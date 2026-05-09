@@ -1,0 +1,14 @@
+{
+  "name": "@cookpit/api-contract",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cookpit/config": "workspace:*",
+    "typescript": "^5.8.3"
+  }
+}

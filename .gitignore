@@ -34,6 +34,9 @@ npm-debug.log*
 # Vercel
 .vercel/
 
-# PWA
-public/sw.js
-public/workbox-*.js
+# PWA（Serwist がビルド時に自動生成するファイル）
+apps/web/public/sw.js
+apps/web/public/workbox-*.js
+
+# Build outputs (apps)
+apps/web/.next/
