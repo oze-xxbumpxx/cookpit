@@ -4,13 +4,13 @@
 
 MVP1 における 5 つの集約。
 
-| 集約 | 役割 |
-|---|---|
-| Recipe | レシピブックのデジタル化、調理手順と材料の管理 |
-| MealPlan | 週次の献立、ビュッフェ方式運用に対応 |
-| ShoppingList | 買い物リスト、価格比較、買い物中の編集 |
-| Pantry | 在庫管理、購入で増え消費で減る |
-| Product | 商品マスタ、店舗別の価格履歴 |
+| 集約         | 役割                                           |
+| ------------ | ---------------------------------------------- |
+| Recipe       | レシピブックのデジタル化、調理手順と材料の管理 |
+| MealPlan     | 週次の献立、ビュッフェ方式運用に対応           |
+| ShoppingList | 買い物リスト、価格比較、買い物中の編集         |
+| Pantry       | 在庫管理、購入で増え消費で減る                 |
+| Product      | 商品マスタ、店舗別の価格履歴                   |
 
 ## 集約間の関係図
 
@@ -40,18 +40,28 @@ export class Money {
     private readonly _amount: number,
     private readonly _currency: Currency,
   ) {}
-  
+
   static of(amount: number, currency: Currency = 'JPY'): Money {
-    if (amount < 0) throw new Error('Money must be non-negative')
-    return new Money(amount, currency)
+    if (amount < 0) throw new Error('Money must be non-negative');
+    return new Money(amount, currency);
   }
-  
-  add(other: Money): Money { /* ... */ }
-  multiply(factor: number): Money { /* ... */ }
-  isLessThan(other: Money): boolean { /* ... */ }
-  
-  get amount(): number { return this._amount }
-  get currency(): Currency { return this._currency }
+
+  add(other: Money): Money {
+    /* ... */
+  }
+  multiply(factor: number): Money {
+    /* ... */
+  }
+  isLessThan(other: Money): boolean {
+    /* ... */
+  }
+
+  get amount(): number {
+    return this._amount;
+  }
+  get currency(): Currency {
+    return this._currency;
+  }
 }
 ```
 
@@ -63,21 +73,24 @@ export class Quantity {
     private readonly _value: number,
     private readonly _unit: Unit,
   ) {}
-  
+
   static of(value: number, unit: Unit): Quantity {
-    if (value < 0) throw new Error('Quantity must be non-negative')
-    return new Quantity(value, unit)
+    if (value < 0) throw new Error('Quantity must be non-negative');
+    return new Quantity(value, unit);
   }
-  
-  multiply(factor: number): Quantity { /* ... */ }
-  add(other: Quantity): Quantity { /* 単位が同じなら加算可能 */ }
-  toGrams(): number { /* 重量系の単位なら g に正規化 */ }
+
+  multiply(factor: number): Quantity {
+    /* ... */
+  }
+  add(other: Quantity): Quantity {
+    /* 単位が同じなら加算可能 */
+  }
+  toGrams(): number {
+    /* 重量系の単位なら g に正規化 */
+  }
 }
 
-export type Unit = 
-  | 'g' | 'kg' | 'ml' | 'l' 
-  | 'tsp' | 'tbsp' | 'cup' 
-  | 'piece' | 'pinch'
+export type Unit = 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup' | 'piece' | 'pinch';
 ```
 
 ### WeekIdentifier
@@ -88,21 +101,25 @@ export class WeekIdentifier {
     private readonly _year: number,
     private readonly _weekNumber: number,
   ) {}
-  
+
   static fromDate(date: Date): WeekIdentifier {
     // ISO 8601 週番号で算出
   }
-  
+
   static current(): WeekIdentifier {
-    return WeekIdentifier.fromDate(new Date())
+    return WeekIdentifier.fromDate(new Date());
   }
-  
-  startDate(): Date { /* 土曜始まり想定（運用に合わせる） */ }
-  endDate(): Date { }
-  next(): WeekIdentifier { }
-  previous(): WeekIdentifier { }
-  
-  toString(): string { return `${this._year}-W${this._weekNumber}` }
+
+  startDate(): Date {
+    /* 土曜始まり想定（運用に合わせる） */
+  }
+  endDate(): Date {}
+  next(): WeekIdentifier {}
+  previous(): WeekIdentifier {}
+
+  toString(): string {
+    return `${this._year}-W${this._weekNumber}`;
+  }
 }
 ```
 
@@ -114,13 +131,13 @@ export class Store {
     private readonly _id: StoreId,
     private readonly _name: string,
   ) {}
-  
+
   static create(name: string): Store {
-    return new Store(StoreId.generate(), name)
+    return new Store(StoreId.generate(), name);
   }
-  
+
   static reconstruct(id: StoreId, name: string): Store {
-    return new Store(id, name)
+    return new Store(id, name);
   }
 }
 ```
@@ -147,12 +164,12 @@ export class Recipe {
     private readonly _createdAt: Date,
     private _updatedAt: Date,
   ) {}
-  
+
   static create(input: CreateRecipeInput): Recipe {
-    if (input.name.trim() === '') throw new Error('Recipe name required')
-    if (input.baseServings <= 0) throw new Error('Servings must be positive')
-    
-    const now = new Date()
+    if (input.name.trim() === '') throw new Error('Recipe name required');
+    if (input.baseServings <= 0) throw new Error('Servings must be positive');
+
+    const now = new Date();
     return new Recipe(
       RecipeId.generate(),
       input.name,
@@ -164,45 +181,45 @@ export class Recipe {
       input.notes ?? '',
       now,
       now,
-    )
+    );
   }
-  
-  static reconstruct(props: RecipeProps): Recipe { /* ... */ }
-  
+
+  static reconstruct(props: RecipeProps): Recipe {
+    /* ... */
+  }
+
   // 振る舞い
   rename(name: string): void {
-    if (name.trim() === '') throw new Error('Recipe name required')
-    this._name = name
-    this._updatedAt = new Date()
+    if (name.trim() === '') throw new Error('Recipe name required');
+    this._name = name;
+    this._updatedAt = new Date();
   }
-  
+
   addIngredient(ingredient: RecipeIngredient): void {
-    this._ingredients.push(ingredient)
-    this._updatedAt = new Date()
+    this._ingredients.push(ingredient);
+    this._updatedAt = new Date();
   }
-  
-  removeIngredient(index: number): void { /* ... */ }
-  
+
+  removeIngredient(index: number): void {
+    /* ... */
+  }
+
   /** 倍量計算：scaleFactor 倍にした材料リストを返す */
   scaleIngredients(scaleFactor: number): RecipeIngredient[] {
-    return this._ingredients.map(ing => ing.scale(scaleFactor))
+    return this._ingredients.map((ing) => ing.scale(scaleFactor));
   }
 }
 
 // 値オブジェクト：レシピ内の材料
 export class RecipeIngredient {
   private constructor(
-    private readonly _productRef: ProductId | null,  // null 許容（マスタ未登録）
+    private readonly _productRef: ProductId | null, // null 許容（マスタ未登録）
     private readonly _displayName: string,
     private readonly _amount: Quantity,
   ) {}
-  
+
   scale(factor: number): RecipeIngredient {
-    return new RecipeIngredient(
-      this._productRef,
-      this._displayName,
-      this._amount.multiply(factor),
-    )
+    return new RecipeIngredient(this._productRef, this._displayName, this._amount.multiply(factor));
   }
 }
 
@@ -214,7 +231,7 @@ export class CookingStep {
   ) {}
 }
 
-export type RecipeTag = '主菜' | '副菜' | '汁物' | '作り置き向き' | '冷凍可' | string
+export type RecipeTag = '主菜' | '副菜' | '汁物' | '作り置き向き' | '冷凍可' | string;
 ```
 
 #### 設計ポイント
@@ -232,41 +249,45 @@ export class Product {
   private constructor(
     private readonly _id: ProductId,
     private _name: string,
-    private _aliases: string[],         // 「玉ねぎ」「タマネギ」などの別名
+    private _aliases: string[], // 「玉ねぎ」「タマネギ」などの別名
     private _category: ProductCategory,
     private _defaultUnit: Unit,
     private _priceHistory: PriceRecord[],
   ) {}
-  
-  static create(input: CreateProductInput): Product { /* ... */ }
-  static reconstruct(props: ProductProps): Product { /* ... */ }
-  
+
+  static create(input: CreateProductInput): Product {
+    /* ... */
+  }
+  static reconstruct(props: ProductProps): Product {
+    /* ... */
+  }
+
   /** 価格を記録する */
   recordPrice(record: PriceRecord): void {
-    this._priceHistory.push(record)
+    this._priceHistory.push(record);
   }
-  
+
   /** 指定店舗の最新価格 */
   latestPriceAt(storeId: StoreId): Money | null {
     const records = this._priceHistory
-      .filter(r => r.storeId.equals(storeId))
-      .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime())
-    return records[0]?.price ?? null
+      .filter((r) => r.storeId.equals(storeId))
+      .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime());
+    return records[0]?.price ?? null;
   }
-  
+
   /** 指定時点で最も安い店舗 */
   cheapestStoreAt(date: Date): StoreId | null {
     // 各店舗の date 直近の価格を取得して比較
   }
-  
+
   /** 指定店舗の期間平均価格 */
-  averagePrice(storeId: StoreId, periodDays: number): Money | null { }
-  
+  averagePrice(storeId: StoreId, periodDays: number): Money | null {}
+
   /** 現在価格が過去比で安いかを判定 */
   isPriceLow(storeId: StoreId, currentPrice: Money): boolean {
-    const avg = this.averagePrice(storeId, 90)
-    if (!avg) return false
-    return currentPrice.isLessThan(avg)
+    const avg = this.averagePrice(storeId, 90);
+    if (!avg) return false;
+    return currentPrice.isLessThan(avg);
   }
 }
 
@@ -274,13 +295,13 @@ export class PriceRecord {
   constructor(
     public readonly storeId: StoreId,
     public readonly price: Money,
-    public readonly unitPrice: Money,    // 100g あたりなどに正規化
+    public readonly unitPrice: Money, // 100g あたりなどに正規化
     public readonly packageSize: Quantity,
     public readonly observedAt: Date,
   ) {}
 }
 
-export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' | '冷凍' | string
+export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' | '冷凍' | string;
 ```
 
 #### 設計ポイント
@@ -304,52 +325,49 @@ export class MealPlan {
     private readonly _createdAt: Date,
     private _completedAt: Date | null,
   ) {}
-  
+
   static create(weekOf: WeekIdentifier): MealPlan {
-    return new MealPlan(
-      MealPlanId.generate(),
-      weekOf,
-      [],
-      'draft',
-      new Date(),
-      null,
-    )
+    return new MealPlan(MealPlanId.generate(), weekOf, [], 'draft', new Date(), null);
   }
-  
-  static reconstruct(props: MealPlanProps): MealPlan { /* ... */ }
-  
+
+  static reconstruct(props: MealPlanProps): MealPlan {
+    /* ... */
+  }
+
   addRecipe(recipeId: RecipeId, scaleFactor: number = 1): PlannedRecipeId {
     if (this._status !== 'draft' && this._status !== 'shopping') {
-      throw new Error('Cannot add recipe to a plan that is already cooking')
+      throw new Error('Cannot add recipe to a plan that is already cooking');
     }
-    const planned = PlannedRecipe.create(recipeId, scaleFactor)
-    this._plannedRecipes.push(planned)
-    return planned.id
+    const planned = PlannedRecipe.create(recipeId, scaleFactor);
+    this._plannedRecipes.push(planned);
+    return planned.id;
   }
-  
-  removeRecipe(plannedRecipeId: PlannedRecipeId): void { /* ... */ }
-  
+
+  removeRecipe(plannedRecipeId: PlannedRecipeId): void {
+    /* ... */
+  }
+
   scheduleForDay(plannedRecipeId: PlannedRecipeId, date: Date): void {
-    const target = this._plannedRecipes.find(p => p.id.equals(plannedRecipeId))
-    if (!target) throw new Error('PlannedRecipe not found')
-    target.scheduleFor(date)
+    const target = this._plannedRecipes.find((p) => p.id.equals(plannedRecipeId));
+    if (!target) throw new Error('PlannedRecipe not found');
+    target.scheduleFor(date);
   }
-  
+
   markAsCooked(plannedRecipeId: PlannedRecipeId): void {
-    const target = this._plannedRecipes.find(p => p.id.equals(plannedRecipeId))
-    if (!target) throw new Error('PlannedRecipe not found')
-    target.markAsCooked(new Date())
+    const target = this._plannedRecipes.find((p) => p.id.equals(plannedRecipeId));
+    if (!target) throw new Error('PlannedRecipe not found');
+    target.markAsCooked(new Date());
   }
-  
+
   /** ステータス遷移 */
   transitionTo(newStatus: MealPlanStatus): void {
     if (!this.canTransitionTo(newStatus)) {
-      throw new Error(`Cannot transition from ${this._status} to ${newStatus}`)
+      throw new Error(`Cannot transition from ${this._status} to ${newStatus}`);
     }
-    this._status = newStatus
-    if (newStatus === 'completed') this._completedAt = new Date()
+    this._status = newStatus;
+    if (newStatus === 'completed') this._completedAt = new Date();
   }
-  
+
   private canTransitionTo(newStatus: MealPlanStatus): boolean {
     const transitions: Record<MealPlanStatus, MealPlanStatus[]> = {
       draft: ['shopping'],
@@ -357,8 +375,8 @@ export class MealPlan {
       cooking: ['consuming'],
       consuming: ['completed'],
       completed: [],
-    }
-    return transitions[this._status].includes(newStatus)
+    };
+    return transitions[this._status].includes(newStatus);
   }
 }
 
@@ -371,28 +389,25 @@ export class PlannedRecipe {
     private _cookedAt: Date | null,
     private _notes: string,
   ) {}
-  
+
   static create(recipeId: RecipeId, scaleFactor: number = 1): PlannedRecipe {
-    return new PlannedRecipe(
-      PlannedRecipeId.generate(),
-      recipeId,
-      scaleFactor,
-      null,
-      null,
-      '',
-    )
+    return new PlannedRecipe(PlannedRecipeId.generate(), recipeId, scaleFactor, null, null, '');
   }
-  
-  scheduleFor(date: Date): void { this._scheduledDate = date }
-  markAsCooked(at: Date): void { this._cookedAt = at }
+
+  scheduleFor(date: Date): void {
+    this._scheduledDate = date;
+  }
+  markAsCooked(at: Date): void {
+    this._cookedAt = at;
+  }
 }
 
-export type MealPlanStatus = 
-  | 'draft'      // 献立検討中
-  | 'shopping'   // 買い物中
-  | 'cooking'    // 作り置き中
-  | 'consuming'  // 平日消費中
-  | 'completed'  // 終了
+export type MealPlanStatus =
+  | 'draft' // 献立検討中
+  | 'shopping' // 買い物中
+  | 'cooking' // 作り置き中
+  | 'consuming' // 平日消費中
+  | 'completed'; // 終了
 ```
 
 #### 設計ポイント
@@ -415,7 +430,7 @@ export class ShoppingList {
     private _shoppingDate: Date,
     private _status: ShoppingListStatus,
   ) {}
-  
+
   static create(input: CreateShoppingListInput): ShoppingList {
     return new ShoppingList(
       ShoppingListId.generate(),
@@ -423,42 +438,46 @@ export class ShoppingList {
       input.items,
       input.shoppingDate,
       'active',
-    )
+    );
   }
-  
-  static reconstruct(props: ShoppingListProps): ShoppingList { /* ... */ }
-  
+
+  static reconstruct(props: ShoppingListProps): ShoppingList {
+    /* ... */
+  }
+
   addItem(item: ShoppingItem): void {
-    this._items.push(item)
+    this._items.push(item);
   }
-  
-  removeItem(itemId: ShoppingItemId): void { /* ... */ }
-  
+
+  removeItem(itemId: ShoppingItemId): void {
+    /* ... */
+  }
+
   markAsBought(itemId: ShoppingItemId, actualPrice: Money, actualStore: StoreId): void {
-    const item = this._items.find(i => i.id.equals(itemId))
-    if (!item) throw new Error('Item not found')
-    item.markAsBought(actualPrice, actualStore)
+    const item = this._items.find((i) => i.id.equals(itemId));
+    if (!item) throw new Error('Item not found');
+    item.markAsBought(actualPrice, actualStore);
   }
-  
-  reassignStore(itemId: ShoppingItemId, newStore: StoreId): void { /* ... */ }
-  
+
+  reassignStore(itemId: ShoppingItemId, newStore: StoreId): void {
+    /* ... */
+  }
+
   complete(): void {
-    if (this._status !== 'active') throw new Error('Already completed')
-    this._status = 'completed'
+    if (this._status !== 'active') throw new Error('Already completed');
+    this._status = 'completed';
   }
-  
+
   /** 完了済みアイテムを Pantry に追加するためのデータを返す */
   getBoughtItemsForPantry(): BoughtItemForPantry[] {
-    return this._items
-      .filter(i => i.isBought())
-      .map(i => i.toPantryEntry())
+    return this._items.filter((i) => i.isBought()).map((i) => i.toPantryEntry());
   }
 }
 
 export class ShoppingItem {
   private constructor(
     private readonly _id: ShoppingItemId,
-    private readonly _productId: ProductId | null,  // null 許容
+    private readonly _productId: ProductId | null, // null 許容
     private _displayName: string,
     private readonly _requiredAmount: Quantity,
     private _targetStore: StoreId | null,
@@ -467,19 +486,21 @@ export class ShoppingItem {
     private _actualStore: StoreId | null,
     private readonly _source: ItemSource,
   ) {}
-  
-  isBought(): boolean { return this._status === 'bought' }
-  
+
+  isBought(): boolean {
+    return this._status === 'bought';
+  }
+
   markAsBought(price: Money, store: StoreId): void {
-    this._status = 'bought'
-    this._actualPrice = price
-    this._actualStore = store
+    this._status = 'bought';
+    this._actualPrice = price;
+    this._actualStore = store;
   }
 }
 
-export type ItemStatus = 'pending' | 'bought' | 'skipped'
-export type ItemSource = 'from_meal_plan' | 'manually_added'
-export type ShoppingListStatus = 'active' | 'completed'
+export type ItemStatus = 'pending' | 'bought' | 'skipped';
+export type ItemSource = 'from_meal_plan' | 'manually_added';
+export type ShoppingListStatus = 'active' | 'completed';
 ```
 
 ### Pantry 集約
@@ -492,64 +513,64 @@ export class Pantry {
     private readonly _id: PantryId,
     private _stocks: Stock[],
   ) {}
-  
+
   static create(): Pantry {
-    return new Pantry(PantryId.generate(), [])
+    return new Pantry(PantryId.generate(), []);
   }
-  
-  static reconstruct(props: PantryProps): Pantry { /* ... */ }
-  
+
+  static reconstruct(props: PantryProps): Pantry {
+    /* ... */
+  }
+
   /** 買い物完了時に呼ばれる：自動 */
   addStock(input: AddStockInput): StockId {
-    const stock = Stock.create(input)
-    this._stocks.push(stock)
-    return stock.id
+    const stock = Stock.create(input);
+    this._stocks.push(stock);
+    return stock.id;
   }
-  
+
   /** 「使った」を記録：手動 */
   consumeStock(stockId: StockId, amount: Quantity, reason: ConsumptionReason): void {
-    const stock = this._stocks.find(s => s.id.equals(stockId))
-    if (!stock) throw new Error('Stock not found')
-    stock.consume(amount, reason)
-    
+    const stock = this._stocks.find((s) => s.id.equals(stockId));
+    if (!stock) throw new Error('Stock not found');
+    stock.consume(amount, reason);
+
     // 量がゼロになったら削除
     if (stock.isEmpty()) {
-      this._stocks = this._stocks.filter(s => !s.id.equals(stockId))
+      this._stocks = this._stocks.filter((s) => !s.id.equals(stockId));
     }
   }
-  
+
   /** 「捨てた」を記録：手動 */
   discardStock(stockId: StockId, reason: string): void {
-    const stock = this._stocks.find(s => s.id.equals(stockId))
-    if (!stock) throw new Error('Stock not found')
-    stock.discard(reason)
-    this._stocks = this._stocks.filter(s => !s.id.equals(stockId))
+    const stock = this._stocks.find((s) => s.id.equals(stockId));
+    if (!stock) throw new Error('Stock not found');
+    stock.discard(reason);
+    this._stocks = this._stocks.filter((s) => !s.id.equals(stockId));
   }
-  
+
   /** 賞味期限が近い在庫を取得（Phase 2 で活用） */
   findExpiringSoon(daysAhead: number): Stock[] {
-    const threshold = new Date()
-    threshold.setDate(threshold.getDate() + daysAhead)
-    return this._stocks.filter(s => 
-      s.expiresAt !== null && s.expiresAt <= threshold
-    )
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() + daysAhead);
+    return this._stocks.filter((s) => s.expiresAt !== null && s.expiresAt <= threshold);
   }
-  
+
   /** 商品 ID で在庫を取得（FIFO 順） */
   findByProduct(productId: ProductId): Stock[] {
     return this._stocks
-      .filter(s => s.productId.equals(productId))
-      .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime())
+      .filter((s) => s.productId.equals(productId))
+      .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
   }
-  
+
   /** 在庫を引いて、買うべき量を計算（買い物リスト生成で使用） */
   calculateRequiredAmount(productId: ProductId, neededAmount: Quantity): Quantity {
-    const stocks = this.findByProduct(productId)
+    const stocks = this.findByProduct(productId);
     const availableTotal = stocks.reduce(
       (sum, s) => sum.add(s.amount),
       Quantity.of(0, neededAmount.unit),
-    )
-    return neededAmount.subtract(availableTotal)  // 負になったら 0 を返す実装
+    );
+    return neededAmount.subtract(availableTotal); // 負になったら 0 を返す実装
   }
 }
 
@@ -562,19 +583,25 @@ export class Stock {
     private readonly _expiresAt: Date | null,
     private readonly _storedLocation: StorageLocation,
   ) {}
-  
+
   consume(amount: Quantity, reason: ConsumptionReason): void {
-    this._amount = this._amount.subtract(amount)
+    this._amount = this._amount.subtract(amount);
   }
-  
-  discard(reason: string): void { /* ログ用に記録 */ }
-  
-  isEmpty(): boolean { return this._amount.value === 0 }
-  isExpired(now: Date): boolean { /* ... */ }
+
+  discard(reason: string): void {
+    /* ログ用に記録 */
+  }
+
+  isEmpty(): boolean {
+    return this._amount.value === 0;
+  }
+  isExpired(now: Date): boolean {
+    /* ... */
+  }
 }
 
-export type ConsumptionReason = 'cooked' | 'eaten' | 'other'
-export type StorageLocation = 'fridge' | 'freezer' | 'pantry'
+export type ConsumptionReason = 'cooked' | 'eaten' | 'other';
+export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
 ```
 
 #### 設計ポイント
@@ -598,51 +625,53 @@ export class GenerateShoppingListUseCase {
     private productRepo: ProductRepository,
     private shoppingListRepo: ShoppingListRepository,
   ) {}
-  
+
   async execute(mealPlanId: MealPlanId): Promise<ShoppingListId> {
     // 1. MealPlan を取得
-    const mealPlan = await this.mealPlanRepo.findById(mealPlanId)
-    if (!mealPlan) throw new Error('MealPlan not found')
-    
+    const mealPlan = await this.mealPlanRepo.findById(mealPlanId);
+    if (!mealPlan) throw new Error('MealPlan not found');
+
     // 2. 含まれる Recipe をすべて取得
-    const recipes = await this.recipeRepo.findByIds(
-      mealPlan.plannedRecipes.map(p => p.recipeId)
-    )
-    
+    const recipes = await this.recipeRepo.findByIds(mealPlan.plannedRecipes.map((p) => p.recipeId));
+
     // 3. 必要な食材を集計（倍量を反映）
-    const requiredIngredients = this.aggregateIngredients(mealPlan, recipes)
-    
+    const requiredIngredients = this.aggregateIngredients(mealPlan, recipes);
+
     // 4. Pantry の在庫を引く
-    const pantry = await this.pantryRepo.find()
-    const toBuy = this.subtractStock(requiredIngredients, pantry)
-    
+    const pantry = await this.pantryRepo.find();
+    const toBuy = this.subtractStock(requiredIngredients, pantry);
+
     // 5. 各食材の最安店舗を決定
     const products = await this.productRepo.findByIds(
-      toBuy.map(i => i.productId).filter(Boolean)
-    )
-    const itemsWithStore = toBuy.map(item => {
-      const product = products.find(p => p.id.equals(item.productId))
-      const cheapest = product?.cheapestStoreAt(new Date())
-      return { ...item, targetStore: cheapest }
-    })
-    
+      toBuy.map((i) => i.productId).filter(Boolean),
+    );
+    const itemsWithStore = toBuy.map((item) => {
+      const product = products.find((p) => p.id.equals(item.productId));
+      const cheapest = product?.cheapestStoreAt(new Date());
+      return { ...item, targetStore: cheapest };
+    });
+
     // 6. ShoppingList を生成して保存
     const shoppingList = ShoppingList.create({
       mealPlanId: mealPlan.id,
-      items: itemsWithStore.map(i => ShoppingItem.create(i)),
+      items: itemsWithStore.map((i) => ShoppingItem.create(i)),
       shoppingDate: new Date(),
-    })
-    await this.shoppingListRepo.save(shoppingList)
-    
+    });
+    await this.shoppingListRepo.save(shoppingList);
+
     // 7. MealPlan のステータスを shopping に
-    mealPlan.transitionTo('shopping')
-    await this.mealPlanRepo.save(mealPlan)
-    
-    return shoppingList.id
+    mealPlan.transitionTo('shopping');
+    await this.mealPlanRepo.save(mealPlan);
+
+    return shoppingList.id;
   }
-  
-  private aggregateIngredients(mealPlan, recipes) { /* ... */ }
-  private subtractStock(required, pantry) { /* ... */ }
+
+  private aggregateIngredients(mealPlan, recipes) {
+    /* ... */
+  }
+  private subtractStock(required, pantry) {
+    /* ... */
+  }
 }
 ```
 
@@ -656,35 +685,35 @@ export class CompleteShoppingUseCase {
     private productRepo: ProductRepository,
     private mealPlanRepo: MealPlanRepository,
   ) {}
-  
+
   async execute(shoppingListId: ShoppingListId): Promise<void> {
-    const shoppingList = await this.shoppingListRepo.findById(shoppingListId)
-    if (!shoppingList) throw new Error('ShoppingList not found')
-    
+    const shoppingList = await this.shoppingListRepo.findById(shoppingListId);
+    if (!shoppingList) throw new Error('ShoppingList not found');
+
     // 1. 買ったアイテムを Pantry に追加
-    const pantry = await this.pantryRepo.find()
+    const pantry = await this.pantryRepo.find();
     for (const boughtItem of shoppingList.getBoughtItemsForPantry()) {
-      pantry.addStock(boughtItem)
+      pantry.addStock(boughtItem);
     }
-    await this.pantryRepo.save(pantry)
-    
+    await this.pantryRepo.save(pantry);
+
     // 2. 価格履歴を Product に記録
     for (const boughtItem of shoppingList.getBoughtItemsForPantry()) {
       if (boughtItem.productId && boughtItem.actualPrice) {
-        const product = await this.productRepo.findById(boughtItem.productId)
-        product.recordPrice(/* PriceRecord */)
-        await this.productRepo.save(product)
+        const product = await this.productRepo.findById(boughtItem.productId);
+        product.recordPrice(/* PriceRecord */);
+        await this.productRepo.save(product);
       }
     }
-    
+
     // 3. ShoppingList を完了に
-    shoppingList.complete()
-    await this.shoppingListRepo.save(shoppingList)
-    
+    shoppingList.complete();
+    await this.shoppingListRepo.save(shoppingList);
+
     // 4. MealPlan を cooking に
-    const mealPlan = await this.mealPlanRepo.findById(shoppingList.mealPlanId)
-    mealPlan.transitionTo('cooking')
-    await this.mealPlanRepo.save(mealPlan)
+    const mealPlan = await this.mealPlanRepo.findById(shoppingList.mealPlanId);
+    mealPlan.transitionTo('cooking');
+    await this.mealPlanRepo.save(mealPlan);
   }
 }
 ```
@@ -692,16 +721,21 @@ export class CompleteShoppingUseCase {
 ## 設計上の論点（実装時に再検討する余地あり）
 
 ### 1. Product の名寄せ問題
+
 「玉ねぎ」と「タマネギ」を同じ Product と認識する仕組み。MVP1 では `aliases` で手動管理するが、入力時の Auto-suggest UX が課題になる。
 
 ### 2. Quantity の単位変換
+
 レシピは「大さじ2」、買い物は「100g」など単位が違うことがある。MVP1 では完全な変換は実装せず、Product ごとの「デフォルト単位」で揃える運用にする。
 
 ### 3. ShoppingList 生成時の在庫引き算
+
 端数処理をどうするか。「玉ねぎ 2個必要、家に 0.5 個ある → 2 個買う」のような切り上げルールを Use Case 側で持つ。
 
 ### 4. 過去の MealPlan の保持期間
+
 履歴が無限に増える。当面は削除しないが、Phase 2 で「6ヶ月以前のデータはアーカイブ」のような方針を検討。
 
 ### 5. ステータス遷移の自動化
+
 現状はユーザーの明示的な操作で遷移するが、「買い物リスト全アイテムが bought になったら自動で cooking に」のような自動化は Phase 2 で。

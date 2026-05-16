@@ -188,7 +188,7 @@ export default async function RecipesPage() {
   const repo = new DrizzleRecipeRepository(db)
   const useCase = new GetRecipesUseCase(repo)
   const recipes = await useCase.execute()
-  
+
   return <RecipeList initialRecipes={recipes} />
 }
 ```
@@ -207,22 +207,23 @@ export function RecipeList({ initialRecipes }) {
     queryFn: () => client.recipes.$get().then(r => r.json()),
     initialData: initialRecipes,
   })
-  
+
   return <ul>{data.map(r => <li key={r.id}>{r.name}</li>)}</ul>
 }
 ```
 
 ### 使い分けの方針
 
-| ユースケース | 採用する方法 |
-|---|---|
-| 初期表示（SEO、初回ロード高速化） | A: Server Component 直接 |
+| ユースケース                       | 採用する方法                 |
+| ---------------------------------- | ---------------------------- |
+| 初期表示（SEO、初回ロード高速化）  | A: Server Component 直接     |
 | 一覧の再フェッチ・ページネーション | B: Hono RPC + TanStack Query |
-| フォーム送信（楽観的更新したい） | B: Hono RPC + TanStack Query |
-| ステータス変更などのアクション | B: Hono RPC + TanStack Query |
-| Server Component から直接書き込み | A: Server Action として |
+| フォーム送信（楽観的更新したい）   | B: Hono RPC + TanStack Query |
+| ステータス変更などのアクション     | B: Hono RPC + TanStack Query |
+| Server Component から直接書き込み  | A: Server Action として      |
 
 **基本方針**：
+
 - **読み取り**は初期表示を Server Component で、その後の操作は Hono RPC に切り替え
 - **書き込み**は基本 Hono RPC（楽観的更新を効かせやすい）
 - 認証なし MVP1 では「ログインユーザー」を意識する必要がないため、A も B もシンプル
@@ -235,7 +236,7 @@ export function RecipeList({ initialRecipes }) {
 // packages/application/recipe/create-recipe.use-case.ts
 export class CreateRecipeUseCase {
   constructor(private recipeRepo: RecipeRepository) {}
-  
+
   async execute(input: CreateRecipeInput): Promise<RecipeId> {
     const recipe = Recipe.create(input)
     await this.recipeRepo.save(recipe)
@@ -250,6 +251,7 @@ await useCase.execute({ name: 'カレー', ... })
 ```
 
 ユースケースの組み立てが煩雑になってきたら、以下のいずれかを検討：
+
 - ファクトリ関数で組み立てを集約
 - DI コンテナ導入
 
@@ -266,7 +268,7 @@ export class Recipe {
     private _ingredients: RecipeIngredient[],
     // ...
   ) {}
-  
+
   // 新規作成時：ID 採番、初期化ロジック含む
   static create(input: CreateRecipeInput): Recipe {
     return new Recipe(
@@ -274,9 +276,9 @@ export class Recipe {
       input.name,
       input.ingredients,
       // ...
-    )
+    );
   }
-  
+
   // DB からの復元時：すでに ID がある、初期化ロジックを通さない
   static reconstruct(props: RecipeProps): Recipe {
     return new Recipe(
@@ -284,26 +286,23 @@ export class Recipe {
       props.name,
       props.ingredients,
       // ...
-    )
+    );
   }
 }
 
 // packages/infrastructure/repositories/drizzle-recipe.repository.ts
 export class DrizzleRecipeRepository implements RecipeRepository {
   async findById(id: RecipeId): Promise<Recipe | null> {
-    const row = await this.db.select()
-      .from(recipes)
-      .where(eq(recipes.id, id.value))
-      .limit(1)
-    
-    if (!row[0]) return null
-    
+    const row = await this.db.select().from(recipes).where(eq(recipes.id, id.value)).limit(1);
+
+    if (!row[0]) return null;
+
     return Recipe.reconstruct({
       id: RecipeId.fromString(row[0].id),
       name: row[0].name,
       ingredients: this.mapIngredients(row[0].ingredients),
       // ...
-    })
+    });
   }
 }
 ```

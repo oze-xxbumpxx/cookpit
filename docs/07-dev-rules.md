@@ -13,13 +13,13 @@ Google Engineering Practices および Google TypeScript Style Guide から、�
 
 ### ブランチ種別
 
-| プレフィックス | 用途 | 例 |
-|---|---|---|
-| `feature/` | 新機能の追加 | `feature/recipe-crud` |
-| `fix/` | バグ修正 | `fix/recipe-name-validation` |
-| `chore/` | 環境構築・設定変更・依存更新 | `chore/setup-turborepo` |
-| `refactor/` | 機能変更なしの内部改善 | `refactor/recipe-repository` |
-| `docs/` | ドキュメントのみの変更 | `docs/update-domain-model` |
+| プレフィックス | 用途                         | 例                           |
+| -------------- | ---------------------------- | ---------------------------- |
+| `feature/`     | 新機能の追加                 | `feature/recipe-crud`        |
+| `fix/`         | バグ修正                     | `fix/recipe-name-validation` |
+| `chore/`       | 環境構築・設定変更・依存更新 | `chore/setup-turborepo`      |
+| `refactor/`    | 機能変更なしの内部改善       | `refactor/recipe-repository` |
+| `docs/`        | ドキュメントのみの変更       | `docs/update-domain-model`   |
 
 ### 運用ルール
 
@@ -81,12 +81,12 @@ scope（任意）: recipe | product | meal-plan | shopping-list | pantry | infra
 
 ### 命名規則
 
-| 対象 | 規則 | 例 |
-|---|---|---|
+| 対象                               | 規則           | 例                                   |
+| ---------------------------------- | -------------- | ------------------------------------ |
 | クラス・インターフェース・型・Enum | UpperCamelCase | `RecipeIngredient`, `MealPlanStatus` |
-| 変数・関数・メソッド・プロパティ | lowerCamelCase | `scaleFactor`, `findById` |
-| グローバル定数・Enum 値 | CONSTANT_CASE | `MAX_SERVINGS` |
-| ファイル名 | kebab-case | `recipe-ingredient.ts` |
+| 変数・関数・メソッド・プロパティ   | lowerCamelCase | `scaleFactor`, `findById`            |
+| グローバル定数・Enum 値            | CONSTANT_CASE  | `MAX_SERVINGS`                       |
+| ファイル名                         | kebab-case     | `recipe-ingredient.ts`               |
 
 - アンダースコアを接頭辞・接尾辞として使わない（`_name` は禁止）
 - 省略語は1単語として扱う（`loadHttpUrl`、`xmlParser` など）
@@ -99,11 +99,11 @@ scope（任意）: recipe | product | meal-plan | shopping-list | pantry | infra
 
 ```typescript
 // Good
-import type { RecipeId } from './recipe-id'
-import { Recipe } from './recipe'
+import type { RecipeId } from './recipe-id';
+import { Recipe } from './recipe';
 
 // Bad
-import Recipe from './recipe'  // default export は禁止
+import Recipe from './recipe'; // default export は禁止
 ```
 
 ### 型の使い方
@@ -116,11 +116,11 @@ import Recipe from './recipe'  // default export は禁止
 ```typescript
 // Good
 interface RecipeRepository {
-  findById(id: RecipeId): Promise<Recipe | null>
+  findById(id: RecipeId): Promise<Recipe | null>;
 }
 
 // Good（Union型はtypeで）
-type MealPlanStatus = 'draft' | 'shopping' | 'cooking' | 'consuming' | 'completed'
+type MealPlanStatus = 'draft' | 'shopping' | 'cooking' | 'consuming' | 'completed';
 ```
 
 ### クラス
@@ -194,9 +194,9 @@ Codex はプロジェクト起動時に `AGENTS.md` を自動で読み込む。
 
 ## テスト方針
 
-| 対象 | テスト種別 | 方針 |
-| --- | --- | --- |
-| Domain 層（Entity / Value Object） | ユニットテスト | 必須 |
-| Application 層（UseCase） | ユニットテスト（Repository はモック） | 必須 |
-| Infrastructure 層（Repository 実装） | 統合テスト（実 DB） | 必須 |
-| E2E | - | MVP1 は対象外 |
+| 対象                                 | テスト種別                            | 方針          |
+| ------------------------------------ | ------------------------------------- | ------------- |
+| Domain 層（Entity / Value Object）   | ユニットテスト                        | 必須          |
+| Application 層（UseCase）            | ユニットテスト（Repository はモック） | 必須          |
+| Infrastructure 層（Repository 実装） | 統合テスト（実 DB）                   | 必須          |
+| E2E                                  | -                                     | MVP1 は対象外 |

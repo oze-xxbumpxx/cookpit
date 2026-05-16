@@ -23,40 +23,49 @@ Claude Code がこのプロジェクトで守るべきルールを定義する�
 ## 行動制約
 
 ### ファイル操作
+
 - **新規ファイルの作成・既存ファイルの削除は、必ず事前に確認を取ること。**
 - 複数ファイルにまたがる変更を行う場合は、変更範囲を先に提示してから実施する。
 
 ### 設計判断
+
 - 設計判断（アーキテクチャ・ドメインモデル・DB スキーマ）は**提案にとどめる。**
 - 合意が取れた後に初めて実装に移る。「提案 → 確認 → 実装」の順を守る。
 
 ### スコープ
+
 - 依頼されたスコープ外のリファクタリング・改善は行わない。
 - 依頼範囲外で気になる点があれば、実施するのではなく**コメントとして伝える。**
 
 ### Git 操作
+
 - `git commit` / `git push` は明示的な指示があるまで実行しない。
 - ブランチ作成・削除も事前確認を必須とする。
 
 ## アーキテクチャ原則（実装時に必ず守ること）
 
 ### 依存方向
+
 ```
 Presentation → Application → Domain ← Infrastructure
 ```
+
 - `packages/domain` は他のパッケージに依存しない。
 - Domain 層に ORM（Drizzle）や HTTP の型を持ち込まない。
 
 ### ドメインモデルのパターン
+
 - Entity の生成は必ず `static create()` を通す。
 - DB からの復元は必ず `static reconstruct()` を通す。
 - ドメインロジック（バリデーション・状態遷移）は Entity / Value Object に閉じ込める。
 
 ### 集約間の参照
+
 - 集約をまたぐ参照は **ID 参照のみ**。集約のインスタンスを別集約に持たせない。
 - 集約をまたぐ操作は Application Layer の UseCase に置く。
 
 ### UseCase
+
 - UseCase は 1 ユースケース = 1 クラス・`execute()` メソッドのみ。
 - DI は手動 DI（コンストラクタ注入）で行う。DI コンテナは導入しない（MVP1 の間）。
 
@@ -68,12 +77,12 @@ Presentation → Application → Domain ← Infrastructure
 
 ## 参照ドキュメント
 
-| ドキュメント | 内容 |
-|---|---|
-| [docs/01-overview.md](docs/01-overview.md) | プロジェクト概要・スコープ |
-| [docs/02-tech-stack.md](docs/02-tech-stack.md) | 技術スタック・選定理由 |
+| ドキュメント                                       | 内容                             |
+| -------------------------------------------------- | -------------------------------- |
+| [docs/01-overview.md](docs/01-overview.md)         | プロジェクト概要・スコープ       |
+| [docs/02-tech-stack.md](docs/02-tech-stack.md)     | 技術スタック・選定理由           |
 | [docs/03-architecture.md](docs/03-architecture.md) | アーキテクチャ・ディレクトリ構成 |
-| [docs/04-domain-model.md](docs/04-domain-model.md) | ドメインモデル設計 |
-| [docs/05-roadmap.md](docs/05-roadmap.md) | スプリント計画 |
-| [docs/06-ai-tools.md](docs/06-ai-tools.md) | AI ツール活用方針 |
-| [docs/07-dev-rules.md](docs/07-dev-rules.md) | 開発ルール |
+| [docs/04-domain-model.md](docs/04-domain-model.md) | ドメインモデル設計               |
+| [docs/05-roadmap.md](docs/05-roadmap.md)           | スプリント計画                   |
+| [docs/06-ai-tools.md](docs/06-ai-tools.md)         | AI ツール活用方針                |
+| [docs/07-dev-rules.md](docs/07-dev-rules.md)       | 開発ルール                       |

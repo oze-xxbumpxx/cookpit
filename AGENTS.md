@@ -6,13 +6,13 @@ Codex がこのプロジェクトで作業する際に守るべきルールを�
 
 実装に着手する前に、以下のドキュメントを必ず読み込むこと。
 
-| ドキュメント | 読む目的 |
-| --- | --- |
-| [docs/01-overview.md](docs/01-overview.md) | プロジェクトの目的・スコープを把握する |
-| [docs/02-tech-stack.md](docs/02-tech-stack.md) | 使用技術と選定理由を把握する |
+| ドキュメント                                       | 読む目的                                     |
+| -------------------------------------------------- | -------------------------------------------- |
+| [docs/01-overview.md](docs/01-overview.md)         | プロジェクトの目的・スコープを把握する       |
+| [docs/02-tech-stack.md](docs/02-tech-stack.md)     | 使用技術と選定理由を把握する                 |
 | [docs/03-architecture.md](docs/03-architecture.md) | 層構成・ディレクトリ構成・依存方向を把握する |
-| [docs/04-domain-model.md](docs/04-domain-model.md) | 集約・Entity・Value Object の設計を把握する |
-| [docs/07-dev-rules.md](docs/07-dev-rules.md) | コーディング規約・命名規則を把握する |
+| [docs/04-domain-model.md](docs/04-domain-model.md) | 集約・Entity・Value Object の設計を把握する  |
+| [docs/07-dev-rules.md](docs/07-dev-rules.md)       | コーディング規約・命名規則を把握する         |
 
 実装対象が特定のドメインに限定される場合は、該当集約の設計（`docs/04-domain-model.md` の該当セクション）を重点的に確認すること。
 

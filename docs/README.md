@@ -4,17 +4,17 @@
 
 ## ドキュメント構成
 
-| ファイル | 内容 |
-|---|---|
-| [01-overview.md](./01-overview.md) | プロジェクト目的・対象ユーザー・スコープ |
-| [02-tech-stack.md](./02-tech-stack.md) | 技術スタックと選定理由 |
-| [03-architecture.md](./03-architecture.md) | アーキテクチャ・ディレクトリ構成 |
-| [04-domain-model.md](./04-domain-model.md) | ドメインモデル設計 |
-| [05-roadmap.md](./05-roadmap.md) | スプリント計画・ロードマップ |
-| [06-ai-tools.md](./06-ai-tools.md) | AI ツール活用方針 |
-| [07-dev-rules.md](./07-dev-rules.md) | 開発ルール（ブランチ戦略・レビュー・コミット規約） |
-| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート |
-| [adr/](./adr/) | アーキテクチャ意思決定記録 |
+| ファイル                                           | 内容                                               |
+| -------------------------------------------------- | -------------------------------------------------- |
+| [01-overview.md](./01-overview.md)                 | プロジェクト目的・対象ユーザー・スコープ           |
+| [02-tech-stack.md](./02-tech-stack.md)             | 技術スタックと選定理由                             |
+| [03-architecture.md](./03-architecture.md)         | アーキテクチャ・ディレクトリ構成                   |
+| [04-domain-model.md](./04-domain-model.md)         | ドメインモデル設計                                 |
+| [05-roadmap.md](./05-roadmap.md)                   | スプリント計画・ロードマップ                       |
+| [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                  |
+| [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約） |
+| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート            |
+| [adr/](./adr/)                                     | アーキテクチャ意思決定記録                         |
 
 ## クイックスタート
 

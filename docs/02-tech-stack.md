@@ -2,20 +2,20 @@
 
 ## サマリ
 
-| レイヤー | 技術 | バージョン目安 |
-|---|---|---|
-| フロントエンド | Next.js (App Router) + React | Next.js 16, React 19 |
-| バックエンド API | Hono（Next.js 内マウント） | Hono 最新 |
-| API 通信（型安全） | Hono RPC + TanStack Query | TanStack Query v5 |
-| ORM | Drizzle ORM | 最新 |
-| データベース | Neon (Serverless PostgreSQL) | - |
-| 認証 | （MVP1 では未使用、Phase 2 で Better Auth 検討） | - |
-| スタイリング | Tailwind CSS + shadcn/ui | Tailwind v4 |
-| クライアント状態 | Zustand | 最新 |
-| バリデーション | Zod | 最新 |
-| PWA | Serwist | 最新 |
-| モノレポ | Turborepo + pnpm workspaces | 最新 |
-| デプロイ | Vercel + Neon | - |
+| レイヤー           | 技術                                             | バージョン目安       |
+| ------------------ | ------------------------------------------------ | -------------------- |
+| フロントエンド     | Next.js (App Router) + React                     | Next.js 16, React 19 |
+| バックエンド API   | Hono（Next.js 内マウント）                       | Hono 最新            |
+| API 通信（型安全） | Hono RPC + TanStack Query                        | TanStack Query v5    |
+| ORM                | Drizzle ORM                                      | 最新                 |
+| データベース       | Neon (Serverless PostgreSQL)                     | -                    |
+| 認証               | （MVP1 では未使用、Phase 2 で Better Auth 検討） | -                    |
+| スタイリング       | Tailwind CSS + shadcn/ui                         | Tailwind v4          |
+| クライアント状態   | Zustand                                          | 最新                 |
+| バリデーション     | Zod                                              | 最新                 |
+| PWA                | Serwist                                          | 最新                 |
+| モノレポ           | Turborepo + pnpm workspaces                      | 最新                 |
+| デプロイ           | Vercel + Neon                                    | -                    |
 
 ## 各技術の選定理由
 
@@ -43,12 +43,12 @@ Hono の型をフロントから直接インポートして、エンドポイン
 
 ```typescript
 // Client 側
-import { hc } from 'hono/client'
-import type { AppType } from '@/server/app'
+import { hc } from 'hono/client';
+import type { AppType } from '@/server/app';
 
-const client = hc<AppType>('/api')
-const res = await client.recipes.$get()  // 型補完される
-const recipes = await res.json()         // 型推論される
+const client = hc<AppType>('/api');
+const res = await client.recipes.$get(); // 型補完される
+const recipes = await res.json(); // 型推論される
 ```
 
 TanStack Query でサーバー状態を管理（キャッシュ、再フェッチ、楽観的更新）。
@@ -97,14 +97,14 @@ shadcn/ui は「コピーして所有する」コンポーネントライブラ�
 
 iPhone（Safari）と Android（Chrome）の両方で動かす必要があるため、PWA の差異を意識する。
 
-| 機能 | iOS Safari | Android Chrome |
-|---|---|---|
-| ホーム画面追加 | ◎ | ◎ |
-| フルスクリーン表示 | ◎ | ◎ |
-| オフライン動作 | ○ (50MB 制限) | ◎ |
-| プッシュ通知 | △ (iOS 16.4+ 限定対応) | ◎ |
-| カメラアクセス | ◎ | ◎ |
-| ローカルストレージ | ○ (7日無使用でクリアの場合あり) | ◎ |
+| 機能               | iOS Safari                      | Android Chrome |
+| ------------------ | ------------------------------- | -------------- |
+| ホーム画面追加     | ◎                               | ◎              |
+| フルスクリーン表示 | ◎                               | ◎              |
+| オフライン動作     | ○ (50MB 制限)                   | ◎              |
+| プッシュ通知       | △ (iOS 16.4+ 限定対応)          | ◎              |
+| カメラアクセス     | ◎                               | ◎              |
+| ローカルストレージ | ○ (7日無使用でクリアの場合あり) | ◎              |
 
 **重要な前提**：iOS は7日間アプリを起動しないとローカルストレージがクリアされる場合がある。よって「サーバー（Neon）が真実のソース、ローカルはキャッシュ」という設計を徹底する。
 
@@ -125,10 +125,10 @@ MVP1 ではプッシュ通知を使わないため、両OS で機能差は出な
 
 ### 環境
 
-| 環境 | 用途 | URL |
-|---|---|---|
-| development | ローカル開発 | localhost:3000 |
-| preview | PR ごとの自動デプロイ（Vercel 標準機能） | 自動生成 |
-| production | 本番（2人で実利用） | 独自 URL |
+| 環境        | 用途                                     | URL            |
+| ----------- | ---------------------------------------- | -------------- |
+| development | ローカル開発                             | localhost:3000 |
+| preview     | PR ごとの自動デプロイ（Vercel 標準機能） | 自動生成       |
+| production  | 本番（2人で実利用）                      | 独自 URL       |
 
 Neon のブランチング機能で、preview 環境ごとに DB を切り替えることも可能（Phase 2 以降で検討）。
