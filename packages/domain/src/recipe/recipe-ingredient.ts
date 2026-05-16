@@ -7,32 +7,48 @@ export interface ProductId {
 export interface RecipeIngredientCreateProps {
   productRef: ProductId | null;
   displayName: string;
-  amount: Quantity;
+  amount: Quantity | null;
+  amountNote: string | null;
 }
 
 export class RecipeIngredient {
   private constructor(
     private readonly productReference: ProductId | null,
     private readonly ingredientDisplayName: string,
-    private readonly ingredientAmount: Quantity,
+    private readonly ingredientAmount: Quantity | null,
+    private readonly ingredientAmountNote: string | null,
   ) {}
 
-  static create(props: {
-    productRef: ProductId | null;
-    displayName: string;
-    amount: Quantity;
-  }): RecipeIngredient {
+  static create(props: RecipeIngredientCreateProps): RecipeIngredient {
     if (props.displayName.trim() === '') {
       throw new Error('Display name is required');
     }
-    return new RecipeIngredient(props.productRef, props.displayName, props.amount);
+
+    const hasAmount = props.amount !== null;
+    const hasAmountNote = props.amountNote !== null && props.amountNote.trim() !== '';
+    if (!hasAmount && !hasAmountNote) {
+      throw new Error('Either amount or amountNote is required');
+    }
+    if (hasAmount === hasAmountNote) {
+      throw new Error('amount and amountNote cannot both be set');
+    }
+    return new RecipeIngredient(
+      props.productRef,
+      props.displayName,
+      props.amount,
+      props.amountNote,
+    );
   }
 
   scale(factor: number): RecipeIngredient {
+    if (this.ingredientAmount === null) {
+      return this;
+    }
     return new RecipeIngredient(
       this.productReference,
       this.ingredientDisplayName,
       this.ingredientAmount.multiply(factor),
+      null,
     );
   }
 
@@ -44,7 +60,10 @@ export class RecipeIngredient {
     return this.ingredientDisplayName;
   }
 
-  get amount(): Quantity {
+  get amount(): Quantity | null {
     return this.ingredientAmount;
+  }
+  get amountNote(): string | null {
+    return this.ingredientAmountNote;
   }
 }

@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>Cookpit — Recipe Wireframes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Klee+One:wght@400;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  :root{
+    --bg: #f6f1ea;
+    --paper: #ffffff;
+    --canvas: #faf6ef;
+    --ink: #1c1a17;
+    --ink-soft: #6b6358;
+    --ink-faint: #a8a195;
+    --rule: #ebe3d4;
+    --rule-strong: #d8cfbd;
+    --accent: #e85d3c;       /* warm tomato — modern cooking app */
+    --accent-deep: #c14b2f;
+    --accent-soft: #fde2d8;
+    --danger: #c0442c;
+    --chip-bg: #f3ece0;
+    --chip-bg-active: #1c1a17;
+    --chip-fg-active: #ffffff;
+    --tag-radius: 999px;
+    --sans: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+    --hand: "Klee One", var(--sans);
+    --label: "Caveat", "Klee One", cursive;
+  }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { padding: 56px 48px 96px; min-height: 100vh; }
+
+  .doc-head {
+    max-width: 1500px;
+    margin: 0 auto 32px;
+    display: flex; align-items: end; justify-content: space-between; gap: 24px;
+    flex-wrap: wrap;
+  }
+  .doc-head h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 36px;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+  }
+  .doc-head h1 .dot { color: var(--accent); }
+  .doc-head .sub {
+    font-family: var(--sans);
+    color: var(--ink-soft);
+    font-size: 15px;
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .doc-head .meta {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: right;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  .doc-head .meta b { color: var(--ink-soft); font-weight: 600; }
+
+  .grid {
+    max-width: 1500px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 56px 48px;
+    justify-items: center;
+  }
+
+  .screen-wrap { width: 100%; max-width: 420px; }
+  .screen-label {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+    letter-spacing: -0.2px;
+  }
+  .screen-label .n {
+    display:inline-flex; align-items:center; justify-content:center;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font-family: var(--sans); font-size: 13px; font-weight: 700;
+  }
+  .screen-label .route {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 11px; color: var(--ink-faint);
+    margin-left: auto; letter-spacing: 0.2px;
+    font-weight: 400;
+  }
+  .screen-note {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+    line-height: 1.55;
+  }
+
+  /* phone */
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--canvas);
+    border: 1px solid var(--rule-strong);
+    border-radius: 44px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(28, 26, 23, 0.18), 0 8px 20px -8px rgba(28, 26, 23, 0.08);
+    margin: 0 auto;
+  }
+  .phone::before{
+    /* dynamic island */
+    content: "";
+    position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+    width: 112px; height: 28px; border-radius: 999px;
+    background: var(--ink);
+  }
+  .status {
+    height: 50px;
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 0 28px;
+    font-family: var(--sans);
+    font-size: 14px; font-weight: 600;
+    color: var(--ink);
+  }
+  .status .right { display:flex; gap: 6px; align-items:center; }
+
+  /* scrollable inner screen content */
+  .screen {
+    position: absolute;
+    inset: 50px 0 0 0;   /* below status */
+    padding: 0 16px 28px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .screen .scroll {
+    flex: 1; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+  }
+
+  /* top app bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 4px 14px;
+    gap: 8px;
+  }
+  .topbar h2 {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .topbar .left, .topbar .right { display:flex; align-items:center; gap: 4px; min-width: 60px; }
+  .topbar .right { justify-content: flex-end; }
+
+  /* buttons */
+  .btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--rule-strong);
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.ink { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+  .btn.sm { min-height: 36px; padding: 0 14px; font-size: 13px; border-radius: 10px; }
+  .btn.icon { width: 40px; min-height: 40px; padding: 0; border-radius: 12px; background: transparent; border-color: transparent; }
+  .btn.linklike { background: transparent; border: none; color: var(--ink-soft); font-weight: 500; padding: 0 8px; min-height: 40px; font-size: 14px; }
+  .btn.linklike.accent-text { color: var(--accent); font-weight: 600; }
+
+  /* search */
+  .search {
+    display: flex; align-items: center; gap: 10px;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink-faint);
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+  .search svg { flex-shrink: 0; color: var(--ink-faint); }
+
+  /* tag chip row */
+  .chips {
+    display: flex; gap: 8px;
+    overflow-x: auto;
+    padding: 14px 0 4px;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--tag-radius);
+    background: #fff;
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-soft);
+    font-family: var(--sans); font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center;
+    white-space: nowrap;
+  }
+  .chip.on {
+    background: var(--chip-bg-active); color: var(--chip-fg-active);
+    border-color: var(--chip-bg-active);
+  }
+  .chip.toggle { background: #fff; }
+  .chip.toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* recipe cards */
+  .cards { display: flex; flex-direction: column; gap: 10px; padding: 12px 0 24px; }
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 14px;
+    background: #fff;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .card .thumb {
+    width: 56px; height: 56px; border-radius: 12px;
+    background:
+      repeating-linear-gradient(135deg, #f3ece0 0 6px, #ece3d2 6px 12px);
+    border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-faint); font-size: 18px;
+  }
+  .card .body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .card .name { font-family: var(--sans); font-weight: 600; font-size: 15px; letter-spacing: -0.1px; }
+  .card .meta {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    color: var(--ink-soft); font-family: var(--sans); font-size: 12px;
+  }
+  .card .meta span { display: inline-flex; align-items:center; gap: 4px; }
+  .card .tags { display:flex; gap:5px; flex-wrap: wrap; }
+  .tag-mini {
+    font-family: var(--sans); font-size: 10.5px; font-weight: 500;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--ink-soft);
+  }
+  .tag-mini.accent { background: var(--accent-soft); color: var(--accent-deep); }
+
+  /* section labels */
+  .section-title {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 18px 0 8px;
+    display: flex; align-items: baseline; gap: 8px;
+    letter-spacing: 0.02em;
+  }
+  .section-title .hint {
+    font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; letter-spacing: 0;
+  }
+
+  /* detail header info */
+  .detail-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin: 4px 0 12px;
+  }
+  .detail-stats {
+    display: flex; gap: 8px; align-items: stretch;
+    margin-bottom: 4px;
+  }
+  .detail-stats .stat {
+    flex: 1;
+    border: 1px solid var(--rule);
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .detail-stats .stat .k { font-size: 11px; color: var(--ink-faint); font-weight: 500; letter-spacing: 0.04em; }
+  .detail-stats .stat .v { font-size: 16px; color: var(--ink); font-weight: 700; }
+  .detail-stats .stat .v small { font-size: 12px; font-weight: 500; color: var(--ink-soft); margin-left: 2px; }
+
+  .scale-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-bottom: 16px;
+  }
+  .scale-btn {
+    height: 44px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    background: #fff;
+    font-family: var(--sans); font-weight: 600; font-size: 14px;
+    color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: -0.02em;
+  }
+  .scale-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ingredient list */
+  .ing-list {
+    display: flex; flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .ing-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+  .ing-row:last-child { border-bottom: none; }
+  .ing-row .amt { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); font-size: 15px; }
+  .ing-row .unit { color: var(--ink-soft); min-width: 32px; text-align: left; font-size: 13px; }
+
+  /* steps */
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+  .step {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .step .num {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent-soft); color: var(--accent-deep);
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    display:flex; align-items: center; justify-content: center;
+  }
+  .step .body {
+    font-family: var(--sans); font-size: 14px; line-height: 1.65; color: var(--ink);
+    padding-top: 3px;
+  }
+
+  /* memo box */
+  .memo {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: var(--sans); font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    background: #fffaf3;
+    min-height: 60px;
+  }
+
+  .danger-block {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    display:flex; justify-content:center;
+  }
+  .danger-block .btn { width: 100%; }
+
+  /* forms */
+  .form { display: flex; flex-direction: column; gap: 14px; padding-bottom: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: 0.01em;
+  }
+  .field label .req {
+    font-family: var(--sans); font-size: 10px; font-weight: 600; color: #fff;
+    background: var(--accent); padding: 2px 7px; border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .field label .opt {
+    font-family: var(--sans); font-size: 11px; color: var(--ink-faint); font-weight: 400;
+  }
+  .input {
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    background: #fff;
+    font-family: var(--sans); font-size: 14px; color: var(--ink);
+    display: flex; align-items: center;
+  }
+  .input.placeholder { color: var(--ink-faint); }
+  .input.filled { color: var(--ink); }
+  .input.area {
+    min-height: 80px;
+    align-items: flex-start;
+    line-height: 1.6;
+  }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .ing-edit-row {
+    display: grid;
+    grid-template-columns: 1fr 56px 68px 24px;
+    gap: 6px;
+    align-items: center;
+  }
+  .ing-edit-row .input { padding: 0 10px; min-height: 40px; font-size: 14px; }
+  .ing-edit-row .drag { color: var(--ink-faint); font-family: var(--sketch); text-align: center; }
+  .ing-edit-row .x { color: var(--ink-faint); text-align: center; cursor: pointer; }
+
+  .step-edit-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 28px;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .step-edit-row .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--ink);
+    font-family: var(--hand); font-weight: 600; font-size: 14px;
+    display:flex; align-items: center; justify-content: center;
+    margin-top: 4px;
+  }
+  .step-edit-row .input.area { min-height: 60px; font-size: 14px; }
+
+  .add-row {
+    height: 44px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 12px;
+    color: var(--accent-deep);
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    display:flex; align-items:center; justify-content:center; gap: 6px;
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  /* legend strip */
+  .legend {
+    max-width: 1500px;
+    margin: 64px auto 0;
+    padding: 20px 24px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 16px;
+    background: #fff;
+    display: flex; gap: 28px; flex-wrap: wrap;
+    font-family: var(--sans); font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .legend b { color: var(--ink); font-family: var(--sans); font-weight: 700; }
+  .legend .sw { display:inline-block; width:14px; height:14px; vertical-align:-2px; margin-right:6px; border-radius: 4px; border:1px solid rgba(0,0,0,0.08); }
+
+  /* SVG icon defaults */
+  .ic { stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* annotation marker on screens */
+  .anno {
+    position: absolute;
+    font-family: var(--label);
+    color: var(--accent-deep);
+    font-size: 18px;
+    pointer-events: none;
+    transform: rotate(-2deg);
+    white-space: nowrap;
+  }
+  .anno::before {
+    content: "";
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    left: -30px; top: -2px;
+    background: #fff;
+  }
+  .anno .num {
+    position: absolute;
+    left: -30px; top: -2px;
+    width: 22px; height: 22px; line-height: 22px;
+    text-align: center;
+    color: var(--accent-deep);
+    font-family: var(--sans); font-size: 12px; font-weight: 700;
+  }
+  body.no-anno .anno { display: none; }
+
+  /* tweak: chip shape */
+  body.squared { --tag-radius: 8px; }
+
+  /* tweak: palettes (Cookpit, Sage, Saffron, Berry) */
+  body.palette-tomato { --accent: #e85d3c; --accent-deep: #c14b2f; --accent-soft: #fde2d8; --bg: #f6f1ea; --canvas: #faf6ef; --chip-bg: #f3ece0; }
+  body.palette-sage   { --accent: #5b8a5f; --accent-deep: #3f6b44; --accent-soft: #dfeadc; --bg: #f1f3ee; --canvas: #f7f8f3; --chip-bg: #e9ede2; }
+  body.palette-saffron{ --accent: #d99528; --accent-deep: #a86d12; --accent-soft: #fbe7be; --bg: #f7f2e6; --canvas: #fbf6e9; --chip-bg: #f3ead2; }
+  body.palette-berry  { --accent: #b34670; --accent-deep: #8b3257; --accent-soft: #f7d8e4; --bg: #f4eeef; --canvas: #faf3f5; --chip-bg: #f0e3e6; }
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <div>
+    <h1>Cookpit<span class="dot">.</span> Recipe Wireframes</h1>
+    <div class="sub">作り置き料理の献立・買い物管理アプリ。レシピ管理機能 4 画面のミドルフィデリティ案。375px / モバイル前提。タップ領域 44px 以上。</div>
+  </div>
+  <div class="meta">
+    <b>VERSION</b>　wireframe v2<br/>
+    <b>SCOPE</b>　/recipes · /recipes/[id] · /recipes/new · /recipes/[id]/edit<br/>
+    <b>TONE</b>　warm tomato + cream, modern
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- ===================== SCREEN 1: LIST ===================== -->
+  <div class="screen-wrap" data-screen-label="01 レシピ一覧">
+    <div class="screen-label"><span class="n">1</span> レシピ一覧 <span class="route">/recipes</span></div>
+    <p class="screen-note">検索 → タグで絞り込み → カードを選んで詳細へ。右上「＋」で新規作成。</p>
+
+    <div class="phone">
+      <div class="status">
+        <span>9:41</span>
+        <span class="right"><span>●●●</span><span>📶</span><span>🔋</span></span>
+      </div>
+      <div class="screen">
+        <div class="topbar">
+          <div class="left"></div>
+          <h2>レシピ</h2>
+          <div class="right">
+            <button class="btn primary sm" aria-label="追加">＋ 追加</button>
+          </div>
+        </div>
+
+        <div class="search" role="search">
+          <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span>レシピを検索</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip on">すべて</span>
+          <span class="chip">主菜</span>
+          <span class="chip">副菜</span>
+          <span class="chip">汁物</span>
+          <span class="chip">作り置き向き</span>
+          <span class="chip">冷凍可</span>
+        </div>
+
+        <div class="scroll">
+          <div class="cards">
+            <div class="card">
+              <div class="thumb"></div>
+              <div class="body">
+                <div class="name">鶏むね肉の塩こうじ漬け</div>
+                <div class="tags">
+                  <span class="tag-mini accent">主菜</span>
+                  <span class="tag-mini">作り置き向き</span>
+                  <span class="tag-mini">冷凍可</span>
+                </div>
+                <div class="meta">
+                  <span>⏱ 25分</span>
+                  <span>👥 2人分</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thumb"></div>
+              <div class="body">
+                <div class="name">にんじんしりしり</div>
+                <div class="tags">
+                  <span class="tag-mini">副菜</span>
+                  <span class="tag-mini">作り置き向き</span>
+                </div>
+                <div class="meta">
+                  <span>⏱ 15分</span>
+                  <span>👥 2人分</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thumb"></div>
+              <div class="body">
+                <div class="name">豚汁</div>
+                <div class="tags">
+                  <span class="tag-mini">汁物</span>
+                </div>
+                <div class="meta">
+                  <span>⏱ 30分</span>
+                  <span>👥 4人分</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thumb"></div>
+              <div class="body">
+                <div class="name">ほうれん草のごま和え</div>
+                <div class="tags">
+                  <span class="tag-mini">副菜</span>
+                  <span class="tag-mini">作り置き向き</span>
+                </div>
+                <div class="meta">
+                  <span>⏱ 10分</span>
+                  <span>👥 2人分</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="thumb"></div>
+              <div class="body">
+                <div class="name">ミートソース</div>
+                <div class="tags">
+                  <span class="tag-mini accent">主菜</span>
+                  <span class="tag-mini">冷凍可</span>
+                </div>
+                <div class="meta">
+                  <span>⏱ 45分</span>
+                  <span>👥 4人分</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="anno" style="top: 78px; right: 56px;"><span class="num">a</span>＋追加</span>
+      <span class="anno" style="top: 170px; left: 70px;"><span class="num">b</span>水平スクロール</span>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 2: DETAIL ===================== -->
+  <div class="screen-wrap" data-screen-label="02 レシピ詳細">
+    <div class="screen-label"><span class="n">2</span> レシピ詳細 <span class="route">/recipes/[id]</span></div>
+    <p class="screen-note">倍量ボタンで材料の数値が連動。最下部に削除（破壊的）。</p>
+
+    <div class="phone">
+      <div class="status">
+        <span>9:41</span>
+        <span class="right"><span>●●●</span><span>📶</span><span>🔋</span></span>
+      </div>
+      <div class="screen">
+        <div class="topbar">
+          <div class="left">
+            <button class="btn icon ghost" aria-label="戻る">
+              <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+          </div>
+          <h2>鶏むね肉の塩こうじ漬け</h2>
+          <div class="right">
+            <button class="btn linklike accent-text">編集</button>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <div class="detail-meta">
+            <span class="tag-mini accent">主菜</span>
+            <span class="tag-mini">作り置き向き</span>
+            <span class="tag-mini">冷凍可</span>
+          </div>
+
+          <div class="detail-stats">
+            <div class="stat"><span class="k">調理時間</span><span class="v">25<small>分</small></span></div>
+            <div class="stat"><span class="k">基準人数</span><span class="v">2<small>人分</small></span></div>
+          </div>
+
+          <div class="section-title">倍量 <span class="hint">材料の数値に反映</span></div>
+          <div class="scale-row">
+            <button class="scale-btn">1×</button>
+            <button class="scale-btn on">1.5×</button>
+            <button class="scale-btn">2×</button>
+            <button class="scale-btn">3×</button>
+          </div>
+
+          <div class="section-title">材料 <span class="hint">3人分</span></div>
+          <div class="ing-list">
+            <div class="ing-row"><span>鶏むね肉</span><span class="amt">450</span><span class="unit">g</span></div>
+            <div class="ing-row"><span>塩こうじ</span><span class="amt">45</span><span class="unit">g</span></div>
+            <div class="ing-row"><span>酒</span><span class="amt">1.5</span><span class="unit">大さじ</span></div>
+            <div class="ing-row"><span>こしょう</span><span class="amt">少々</span><span class="unit">　</span></div>
+          </div>
+
+          <div class="section-title">作り方</div>
+          <div class="steps">
+            <div class="step"><span class="num">1</span><div class="body">鶏むね肉は厚みを均等にし、フォークで数カ所穴を開ける。</div></div>
+            <div class="step"><span class="num">2</span><div class="body">ポリ袋に肉・塩こうじ・酒・こしょうを入れ、よくもみ込む。</div></div>
+            <div class="step"><span class="num">3</span><div class="body">冷蔵庫で半日〜一晩おく。フライパンで弱火、片面 5 分ずつ焼く。</div></div>
+          </div>
+
+          <div class="section-title">メモ</div>
+          <div class="memo">焼く前にキッチンペーパーで塩こうじを軽く拭うと焦げにくい。冷凍する場合は漬けた状態のまま袋ごとで OK。</div>
+
+          <div class="danger-block">
+            <button class="btn danger">このレシピを削除</button>
+          </div>
+        </div>
+      </div>
+
+      <span class="anno" style="top: 245px; right: 50px;"><span class="num">a</span>選択中</span>
+      <span class="anno" style="top: 305px; left: 84px;"><span class="num">b</span>×1.5 で再計算</span>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 3: NEW ===================== -->
+  <div class="screen-wrap" data-screen-label="03 レシピ作成">
+    <div class="screen-label"><span class="n">3</span> レシピ作成 <span class="route">/recipes/new</span></div>
+    <p class="screen-note">必須はレシピ名のみ。タグはトグル選択。材料・ステップは行を追加できる。</p>
+
+    <div class="phone">
+      <div class="status">
+        <span>9:41</span>
+        <span class="right"><span>●●●</span><span>📶</span><span>🔋</span></span>
+      </div>
+      <div class="screen">
+        <div class="topbar">
+          <div class="left">
+            <button class="btn linklike">キャンセル</button>
+          </div>
+          <h2>レシピを追加</h2>
+          <div class="right">
+            <button class="btn primary sm">保存</button>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <div class="form">
+            <div class="field">
+              <label>レシピ名 <span class="req">必須</span></label>
+              <div class="input placeholder">例：鶏むね肉の塩こうじ漬け</div>
+            </div>
+
+            <div class="field">
+              <label>タグ <span class="opt">複数選択可</span></label>
+              <div class="chips" style="overflow: visible; flex-wrap: wrap; padding: 0;">
+                <span class="chip toggle on">主菜</span>
+                <span class="chip toggle">副菜</span>
+                <span class="chip toggle">汁物</span>
+                <span class="chip toggle on">作り置き向き</span>
+                <span class="chip toggle">冷凍可</span>
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label>基準人数</label>
+                <div class="input placeholder">2 人分</div>
+              </div>
+              <div class="field">
+                <label>調理時間 <span class="opt">任意</span></label>
+                <div class="input placeholder">25 分</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>材料</label>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div class="ing-edit-row">
+                  <div class="input placeholder">食材名</div>
+                  <div class="input placeholder">量</div>
+                  <div class="input placeholder">単位</div>
+                  <span class="x">✕</span>
+                </div>
+                <div class="ing-edit-row">
+                  <div class="input placeholder">食材名</div>
+                  <div class="input placeholder">量</div>
+                  <div class="input placeholder">単位</div>
+                  <span class="x">✕</span>
+                </div>
+                <button class="add-row">＋ 材料を追加</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>作り方</label>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div class="step-edit-row">
+                  <span class="num">1</span>
+                  <div class="input area placeholder">手順を入力</div>
+                  <span class="x" style="margin-top:14px;">✕</span>
+                </div>
+                <div class="step-edit-row">
+                  <span class="num">2</span>
+                  <div class="input area placeholder">手順を入力</div>
+                  <span class="x" style="margin-top:14px;">✕</span>
+                </div>
+                <button class="add-row">＋ ステップを追加</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>メモ <span class="opt">任意</span></label>
+              <div class="input area placeholder">補足や保存方法など</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="anno" style="top: 80px; right: 56px;"><span class="num">a</span>必須空欄なら無効</span>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 4: EDIT ===================== -->
+  <div class="screen-wrap" data-screen-label="04 レシピ編集">
+    <div class="screen-label"><span class="n">4</span> レシピ編集 <span class="route">/recipes/[id]/edit</span></div>
+    <p class="screen-note">画面3と同レイアウト。タイトルが「レシピを編集」、各フィールドに既存値が入った状態。</p>
+
+    <div class="phone">
+      <div class="status">
+        <span>9:41</span>
+        <span class="right"><span>●●●</span><span>📶</span><span>🔋</span></span>
+      </div>
+      <div class="screen">
+        <div class="topbar">
+          <div class="left">
+            <button class="btn linklike">キャンセル</button>
+          </div>
+          <h2>レシピを編集</h2>
+          <div class="right">
+            <button class="btn primary sm">保存</button>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <div class="form">
+            <div class="field">
+              <label>レシピ名 <span class="req">必須</span></label>
+              <div class="input filled">鶏むね肉の塩こうじ漬け</div>
+            </div>
+
+            <div class="field">
+              <label>タグ <span class="opt">複数選択可</span></label>
+              <div class="chips" style="overflow: visible; flex-wrap: wrap; padding: 0;">
+                <span class="chip toggle on">主菜</span>
+                <span class="chip toggle">副菜</span>
+                <span class="chip toggle">汁物</span>
+                <span class="chip toggle on">作り置き向き</span>
+                <span class="chip toggle on">冷凍可</span>
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label>基準人数</label>
+                <div class="input filled">2 人分</div>
+              </div>
+              <div class="field">
+                <label>調理時間 <span class="opt">任意</span></label>
+                <div class="input filled">25 分</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>材料</label>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div class="ing-edit-row">
+                  <div class="input filled">鶏むね肉</div>
+                  <div class="input filled">300</div>
+                  <div class="input filled">g</div>
+                  <span class="x">✕</span>
+                </div>
+                <div class="ing-edit-row">
+                  <div class="input filled">塩こうじ</div>
+                  <div class="input filled">30</div>
+                  <div class="input filled">g</div>
+                  <span class="x">✕</span>
+                </div>
+                <div class="ing-edit-row">
+                  <div class="input filled">酒</div>
+                  <div class="input filled">1</div>
+                  <div class="input filled">大さじ</div>
+                  <span class="x">✕</span>
+                </div>
+                <button class="add-row">＋ 材料を追加</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>作り方</label>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div class="step-edit-row">
+                  <span class="num">1</span>
+                  <div class="input area filled">鶏むね肉の厚みを均等にし、フォークで数カ所穴を開ける。</div>
+                  <span class="x" style="margin-top:14px;">✕</span>
+                </div>
+                <div class="step-edit-row">
+                  <span class="num">2</span>
+                  <div class="input area filled">ポリ袋に肉・塩こうじ・酒・こしょうを入れ、もみ込む。</div>
+                  <span class="x" style="margin-top:14px;">✕</span>
+                </div>
+                <div class="step-edit-row">
+                  <span class="num">3</span>
+                  <div class="input area filled">冷蔵庫で半日〜一晩。弱火で片面 5 分ずつ焼く。</div>
+                  <span class="x" style="margin-top:14px;">✕</span>
+                </div>
+                <button class="add-row">＋ ステップを追加</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>メモ <span class="opt">任意</span></label>
+              <div class="input area filled">焼く前にキッチンペーパーで塩こうじを軽く拭うと焦げにくい。冷凍する場合は漬けた状態のまま袋ごとで OK。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="anno" style="top: 80px; left: 78px;"><span class="num">a</span>既存値プリセット</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span><span class="sw" style="background:#ffffff; border-color:#d8cfbd;"></span><b>Paper</b> #ffffff</span>
+  <span><span class="sw" style="background:#faf6ef; border-color:#d8cfbd;"></span><b>Canvas</b> #faf6ef</span>
+  <span><span class="sw" style="background:#1c1a17;"></span><b>Ink</b> #1c1a17</span>
+  <span><span class="sw" style="background:#e85d3c;"></span><b>Accent / Tomato</b> #e85d3c</span>
+  <span><span class="sw" style="background:#c0442c;"></span><b>Danger</b> #c0442c</span>
+  <span><b>Type</b> Noto Sans JP · Caveat</span>
+  <span><b>Touch</b> ≥ 44px</span>
+</div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<div id="tweaks-root"></div>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "chipShape": "pill",
+  "palette": "tomato",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+function App(){
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  React.useEffect(() => {
+    document.body.classList.toggle('squared', t.chipShape === 'squared');
+    document.body.classList.toggle('no-anno', !t.annotations);
+    ['palette-tomato','palette-sage','palette-saffron','palette-berry']
+      .forEach(c => document.body.classList.remove(c));
+    document.body.classList.add('palette-' + (t.palette || 'tomato'));
+  }, [t.chipShape, t.palette, t.annotations]);
+
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection title="パレット">
+        <TweakRadio
+          value={t.palette}
+          onChange={(v)=>setTweak('palette', v)}
+          options={[
+            { value: 'tomato',  label: 'トマト' },
+            { value: 'sage',    label: 'セージ' },
+            { value: 'saffron', label: 'サフラン' },
+            { value: 'berry',   label: 'ベリー' },
+          ]}
+        />
+      </TweakSection>
+
+      <TweakSection title="チップ形状">
+        <TweakRadio
+          value={t.chipShape}
+          onChange={(v)=>setTweak('chipShape', v)}
+          options={[
+            { value: 'pill', label: '丸' },
+            { value: 'squared', label: '角' },
+          ]}
+        />
+      </TweakSection>
+
+      <TweakSection title="注釈マーカー">
+        <TweakToggle
+          value={t.annotations}
+          onChange={(v)=>setTweak('annotations', v)}
+          label="a/b を表示"
+        />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('tweaks-root')).render(<App />);
+</script>
+
+</body>
+</html>
