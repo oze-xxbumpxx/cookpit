@@ -82,6 +82,8 @@
 1. **Recipe ドメインモデル実装**
    - `packages/domain/recipe/` に Recipe / RecipeId / RecipeIngredient / CookingStep / Recipe Repository Interface
    - 共通値オブジェクト `Quantity` `Unit` も実装
+     - `Unit` 型を拡張：既存（`g / kg / ml / l / tsp / tbsp / cup / piece / pinch`）に加え `本 / 枚 / 束 / 合 / 個` 等を追加
+     - カスタム単位（ユーザーが追加した単位）の保持方法を設計段階で決定すること
    - ユニットテスト
 
 2. **Drizzle スキーマ**
@@ -115,6 +117,12 @@
    - レシピ作成（`/recipes/new`）
    - レシピ編集（`/recipes/[id]/edit`）
    - shadcn/ui の Form / Input / Card を活用
+   - 材料入力の単位フィールドはプルダウン選択（プリセット単位 + カスタム単位の追加）
+
+7. **単位マスタ管理**
+   - よく使う単位をプルダウンから選択できる UI
+   - ユーザーがカスタム単位を追加・削除できる設定画面（`/settings/units` 等）
+   - 単位マスタの永続化（DB または設定ストア）
 
 ### 完了条件
 

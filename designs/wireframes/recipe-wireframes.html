@@ -414,13 +414,33 @@
 
   .ing-edit-row {
     display: grid;
-    grid-template-columns: 1fr 56px 68px 24px;
+    grid-template-columns: 1fr 52px 84px 24px;
     gap: 6px;
     align-items: center;
   }
   .ing-edit-row .input { padding: 0 10px; min-height: 40px; font-size: 14px; }
   .ing-edit-row .drag { color: var(--ink-faint); font-family: var(--sketch); text-align: center; }
   .ing-edit-row .x { color: var(--ink-faint); text-align: center; cursor: pointer; }
+
+  /* 単位プルダウン */
+  .input.select {
+    cursor: pointer;
+    user-select: none;
+    padding-right: 24px;
+    position: relative;
+  }
+  .input.select::after {
+    content: '';
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--ink-faint);
+    pointer-events: none;
+  }
 
   .step-edit-row {
     display: grid;
@@ -769,7 +789,7 @@
   <!-- ===================== SCREEN 3: NEW ===================== -->
   <div class="screen-wrap" data-screen-label="03 レシピ作成">
     <div class="screen-label"><span class="n">3</span> レシピ作成 <span class="route">/recipes/new</span></div>
-    <p class="screen-note">必須はレシピ名のみ。タグはトグル選択。材料・ステップは行を追加できる。</p>
+    <p class="screen-note">必須はレシピ名のみ。タグはトグル選択。材料・ステップは行を追加できる。単位はプルダウン（g・個・本・枚・束・合・大さじ・小さじ等）で、よく使う単位は設定から追加管理できる想定。</p>
 
     <div class="phone">
       <div class="status">
@@ -822,13 +842,13 @@
                 <div class="ing-edit-row">
                   <div class="input placeholder">食材名</div>
                   <div class="input placeholder">量</div>
-                  <div class="input placeholder">単位</div>
+                  <div class="input select placeholder">単位 ▾</div>
                   <span class="x">✕</span>
                 </div>
                 <div class="ing-edit-row">
                   <div class="input placeholder">食材名</div>
                   <div class="input placeholder">量</div>
-                  <div class="input placeholder">単位</div>
+                  <div class="input select placeholder">単位 ▾</div>
                   <span class="x">✕</span>
                 </div>
                 <button class="add-row">＋ 材料を追加</button>
@@ -861,6 +881,7 @@
       </div>
 
       <span class="anno" style="top: 80px; right: 56px;"><span class="num">a</span>必須空欄なら無効</span>
+      <span class="anno" style="top: 415px; right: 42px;"><span class="num">b</span>プルダウン選択</span>
     </div>
   </div>
 
@@ -920,19 +941,19 @@
                 <div class="ing-edit-row">
                   <div class="input filled">鶏むね肉</div>
                   <div class="input filled">300</div>
-                  <div class="input filled">g</div>
+                  <div class="input select filled">g</div>
                   <span class="x">✕</span>
                 </div>
                 <div class="ing-edit-row">
                   <div class="input filled">塩こうじ</div>
                   <div class="input filled">30</div>
-                  <div class="input filled">g</div>
+                  <div class="input select filled">g</div>
                   <span class="x">✕</span>
                 </div>
                 <div class="ing-edit-row">
                   <div class="input filled">酒</div>
                   <div class="input filled">1</div>
-                  <div class="input filled">大さじ</div>
+                  <div class="input select filled">大さじ</div>
                   <span class="x">✕</span>
                 </div>
                 <button class="add-row">＋ 材料を追加</button>
