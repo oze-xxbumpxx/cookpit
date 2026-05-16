@@ -1,1 +1,11 @@
-export type Unit = 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup' | 'piece' | 'pinch';
+export type Unit =
+  // 重量・容量
+  | 'g' | 'kg' | 'ml' | 'l'
+  // 調理単位
+  | 'tsp' | 'tbsp' | 'cup'
+  // 個数・形状
+  | 'piece' | '本' | '枚' | '個' | '玉' | '尾' | '切れ'
+  // まとまり
+  | '束' | '袋' | '缶' | '合'
+  // テキスト量
+  | 'pinch';
