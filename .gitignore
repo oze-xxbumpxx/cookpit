@@ -40,3 +40,6 @@ apps/web/public/workbox-*.js
 
 # Build outputs (apps)
 apps/web/.next/
+
+# Generated design exports
+designs/wireframes/*.pdf
