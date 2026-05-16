@@ -503,6 +503,61 @@
   body.palette-sage   { --accent: #5b8a5f; --accent-deep: #3f6b44; --accent-soft: #dfeadc; --bg: #f1f3ee; --canvas: #f7f8f3; --chip-bg: #e9ede2; }
   body.palette-saffron{ --accent: #d99528; --accent-deep: #a86d12; --accent-soft: #fbe7be; --bg: #f7f2e6; --canvas: #fbf6e9; --chip-bg: #f3ead2; }
   body.palette-berry  { --accent: #b34670; --accent-deep: #8b3257; --accent-soft: #f7d8e4; --bg: #f4eeef; --canvas: #faf3f5; --chip-bg: #f0e3e6; }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+
+  /* 2列グリッドは横幅が十分な時だけ（375px×2 + padding + gap ≈ 900px） */
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+  }
+
+  /* タブレット〜大きめスマホ */
+  @media (max-width: 600px) {
+    body {
+      padding: 32px 20px 64px;
+    }
+    .doc-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .doc-head h1 {
+      font-size: 26px;
+    }
+    .doc-head .sub {
+      max-width: 100%;
+    }
+    .doc-head .meta {
+      text-align: left;
+    }
+    .legend {
+      gap: 16px;
+    }
+  }
+
+  /* スマホ標準サイズ */
+  @media (max-width: 500px) {
+    body {
+      padding: 20px 16px 48px;
+    }
+  }
+
+  /* 電話フレーム（375px）が収まらない幅でズームスケール */
+  /* 375px + 32px(padding×2) = 407px が境界 */
+  @media (max-width: 406px) {
+    .phone {
+      zoom: 0.9;
+    }
+  }
+  @media (max-width: 368px) {
+    .phone {
+      zoom: 0.85;
+    }
+  }
 </style>
 </head>
 <body>
