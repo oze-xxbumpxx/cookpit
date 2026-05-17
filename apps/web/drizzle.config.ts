@@ -1,4 +1,11 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Config } from 'drizzle-kit';
+
+const envLocalPath = join(process.cwd(), '.env.local');
+if (existsSync(envLocalPath)) {
+  process.loadEnvFile(envLocalPath);
+}
 
 export default {
   schema: './src/db/schema.ts',
