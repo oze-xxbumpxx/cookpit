@@ -23,6 +23,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@cookpit/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
       '@hono/zod-validator':
         specifier: ^0.8.0
         version: 0.8.0(hono@4.12.18)(zod@4.4.3)
@@ -143,10 +146,23 @@ importers:
         version: 8.59.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
 
   packages/infrastructure:
+    dependencies:
+      '@cookpit/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@neondatabase/serverless':
+        specifier: ^1.1.0
+        version: 1.1.0
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@neondatabase/serverless@1.1.0)
     devDependencies:
       '@cookpit/config':
         specifier: workspace:*
         version: link:../config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.40
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
