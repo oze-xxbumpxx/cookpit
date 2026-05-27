@@ -1,4 +1,4 @@
-# Sprint 1：DrizzleRecipeRepository 実装指針
+　# Sprint 1：DrizzleRecipeRepository 実装指針
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 

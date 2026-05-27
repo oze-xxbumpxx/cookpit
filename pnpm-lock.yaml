@@ -113,6 +113,10 @@ importers:
         version: 5.9.3
 
   packages/application:
+    dependencies:
+      '@cookpit/domain':
+        specifier: workspace:*
+        version: link:../domain
     devDependencies:
       '@cookpit/config':
         specifier: workspace:*

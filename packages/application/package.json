@@ -7,6 +7,9 @@
   "scripts": {
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@cookpit/domain": "workspace:*"
+  },
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "typescript": "^5.8.3"
