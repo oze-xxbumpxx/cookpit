@@ -23,6 +23,15 @@ importers:
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@cookpit/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
+      '@cookpit/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@cookpit/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@cookpit/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
@@ -104,6 +113,10 @@ importers:
         version: 5.9.3
 
   packages/api-contract:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@cookpit/config':
         specifier: workspace:*

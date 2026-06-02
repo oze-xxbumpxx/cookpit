@@ -7,6 +7,9 @@
   "scripts": {
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "typescript": "^5.8.3"

@@ -1,9 +1,17 @@
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
-
+import { recipesRoute } from './routes/recipes';
+import { RecipeNotFoundError } from '@cookpit/application';
 const app = new Hono().basePath('/api');
 
-const routes = app.route('/health', healthRoute);
+const routes = app.route('/health', healthRoute).route('/recipes', recipesRoute);
 
+app.onError((err, c) => {
+  if (err instanceof RecipeNotFoundError) {
+    return c.json({ error: err.message }, 404);
+  }
+  console.error(err);
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 export type AppType = typeof routes;
 export default app;
