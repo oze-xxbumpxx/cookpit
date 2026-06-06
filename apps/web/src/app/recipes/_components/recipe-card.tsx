@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { RecipeDto } from '@cookpit/application';
+import type { RecipeDto } from '@cookpit/application';
 import Link from 'next/link';
 
 interface Props {

@@ -77,50 +77,67 @@
 
 紙のレシピを徐々にアプリに転記し始められる状態。**このスプリント完了後から実利用開始**。
 
+### 進捗サマリ（2026-06-06 時点）
+
+タスク 1〜5（ドメイン・スキーマ・Repository・UseCase・API）は完了。タスク 6（画面）は一覧が完了し、作成フォームが実装指針作成済み・実装待ち。詳細・編集が残り。
+
+| #   | タスク                    | 状態                                              |
+| --- | ------------------------- | ------------------------------------------------- |
+| 1   | Recipe ドメインモデル     | ✅ 完了                                            |
+| 2   | Drizzle スキーマ          | ✅ 完了（JSONB 集約一括保存）                      |
+| 3   | Recipe Repository         | ✅ 完了（commit `aaf66c9`）                        |
+| 4   | Use Case                  | ✅ 完了（commit `1c583d0` ほか・全5本）            |
+| 5   | API エンドポイント        | ✅ 完了（commit `5cea98e`）                        |
+| 6   | 画面実装                  | 🔄 一覧 ✅ / 作成 📝指針作成済み / 詳細・編集 未着手 |
+| 7   | 単位プルダウン            | 🔄 作成フォームで対応予定（ネイティブ `<select>`） |
+
 ### タスク
 
-1. **Recipe ドメインモデル実装**
+1. **Recipe ドメインモデル実装** ✅
    - `packages/domain/recipe/` に Recipe / RecipeId / RecipeIngredient / CookingStep / Recipe Repository Interface
    - 共通値オブジェクト `Quantity` `Unit` も実装
-     - `Unit` 型を拡張：既存（`g / kg / ml / l / tsp / tbsp / cup / piece / pinch`）に加え `本 / 枚 / 束 / 合 / 個` 等を追加
+     - `Unit` 型は**日本語統一**：`g / kg / ml / l / 大さじ / 小さじ / cup / 個 / 本 / 枚 / 玉 / 尾 / 切れ / 束 / 袋 / 缶 / 合`（英語表記 `tsp / tbsp / piece / pinch` は廃止）
      - **プリセット固定方針**：ユーザーによるカスタム単位追加は行わない。型安全性を Union 型で維持する
+   - `RecipeIngredient` に `amountNote: string | null` を追加（「少々」など非数値量に対応）
    - ユニットテスト
 
-2. **Drizzle スキーマ**
+2. **Drizzle スキーマ** ✅
    - `recipes` テーブル
-   - `recipe_ingredients` を JSONB 列として持つか別テーブルにするか判断（推奨：JSONB で集約一括取得）
+   - `recipe_ingredients` は **JSONB 列**として集約一括保存（ingredients / steps）
    - マイグレーション実行
 
-3. **Recipe Repository 実装**
+3. **Recipe Repository 実装** ✅
    - `DrizzleRecipeRepository` 実装
    - `findById` `findAll` `save` `delete`
    - ドメインモデル ↔ DB 行のマッピング
 
-4. **Use Case 実装**
+4. **Use Case 実装** ✅
    - `CreateRecipeUseCase`
    - `GetRecipesUseCase`
-   - `GetRecipeUseCase`
-   - `UpdateRecipeUseCase`
+   - `GetRecipeUseCase`（詳細画面用に追加）
+   - `UpdateRecipeUseCase`（`baseServings` は変更しない方針）
    - `DeleteRecipeUseCase`
+   - 戻り値は `RecipeDto`（Entity を境界外に漏らさない）／ NotFound は `RecipeNotFoundError`
 
-5. **API エンドポイント（Hono）**
+5. **API エンドポイント（Hono）** ✅
    - `GET /api/recipes`
    - `GET /api/recipes/:id`
    - `POST /api/recipes`
    - `PUT /api/recipes/:id`
    - `DELETE /api/recipes/:id`
-   - Zod でバリデーション
+   - Zod（`@cookpit/api-contract`）でバリデーション
 
-6. **画面実装**
-   - レシピ一覧（`/recipes`）
-   - レシピ詳細（`/recipes/[id]`）
-   - レシピ作成（`/recipes/new`）
-   - レシピ編集（`/recipes/[id]/edit`）
-   - shadcn/ui の Form / Input / Card を活用
-   - 材料入力の単位フィールドはプルダウン選択（プリセット単位 + カスタム単位の追加）
+6. **画面実装** 🔄
+   - レシピ一覧（`/recipes`）✅ — Server Component で初期取得 → Client で検索・タグ絞り込み
+   - レシピ作成（`/recipes/new`）📝 — 実装指針 `tasks/sprint1-recipe-ui-form.md` 作成済み、実装待ち
+   - レシピ詳細（`/recipes/[id]`）— 未着手
+   - レシピ編集（`/recipes/[id]/edit`）— 未着手
+   - shadcn/ui の Input / Button / Textarea を活用
+   - 材料入力の単位フィールドはプルダウン選択（プリセット固定）
 
-7. **単位プルダウン**
+7. **単位プルダウン** 🔄
    - 材料入力の単位フィールドをプルダウン選択（`Unit` 型に定義された値のみ）
+   - モバイル PWA 向けにネイティブ `<select>` を採用予定（OS 標準ピッカー）
    - 設定画面・カスタム追加機能は持たない
 
 ### 完了条件

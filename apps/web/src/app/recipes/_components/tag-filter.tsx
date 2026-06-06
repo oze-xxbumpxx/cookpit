@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { RecipeDto } from '@cookpit/application';
-import { ReactNode } from 'react';
+import type { RecipeDto } from '@cookpit/application';
+import type { ReactNode } from 'react';
 
 type RecipeTag = RecipeDto['tags'][number];
 

@@ -2,11 +2,11 @@
 
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { RecipeDto } from '@cookpit/application';
+import type { RecipeDto } from '@cookpit/application';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { TagFilter, TagFilterValue } from './tag-filter';
+import { TagFilter, type TagFilterValue } from './tag-filter';
 import { RecipeCard } from './recipe-card';
 import { Input } from '@/components/ui/input';
 
