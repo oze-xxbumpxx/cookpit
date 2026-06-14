@@ -1,0 +1,27 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-YYYY-NNN
+feature_name: example-feature
+change_level: 2          # 0 | 1 | 2 | 3
+date: YYYY-MM-DD
+
+agents:
+  calls: unknown          # Agent 呼び出し回数
+  retries: unknown        # 再依頼回数
+  unnecessary_calls: unknown
+
+quality:
+  tests_added: unknown    # MVP1 はテストランナー未導入のため通常 unknown
+  initial_test_failures: unknown
+  reviewer_critical: 0
+  reviewer_major: 0
+  reviewer_minor: 0
+  user_corrections: 0
+  escaped_defects: 0
+
+process:
+  requirement_rework: 0
+  design_rework: 0
+  implementation_rework: 0
+  missing_documents: 0
+  unresolved_items: 0
