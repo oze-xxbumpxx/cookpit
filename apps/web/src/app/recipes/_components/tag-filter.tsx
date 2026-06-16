@@ -52,8 +52,8 @@ function Chip({
       className={cn(
         'shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-sm transition-colors',
         selected
-          ? 'border-zinc-900 bg-zinc-900 text-white'
-          : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50',
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-secondary text-secondary-foreground hover:bg-muted',
       )}
     >
       {children}

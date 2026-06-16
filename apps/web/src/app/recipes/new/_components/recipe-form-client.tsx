@@ -255,7 +255,7 @@ export function RecipeFormClient() {
   }
 
   return (
-    <main className="min-h-dvh bg-zinc-50">
+    <main className="min-h-dvh bg-background">
       <form
         onSubmit={handleSubmit}
         className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4"
@@ -267,12 +267,12 @@ export function RecipeFormClient() {
               variant="ghost"
               size="sm"
               onClick={() => router.push('/recipes')}
-              className="h-9 px-2 text-zinc-700"
+              className="h-9 px-2 text-foreground"
             >
               キャンセル
             </Button>
           </div>
-          <h1 className="text-lg font-semibold text-zinc-900">レシピを追加</h1>
+          <h1 className="text-lg font-semibold text-foreground">レシピを追加</h1>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!canSubmit} className="h-9 px-4">
               {submitting ? '保存中' : '保存'}
@@ -288,7 +288,7 @@ export function RecipeFormClient() {
 
         <div className="flex flex-col gap-5">
           <section className="flex flex-col gap-2">
-            <label htmlFor={nameId} className="text-sm font-medium text-zinc-900">
+            <label htmlFor={nameId} className="text-sm font-medium text-foreground">
               レシピ名 <span className="text-xs font-normal text-red-600">必須</span>
             </label>
             <Input
@@ -296,13 +296,13 @@ export function RecipeFormClient() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="例：鶏むね肉の塩こうじ漬け"
-              className="h-11 rounded-xl bg-white"
+              className="h-11 rounded-xl bg-card"
             />
           </section>
 
           <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-zinc-900">
-              タグ <span className="text-xs font-normal text-zinc-500">複数選択可</span>
+            <p className="text-sm font-medium text-foreground">
+              タグ <span className="text-xs font-normal text-muted-foreground">複数選択可</span>
             </p>
             <div className="flex flex-wrap gap-2" aria-label="レシピタグ">
               {TAG_OPTIONS.map((tag) => {
@@ -316,8 +316,8 @@ export function RecipeFormClient() {
                     className={cn(
                       'rounded-full border px-3 py-1 text-sm transition-colors',
                       selected
-                        ? 'border-zinc-900 bg-zinc-900 text-white'
-                        : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50',
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-secondary text-secondary-foreground hover:bg-muted',
                     )}
                   >
                     {tag}
@@ -329,7 +329,7 @@ export function RecipeFormClient() {
 
           <section className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <label htmlFor={baseServingsId} className="text-sm font-medium text-zinc-900">
+              <label htmlFor={baseServingsId} className="text-sm font-medium text-foreground">
                 基準人数
               </label>
               <Input
@@ -344,7 +344,7 @@ export function RecipeFormClient() {
                 aria-describedby={
                   fieldErrors.baseServings === null ? undefined : baseServingsErrorId
                 }
-                className="h-11 rounded-xl bg-white"
+                className="h-11 rounded-xl bg-card"
               />
               {fieldErrors.baseServings !== null && (
                 <p id={baseServingsErrorId} className="text-xs text-red-600">
@@ -354,8 +354,8 @@ export function RecipeFormClient() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor={cookingTimeId} className="text-sm font-medium text-zinc-900">
-                調理時間 <span className="text-xs font-normal text-zinc-500">任意</span>
+              <label htmlFor={cookingTimeId} className="text-sm font-medium text-foreground">
+                調理時間 <span className="text-xs font-normal text-muted-foreground">任意</span>
               </label>
               <Input
                 id={cookingTimeId}
@@ -368,7 +368,7 @@ export function RecipeFormClient() {
                 placeholder="25"
                 aria-invalid={fieldErrors.cookingTime !== null}
                 aria-describedby={fieldErrors.cookingTime === null ? undefined : cookingTimeErrorId}
-                className="h-11 rounded-xl bg-white"
+                className="h-11 rounded-xl bg-card"
               />
               {fieldErrors.cookingTime !== null && (
                 <p id={cookingTimeErrorId} className="text-xs text-red-600">
@@ -379,7 +379,7 @@ export function RecipeFormClient() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-zinc-900">材料</p>
+            <p className="text-sm font-medium text-foreground">材料</p>
             <div className="flex flex-col gap-2">
               {ingredients.map((ingredient) => (
                 <IngredientRow
@@ -395,7 +395,7 @@ export function RecipeFormClient() {
                 type="button"
                 variant="outline"
                 onClick={addIngredient}
-                className="h-10 justify-start rounded-lg border-dashed bg-white text-zinc-700"
+                className="h-10 justify-start rounded-lg border-dashed bg-card text-foreground"
               >
                 <Plus className="size-4" aria-hidden="true" />
                 材料を追加
@@ -404,7 +404,7 @@ export function RecipeFormClient() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-zinc-900">作り方</p>
+            <p className="text-sm font-medium text-foreground">作り方</p>
             <div className="flex flex-col gap-3">
               {steps.map((step, index) => (
                 <StepRow
@@ -419,7 +419,7 @@ export function RecipeFormClient() {
                 type="button"
                 variant="outline"
                 onClick={addStep}
-                className="h-10 justify-start rounded-lg border-dashed bg-white text-zinc-700"
+                className="h-10 justify-start rounded-lg border-dashed bg-card text-foreground"
               >
                 <Plus className="size-4" aria-hidden="true" />
                 ステップを追加
@@ -428,15 +428,15 @@ export function RecipeFormClient() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <label htmlFor={notesId} className="text-sm font-medium text-zinc-900">
-              メモ <span className="text-xs font-normal text-zinc-500">任意</span>
+            <label htmlFor={notesId} className="text-sm font-medium text-foreground">
+              メモ <span className="text-xs font-normal text-muted-foreground">任意</span>
             </label>
             <Textarea
               id={notesId}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="補足や保存方法など"
-              className="min-h-24 rounded-xl bg-white"
+              className="min-h-24 rounded-xl bg-card"
             />
           </section>
         </div>

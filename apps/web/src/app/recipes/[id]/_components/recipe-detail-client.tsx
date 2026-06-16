@@ -66,7 +66,7 @@ export function RecipeDetailClient({ recipe }: Props) {
   }
 
   return (
-    <main className="min-h-dvh bg-zinc-50">
+    <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-4">
         <header className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
           <Button
@@ -75,11 +75,11 @@ export function RecipeDetailClient({ recipe }: Props) {
             size="icon-lg"
             onClick={() => router.push('/recipes')}
             aria-label="一覧に戻る"
-            className="text-zinc-700"
+            className="text-foreground"
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-lg font-semibold text-zinc-900">
+          <h1 className="truncate text-center text-lg font-semibold text-foreground">
             {recipe.name}
           </h1>
           <span aria-hidden="true" className="w-9" />
@@ -92,7 +92,7 @@ export function RecipeDetailClient({ recipe }: Props) {
                 key={`${tag}-${index}`}
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
-                  index === 0 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-700',
+                  index === 0 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
                 )}
               >
                 {tag}
@@ -102,21 +102,21 @@ export function RecipeDetailClient({ recipe }: Props) {
         )}
 
         <section className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <p className="text-xs text-zinc-500">調理時間</p>
-            <p className="text-lg font-semibold text-zinc-900">
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-xs text-muted-foreground">調理時間</p>
+            <p className="text-lg font-semibold text-foreground">
               {recipe.cookingTime === null ? '—' : `${recipe.cookingTime}分`}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <p className="text-xs text-zinc-500">基準人数</p>
-            <p className="text-lg font-semibold text-zinc-900">{recipe.baseServings}人分</p>
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-xs text-muted-foreground">基準人数</p>
+            <p className="text-lg font-semibold text-foreground">{recipe.baseServings}人分</p>
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-zinc-900">
-            倍量 <span className="text-xs font-normal text-zinc-500">材料の数値に反映</span>
+          <p className="text-sm font-medium text-foreground">
+            倍量 <span className="text-xs font-normal text-muted-foreground">材料の数値に反映</span>
           </p>
           <div className="flex gap-2">
             {SCALE_OPTIONS.map((option) => (
@@ -128,8 +128,8 @@ export function RecipeDetailClient({ recipe }: Props) {
                 className={cn(
                   'flex-1 rounded-lg border py-2 text-sm transition-colors',
                   scale === option
-                    ? 'border-zinc-900 bg-zinc-900 text-white'
-                    : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50',
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-secondary text-secondary-foreground hover:bg-muted',
                 )}
               >
                 {option}×
@@ -139,34 +139,34 @@ export function RecipeDetailClient({ recipe }: Props) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-zinc-900">
-            材料 <span className="text-xs font-normal text-zinc-500">{servings}人分</span>
+          <p className="text-sm font-medium text-foreground">
+            材料 <span className="text-xs font-normal text-muted-foreground">{servings}人分</span>
           </p>
-          <div className="flex flex-col divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+          <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
             {recipe.ingredients.map((ingredient, index) => (
               <div
                 key={`${ingredient.displayName}-${index}`}
                 className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-3 py-2.5 text-sm"
               >
-                <span className="min-w-0 text-zinc-900">{ingredient.displayName}</span>
-                <span className="text-right font-medium text-zinc-900">
+                <span className="min-w-0 text-foreground">{ingredient.displayName}</span>
+                <span className="text-right font-medium text-foreground">
                   {formatIngredientAmount(ingredient.amountValue, ingredient.amountNote, scale)}
                 </span>
-                <span className="w-10 text-right text-zinc-500">{ingredient.amountUnit ?? ''}</span>
+                <span className="w-10 text-right text-muted-foreground">{ingredient.amountUnit ?? ''}</span>
               </div>
             ))}
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-zinc-900">作り方</p>
+          <p className="text-sm font-medium text-foreground">作り方</p>
           <ol className="flex flex-col gap-3">
             {recipe.steps.map((step, index) => (
               <li key={index} className="grid grid-cols-[28px_minmax(0,1fr)] gap-2">
-                <span className="flex size-7 items-center justify-center rounded-full bg-zinc-100 text-sm font-medium text-zinc-700">
+                <span className="flex size-7 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
                   {index + 1}
                 </span>
-                <p className="pt-0.5 text-sm whitespace-pre-wrap text-zinc-800">
+                <p className="pt-0.5 text-sm whitespace-pre-wrap text-foreground">
                   {step.description}
                 </p>
               </li>
@@ -176,8 +176,8 @@ export function RecipeDetailClient({ recipe }: Props) {
 
         {recipe.notes.trim() !== '' && (
           <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-zinc-900">メモ</p>
-            <p className="rounded-xl border border-zinc-200 bg-white p-3 text-sm whitespace-pre-wrap text-zinc-800">
+            <p className="text-sm font-medium text-foreground">メモ</p>
+            <p className="rounded-xl border border-border bg-card p-3 text-sm whitespace-pre-wrap text-foreground">
               {recipe.notes}
             </p>
           </section>

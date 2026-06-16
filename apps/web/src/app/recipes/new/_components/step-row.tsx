@@ -28,7 +28,7 @@ export function StepRow({ index, value, onChange, onRemove }: Props) {
   return (
     <div className="grid grid-cols-[28px_minmax(0,1fr)_36px] gap-2">
       <div
-        className="flex h-11 items-center justify-center rounded-full bg-zinc-100 text-sm font-medium text-zinc-700"
+        className="flex h-11 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground"
         aria-hidden="true"
       >
         {index + 1}
@@ -41,7 +41,7 @@ export function StepRow({ index, value, onChange, onRemove }: Props) {
         value={value.description}
         onChange={handleDescriptionChange}
         placeholder="手順を入力"
-        className="min-h-20 rounded-lg bg-white text-sm"
+        className="min-h-20 rounded-lg bg-card text-sm"
       />
       <Button
         type="button"
@@ -50,7 +50,7 @@ export function StepRow({ index, value, onChange, onRemove }: Props) {
         onClick={onRemove}
         aria-label="手順を削除"
         title="手順を削除"
-        className="h-11 w-9 rounded-lg text-zinc-500 hover:text-zinc-900"
+        className="h-11 w-9 rounded-lg text-muted-foreground hover:text-foreground"
       >
         <X className="size-4" aria-hidden="true" />
       </Button>

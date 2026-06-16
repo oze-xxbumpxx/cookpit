@@ -64,7 +64,7 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
           placeholder="食材名"
           aria-invalid={errorMessage !== null}
           aria-describedby={errorMessage === null ? undefined : errorId}
-          className="h-11 rounded-lg bg-white px-2 text-sm"
+          className="h-11 rounded-lg bg-card px-2 text-sm"
         />
 
         <label htmlFor={amountId} className="sr-only">
@@ -77,7 +77,7 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
           placeholder="量"
           aria-invalid={errorMessage !== null}
           aria-describedby={errorMessage === null ? undefined : errorId}
-          className="h-11 rounded-lg bg-white px-2 text-sm"
+          className="h-11 rounded-lg bg-card px-2 text-sm"
         />
 
         <label htmlFor={unitId} className="sr-only">
@@ -89,7 +89,7 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
           onChange={handleAmountUnitChange}
           aria-invalid={errorMessage !== null}
           aria-describedby={errorMessage === null ? undefined : errorId}
-          className="h-11 w-full rounded-lg border border-input bg-white px-2 text-sm text-zinc-900 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20"
+          className="h-11 w-full rounded-lg border border-input bg-card px-2 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20"
         >
           <option value="">単位</option>
           {unitOptions.map((unit) => (
@@ -106,7 +106,7 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
           onClick={onRemove}
           aria-label="材料を削除"
           title="材料を削除"
-          className="h-11 w-9 rounded-lg text-zinc-500 hover:text-zinc-900"
+          className="h-11 w-9 rounded-lg text-muted-foreground hover:text-foreground"
         >
           <X className="size-4" aria-hidden="true" />
         </Button>
