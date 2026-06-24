@@ -25,10 +25,13 @@
 ```
 pnpm lint
 pnpm type-check
-pnpm format   # 必要に応じて
+pnpm test      # テストランナー: Vitest
+pnpm format    # 必要に応じて
 ```
 
-テストランナー導入後は該当パッケージのテストも実行する（MVP1 現状は未導入）。
+テストランナーは Vitest。Domain 層（`packages/domain`）は co-located（`src/**/*.test.ts`）で
+導入済み。該当パッケージを変更したら対応するテストを追加・実行する。Application /
+Infrastructure 層は後続フェーズで整備する。
 
 ## スコープ
 

@@ -6,7 +6,8 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "type-check": "turbo type-check"
+    "type-check": "turbo type-check",
+    "test": "turbo test"
   },
   "devDependencies": {
     "prettier": "^3.5.3",
