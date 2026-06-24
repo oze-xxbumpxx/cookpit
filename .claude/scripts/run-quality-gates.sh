@@ -64,10 +64,8 @@ if [ "$RUN_FORMAT" = "1" ] || [ "$RUN_ALL" = "1" ]; then
     skip_gate "format-check" "prettier unavailable"
   fi
 fi
-# tests（実在時のみ）
-if [ "$RUN_ALL" = "1" ]; then
-  if has_script test; then run_gate "test" pnpm run test; else skip_gate "test" "unavailable (MVP1 未導入)"; fi
-fi
+# tests（実在時は既定でも実行する。domain 層に Vitest を導入済み）
+if has_script test; then run_gate "test" pnpm run test; else skip_gate "test" "unavailable"; fi
 
 echo "===== summary ====="
 echo "PASS: ${PASS[*]:-(none)}"

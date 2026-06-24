@@ -200,3 +200,7 @@ Codex はプロジェクト起動時に `AGENTS.md` を自動で読み込む。
 | Application 層（UseCase）            | ユニットテスト（Repository はモック） | 必須          |
 | Infrastructure 層（Repository 実装） | 統合テスト（実 DB）                   | 必須          |
 | E2E                                  | -                                     | MVP1 は対象外 |
+
+テストランナーは **Vitest**。Domain 層（`packages/domain`）は co-located（`src/**/*.test.ts`）で
+導入済みで、`pnpm test`（= `turbo test`）で実行する。Application / Infrastructure 層の整備は
+後続フェーズ。
