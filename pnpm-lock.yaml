@@ -134,6 +134,9 @@ importers:
       '@cookpit/config':
         specifier: workspace:*
         version: link:../config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.40
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

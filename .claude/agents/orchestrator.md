@@ -44,7 +44,9 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
   必ず突き合わせる。
 - 設計判断（アーキテクチャ・ドメインモデル・DB スキーマ）、新規ファイル作成、
   既存ファイル削除、スコープ超過は、進める前にユーザー確認を取る。
-- `git commit` / `git push`、ブランチ作成・削除は明示指示があるまで行わない。
+- 指定の作業ブランチへの `git commit` / `git push` は事前承認なしで可。`main` 等の指定外
+  ブランチへの push、ブランチ作成・削除、force-push / `git reset --hard` 等の破壊的操作、
+  構成ファイル変更を含むコミットは明示指示・人間承認があるまで行わない（CLAUDE.md 行動制約に準拠）。
 - 自分でソースコードを書き換えない（Edit/Write/Bash を持たない）。実装は implementer へ。
 
 ## 委譲フロー早見（詳細は orchestration-policy.md）

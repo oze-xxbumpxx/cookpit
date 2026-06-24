@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@cookpit/config": "workspace:*",
+    "@types/node": "^20",
     "typescript": "^5.8.3"
   }
 }
