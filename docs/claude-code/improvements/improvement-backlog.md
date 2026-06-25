@@ -10,6 +10,7 @@
 | ID | タイトル | 対象 | ステータス | 候補 | 提案 | 評価 | 決定 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | IMP-2026-001 | create-test-plan Skill に冪等性・障害系・FE固有観点 +「観点の選択基準」を追加（事象2(b)・4 統合） | .claude/skills/create-test-plan/SKILL.md | accepted | [candidates/test-runner-introduction.md](candidates/test-runner-introduction.md) | [proposals/IMP-2026-001.md](proposals/IMP-2026-001.md) | [evaluations/IMP-2026-001.md](evaluations/IMP-2026-001.md) | 2026-06-24 採用（manager / 悪化なし・本適用済み） |
+| IMP-2026-002 | Stop フックの反復ノイズを変更検知デバウンスで抑制 | .claude/hooks/check-deliverables.mjs / check-improvement-cycle.mjs | proposal | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md)（事象5） | [proposals/IMP-2026-002.md](proposals/IMP-2026-002.md) | 未実施（承認後にスクリプト試験） | 人間承認待ち |
 
 凡例: ステータス = candidate / proposal / evaluated / accepted / rejected。
 「候補」「提案」「評価」「決定」列には該当ファイルへの相対リンクまたは日付を入れる。
