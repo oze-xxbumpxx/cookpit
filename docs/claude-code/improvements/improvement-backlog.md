@@ -28,7 +28,7 @@
 
 | 項目 | 決定 | 担当 | 起票元 |
 | --- | --- | --- | --- |
-| eval ベースライン再採点（テスト網羅性ほか） | Phase 3 完了後に全軸を一括再採点（部分再採点しない）。IMP-2026-001 の即時 before/after は evaluations で担保済み | evaluator/baseline タスク | 事象 2(a) |
+| eval ベースライン再採点（テスト網羅性ほか） | 2026-06-25 実施済み。`INDEX-2026-06-25.md` に新ベースライン保存（IMP-2026-003/004/005・Application Vitest・Playwright 反映）。次回再採点は次の主要改善適用後。 | 完了 | 事象 2(a) |
 | IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
