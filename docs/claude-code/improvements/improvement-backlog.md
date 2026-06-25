@@ -25,6 +25,7 @@
 | 項目 | 決定 | 担当 | 起票元 |
 | --- | --- | --- | --- |
 | eval ベースライン再採点（テスト網羅性ほか） | Phase 3 完了後に全軸を一括再採点（部分再採点しない）。IMP-2026-001 の即時 before/after は evaluations で担保済み | evaluator/baseline タスク | 事象 2(a) |
+| IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
 
@@ -36,9 +37,16 @@
 | turbo キャッシュが既存エラーを不可視化（node:crypto type-check 失敗） | test-runner-introduction | 1 | implementer Subagent Memory |
 | auto モード安全性判定器障害からのチェックポイントコミット復旧パターン | test-runner-introduction | 1 | implementer Subagent Memory |
 | contract-designer 起動条件が orchestrator 判断依存で不明確 | test-runner-introduction（ベースライン採点） | 1（実タスク未発生） | orchestrator Subagent Memory |
+| orchestrator L2 フルフロー 5 本が手戻りゼロで完走（成功パターン） | recipe-edit-screen | 1 | orchestrator Subagent Memory |
+| classify-change Skill の「新規画面 = L3」という読める曖昧な記述（潜在誤判定リスク） | recipe-edit-screen | 1（明示的誤判定は未発生） | orchestrator Subagent Memory |
+| coding-standards.md に Next.js page/layout の default export 例外が未記載（reviewer N2） | recipe-edit-screen | 1 | reviewer Subagent Memory |
+| Stop フック（check-deliverables/check-improvement-cycle）が多段進行中に毎ターン発火しノイズ | recipe-edit-screen | 1 | orchestrator Subagent Memory |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
 | task-id | 事象タイトル | 対象 | ステータス | 候補ファイル |
 | --- | --- | --- | --- | --- |
 | test-runner-introduction | テスト網羅性弱点解消後の再採点 + create-test-plan Skill 観点追加（冪等性・障害系・FE固有） | .claude/skills/create-test-plan.md / evals/baselines | proposal 化済み（→ IMP-2026-001） | [candidates/test-runner-introduction.md](candidates/test-runner-introduction.md) |
+| recipe-edit-screen | classify-change Skill: 「新規画面」単体を L3 と読める曖昧さを解消（再発監視中・次回誤判定で昇格） | .claude/skills/classify-change/SKILL.md | candidate（Memory 留め） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
+| recipe-edit-screen | coding-standards.md: Next.js page/layout の default export 例外を明記（再発監視中・次回同 nit で昇格） | .claude/rules/coding-standards.md | candidate（Memory 留め） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
+| recipe-edit-screen | Stop フック: 多段オーケストレーション進行中の毎ターン誤発火抑制（次回 L2/L3 再発で即昇格・Hook 変更は人間承認必須） | Hook（check-deliverables / check-improvement-cycle） | candidate（Memory 留め） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
