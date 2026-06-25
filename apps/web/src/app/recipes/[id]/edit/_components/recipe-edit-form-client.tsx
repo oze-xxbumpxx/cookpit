@@ -5,25 +5,29 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { recipeTagSchema, unitSchema, type CreateRecipeBody } from '@cookpit/api-contract';
+import {
+  IngredientRow,
+  type IngredientRowValue,
+  type IngredientUnit,
+} from '@/app/recipes/_components/ingredient-row';
+import { StepRow, type StepRowValue } from '@/app/recipes/_components/step-row';
+import { buildIngredientInput } from '@/app/recipes/_utils/build-ingredient-input';
+import { recipeTagSchema, unitSchema, type UpdateRecipeBody } from '@cookpit/api-contract';
+import type { RecipeDto } from '@cookpit/application';
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useId, useRef, useState } from 'react';
-import { IngredientRow, type IngredientRowValue } from '@/app/recipes/_components/ingredient-row';
-import { StepRow, type StepRowValue } from '@/app/recipes/_components/step-row';
-import { buildIngredientInput } from '@/app/recipes/_utils/build-ingredient-input';
 
-type RecipeTag = CreateRecipeBody['tags'][number];
+type RecipeTag = UpdateRecipeBody['tags'][number];
 
 interface FieldErrors {
-  baseServings: string | null;
   cookingTime: string | null;
   ingredients: Record<string, string>;
 }
 
 interface BuildResult {
-  input: CreateRecipeBody | null;
+  input: UpdateRecipeBody | null;
   errors: FieldErrors;
 }
 
@@ -32,52 +36,71 @@ const UNIT_OPTIONS = unitSchema.options;
 
 function emptyFieldErrors(): FieldErrors {
   return {
-    baseServings: null,
     cookingTime: null,
     ingredients: {},
   };
 }
 
-function createIngredientRow(id: string): IngredientRowValue {
+function toIngredientRowValue(
+  ingredient: RecipeDto['ingredients'][number],
+  index: number,
+): IngredientRowValue {
+  const id = `ingredient-${index}`;
+  if (ingredient.amountValue !== null) {
+    return {
+      id,
+      displayName: ingredient.displayName,
+      amountText: String(ingredient.amountValue),
+      amountUnit: ingredient.amountUnit as IngredientUnit,
+    };
+  }
+  if (ingredient.amountNote !== null) {
+    return {
+      id,
+      displayName: ingredient.displayName,
+      amountText: ingredient.amountNote,
+      amountUnit: '',
+    };
+  }
+  // 防御的フォールバック: DB 制約上この分岐には入らない
   return {
     id,
-    displayName: '',
+    displayName: ingredient.displayName,
     amountText: '',
     amountUnit: '',
   };
 }
 
-function createStepRow(id: string): StepRowValue {
-  return {
-    id,
-    description: '',
-  };
+interface Props {
+  recipe: RecipeDto;
 }
 
-export function RecipeFormClient() {
+export function RecipeEditFormClient({ recipe }: Props) {
   const router = useRouter();
   const nameId = useId();
-  const baseServingsId = useId();
   const cookingTimeId = useId();
   const notesId = useId();
-  const baseServingsErrorId = useId();
   const cookingTimeErrorId = useId();
-  const nextIngredientId = useRef(2);
-  const nextStepId = useRef(2);
+  const nextIngredientId = useRef(recipe.ingredients.length + 1);
+  const nextStepId = useRef(recipe.steps.length + 1);
 
-  const [name, setName] = useState('');
-  const [tags, setTags] = useState<RecipeTag[]>([]);
-  const [baseServings, setBaseServings] = useState('2');
-  const [cookingTime, setCookingTime] = useState('');
-  const [ingredients, setIngredients] = useState<IngredientRowValue[]>([
-    createIngredientRow('ingredient-1'),
-  ]);
-  const [steps, setSteps] = useState<StepRowValue[]>([createStepRow('step-1')]);
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState(recipe.name);
+  const [tags, setTags] = useState<RecipeTag[]>(recipe.tags);
+  const [cookingTime, setCookingTime] = useState(
+    recipe.cookingTime !== null ? String(recipe.cookingTime) : '',
+  );
+  const [ingredients, setIngredients] = useState<IngredientRowValue[]>(() =>
+    recipe.ingredients.map((ingredient, index) => toIngredientRowValue(ingredient, index)),
+  );
+  const [steps, setSteps] = useState<StepRowValue[]>(() =>
+    recipe.steps.map((step, index) => ({ id: `step-${index}`, description: step.description })),
+  );
+  const [notes, setNotes] = useState(recipe.notes);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(emptyFieldErrors);
 
+  const baseServings = recipe.baseServings;
   const canSubmit = name.trim() !== '' && !submitting;
 
   function toggleTag(tag: RecipeTag): void {
@@ -89,7 +112,10 @@ export function RecipeFormClient() {
   function addIngredient(): void {
     const nextId = `ingredient-${nextIngredientId.current}`;
     nextIngredientId.current += 1;
-    setIngredients((prev) => [...prev, createIngredientRow(nextId)]);
+    setIngredients((prev) => [
+      ...prev,
+      { id: nextId, displayName: '', amountText: '', amountUnit: '' },
+    ]);
   }
 
   function updateIngredient(next: IngredientRowValue): void {
@@ -111,7 +137,7 @@ export function RecipeFormClient() {
   function addStep(): void {
     const nextId = `step-${nextStepId.current}`;
     nextStepId.current += 1;
-    setSteps((prev) => [...prev, createStepRow(nextId)]);
+    setSteps((prev) => [...prev, { id: nextId, description: '' }]);
   }
 
   function updateStep(next: StepRowValue): void {
@@ -122,20 +148,10 @@ export function RecipeFormClient() {
     setSteps((prev) => prev.filter((row) => row.id !== id));
   }
 
-  function buildCreateInput(): BuildResult {
+  function buildUpdateInput(): BuildResult {
     const errors = emptyFieldErrors();
-    const trimmedBaseServings = baseServings.trim();
-    const parsedBaseServings = Number(trimmedBaseServings);
     const trimmedCookingTime = cookingTime.trim();
     const parsedCookingTime = trimmedCookingTime === '' ? null : Number(trimmedCookingTime);
-
-    if (
-      trimmedBaseServings === '' ||
-      !Number.isFinite(parsedBaseServings) ||
-      parsedBaseServings <= 0
-    ) {
-      errors.baseServings = '基準人数は1以上の数値で入力してください。';
-    }
 
     if (
       parsedCookingTime !== null &&
@@ -151,18 +167,14 @@ export function RecipeFormClient() {
     errors.ingredients = ingredientErrors;
 
     const hasIngredientErrors = Object.keys(errors.ingredients).length > 0;
-    if (errors.baseServings !== null || errors.cookingTime !== null || hasIngredientErrors) {
-      return {
-        input: null,
-        errors,
-      };
+    if (errors.cookingTime !== null || hasIngredientErrors) {
+      return { input: null, errors };
     }
 
     return {
       input: {
         name: name.trim(),
         tags,
-        baseServings: parsedBaseServings,
         cookingTime: parsedCookingTime,
         notes,
         ingredients: parsedIngredients,
@@ -181,7 +193,7 @@ export function RecipeFormClient() {
       return;
     }
 
-    const result = buildCreateInput();
+    const result = buildUpdateInput();
     setFieldErrors(result.errors);
     setErrorMessage(null);
 
@@ -192,13 +204,16 @@ export function RecipeFormClient() {
 
     setSubmitting(true);
     try {
-      const response = await client.api.recipes.$post({ json: result.input });
-      if (!response.ok) {
-        setErrorMessage('保存に失敗しました。入力内容を確認してください。');
+      const response = await client.api.recipes[':id'].$put({
+        param: { id: recipe.id },
+        json: result.input,
+      });
+      if (response.ok) {
+        router.push(`/recipes/${recipe.id}`);
+        router.refresh();
         return;
       }
-      router.push('/recipes');
-      router.refresh();
+      setErrorMessage('保存に失敗しました。');
     } catch {
       setErrorMessage('通信エラーが発生しました。');
     } finally {
@@ -218,13 +233,13 @@ export function RecipeFormClient() {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/recipes')}
+              onClick={() => router.push(`/recipes/${recipe.id}`)}
               className="h-9 px-2 text-foreground"
             >
               キャンセル
             </Button>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">レシピを追加</h1>
+          <h1 className="text-lg font-semibold text-foreground">レシピを編集</h1>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!canSubmit} className="h-9 px-4">
               {submitting ? '保存中' : '保存'}
@@ -281,28 +296,11 @@ export function RecipeFormClient() {
 
           <section className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <label htmlFor={baseServingsId} className="text-sm font-medium text-foreground">
-                基準人数
-              </label>
-              <Input
-                id={baseServingsId}
-                type="number"
-                min="1"
-                step="1"
-                inputMode="decimal"
-                value={baseServings}
-                onChange={(event) => setBaseServings(event.target.value)}
-                aria-invalid={fieldErrors.baseServings !== null}
-                aria-describedby={
-                  fieldErrors.baseServings === null ? undefined : baseServingsErrorId
-                }
-                className="h-11 rounded-xl bg-card"
-              />
-              {fieldErrors.baseServings !== null && (
-                <p id={baseServingsErrorId} className="text-xs text-red-600">
-                  {fieldErrors.baseServings}
-                </p>
-              )}
+              <p className="text-sm font-medium text-foreground">基準人数</p>
+              <p className="flex h-11 items-center rounded-xl bg-card px-3 text-sm text-foreground">
+                {baseServings}人分
+              </p>
+              <p className="text-xs text-muted-foreground">（作成後は変更できません）</p>
             </div>
 
             <div className="flex flex-col gap-2">

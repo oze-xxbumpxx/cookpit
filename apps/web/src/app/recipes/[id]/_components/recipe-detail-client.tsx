@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { RecipeDto } from '@cookpit/application';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -82,7 +82,16 @@ export function RecipeDetailClient({ recipe }: Props) {
           <h1 className="truncate text-center text-lg font-semibold text-foreground">
             {recipe.name}
           </h1>
-          <span aria-hidden="true" className="w-9" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            onClick={() => router.push(`/recipes/${recipe.id}/edit`)}
+            aria-label="編集"
+            className="text-foreground"
+          >
+            <Pencil className="size-5" aria-hidden="true" />
+          </Button>
         </header>
 
         {recipe.tags.length > 0 && (
