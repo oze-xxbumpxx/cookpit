@@ -1,0 +1,28 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-2026-001
+feature_name: recipe-edit-screen
+change_level: 2
+date: 2026-06-25
+
+agents:
+  calls: 5                # architecture-designer / implementation-planner / test-designer / implementer / reviewer
+  retries: 0              # 差し戻し・再依頼なし（implementer 逸脱なし、reviewer 承認可）
+  unnecessary_calls: 0    # contract-designer は契約不変のため正しく省略。5本すべて L2 に必要
+
+quality:
+  tests_added: 0          # Presentation 層増分・自動テストランナー未導入のため新規自動テストなし（手動 57 観点を試験計画に設計）
+  initial_test_failures: 0 # 既存 29 tests は green 維持。lint/type-check も初回から通過（ゲート失敗の反復なし）
+  reviewer_critical: 0
+  reviewer_major: 0
+  reviewer_minor: 1       # M1: amountUnit の型ガードなしキャスト（実行時安全・proper fix はスコープ外）
+  reviewer_nits: 3        # N1 ID欠番(実害なし) / N2 page.tsx default export(Next.js 要件) / N3 notes null(非問題)
+  user_corrections: 0     # 成果物への修正指示なし。設計2論点は実装前にユーザー選択で確定（手戻りでない）
+  escaped_defects: 0      # 既知の流出欠陥なし（ブラウザ手動テストは未実施・下記 unresolved 参照）
+
+process:
+  requirement_rework: 0
+  design_rework: 0        # 設計の未決2点は実装前に解消（リワークでない）
+  implementation_rework: 0 # 計画どおり7ステップ完遂・差し戻しゼロ
+  missing_documents: 0    # designs / implementation-plans / tests / reviews すべて作成
+  unresolved_items: 2     # (1) M1 minor を将来対応に保留 (2) ブラウザ手動テスト未実施（実行環境制約）

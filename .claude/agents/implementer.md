@@ -24,8 +24,10 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 - 静的チェックの実行：
   - `pnpm lint`
   - `pnpm type-check`
-  - テストランナー導入後は該当パッケージのテスト（現状 MVP1 はテストランナー未導入。
-    導入されていなければ型チェックと lint を必須とし、その旨を報告する）。
+  - 該当パッケージのテスト（テストランナー: Vitest）。`packages/domain` は co-located
+    テスト導入済みで、domain を変更したら対応するテストを追加・実行する（`pnpm test`）。
+    application / infrastructure / apps/web はランナー未展開のため、型チェックと lint を
+    必須とし、テスト観点は計画に残す（導入後に実装へ落とす）。
 
 ## アーキテクチャ・コーディング規約（厳守）
 

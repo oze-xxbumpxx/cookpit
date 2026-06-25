@@ -9,10 +9,40 @@
 // - 不足を見つけても処理はブロックしない（exit 0）。additionalContext で警告を返すだけ。
 // - 機械判定できない意味的整合性は validate-deliverables Skill / reviewer に委譲。
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲しない窓（30分）
+
+// 同一の警告セットを毎ターン繰り返さないためのデバウンス。
+// 警告セットが変化したか、クールダウンを過ぎたときだけ true（= emit すべき）。
+// state 読み書き失敗時は fail-open（true を返し従来どおり警告する。沈黙して隠さない）。
+function shouldEmitNotice(key, feature, warnings) {
+  const statePath = join(ROOT, '.claude/state/hook-notice-state.json');
+  const hash = createHash('sha1')
+    .update(`${feature}\n${[...warnings].sort().join('\n')}`)
+    .digest('hex');
+  let state = {};
+  try {
+    if (existsSync(statePath)) state = JSON.parse(readFileSync(statePath, 'utf8')) || {};
+  } catch {
+    return true; // 読めない → 従来どおり出す
+  }
+  const prev = state[key];
+  const now = Date.now();
+  if (prev && prev.hash === hash && now - prev.ts < NOTICE_COOLDOWN_MS) return false;
+  state[key] = { hash, ts: now, feature };
+  try {
+    mkdirSync(join(ROOT, '.claude/state'), { recursive: true });
+    writeFileSync(statePath, JSON.stringify(state, null, 2));
+  } catch {
+    /* 書き込み失敗は致命でない。今回は出し、次回も出る（fail-open） */
+  }
+  return true;
+}
 
 function readStdin() {
   try {
@@ -114,7 +144,7 @@ function main() {
 
   if (event === 'Stop') {
     const warnings = checkDeliverables(feature);
-    if (warnings.length) {
+    if (warnings.length && shouldEmitNotice('check-deliverables:Stop', feature, warnings)) {
       emit(
         `⚠ 完了前チェック（feature: ${feature}）— 未充足の成果物があります:\n` +
           warnings.map((w) => ` - ${w}`).join('\n') +
