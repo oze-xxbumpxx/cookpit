@@ -56,8 +56,10 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
 - L2：architecture-designer →〔契約変更あれば contract-designer〕→ (implementation-planner ∥ test-designer) → implementer → reviewer → reflection-agent
 - L3：requirements-analyst → architecture-designer →〔契約あれば contract-designer〕→ (planner ∥ test-designer) → implementer → reviewer（+ ADR）→ reflection-agent
 
-> contract-designer は **契約（Zod / Drizzle スキーマ / Hono RPC 型 / DTO / 外部連携）の
-> 新設・変更があるときだけ**起動する。契約変更の無い変更では起動しない（過剰工程の禁止）。
+> contract-designer の起動は orchestration-policy.md §contract-designer の必須起動トリガー
+> に従う。Zod / Drizzle / Hono RPC 型 / DTO のフィールド追加・変更・削除・必須/任意・
+> nullability・バリデーション境界の変更があれば **L2 でも必ず起動**する。契約の形が変わらない
+> 変更（内部リファクタ・文言のみ）では起動しない（過剰工程の禁止）。
 
 ## 改善サイクルへの接続（詳細は improvement-cycle.md）
 
