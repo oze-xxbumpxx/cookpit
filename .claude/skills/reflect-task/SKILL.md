@@ -47,6 +47,18 @@ reflection-agent がタスク完了後の振り返りを行い、Memory 候補�
 `docs/claude-code/improvements/candidates/_TEMPLATE.md`）。各候補に観測事象・発生回数・
 対象タスク・原因仮説・改善案・変更対象・想定副作用・評価方法を含める。
 
+## メトリクス記録（L2/L3）
+
+candidate ファイル作成後、タスクのメトリクスを記録する。
+
+1. `bash .claude/scripts/record-task-metrics.sh <task-id> <feature-name> <level>` を実行してテンプレートを生成する（既存なら上書き不要）。
+2. 生成された `docs/claude-code/improvements/metrics/<task-id>.yml` に実値を埋める：
+   - `agents.calls`：subagent-log から自動補完済みかを確認。未補完なら subagent-log を数えて記入。
+   - `quality.reviewer_critical/major/minor/nits`：`docs/reviews/<feature>.md` の実指摘数。
+   - `quality.user_corrections`：会話上のユーザー修正・差し戻し回数。
+   - `process.*_rework`：各フェーズの手戻り回数。
+   - 判定できない値は `unknown` のまま残す（推測値を入れない）。
+
 ## 禁止事項
 
 - CLAUDE.md / Agent 定義 / Skill / Rule / Hook / settings.json の変更（提案は candidate に書くだけ）。

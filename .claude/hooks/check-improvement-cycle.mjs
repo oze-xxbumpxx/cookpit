@@ -22,7 +22,7 @@ const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲し�
 function shouldEmitNotice(key, feature, warnings) {
   const statePath = join(ROOT, '.claude/state/hook-notice-state.json');
   const hash = createHash('sha1')
-    .update(`${feature}\n${[...warnings].sort().join('\n')}`)
+    .update(feature)
     .digest('hex');
   let state = {};
   try {
