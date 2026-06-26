@@ -46,6 +46,7 @@
 | coding-standards.md に Next.js page/layout の default export 例外が未記載（reviewer N2） | recipe-edit-screen | 1 | reviewer Subagent Memory |
 | Stop フック（check-deliverables/check-improvement-cycle）が多段進行中に毎ターン発火しノイズ | recipe-edit-screen | 1 | orchestrator Subagent Memory |
 | reviewer に障害設計固有観点（リトライ嵐・冪等性欠如等）が不足 | ベースライン再採点（post-phase3）| 2（→ IMP-2026-003 へ昇格・proposal 化）| reviewer Agent 定義 → proposal |
+| sw.js（Serwist 自動生成 Service Worker）が ESLint error（no-this-alias）を出す | Sprint 1 クローズ | 1 | ESLint 除外設定で対応可 |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
