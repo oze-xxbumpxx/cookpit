@@ -42,4 +42,38 @@ else
 fi
 
 echo "created: $OUT"
-echo "（数値は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"
+
+# subagent-log から agents.calls を自動補完（feature が一致する行を数える）
+SUBAGENT_LOG="$ROOT/.claude/state/subagent-log.jsonl"
+if [ -f "$SUBAGENT_LOG" ]; then
+  AGENT_CALLS="$(node -e "
+const fs = require('fs');
+const lines = fs.readFileSync('$SUBAGENT_LOG', 'utf8').trim().split('\n').filter(Boolean);
+const n = lines.filter(l => { try { return JSON.parse(l).feature === '$FEATURE'; } catch { return false; } }).length;
+process.stdout.write(String(n));
+" 2>/dev/null || echo '0')"
+  if [ "$AGENT_CALLS" -gt 0 ] 2>/dev/null; then
+    node -e "
+const fs = require('fs');
+let t = fs.readFileSync('$OUT', 'utf8');
+t = t.replace(/^  calls: unknown/m, '  calls: $AGENT_CALLS  # subagent-log から自動集計');
+fs.writeFileSync('$OUT', t);
+" 2>/dev/null && echo "agents.calls を自動補完: $AGENT_CALLS（subagent-log の feature=$FEATURE 行数）"
+  fi
+fi
+
+# docs の有無から process.missing_documents を自動補完
+MISSING=0
+[ ! -f "$ROOT/docs/designs/${FEATURE}.md" ]              && MISSING=$((MISSING+1))
+[ ! -f "$ROOT/docs/implementation-plans/${FEATURE}.md" ] && MISSING=$((MISSING+1))
+[ ! -f "$ROOT/docs/tests/${FEATURE}.md" ]                && MISSING=$((MISSING+1))
+if [ "$LEVEL" -ge 2 ] 2>/dev/null && [ "$MISSING" -gt 0 ]; then
+  node -e "
+const fs = require('fs');
+let t = fs.readFileSync('$OUT', 'utf8');
+t = t.replace(/^  missing_documents: 0/m, '  missing_documents: $MISSING  # docs 存在チェックから自動補完');
+fs.writeFileSync('$OUT', t);
+" 2>/dev/null && echo "process.missing_documents を自動補完: $MISSING"
+fi
+
+echo "（残りの数値は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"
