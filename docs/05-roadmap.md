@@ -203,11 +203,16 @@
    - 価格履歴表示（簡易グラフ）
    - 「この商品、どっちの店舗が安い？」ビュー
 
+6. **GitHub Actions CI 導入**
+   - PR トリガーで `pnpm lint` / `pnpm type-check` / `pnpm test` / `pnpm build` を実行
+   - 現状 Vercel Preview Comments のみで品質ゲートが CI 化されていない
+
 ### 完了条件
 
 - [ ] 商品を 20 件程度登録できる
 - [ ] 価格を手動で記録できる
 - [ ] 店舗別の価格比較が画面で見える
+- [ ] PR に対して lint / type-check / test / build が自動で走る
 
 ## Sprint 3：MealPlan 献立作成（1.5週間）
 
