@@ -34,9 +34,21 @@ describe('Money', () => {
     expect(multiplied.currency).toBe('JPY');
   });
 
+  it('multiply に負のファクターを渡すと非負制約でスロー (M-GAP-1)', () => {
+    expect(() => Money.of(100, 'JPY').multiply(-1)).toThrow('Money amount must be non-negative');
+  });
+
+  it('multiply(0) は 0 円になる (M-GAP-2)', () => {
+    expect(Money.of(100, 'JPY').multiply(0).amount).toBe(0);
+  });
+
   it('isLessThan は大小比較を返す (M7)', () => {
     expect(Money.of(99, 'JPY').isLessThan(Money.of(100, 'JPY'))).toBe(true);
     expect(Money.of(100, 'JPY').isLessThan(Money.of(99, 'JPY'))).toBe(false);
+  });
+
+  it('isLessThan — 同値は false を返す (M-GAP-3)', () => {
+    expect(Money.of(100, 'JPY').isLessThan(Money.of(100, 'JPY'))).toBe(false);
   });
 
   it('isLessThan は異なる通貨を拒否する (M8)', () => {

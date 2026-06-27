@@ -69,6 +69,27 @@ describe('RecipeIngredient.create', () => {
       }),
     ).toThrow('Either amount or amountNote is required');
   });
+
+  it('amountNote が空文字は未設定扱いで拒否する (I-GAP-2)', () => {
+    expect(() =>
+      RecipeIngredient.create({
+        productRef: null,
+        displayName: '砂糖',
+        amount: null,
+        amountNote: '',
+      }),
+    ).toThrow('Either amount or amountNote is required');
+  });
+
+  it('productRef が非 null のとき値を保持する (I-GAP-3)', () => {
+    const ingredient = RecipeIngredient.create({
+      productRef: { value: 'prod-1' },
+      displayName: '玉ねぎ',
+      amount: Quantity.of(100, 'g'),
+      amountNote: null,
+    });
+    expect(ingredient.productRef?.value).toBe('prod-1');
+  });
 });
 
 describe('RecipeIngredient.scale', () => {
@@ -93,5 +114,18 @@ describe('RecipeIngredient.scale', () => {
     const scaled = original.scale(2);
     expect(scaled).toBe(original);
     expect(scaled.amountNote).toBe('適量');
+  });
+
+  it('scale 後も productRef が引き継がれる (I-GAP-1)', () => {
+    const ingredient = RecipeIngredient.create({
+      productRef: { value: 'prod-1' },
+      displayName: '玉ねぎ',
+      amount: Quantity.of(100, 'g'),
+      amountNote: null,
+    });
+    const scaled = ingredient.scale(3);
+    expect(scaled.productRef?.value).toBe('prod-1');
+    expect(scaled.displayName).toBe('玉ねぎ');
+    expect(scaled.amount?.value).toBe(300);
   });
 });

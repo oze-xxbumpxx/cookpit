@@ -9,6 +9,13 @@ describe('RecipeId', () => {
     expect(a.equals(b)).toBe(false);
   });
 
+  it('generate は UUID v4 フォーマットを生成する (ID-GAP-1)', () => {
+    const id = RecipeId.generate();
+    expect(id.value).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
   it('fromString は値を保持する (ID2)', () => {
     expect(RecipeId.fromString('abc').value).toBe('abc');
   });
