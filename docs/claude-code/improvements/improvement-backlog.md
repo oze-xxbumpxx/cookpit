@@ -48,6 +48,13 @@
 | reviewer に障害設計固有観点（リトライ嵐・冪等性欠如等）が不足 | ベースライン再採点（post-phase3）| 2（→ IMP-2026-003 へ昇格・proposal 化）| reviewer Agent 定義 → proposal |
 | sw.js（Serwist 自動生成 Service Worker）が ESLint error（no-this-alias）を出す | Sprint 1 クローズ | 1 | ESLint 除外設定で対応可 |
 
+## Sprint 2 レトロスペクティブ議題（Sprint 2 終了時に話し合う）
+
+| 項目 | 概要 | 観測ポイント |
+| --- | --- | --- |
+| Claude × Codex 棲み分けの評価 | 設計・レビューを Claude、実装を Codex で分担するワークフローの有効性を評価する。product-master タスク 01〜05 の実行結果をベースに判断 | Codex の出力品質（型エラー・テスト通過率）、手戻り回数、指示書の粒度が適切だったか、コンテキスト断絶による問題の有無、ラウンドトリップのコスト |
+| 指示書フォーマットの改善 | `docs/codex-tasks/` の指示書形式が Codex に適切だったか。次スプリント（MealPlan 等）の指示書に反映する改善点を抽出 | Codex が迷った箇所、過不足のあった情報、模範コードの参照が機能したか |
+
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
 | task-id | 事象タイトル | 対象 | ステータス | 候補ファイル |
