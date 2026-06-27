@@ -46,6 +46,7 @@
 | coding-standards.md に Next.js page/layout の default export 例外が未記載（reviewer N2） | recipe-edit-screen | 1 | reviewer Subagent Memory |
 | Stop フック（check-deliverables/check-improvement-cycle）が多段進行中に毎ターン発火しノイズ | recipe-edit-screen | 1 | orchestrator Subagent Memory |
 | reviewer に障害設計固有観点（リトライ嵐・冪等性欠如等）が不足 | ベースライン再採点（post-phase3）| 2（→ IMP-2026-003 へ昇格・proposal 化）| reviewer Agent 定義 → proposal |
+| sw.js（Serwist 自動生成 Service Worker）が ESLint error（no-this-alias）を出す | Sprint 1 クローズ | 1 | ESLint 除外設定で対応可 |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
@@ -56,3 +57,4 @@
 | recipe-edit-screen | coding-standards.md: Next.js page/layout の default export 例外を明記（再発監視中・次回同 nit で昇格） | .claude/rules/coding-standards.md | candidate（Memory 留め） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | Stop フック: 多段オーケストレーション進行中の毎ターン誤発火抑制（次回 L2/L3 再発で即昇格・Hook 変更は人間承認必須） | Hook（check-deliverables / check-improvement-cycle） | proposal 化済み（→ IMP-2026-005） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | contract-designer 起動条件の不明確さ（事象5）→ ベースライン再採点と統合し proposal 化 | docs/claude-code/orchestration-policy.md / orchestrator.md | proposal 化済み（→ IMP-2026-004） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
+| orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | **candidate（必須昇格）** | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |

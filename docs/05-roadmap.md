@@ -128,11 +128,11 @@
    - `DELETE /api/recipes/:id`
    - Zod（`@cookpit/api-contract`）でバリデーション
 
-6. **画面実装** 🔄
+6. **画面実装** ✅
    - レシピ一覧（`/recipes`）✅ — Server Component で初期取得 → Client で検索・タグ絞り込み
    - レシピ作成（`/recipes/new`）✅ — Hono RPC で POST、量の数値/テキスト判定を `buildCreateInput` に集約、タグ複数選択（実装＋レビュー完了）
    - レシピ詳細（`/recipes/[id]`）✅ — Server Component で初期取得、倍量はクライアント表示計算、削除は base-ui AlertDialog の2段階 → Hono RPC（実装＋レビュー完了）
-   - レシピ編集（`/recipes/[id]/edit`）— 未着手（Sprint 1 の残タスク。詳細画面に編集ボタン追加もここで対応）
+   - レシピ編集（`/recipes/[id]/edit`）✅ — Server Component で初期取得 → Client フォームで Hono RPC PUT、NotFound は notFound()、共用コンポーネント分離（L2 フルフロー・レビュー完了）
    - shadcn/ui の Input / Button / Textarea を活用
    - 材料入力の単位フィールドはプルダウン選択（プリセット固定）
 
@@ -150,9 +150,20 @@
 
 ### 完了条件
 
-- [ ] レシピを 5 件以上、紙から転記できる
-- [ ] スマホから操作してもストレスがない
-- [ ] PWA としてインストール状態で快適に動く
+- [x] レシピを 5 件以上、紙から転記できる — 機能は完備（CRUD 4 画面 + API 5 本）。実転記は運用開始後
+- [ ] スマホから操作してもストレスがない — 実利用で確認（機能としてはレスポンシブ対応済み）
+- [ ] PWA としてインストール状態で快適に動く — 実利用で確認（Serwist + manifest 設定済み）
+
+### Sprint 1 完了サマリ（2026-06-26）
+
+- **全 8 タスク完了**。画面 4 本（一覧・作成・詳細・編集）+ API 5 本 + ドメインモデル + DB + ビジュアルデザイン
+- **品質ゲート**: type-check 6/6 通過、Vitest 43/43 通過（domain 29 + application 14）、Playwright E2E スモーク導入済み
+- **lint**: error 1 件は `sw.js`（Serwist 自動生成 Service Worker）の `no-this-alias`。プロジェクトコードは clean
+- **harness 効果**: orchestrator L2 フルフロー（5 Agent）が手戻りゼロで完走。改善サイクル IMP-2026-001〜005 を通じて eval ベースラインが全軸改善（悪化なし）
+- **残課題**（Sprint 2 以降 or バックログ）:
+  - `sw.js` の lint error — ESLint 設定で Serwist 生成ファイルを除外するか検討
+  - スマホ実利用での UX 確認 — 実転記開始後に判断
+  - ブラウザ手動テスト（編集画面の DB 接続込み）— 実環境で完全確認
 
 ### Sprint 1 のマイルストーン
 
