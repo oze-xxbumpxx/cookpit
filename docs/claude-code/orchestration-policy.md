@@ -50,16 +50,20 @@ requirements-analyst（任意・影響が読めない時）
   → test-designer（計画と並行可） → docs/tests/<feature>.md
   → implementer                  → 実装 + 単体テスト + lint/型チェック
   → reviewer                     → 指摘（必要なら docs/reviews/<feature>.md）
+  → security-reviewer            → セキュリティ指摘
 ```
 
 ### Level 3
 ```
 requirements-analyst  → docs/requirements/<feature>.md
   → architecture-designer      → docs/designs/<feature>.md（+ ADR は docs/decisions/）
+  →〔外部I/O/大量データあれば performance-designer（planner と並行可）〕
   → implementation-planner     → docs/implementation-plans/<feature>.md
   → test-designer              → docs/tests/<feature>.md
   → implementer                → 実装 + 単体テスト + lint/型チェック
+  →〔E2E基盤整備済みなら e2e-test-implementer〕→ E2E テスト
   → reviewer                   → docs/reviews/<feature>.md
+  → security-reviewer          → セキュリティ指摘
 ```
 
 ## 並列実行の指針
@@ -89,6 +93,42 @@ contract-designer の起動を orchestrator の定性判断だけに委ねない
 
 判断に迷うフィールド変更は「契約変更あり」側に倒し起動する（契約品質の欠落は後段で高コスト）。
 
+## security-reviewer の起動条件
+
+**L2/L3 の全タスクで `reviewer` の後に必ず起動する。** L1 では起動しない。
+
+起動しない例外（L2/L3 でも省略してよいケース）:
+- ドキュメント / コメント / テキスト文言のみの変更（コード変更がない）。
+- `documentation-only-change` 相当の変更。
+
+判断に迷う場合は起動する側に倒す（コードが変わる変更は必ず起動）。
+
+`security-reviewer` は `reviewer` と役割を分担する:
+- `reviewer`: 品質・整合性・責務分離・エラー処理・テスト不足を見る。
+- `security-reviewer`: OWASP Top 10・認証/認可・秘密情報漏洩・依存脆弱性を見る。
+
+## performance-designer の起動条件
+
+**L3 のみ**、かつ次のいずれかを含む場合に起動する。それ以外では起動しない（過剰工程の禁止）。
+
+1. Infrastructure 経由の外部 API / 外部ストレージへの I/O を新設・変更する。
+2. 一覧取得・集計など大量データを扱う DB クエリを新設・変更する。
+3. 性能要件が明示された改善タスク。
+
+起動タイミング: `architecture-designer` 完了後、`implementation-planner` / `test-designer` と**並列**に進められる。
+
+## e2e-test-implementer の起動条件
+
+**L3 のみ**、かつ次のいずれかを満たす場合に起動する。
+
+1. `apps/web/playwright.config.ts` が存在する（Playwright 基盤整備済み）。
+2. 対象 Hono ルートにテストクライアント用のセットアップが存在する。
+
+テスト基盤が整備されていない場合は起動しない。観点は `docs/tests/<feature>.md` の
+「未実装観点（基盤待ち）」セクションに記録するにとどめる。
+
+起動タイミング: `implementer` 完了後、`reviewer` の前。
+
 ## reviewer からの例外的な Subagent 起動
 
 reviewer は原則コードを変更せず指摘に徹する。ただし「仕様の事実確認」が必要な場合に
@@ -106,6 +146,9 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 | implementer | `claude-sonnet-4-6` |
 | test-designer | `claude-sonnet-4-6` |
 | reviewer | `claude-sonnet-4-6` |
+| security-reviewer | `claude-sonnet-4-6` |
+| e2e-test-implementer | `claude-sonnet-4-6` |
+| performance-designer | `claude-sonnet-4-6` |
 
 > `CLAUDE_CODE_SUBAGENT_MODEL` は設定しない。設定すると全 Subagent のモデルを
 > 一律上書きし、Agent 定義の `model` より優先されてしまう。モデルは各 Agent ファイルの

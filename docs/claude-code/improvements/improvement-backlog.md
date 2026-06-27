@@ -14,6 +14,8 @@
 | IMP-2026-003 | reviewer に障害設計レビュー観点を追加（外部 I/O / 障害系タスク限定で適用） | .claude/agents/reviewer.md | accepted | ベースライン採点（INDEX 弱軸 §3 レビュー品質 3.7） | [proposals/IMP-2026-003.md](proposals/IMP-2026-003.md) | [evaluations/IMP-2026-003.md](evaluations/IMP-2026-003.md) | 2026-06-25 採用（人間承認・本適用済み・悪化なし） |
 | IMP-2026-004 | contract-designer の起動条件を明示化（L2 の Zod スキーマ変更で必須起動） | docs/claude-code/orchestration-policy.md / .claude/agents/orchestrator.md | accepted | ベースライン採点（INDEX 弱軸 §2 契約品質 3.4）+ [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md)（事象5） | [proposals/IMP-2026-004.md](proposals/IMP-2026-004.md) | [evaluations/IMP-2026-004.md](evaluations/IMP-2026-004.md) | 2026-06-25 採用（人間承認・本適用済み・悪化なし） |
 | IMP-2026-005 | Stop フックのデバウンスを feature-only ハッシュに変更（IMP-2026-002 の追加修正） | .claude/hooks/check-deliverables.mjs / check-improvement-cycle.mjs | accepted | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md)（事象5残存） | — | スクリプト試験3項目 合格 | 2026-06-25 採用（人間承認・本適用済み） |
+| IMP-2026-006 | 不足サブエージェント3種追加（security-reviewer / performance-designer / e2e-test-implementer）と障害設計の設計前倒し | .claude/agents/{security-reviewer,performance-designer,e2e-test-implementer}.md / orchestrator.md / orchestration-policy.md / agent-responsibilities.md / create-design-document SKILL | accepted | ユーザー要求（委譲ギャップ分析） | [proposals/IMP-2026-006.md](proposals/IMP-2026-006.md) | dry run 5ケース・悪化軸ゼロ（[evals/results/…SUMMARY.md](../../.claude/evals/results/agent-addition-security-perf-e2e--SUMMARY.md)） | 2026-06-27 採用（人間承認・本適用済み） |
+| IMP-2026-007 | orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（改善A: 設計系並列化 / 改善B: 先行調査共有） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | evaluated | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md)（**ユーザー指定の必須昇格**） | [proposals/IMP-2026-007.md](proposals/IMP-2026-007.md) | [evaluations/IMP-2026-007.md](evaluations/IMP-2026-007.md)（2026-06-27 実施・3ケース全軸悪化なし・効率改善は定量未確認・採用推奨[条件付き]） | 未決定（人間承認必須） |
 
 凡例: ステータス = candidate / proposal / evaluated / accepted / rejected。
 「候補」「提案」「評価」「決定」列には該当ファイルへの相対リンクまたは日付を入れる。
@@ -30,6 +32,7 @@
 | --- | --- | --- | --- |
 | eval ベースライン再採点（テスト網羅性ほか） | 2026-06-25 実施済み。`INDEX-2026-06-25.md` に新ベースライン保存（IMP-2026-003/004/005・Application Vitest・Playwright 反映）。次回再採点は次の主要改善適用後。 | 完了 | 事象 2(a) |
 | IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
+| **IMP-2026-007 採否判断のための定量計測**（次の L3 タスクで実施）: reflection-agent が `duration_ms` / `tool uses` / 合計トークンの before/after を記録し、`docs/claude-code/improvements/evaluations/IMP-2026-007.md` の「実タスク計測」節に追記すること。計測後に人間が採否を最終判断する。 | 未実施（次の L3 タスク完了後に実施） | reflection-agent + 人間 | IMP-2026-007 A案決定（2026-06-27）|
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
 
@@ -57,4 +60,4 @@
 | recipe-edit-screen | coding-standards.md: Next.js page/layout の default export 例外を明記（再発監視中・次回同 nit で昇格） | .claude/rules/coding-standards.md | candidate（Memory 留め） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | Stop フック: 多段オーケストレーション進行中の毎ターン誤発火抑制（次回 L2/L3 再発で即昇格・Hook 変更は人間承認必須） | Hook（check-deliverables / check-improvement-cycle） | proposal 化済み（→ IMP-2026-005） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | contract-designer 起動条件の不明確さ（事象5）→ ベースライン再採点と統合し proposal 化 | docs/claude-code/orchestration-policy.md / orchestrator.md | proposal 化済み（→ IMP-2026-004） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
-| orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | **candidate（必須昇格）** | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |
+| orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | proposal 化済み（→ IMP-2026-007） | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |
