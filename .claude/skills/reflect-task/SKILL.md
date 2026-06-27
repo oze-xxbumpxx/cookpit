@@ -47,6 +47,19 @@ reflection-agent がタスク完了後の振り返りを行い、Memory 候補�
 `docs/claude-code/improvements/candidates/_TEMPLATE.md`）。各候補に観測事象・発生回数・
 対象タスク・原因仮説・改善案・変更対象・想定副作用・評価方法を含める。
 
+## IMP-2026-007 追跡計測（L3 タスクのみ・バックログ申し送り済み）
+
+L3 タスクを完了した場合、`docs/claude-code/improvements/improvement-backlog.md` の申し送り表に
+「IMP-2026-007 採否判断のための定量計測」行が未実施のまま残っているか確認する。
+残っている場合は以下を `docs/claude-code/improvements/evaluations/IMP-2026-007.md` の末尾に追記する。
+
+- タスク名・日付
+- このタスクの `duration_ms`（subagent-log の最古〜最新 ts の差分）
+- 総 `tool uses` 数（subagent-log の entries 数）
+- 合計トークン（判明する範囲で）
+- 並列化（改善A）が実際に発動したか、先行調査（改善B）の効果が見られたか
+- 上記を記録したら申し送り表の「未実施」を「実施済み」に更新し、採否の人間判断を促す。
+
 ## メトリクス記録（L2/L3）
 
 candidate ファイル作成後、タスクのメトリクスを記録する。
