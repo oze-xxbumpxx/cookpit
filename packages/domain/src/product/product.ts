@@ -1,11 +1,11 @@
-import type { Money } from '../shared/money';
+import { Money } from '../shared/money';
 import type { Quantity } from '../shared/quantity';
 import type { StoreId } from '../shared/store';
 import type { Unit } from '../shared/unit';
 import type { PriceRecordId } from './price-record-id';
 import { ProductId } from './product-id';
 
-export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' | '冷凍' | 'その他';
+export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' | '冷凍' | string;
 
 export interface PriceRecordProps {
   id: PriceRecordId;
@@ -27,6 +27,16 @@ export class PriceRecord {
   ) {}
 
   static create(props: PriceRecordProps): PriceRecord {
+    if (props.price.amount <= 0) {
+      throw new Error('Price record price must be positive');
+    }
+    if (props.unitPrice.amount <= 0) {
+      throw new Error('Price record unit price must be positive');
+    }
+    if (props.packageSize.value <= 0) {
+      throw new Error('Price record package size must be positive');
+    }
+
     return new PriceRecord(
       props.id,
       props.storeId,
@@ -158,7 +168,11 @@ export class Product {
     this.touch();
   }
 
-  latestPriceAt(storeId: StoreId): PriceRecord | null {
+  latestPriceAt(storeId: StoreId): Money | null {
+    return this.latestPriceRecordAt(storeId)?.price ?? null;
+  }
+
+  latestPriceRecordAt(storeId: StoreId): PriceRecord | null {
     const records = this.productPriceHistory
       .filter((record) => record.storeId.equals(storeId))
       .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime());
@@ -176,6 +190,40 @@ export class Product {
     }
 
     return cheapestRecord?.storeId ?? null;
+  }
+
+  averagePrice(storeId: StoreId, periodDays: number): Money | null {
+    if (periodDays <= 0) {
+      throw new Error('Period days must be positive');
+    }
+
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - periodDays);
+
+    const records = this.productPriceHistory.filter(
+      (record) => record.storeId.equals(storeId) && record.observedAt.getTime() >= threshold.getTime(),
+    );
+    const firstRecord = records[0] ?? null;
+    if (firstRecord === null) {
+      return null;
+    }
+
+    let total = firstRecord.price;
+    for (const record of records.slice(1)) {
+      total = total.add(record.price);
+    }
+
+    const averageAmount = Math.round((total.amount / records.length) * 10) / 10;
+    return Money.of(averageAmount, firstRecord.price.currency);
+  }
+
+  isPriceLow(storeId: StoreId, currentPrice: Money): boolean {
+    const average = this.averagePrice(storeId, 90);
+    if (average === null) {
+      return false;
+    }
+
+    return currentPrice.isLessThan(average);
   }
 
   get id(): ProductId {
