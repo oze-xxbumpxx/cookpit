@@ -83,6 +83,18 @@ describe('toIngredient', () => {
     };
     expect(toIngredient(dto).amount).toBeNull();
   });
+
+  it('amountValue が非 null でも amountUnit が null なら量なし扱いでドメインバリデーションエラー (MAP-GAP-1)', () => {
+    const dto: RecipeIngredientDto = {
+      productRef: null,
+      displayName: 'こしょう',
+      amountValue: 100,
+      amountUnit: null,
+      amountNote: null,
+    };
+    // toQuantity が null を返すため amount も amountNote もなしになる
+    expect(() => toIngredient(dto)).toThrow('Either amount or amountNote is required');
+  });
 });
 
 describe('toRecipeDto', () => {
@@ -167,6 +179,38 @@ describe('toRecipeDto', () => {
     });
 
     expect(toRecipeDto(recipe).cookingTime).toBeNull();
+  });
+
+  it('tags が空の場合は空配列を返す (MAP-GAP-2)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('recipe-4'),
+      name: 'テスト',
+      ingredients: [],
+      steps: [new CookingStep('手順')],
+      baseServings: 1,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    expect(toRecipeDto(recipe).tags).toEqual([]);
+  });
+
+  it('notes が空文字の場合は空文字を返す (MAP-GAP-3)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('recipe-5'),
+      name: 'テスト',
+      ingredients: [],
+      steps: [new CookingStep('手順')],
+      baseServings: 1,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    expect(toRecipeDto(recipe).notes).toBe('');
   });
 
   it('productRef が null の食材は productRef: null を返す (M12)', () => {

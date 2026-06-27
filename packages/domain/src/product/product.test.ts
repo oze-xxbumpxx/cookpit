@@ -78,6 +78,33 @@ describe('PriceRecord', () => {
     expect(record.unitPrice.amount).toBe(83.3);
   });
 
+  it('reconstruct は create のバリデーションをスキップする（DB 復元のセマンティクス）(PR-GAP-2)', () => {
+    // price = 0 は create では拒否されるが reconstruct では通る
+    expect(() =>
+      PriceRecord.reconstruct({
+        id: PriceRecordId.fromString('price-record-1'),
+        storeId: StoreId.fromString('store-1'),
+        price: Money.of(0, 'JPY'),
+        unitPrice: Money.of(0, 'JPY'),
+        packageSize: Quantity.of(1, '個'),
+        observedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }),
+    ).not.toThrow();
+  });
+
+  it('負の price は Money.of の時点でスロー（PriceRecord.create に到達しない）(PR-GAP-1)', () => {
+    expect(() =>
+      PriceRecord.create({
+        id: PriceRecordId.fromString('price-record-1'),
+        storeId: StoreId.fromString('store-1'),
+        price: Money.of(-100, 'JPY'),
+        unitPrice: Money.of(100, 'JPY'),
+        packageSize: Quantity.of(3, '個'),
+        observedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }),
+    ).toThrow('Money amount must be non-negative');
+  });
+
   it('create は 0 円の価格を拒否する (PR4)', () => {
     expect(() =>
       PriceRecord.create({
@@ -192,6 +219,22 @@ describe('Product の状態変更', () => {
     expect(product.priceHistory).toEqual([record]);
   });
 
+  it('update 後に updatedAt が進む (P-GAP-2)', () => {
+    const product = createProduct();
+    const before = product.updatedAt.getTime();
+    product.update({ name: 'にんじん', aliases: [], category: '野菜', defaultUnit: '本' });
+    expect(product.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('recordPrice 後に updatedAt が進む (P-GAP-3)', () => {
+    const product = createProduct();
+    const before = product.updatedAt.getTime();
+    product.recordPrice(
+      createPriceRecord('record-1', StoreId.fromString('store-1'), 100, new Date()),
+    );
+    expect(product.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
   it('ゲッターは防御的コピーを返し内部状態を保護する (P6)', () => {
     const product = createProduct();
     product.aliases.push('玉葱');
@@ -256,6 +299,14 @@ describe('Product.latestPriceRecordAt', () => {
 
     expect(product.latestPriceRecordAt(storeId)?.id.value).toBe('new-record');
   });
+
+  it('対象店舗の記録がなければ null を返す (P-GAP-4)', () => {
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('record-1', StoreId.fromString('store-1'), 100, new Date()),
+    );
+    expect(product.latestPriceRecordAt(StoreId.fromString('missing-store'))).toBeNull();
+  });
 });
 
 describe('Product.cheapestStoreAt', () => {
@@ -306,6 +357,15 @@ describe('Product.cheapestStoreAt', () => {
       true,
     );
   });
+
+  it('observedAt が at と同時刻のレコードは最安判定に含まれる（境界値）(P-GAP-5)', () => {
+    const product = createProduct();
+    const storeId = StoreId.fromString('store-1');
+    const at = new Date('2026-01-01T00:00:00.000Z');
+    product.recordPrice(createPriceRecord('record-1', storeId, 100, at));
+
+    expect(product.cheapestStoreAt(at)?.equals(storeId)).toBe(true);
+  });
 });
 
 describe('Product.averagePrice', () => {
@@ -327,8 +387,22 @@ describe('Product.averagePrice', () => {
     expect(product.averagePrice(storeId, 30)).toBeNull();
   });
 
+  it('期間内に 1 件のみのときその価格をそのまま返す (P-GAP-7)', () => {
+    const product = createProduct();
+    const storeId = StoreId.fromString('store-1');
+    product.recordPrice(createPriceRecord('record-1', storeId, 100, daysAgo(1), 250));
+
+    expect(product.averagePrice(storeId, 30)?.amount).toBe(250);
+  });
+
   it('periodDays が 0 以下なら拒否する (P19)', () => {
     expect(() => createProduct().averagePrice(StoreId.fromString('store-1'), 0)).toThrow(
+      'Period days must be positive',
+    );
+  });
+
+  it('periodDays が負でも拒否する（境界値）(P-GAP-6)', () => {
+    expect(() => createProduct().averagePrice(StoreId.fromString('store-1'), -1)).toThrow(
       'Period days must be positive',
     );
   });
@@ -353,6 +427,15 @@ describe('Product.isPriceLow', () => {
     expect(product.isPriceLow(storeId, Money.of(250, 'JPY'))).toBe(false);
   });
 
+  it('現在価格が 90 日平均と等値のときも false を返す（境界値）(P-GAP-8)', () => {
+    const product = createProduct();
+    const storeId = StoreId.fromString('store-1');
+    product.recordPrice(createPriceRecord('record-1', storeId, 100, daysAgo(1), 250));
+
+    // 平均 = 250 円、現在価格 = 250 円 → isLessThan は < なので false
+    expect(product.isPriceLow(storeId, Money.of(250, 'JPY'))).toBe(false);
+  });
+
   it('平均価格がなければ false を返す (P22)', () => {
     expect(createProduct().isPriceLow(StoreId.fromString('store-1'), Money.of(200, 'JPY'))).toBe(
       false,
@@ -361,6 +444,27 @@ describe('Product.isPriceLow', () => {
 });
 
 describe('Product.reconstruct', () => {
+  it('reconstruct 後の priceHistory ゲッターは防御的コピーを返す (P-GAP-9)', () => {
+    const priceRecord = createPriceRecord(
+      'record-1',
+      StoreId.fromString('store-1'),
+      100,
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
+    const product = Product.reconstruct({
+      id: ProductId.fromString('product-1'),
+      name: '玉ねぎ',
+      aliases: [],
+      category: '野菜',
+      defaultUnit: '個',
+      priceHistory: [priceRecord],
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    product.priceHistory.pop();
+    expect(product.priceHistory).toHaveLength(1);
+  });
+
   it('props の値を保持して復元する (P14)', () => {
     const createdAt = new Date('2026-01-01T00:00:00.000Z');
     const updatedAt = new Date('2026-01-02T00:00:00.000Z');

@@ -49,4 +49,34 @@ describe('UnitPriceCalculator', () => {
     expect(unitPrice.amount).toBe(1);
     expect(unitPrice.currency).toBe('USD');
   });
+
+  it('負の packageSize は Quantity.of の時点でスロー（UnitPriceCalculator に到達しない）(UPC-GAP-1)', () => {
+    expect(() =>
+      UnitPriceCalculator.calculate(Money.of(100, 'JPY'), Quantity.of(-1, 'g')),
+    ).toThrow('Quantity must be non-negative');
+  });
+
+  it('個数系（else ブランチ）で割り切れない場合は小数点第 1 位で丸める (UPC-GAP-2)', () => {
+    // 100 / 3 = 33.333... → 33.3
+    const unitPrice = UnitPriceCalculator.calculate(Money.of(100, 'JPY'), Quantity.of(3, '個'));
+    expect(unitPrice.amount).toBe(33.3);
+  });
+
+  it('小さじ は 1 単位あたりの単価を返す（else ブランチ）(UPC-GAP-3a)', () => {
+    expect(
+      UnitPriceCalculator.calculate(Money.of(90, 'JPY'), Quantity.of(3, '小さじ')).amount,
+    ).toBe(30);
+  });
+
+  it('本 は 1 単位あたりの単価を返す（else ブランチ）(UPC-GAP-3b)', () => {
+    expect(UnitPriceCalculator.calculate(Money.of(200, 'JPY'), Quantity.of(4, '本')).amount).toBe(
+      50,
+    );
+  });
+
+  it('枚 は 1 単位あたりの単価を返す（else ブランチ）(UPC-GAP-3c)', () => {
+    expect(UnitPriceCalculator.calculate(Money.of(300, 'JPY'), Quantity.of(5, '枚')).amount).toBe(
+      60,
+    );
+  });
 });

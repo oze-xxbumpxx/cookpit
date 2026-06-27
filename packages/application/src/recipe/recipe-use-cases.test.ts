@@ -122,6 +122,15 @@ describe('CreateRecipeUseCase', () => {
       'Recipe base servings must be positive',
     );
   });
+
+  it('cookingTime が負ならドメインバリデーションで弾かれ、保存されない (UC-GAP-1)', async () => {
+    const useCase = new CreateRecipeUseCase(repository);
+
+    await expect(useCase.execute({ ...baseInput, cookingTime: -1 })).rejects.toThrow(
+      'Recipe cooking time must be non-negative',
+    );
+    expect(repository.saveCount).toBe(0);
+  });
 });
 
 describe('GetRecipeUseCase', () => {
@@ -156,6 +165,23 @@ describe('GetRecipesUseCase', () => {
 
     expect(dtos).toHaveLength(2);
     expect(dtos.map((d) => d.name).sort()).toEqual(['A', 'B']);
+  });
+
+  it('各レシピの DTO フィールドが正しくマッピングされる (UC-GAP-4)', async () => {
+    repository.seed(seededRecipe('id-1', 'みそ汁', 2));
+
+    const dtos = await new GetRecipesUseCase(repository).execute();
+
+    expect(dtos[0]?.id).toBe('id-1');
+    expect(dtos[0]?.name).toBe('みそ汁');
+    expect(dtos[0]?.baseServings).toBe(2);
+    expect(dtos[0]?.cookingTime).toBeNull();
+    expect(dtos[0]?.tags).toEqual([]);
+    expect(dtos[0]?.notes).toBe('');
+    expect(dtos[0]?.ingredients).toEqual([]);
+    expect(dtos[0]?.steps).toEqual([]);
+    expect(dtos[0]?.createdAt).toBeDefined();
+    expect(dtos[0]?.updatedAt).toBeDefined();
   });
 });
 
@@ -192,6 +218,27 @@ describe('UpdateRecipeUseCase', () => {
     expect(new Date(dto.updatedAt).getTime()).toBeGreaterThan(new Date(dto.createdAt).getTime());
   });
 
+  it('cookingTime を null へ更新できる (UC-GAP-2)', async () => {
+    repository.seed(seededRecipe('id-1', 'カレー', 4));
+
+    const dto = await new UpdateRecipeUseCase(repository).execute({
+      ...updateInput,
+      cookingTime: null,
+    });
+
+    expect(dto.cookingTime).toBeNull();
+    expect(repository.saveCount).toBe(1);
+  });
+
+  it('ドメインバリデーション違反は保存されない (UC-GAP-3)', async () => {
+    repository.seed(seededRecipe('id-1'));
+
+    await expect(
+      new UpdateRecipeUseCase(repository).execute({ ...updateInput, name: '' }),
+    ).rejects.toThrow('Recipe name is required');
+    expect(repository.saveCount).toBe(0);
+  });
+
   it('存在しない ID は RecipeNotFoundError を投げ、保存しない', async () => {
     await expect(
       new UpdateRecipeUseCase(repository).execute({ ...updateInput, id: 'missing' }),
@@ -225,5 +272,15 @@ describe('DeleteRecipeUseCase', () => {
 
     await expect(useCase.execute('id-1')).rejects.toBeInstanceOf(RecipeNotFoundError);
     expect(repository.deletedIds).toEqual(['id-1']);
+  });
+
+  it('削除後に GetRecipe で取得すると NotFound になる (UC-GAP-5)', async () => {
+    repository.seed(seededRecipe('id-1'));
+
+    await new DeleteRecipeUseCase(repository).execute('id-1');
+
+    await expect(new GetRecipeUseCase(repository).execute('id-1')).rejects.toBeInstanceOf(
+      RecipeNotFoundError,
+    );
   });
 });

@@ -25,4 +25,8 @@ describe('Quantity', () => {
   it('multiply(0) は 0 になる (Q5)', () => {
     expect(Quantity.of(100, 'g').multiply(0).value).toBe(0);
   });
+
+  it('multiply に負のファクターを渡すと非負制約でスロー (Q-GAP-1)', () => {
+    expect(() => Quantity.of(100, 'g').multiply(-1)).toThrow('Quantity must be non-negative');
+  });
 });
