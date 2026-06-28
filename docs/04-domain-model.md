@@ -126,23 +126,50 @@ export class WeekIdentifier {
 ### Store
 
 ```typescript
+export interface StoreCreateInput {
+  name: string;
+}
+
+export interface StoreProps {
+  id: StoreId;
+  name: string;
+  createdAt: Date;
+}
+
 export class Store {
   private constructor(
-    private readonly _id: StoreId,
-    private readonly _name: string,
+    private readonly storeId: StoreId,
+    private readonly storeName: string,
+    private readonly createdDate: Date,
   ) {}
 
-  static create(name: string): Store {
-    return new Store(StoreId.generate(), name);
+  static create(input: StoreCreateInput): Store {
+    if (input.name.trim() === '') {
+      throw new Error('Store name is required');
+    }
+    return new Store(StoreId.generate(), input.name, new Date());
   }
 
-  static reconstruct(id: StoreId, name: string): Store {
-    return new Store(id, name);
+  static reconstruct(props: StoreProps): Store {
+    return new Store(props.id, props.name, new Date(props.createdAt));
+  }
+
+  get id(): StoreId {
+    return this.storeId;
+  }
+
+  get name(): string {
+    return this.storeName;
+  }
+
+  /** 防御的コピーを返す */
+  get createdAt(): Date {
+    return new Date(this.createdDate);
   }
 }
 ```
 
-MVP1 では Store はシード（初期データ）として 2 件を DB に登録する想定。動的な追加は Phase 2 以降。
+Store のドメインモデルは実装済みで、`create` は店名必須のバリデーションを持つ（動的生成自体は可能）。MVP1 の運用では Store をシード（初期データ）として 2 件 DB に登録する。
 
 ## 集約詳細
 
