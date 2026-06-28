@@ -5,9 +5,9 @@ import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
 import { RecipeIngredient } from '@cookpit/domain/src/recipe/recipe-ingredient';
 import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import type { Unit } from '@cookpit/domain/src/shared/unit';
 import type { DrizzleClient } from '../db/client';
 import { recipes, type NewRecipeRow, type RecipeRow } from '../db/schema';
+import { toUnit } from './mappers';
 type IngredientRow = {
   productRef: string | null;
   displayName: string;
@@ -116,31 +116,6 @@ export class DrizzleRecipeRepository implements RecipeRepository {
       createdAt: recipe.createdAt,
       updatedAt: recipe.updatedAt,
     };
-  }
-}
-
-function toUnit(value: string): Unit {
-  switch (value) {
-    case 'g':
-    case 'kg':
-    case 'ml':
-    case 'l':
-    case '大さじ':
-    case '小さじ':
-    case 'cup':
-    case '個':
-    case '本':
-    case '枚':
-    case '玉':
-    case '尾':
-    case '切れ':
-    case '束':
-    case '袋':
-    case '缶':
-    case '合':
-      return value;
-    default:
-      throw new Error(`Unknown unit: ${value}`);
   }
 }
 

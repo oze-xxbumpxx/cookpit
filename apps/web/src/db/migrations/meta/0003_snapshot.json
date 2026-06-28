@@ -64,7 +64,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "price_records_product_id_idx": {
+          "name": "price_records_product_id_idx",
+          "columns": [
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "price_records_product_id_products_id_fk": {
           "name": "price_records_product_id_products_id_fk",

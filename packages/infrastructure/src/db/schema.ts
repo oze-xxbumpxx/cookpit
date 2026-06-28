@@ -1,4 +1,4 @@
-import { integer, jsonb, numeric, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, numeric, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const recipes = pgTable('recipes', {
   id: text('id').primaryKey(),
@@ -53,7 +53,9 @@ export const priceRecords = pgTable('price_records', {
   packageSizeUnit: text('package_size_unit').notNull(),
   observedAt: timestamp('observed_at').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('price_records_product_id_idx').on(table.productId),
+]);
 
 export type PriceRecordRow = typeof priceRecords.$inferSelect;
 export type NewPriceRecordRow = typeof priceRecords.$inferInsert;
