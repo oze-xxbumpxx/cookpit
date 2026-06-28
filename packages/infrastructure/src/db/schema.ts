@@ -16,3 +16,12 @@ export const recipes = pgTable('recipes', {
 export type RecipeRow = typeof recipes.$inferSelect;
 
 export type NewRecipeRow = typeof recipes.$inferInsert;
+
+export const stores = pgTable('stores', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type StoreRow = typeof stores.$inferSelect;
+export type NewStoreRow = typeof stores.$inferInsert;
