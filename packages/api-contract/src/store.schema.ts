@@ -1,8 +1,9 @@
 import z from 'zod';
 
-const nonBlankString = z.string().refine((value) => value.trim() !== '', {
-  message: 'required',
-});
+const nonBlankString = z
+  .string()
+  .max(255)
+  .refine((value) => value.trim() !== '', { message: 'required' });
 
 export const createStoreSchema = z.object({
   name: nonBlankString,

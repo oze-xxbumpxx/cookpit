@@ -2,8 +2,7 @@ import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
 import { recipesRoute } from './routes/recipes';
 import { storesRoute } from './routes/stores';
-import { RecipeNotFoundError } from '@cookpit/application';
-import { StoreNotFoundError } from '@cookpit/application';
+import { RecipeNotFoundError, StoreNotFoundError } from '@cookpit/application';
 const app = new Hono().basePath('/api');
 
 const routes = app

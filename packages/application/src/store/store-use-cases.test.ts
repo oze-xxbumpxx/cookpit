@@ -76,6 +76,20 @@ describe('CreateStoreUseCase', () => {
   });
 });
 
+describe('CreateStoreUseCase + GetStoresUseCase', () => {
+  it('作成した Store が GetStoresUseCase で取得できる（N-02）', async () => {
+    const createUseCase = new CreateStoreUseCase(repository);
+    const getUseCase = new GetStoresUseCase(repository);
+
+    const created = await createUseCase.execute({ name: 'マルエツ' });
+    const dtos = await getUseCase.execute();
+
+    expect(dtos).toHaveLength(1);
+    expect(dtos[0]?.id).toBe(created.id);
+    expect(dtos[0]?.name).toBe('マルエツ');
+  });
+});
+
 describe('GetStoresUseCase', () => {
   it('0件の場合は空配列を返す（N-03）', async () => {
     const dtos = await new GetStoresUseCase(repository).execute();
