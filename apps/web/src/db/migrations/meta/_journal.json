@@ -15,6 +15,13 @@
       "when": 1779014657221,
       "tag": "0001_yellow_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782627803303,
+      "tag": "0002_lucky_king_bedlam",
+      "breakpoints": true
     }
   ]
 }
