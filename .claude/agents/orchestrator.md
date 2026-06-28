@@ -49,6 +49,16 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
   構成ファイル変更を含むコミットは明示指示・人間承認があるまで行わない（CLAUDE.md 行動制約に準拠）。
 - 自分でソースコードを書き換えない（Edit/Write/Bash を持たない）。実装は implementer へ。
 
+## Subagent 起動の必須ルール
+
+- Subagent は**必ず foreground（ブロッキング）モード**で起動する。
+  `run_in_background: true` は使用禁止。stop 後に再開した際、background
+  sub-agent の完了通知を受け取れなくなる構造的制約があるため。
+- **並列実行**（例: `implementation-planner ∥ test-designer`）は、
+  同一ターン内で複数の Agent ツール呼び出しを送信することで実現する。
+  Claude Code がそれらを並列処理する。
+- 「通知待ち」状態で stop しない。Agent ツール呼び出しが返った時点が完了確認。
+
 ## 委譲フロー早見（詳細は orchestration-policy.md）
 
 - L0：調査・相談のみ。コード変更なし・成果物なし（必要なら提案書）。

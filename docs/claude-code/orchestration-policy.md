@@ -73,6 +73,8 @@ requirements-analyst  → docs/requirements/<feature>.md
   並列に進められる（どちらも設計書を入力にするため）。
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
+- 並列実行は**同一ターン内で複数の Agent ツール呼び出しを送信**することで実現する。
+  `run_in_background: true` は使用しない（stop 後の再開時に通知が届かない構造的問題があるため）。
 
 ## contract-designer の必須起動トリガー
 
