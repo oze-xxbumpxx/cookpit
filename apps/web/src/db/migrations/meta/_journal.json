@@ -22,6 +22,13 @@
       "when": 1782627803303,
       "tag": "0002_lucky_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782635671534,
+      "tag": "0003_graceful_selene",
+      "breakpoints": true
     }
   ]
 }
