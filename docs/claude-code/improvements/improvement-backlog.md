@@ -32,7 +32,8 @@
 | --- | --- | --- | --- |
 | eval ベースライン再採点（テスト網羅性ほか） | 2026-06-25 実施済み。`INDEX-2026-06-25.md` に新ベースライン保存（IMP-2026-003/004/005・Application Vitest・Playwright 反映）。次回再採点は次の主要改善適用後。 | 完了 | 事象 2(a) |
 | IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
-| **IMP-2026-007 採否判断のための定量計測**（次の L3 タスクで実施）: reflection-agent が `duration_ms` / `tool uses` / 合計トークンの before/after を記録し、`docs/claude-code/improvements/evaluations/IMP-2026-007.md` の「実タスク計測」節に追記すること。計測後に人間が採否を最終判断する。 | 未実施（次の L3 タスク完了後に実施） | reflection-agent + 人間 | IMP-2026-007 A案決定（2026-06-27）|
+| **IMP-2026-007 採否判断のための定量計測**（次の L3 タスクで実施）: reflection-agent が `duration_ms` / `tool uses` / 合計トークンの before/after を記録し、`docs/claude-code/improvements/evaluations/IMP-2026-007.md` の「実タスク計測」節に追記すること。計測後に人間が採否を最終判断する。 | **store-master（2026-06-28）で計測実施したが、orchestrator の notification 待ちループにより手動オーケストレーション状態となり、正常動作時の before 値として使いにくい**。次の L3 タスク（orchestrator 正常動作かつ notification ループ未発生）で再計測を推奨。evaluations/IMP-2026-007.md の「実タスク計測」節に詳細記録済み。 | reflection-agent + 人間 | IMP-2026-007 A案決定（2026-06-27）+ store-master 計測（2026-06-28）|
+| **orchestrator stop/resume 後の Sub-agent notification 待ちループ問題**（新規・重要）: orchestrator が background で Sub-agent を起動した後に stop すると、再開時に Sub-agent 完了通知を受け取れず無限待機に陥る。store-master で初観測。IMP-2026-007 の計測前提を崩す根本問題であり、並列化改善より先に解決が必要な可能性がある。候補ファイル: [candidates/store-master.md](candidates/store-master.md) 事象 1 参照。 | 未実施。manager が次の L3 タスク前に proposal 起票するか判断する。 | manager | store-master 事象 1（2026-06-28）|
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
 
@@ -50,6 +51,10 @@
 | Stop フック（check-deliverables/check-improvement-cycle）が多段進行中に毎ターン発火しノイズ | recipe-edit-screen | 1 | orchestrator Subagent Memory |
 | reviewer に障害設計固有観点（リトライ嵐・冪等性欠如等）が不足 | ベースライン再採点（post-phase3）| 2（→ IMP-2026-003 へ昇格・proposal 化）| reviewer Agent 定義 → proposal |
 | sw.js（Serwist 自動生成 Service Worker）が ESLint error（no-this-alias）を出す | Sprint 1 クローズ | 1 | ESLint 除外設定で対応可 |
+| architecture-designer 二重起動（orchestrator notification 待ちループの副産物） | store-master | 1 | orchestrator Subagent Memory（事象 1 解消で自然消滅） |
+| N-02 テスト（create → getAll 連携）が設計書テスト節省略により未実装（reviewer Should-2） | store-master | 1（再発監視中・次回同種 Should 指摘で create-test-plan Skill 昇格） | test-designer Subagent Memory |
+| docs/04-domain-model.md の Store エンティティ定義が実装と乖離（reviewer Nice-2） | store-master | 1（再発監視中・次回同種指摘で昇格） | implementer Subagent Memory |
+| hono バージョン ^4.12.18 に脆弱性（GHSA-88fw-hqm2-52qc）・最新パッチ以上に維持する運用ルール | store-master | 1 | implementer Subagent Memory |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
@@ -61,3 +66,4 @@
 | recipe-edit-screen | Stop フック: 多段オーケストレーション進行中の毎ターン誤発火抑制（次回 L2/L3 再発で即昇格・Hook 変更は人間承認必須） | Hook（check-deliverables / check-improvement-cycle） | proposal 化済み（→ IMP-2026-005） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | contract-designer 起動条件の不明確さ（事象5）→ ベースライン再採点と統合し proposal 化 | docs/claude-code/orchestration-policy.md / orchestrator.md | proposal 化済み（→ IMP-2026-004） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | proposal 化済み（→ IMP-2026-007） | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |
+| store-master | **【昇格推奨】** orchestrator stop/resume 後の Sub-agent notification 待ちループ（手動オーケストレーションが必要になる根本問題・IMP-2026-007 計測前提を崩す） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | candidate（manager が proposal 起票を検討） | [candidates/store-master.md](candidates/store-master.md)（事象 1） |
