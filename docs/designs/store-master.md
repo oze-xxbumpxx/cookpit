@@ -343,7 +343,7 @@ export * from './store';  // 追加
 **ファイル**: `packages/api-contract/src/store.schema.ts`
 
 ```typescript
-import { z } from 'zod';
+import z from 'zod';
 
 const nonBlankString = z.string().refine((value) => value.trim() !== '', {
   message: 'required',
@@ -371,6 +371,8 @@ export type StoreResponse = z.infer<typeof storeResponseSchema>;
 - フロントエンドが将来 `StoreResponse` 型を `import type` で参照できることを前提としている
 - `nonBlankString` は `recipe.schema.ts` と同一パターンをローカル定義する
   （共通化のリファクタリングはスコープ外）
+- Zod インポートは `import z from 'zod'`（デフォルトインポート）を使う。`recipe.schema.ts` が
+  同形式であり `api-contract` パッケージ内での統一のため（`import { z } from 'zod'` は使わない）
 
 ### 7-2. `packages/api-contract/src/index.ts` への追記
 
@@ -528,6 +530,15 @@ HTTP POST /api/stores  body: { name: string }
 **エラーハンドリングの原則**: UseCase の入口（ドメイン境界）でハンドリングする。内部では
 例外をそのまま投げ、`app.ts` の `onError` で HTTP レスポンスに変換する（既存パターン踏襲）。
 
+**Zod バリデーション失敗時のレスポンス形式**（`@hono/zod-validator` デフォルト）:
+
+```json
+{
+  "success": false,
+  "error": { "issues": [...], "name": "ZodError" }
+}
+```
+
 ---
 
 ## 11. マイグレーション
@@ -663,3 +674,41 @@ Application / Infrastructure 層の自動テストは後続フェーズで整備
 | DB カラム型 | jsonb（ingredients/steps） | text のみ |
 | `updatedAt` カラム | あり（update UseCase が存在する） | なし（Store は今回 create のみ） |
 | api-contract のスキーマ | createRecipeSchema + updateRecipeSchema（レスポンスは application 層のみ） | createStoreSchema + storeResponseSchema（両方を api-contract に定義。D-1） |
+
+---
+
+## 19. 契約テスト観点（test-designer への引き継ぎ）
+
+§17 の Application 層テストに加え、以下の契約テスト観点を test-designer へ引き継ぐ。
+詳細なテストケース設計・実装は test-designer の責務とする。
+
+### 19-1. `createStoreSchema` の Zod バリデーションテスト
+
+| # | 入力 | 期待結果 |
+|---|---|---|
+| Z-01 | `{ name: "西友" }` | `parse()` が成功し `CreateStoreBody` 型の値を返す |
+| Z-02 | `{ name: "" }` | `ZodError`（`refine` 失敗、`message: "required"`） |
+| Z-03 | `{ name: "  " }` | `ZodError`（`refine` 失敗、`message: "required"`） |
+| Z-04 | `{}` | `ZodError`（`name` フィールド欠損） |
+| Z-05 | `{ name: "a" }` | 成功（1文字は有効） |
+
+### 19-2. `storeResponseSchema` の型往復テスト（D-2 の確認）
+
+| # | 観点 | 確認方法 |
+|---|---|---|
+| R-01 | `StoreResponse` 型が `StoreDto` に代入可能であること | TypeScript の型チェック（`pnpm type-check`）で確認 |
+| R-02 | `storeResponseSchema.parse(storeDto)` が成功すること | Mapper が返す `StoreDto` を `storeResponseSchema` でパースして通過することを検証 |
+| R-03 | `createdAt` フィールドが `string` であること | `storeResponseSchema` の `createdAt: z.string()` が `toISOString()` の出力を受け入れること |
+
+### 19-3. 後方互換確認テスト
+
+| # | 観点 | 確認方法 |
+|---|---|---|
+| B-C1 | `createRecipeSchema` / `updateRecipeSchema` の動作が変わっていないこと | 既存の Recipe 契約テストが引き続き通ること |
+| B-C2 | `packages/api-contract/src/index.ts` の追記後に既存エクスポートが消えていないこと | `CreateRecipeBody` / `UpdateRecipeBody` / `unitSchema` 等が `@cookpit/api-contract` から引き続き参照できること |
+
+### 19-4. 冪等性
+
+`POST /api/stores` は冪等でない（毎回 `StoreId.generate()` で新 UUID を採番するため、同名の別 Store が作成される）。
+MVP1 スコープでは冪等キーは不要（D-3 の確定事項と一致）。
+test-designer は冪等性テストを設計対象外とすること。
