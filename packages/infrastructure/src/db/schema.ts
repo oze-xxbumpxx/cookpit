@@ -46,7 +46,7 @@ export const priceRecords = pgTable('price_records', {
     .references(() => products.id, { onDelete: 'cascade' }),
   storeId: text('store_id')
     .notNull()
-    .references(() => stores.id),
+    .references(() => stores.id, { onDelete: 'restrict' }),
   priceAmount: numeric('price_amount', { precision: 10, scale: 1 }).notNull(),
   unitPriceAmount: numeric('unit_price_amount', { precision: 10, scale: 1 }).notNull(),
   packageSizeValue: numeric('package_size_value', { precision: 10, scale: 3 }).notNull(),

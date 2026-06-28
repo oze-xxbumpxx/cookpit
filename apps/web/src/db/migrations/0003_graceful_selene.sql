@@ -21,9 +21,4 @@ CREATE TABLE "products" (
 );
 --> statement-breakpoint
 ALTER TABLE "price_records" ADD CONSTRAINT "price_records_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "price_records" ADD CONSTRAINT "price_records_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-INSERT INTO "stores" ("id", "name", "created_at")
-VALUES
-	('23ce428e-57cd-4e0c-ad38-5ae0f000973e', 'コモディイイダ', now()),
-	('599e07d9-f427-448e-8341-743459445392', 'ライフ', now())
-ON CONFLICT ("id") DO NOTHING;
+ALTER TABLE "price_records" ADD CONSTRAINT "price_records_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE restrict ON UPDATE no action;

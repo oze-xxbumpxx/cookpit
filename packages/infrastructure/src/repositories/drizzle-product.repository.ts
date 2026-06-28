@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { PriceRecord, Product, type ProductCategory } from '@cookpit/domain/src/product/product';
+import { and, eq, notInArray } from 'drizzle-orm';
+import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
 import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
 import { ProductId } from '@cookpit/domain/src/product/product-id';
 import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
@@ -77,6 +77,18 @@ export class DrizzleProductRepository implements ProductRepository {
       });
 
     const priceRecordRows = this.toPriceRecordRows(product);
+    const currentIds = priceRecordRows.map((row) => row.id);
+
+    if (currentIds.length > 0) {
+      await this.db
+        .delete(priceRecords)
+        .where(
+          and(eq(priceRecords.productId, product.id.value), notInArray(priceRecords.id, currentIds)),
+        );
+    } else {
+      await this.db.delete(priceRecords).where(eq(priceRecords.productId, product.id.value));
+    }
+
     for (const row of priceRecordRows) {
       await this.db
         .insert(priceRecords)
@@ -126,7 +138,7 @@ export class DrizzleProductRepository implements ProductRepository {
       id: ProductId.fromString(productRow.id),
       name: productRow.name,
       aliases: [...productRow.aliases],
-      category: toProductCategory(productRow.category),
+      category: productRow.category,
       defaultUnit: toUnit(productRow.defaultUnit),
       priceHistory: priceRecordRows.map((row) =>
         PriceRecord.reconstruct({
@@ -192,8 +204,4 @@ function toUnit(value: string): Unit {
     default:
       throw new Error(`Unknown unit: ${value}`);
   }
-}
-
-function toProductCategory(value: string): ProductCategory {
-  return value;
 }
