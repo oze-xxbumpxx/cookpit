@@ -6,6 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "type-check": "tsc --noEmit",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -14,7 +15,9 @@
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "@types/node": "^20",
+    "eslint": "^9.0.0",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^3.2.0"
   }
 }
