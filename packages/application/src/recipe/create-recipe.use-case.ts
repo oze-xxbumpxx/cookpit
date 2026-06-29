@@ -1,6 +1,6 @@
 import { Recipe } from '@cookpit/domain/src/recipe/recipe';
 import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
-import { CreateRecipeInputDto, RecipeDto } from './recipe.dto';
+import type { CreateRecipeInputDto, RecipeDto } from './recipe.dto';
 import { toIngredient, toRecipeDto, toStep } from './recipe.mapper';
 
 export class CreateRecipeUseCase {

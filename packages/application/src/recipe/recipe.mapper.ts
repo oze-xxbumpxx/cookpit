@@ -1,9 +1,9 @@
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { Unit } from '@cookpit/domain/src/shared/unit';
-import { RecipeIngredientDto, CookingStepDto, RecipeDto } from './recipe.dto';
+import type { Unit } from '@cookpit/domain/src/shared/unit';
+import type { RecipeIngredientDto, CookingStepDto, RecipeDto } from './recipe.dto';
 import { RecipeIngredient } from '@cookpit/domain/src/recipe/recipe-ingredient';
 import { CookingStep } from '@cookpit/domain/src/recipe/cooking-step';
-import { Recipe } from '@cookpit/domain/src/recipe/recipe';
+import type { Recipe } from '@cookpit/domain/src/recipe/recipe';
 
 function toQuantity(value: number | null, unit: Unit | null): Quantity | null {
   if (value === null || unit === null) {
