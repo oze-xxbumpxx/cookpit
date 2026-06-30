@@ -15,5 +15,11 @@ export const storeResponseSchema = z.object({
   createdAt: z.string(),
 });
 
+export const storeSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+});
+
 export type CreateStoreBody = z.infer<typeof createStoreSchema>;
 export type StoreResponse = z.infer<typeof storeResponseSchema>;
+export type StoreSchemaType = z.infer<typeof storeSchema>;
