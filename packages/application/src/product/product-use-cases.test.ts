@@ -358,6 +358,7 @@ describe('GetCheapestStoreUseCase', () => {
       storeName: 'ライフ',
       latestPrice: 270,
       unitPrice: 90,
+      packageSizeUnit: '個',
     });
   });
 
@@ -384,6 +385,7 @@ describe('GetCheapestStoreUseCase', () => {
       storeName: '',
       latestPrice: 300,
       unitPrice: 100,
+      packageSizeUnit: '個',
     });
   });
 });

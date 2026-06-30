@@ -9,11 +9,21 @@ import {
   sortPriceHistoryByObservedAt,
   unitPriceBasisLabel,
 } from '@/app/products/_utils/product-format';
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { CheapestStoreResultDto, ProductDto } from '@cookpit/application';
 import { ChevronLeft, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface Props {
   product: ProductDto;
@@ -24,6 +34,26 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
   const router = useRouter();
   const latestPrice = findLatestPriceRecord(product.priceHistory);
   const recentPriceHistory = sortPriceHistoryByObservedAt(product.priceHistory).slice(-5).reverse();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+
+  async function handleDelete(): Promise<void> {
+    setDeleting(true);
+    setDeleteErrorMessage(null);
+    try {
+      const response = await client.api.products[':id'].$delete({ param: { id: product.id } });
+      if (!response.ok) {
+        setDeleteErrorMessage('削除に失敗しました。');
+        return;
+      }
+      router.push('/products');
+      router.refresh();
+    } catch {
+      setDeleteErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <main className="min-h-dvh bg-background">
@@ -85,7 +115,8 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                   {cheapestStore.storeName === '' ? '店舗未設定' : cheapestStore.storeName}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatYen(cheapestStore.unitPrice)} / 比較単位
+                  {formatYen(cheapestStore.unitPrice)} /{' '}
+                  {unitPriceBasisLabel(cheapestStore.packageSizeUnit)}
                 </p>
               </>
             )}
@@ -117,7 +148,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
         </section>
 
         {recentPriceHistory.length > 0 && (
-          <section className="flex flex-col gap-2 pb-8">
+          <section className="flex flex-col gap-2">
             <h2 className="text-sm font-medium text-foreground">最近の記録</h2>
             <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
               {recentPriceHistory.map((record) => (
@@ -145,6 +176,47 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
             </div>
           </section>
         )}
+
+        <div className="pt-2 pb-8">
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button type="button" variant="destructive" className="h-11 w-full">
+                  この商品を削除
+                </Button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogTitle>この商品を削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                削除すると元に戻せません。価格履歴も削除されます。
+              </AlertDialogDescription>
+              {deleteErrorMessage !== null && (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {deleteErrorMessage}
+                </p>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <AlertDialogClose
+                  render={
+                    <Button type="button" variant="outline" className="h-9">
+                      キャンセル
+                    </Button>
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="h-9"
+                >
+                  {deleting ? '削除中' : '削除する'}
+                </Button>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </main>
   );

@@ -36,6 +36,7 @@ export class GetCheapestStoreUseCase {
       storeName: store?.name ?? '',
       latestPrice: latestPriceRecord.price.amount,
       unitPrice: latestPriceRecord.unitPrice.amount,
+      packageSizeUnit: latestPriceRecord.packageSize.unit,
     };
   }
 }
