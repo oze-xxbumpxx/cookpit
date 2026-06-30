@@ -159,8 +159,8 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 | 3 | GET | `/api/products/:id` | GetProductUseCase | 200 | `id: uuid` | なし | `ProductDto` |
 | 4 | PUT | `/api/products/:id` | UpdateProductUseCase | 200 | `id: uuid` | `UpdateProductBody` | `ProductDto` |
 | 5 | DELETE | `/api/products/:id` | DeleteProductUseCase | 204 | `id: uuid` | なし | なし（空ボディ） |
-| 6 | POST | `/api/products/:id/price-records` | RecordPriceUseCase | **200** ※要確認 | `id: uuid` | `RecordPriceBody` | なし（空ボディ）|
-| 7 | GET | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 200 | `id: uuid` | なし | `CheapestStoreResult \| { data: null }` |
+| 6 | POST | `/api/products/:id/price-records` | RecordPriceUseCase | **200**（確定: 案A） | `id: uuid` | `RecordPriceBody` | なし（空ボディ） |
+| 7 | GET | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 200 | `id: uuid` | なし | `{ data: CheapestStoreResult \| null }`（確定: 案A） |
 | 8 | GET | `/api/stores` | GetStoresUseCase | 200 | なし | なし | `StoreDto[]` |
 
 ### 3-2. エンドポイント別の詳細
@@ -260,7 +260,7 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 エラーレスポンス 404（StoreNotFoundError）: { "error": "Store not found: <storeId>" }
 ```
 
-**RecordPrice の成功ステータスに関する検討（要ユーザー確認）:**
+**RecordPrice の成功ステータス（確定: 案A / 200）:**
 
 | 案 | ステータス | レスポンスボディ | 根拠 |
 |---|---|---|---|
@@ -271,17 +271,19 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 設計推奨は **案A（200）**。理由: RecordPriceUseCase は PriceRecord を作成するが、その URL を
 クライアントに知らせる必要がない（`Location` ヘッダーなし）。`void` の操作は 200 または
 204 のどちらかが適切。同ルート内の POST で 201 を使うと「ProductDto が返ってくる」という
-誤解を招く可能性がある。ただし 201 派の意見もあるため、**ユーザー確認を要する**。
+誤解を招く可能性がある。201 派の意見もあったが、**案A（200）で確定**（実装済み）。
 
 #### GET /api/products/:id/cheapest-store（最安店舗取得）
 
 ```
 価格記録あり成功レスポンス 200:
 {
-  "storeId": "550e8400-e29b-41d4-a716-446655440010",
-  "storeName": "コモディイイダ",
-  "latestPrice": 137,
-  "unitPrice": 45.7
+  "data": {
+    "storeId": "550e8400-e29b-41d4-a716-446655440010",
+    "storeName": "コモディイイダ",
+    "latestPrice": 137,
+    "unitPrice": 45.7
+  }
 }
 
 価格記録なし成功レスポンス 200:
@@ -306,7 +308,7 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 - ただし、既存の recipes.ts は `c.json(recipe)` / `c.json(recipes)` とフラットに返しており、
   ラッパーを使っていない。cheapest-store のみラッパーを入れると乖離が生じる。
 
-**要ユーザー確認**: 以下の2案から選択が必要。
+**確定: 案A**（実装済み）。当初検討した2案:
 
 | 案 | null のレスポンス | 非null のレスポンス | 一貫性 |
 |---|---|---|---|
@@ -314,8 +316,8 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 | 案B | `null`（JSON の null） | `{ storeId, storeName, latestPrice, unitPrice }` | フラット（recipes と同形式、null レスポンスが `null` リテラル） |
 
 Hono の `c.json(null)` は `null` を JSON としてシリアライズするため技術的には可能。
-TanStack Query では `data === null` として扱える。設計推奨は**案A**（ラッパーで非対称を避ける）だが、
-**ユーザー確認を要する**。
+TanStack Query では `data === null` として扱える。設計推奨は**案A**（ラッパーで非対称を避ける）で、
+**案Aで確定**（実装済み）。
 
 #### GET /api/stores（店舗一覧）
 
