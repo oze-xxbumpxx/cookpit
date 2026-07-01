@@ -32,9 +32,19 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
    L2: architecture-designer）に対し、成果物作成とあわせて
    `.claude/state/current-feature` へ feature-name を 1 行で書き込むよう指示する。
    Level 1 ではこのファイルを設定しない（Hook を黙らせ誤検知を防ぐため）。
+   - **L3 で** Sub-agent を **background で** 委譲する場合に限り（L1/L2 および単一 Sub-agent の
+     同期委譲では不要）、起動する Write 可能な Subagent へ「起動する Sub-agent 名 / 目的 /
+     期待成果物パス」を `.claude/state/inflight-agents.json` へ追記するよう指示する（通知非依存の
+     再開判定用）。単一 Sub-agent の委譲は原則同期待機とし、background は明示的に並列化する複数
+     Sub-agent に限定する。feature 完了時（reflection-agent 起動時または完了報告前）に同ファイルを
+     空にする（古いエントリの誤判定防止）。詳細は orchestration-policy.md を参照。
 4. 各 Subagent へ委譲する。委譲時は必ず以下を明示する。
    - 目的 / 対象範囲 / 対象外 / 参照すべきファイル / 期待する成果物 / 出力先 /
      完了条件 / 禁止事項
+   - resume（会話再開）直後かつ `.claude/state/inflight-agents.json` に未処理エントリがある場合
+     のみ、notification を待たず各エントリの期待成果物の存在を確認する。存在すれば完了とみなし
+     当該エントリを除去して次工程へ進み、無ければ再委譲する（「完了待ちループ」に入らない）。
+     stop していない通常フローでは本手順は発動しない。
 5. 成果物を統合し、矛盾があれば該当 Subagent へ差し戻す。
 6. 完了条件（development-workflow.md）を確認してユーザーへ報告する。
 
