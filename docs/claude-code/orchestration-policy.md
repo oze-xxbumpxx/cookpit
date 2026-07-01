@@ -74,6 +74,21 @@ requirements-analyst  → docs/requirements/<feature>.md
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
 
+## stop/resume を跨ぐ委譲の扱い（通知非依存）
+
+出典: IMP-2026-008（store-master 事象1・stop/resume 後の Sub-agent notification 待ちループ解消）。
+
+- **適用レベル: L3 のみ**（L1/L2 では `inflight-agents.json` を使わない）。
+- **background 委譲時のみ**、その前に `.claude/state/inflight-agents.json` へ
+  `{ agent, purpose, expected_outputs[] }` を追記する。単一 Sub-agent の同期委譲では追記しない。
+- resume 直後（未処理エントリがある場合のみ）は notification を待たず expected_outputs の
+  存在で完了を冪等判定する。stop していない通常フローでは発動しない。
+- 単一 Sub-agent への委譲は同期待機を既定とし、background は複数 Sub-agent の明示的並列化に
+  限定する（stop を跨ぐ揮発状態を最小化）。
+- **クリアタイミング**: `reflection-agent` 起動時、または feature 完了報告前に空にする。
+- **追記責務**: 委譲指示の禁止事項に「`inflight-agents.json` の追記を成果物確定前に行わない」を
+  明記し、部分書き込みによる完了誤判定を防ぐ。
+
 ## contract-designer の必須起動トリガー
 
 contract-designer の起動を orchestrator の定性判断だけに委ねない。次のいずれかに該当したら
