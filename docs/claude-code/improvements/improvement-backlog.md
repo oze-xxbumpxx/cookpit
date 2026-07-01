@@ -56,6 +56,10 @@
 | N-02 テスト（create → getAll 連携）が設計書テスト節省略により未実装（reviewer Should-2） | store-master | 1（再発監視中・次回同種 Should 指摘で create-test-plan Skill 昇格） | test-designer Subagent Memory |
 | docs/04-domain-model.md の Store エンティティ定義が実装と乖離（reviewer Nice-2） | store-master | 1（再発監視中・次回同種指摘で昇格） | implementer Subagent Memory |
 | hono バージョン ^4.12.18 に脆弱性（GHSA-88fw-hqm2-52qc）・最新パッチ以上に維持する運用ルール | store-master | 1 | implementer Subagent Memory |
+| 計画セッション分離型 L2（前日に計画確定→翌日実装）が手戻りゼロで完走（成功パターン） | test-infra-expansion | 1 | orchestrator Subagent Memory |
+| 設計書が非推奨 API を指定（Vitest defineWorkspace → test.projects へ実装時置換）。設計時に採用バージョンの現行 API 未確認 | test-infra-expansion | 1（再発で create-design-document Skill 昇格を検討） | architecture-designer Subagent Memory |
+| リモート（エフェメラル）環境では subagent-log が残らず record-task-metrics.sh の自動補完・横断計測が機能しない | test-infra-expansion | 1（IMP-2026-007 定量計測の前提にも影響・再発で reflect-task Skill 昇格を検討） | reflection-agent Subagent Memory |
+| テスト・設定のみ（プロダクションコード変更 0）の L2 で実装後 reviewer を省略しマージ（省略条件が未明文化） | test-infra-expansion | 1（判断が揺れたら classify-change / validate-deliverables へ明文化） | orchestrator Subagent Memory |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
