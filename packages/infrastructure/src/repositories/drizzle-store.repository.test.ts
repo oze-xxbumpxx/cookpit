@@ -1,0 +1,60 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { Store, StoreId } from '@cookpit/domain/src/shared/store';
+import type { DrizzleClient } from '../db/client';
+import { createTestDb } from '../testing/create-test-db';
+import { DrizzleStoreRepository } from './drizzle-store.repository';
+
+describe('DrizzleStoreRepository', () => {
+  let db: DrizzleClient;
+  let repository: DrizzleStoreRepository;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    repository = new DrizzleStoreRepository(db);
+  });
+
+  it('IR-S-01: save() + findById() ラウンドトリップで全フィールドが一致する', async () => {
+    const store = Store.reconstruct({
+      id: StoreId.generate(),
+      name: 'スーパーA',
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+    });
+
+    await repository.save(store);
+    const found = await repository.findById(store.id);
+
+    expect(found).not.toBeNull();
+    expect(found?.id.equals(store.id)).toBe(true);
+    expect(found?.name).toBe('スーパーA');
+    expect(found?.createdAt.getTime()).toBe(store.createdAt.getTime());
+  });
+
+  it('IR-S-02: findAll() で createdAt 順に返る（INFRA-R-11: 全フィールド往復）', async () => {
+    const older = Store.reconstruct({
+      id: StoreId.generate(),
+      name: '八百屋B',
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+    });
+    const newer = Store.reconstruct({
+      id: StoreId.generate(),
+      name: 'スーパーA',
+      createdAt: new Date('2026-06-15T00:00:00.000Z'),
+    });
+
+    await repository.save(newer);
+    await repository.save(older);
+    const all = await repository.findAll();
+
+    expect(all).toHaveLength(2);
+    expect(all[0]?.name).toBe('八百屋B');
+    expect(all[1]?.name).toBe('スーパーA');
+    expect(all[0]?.id.equals(older.id)).toBe(true);
+    expect(all[0]?.createdAt.getTime()).toBe(older.createdAt.getTime());
+  });
+
+  it('IR-S-03: findById() で存在しない ID は null を返す', async () => {
+    const found = await repository.findById(StoreId.generate());
+
+    expect(found).toBeNull();
+  });
+});
