@@ -27,6 +27,7 @@ export interface CheapestStoreResultDto {
   storeName: string;
   latestPrice: number;
   unitPrice: number;
+  packageSizeUnit: Unit;
 }
 
 export interface CreateProductInputDto {

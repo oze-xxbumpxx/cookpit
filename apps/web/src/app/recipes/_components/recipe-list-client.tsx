@@ -32,7 +32,17 @@ export function RecipeListClient({ initialRecipes }: Props) {
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div aria-hidden="true" />
+          <div className="flex justify-start">
+            <Link
+              href="/products"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-9 px-2 text-foreground',
+              )}
+            >
+              商品
+            </Link>
+          </div>
           <h1 className="text-lg font-semibold text-foreground">レシピ</h1>
           <div className="flex justify-end">
             <Link href="/recipes/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
@@ -61,7 +71,9 @@ export function RecipeListClient({ initialRecipes }: Props) {
               まだレシピがありません。右上から追加できます。
             </p>
           ) : filteredRecipes.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">該当するレシピがありません</p>
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              該当するレシピがありません
+            </p>
           ) : (
             <ul className="flex flex-col gap-3">
               {filteredRecipes.map((recipe) => (
