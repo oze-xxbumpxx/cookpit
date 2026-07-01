@@ -177,42 +177,57 @@
 
 ### タスク
 
-1. **Product / Store ドメインモデル実装**
-   - `packages/domain/product/` に Product / ProductId / PriceRecord / ProductCategory
+1. **Product / Store ドメインモデル実装** ✅
+   - `packages/domain/product/` に Product / ProductId / PriceRecord / PriceRecordId / ProductCategory
    - `packages/domain/shared/store.ts` に Store / StoreId
-   - `packages/domain/shared/money.ts` に Money
+   - `packages/domain/shared/money.ts` に Money（Sprint 2 Unit A で先行実装）
+   - ユニットテスト（domain 層 co-located）
 
-2. **Drizzle スキーマ**
+2. **Drizzle スキーマ** ✅
    - `products` テーブル
-   - `price_records` テーブル（履歴は別テーブル推奨）
+   - `price_records` テーブル（履歴は別テーブル・`product_id` インデックス・FK は cascade/restrict）
    - `stores` テーブル
-   - 初期データ：Store を 2 件投入（実際の使用店舗）
+   - 初期データ投入は**方式変更**：シードは廃止し、価格記録フォームから店舗をその場で追加する UI 方式に（PR #15）
 
-3. **Repository 実装**
-   - `DrizzleProductRepository`
+3. **Repository 実装** ✅
+   - `DrizzleProductRepository`（LEFT JOIN グルーピング・upsert・stale priceRecords 削除）
    - `DrizzleStoreRepository`
+   - PGlite ベースの Repository テスト 16 本（test-infra-expansion で追加）
 
-4. **Use Case 実装**
-   - `CreateProductUseCase`
-   - `GetProductsUseCase`
-   - `RecordPriceUseCase`
-   - `GetCheapestStoreUseCase`
+4. **Use Case 実装** ✅
+   - `CreateProductUseCase` / `GetProductsUseCase` / `RecordPriceUseCase` / `GetCheapestStoreUseCase`
+   - 追加実装：`GetProductUseCase` / `UpdateProductUseCase` / `DeleteProductUseCase`
 
-5. **API + 画面**
-   - 商品一覧・詳細・作成・編集
+5. **API + 画面** ✅
+   - 商品一覧・詳細・作成・編集（+ 削除 UI）
    - 価格履歴表示（簡易グラフ）
-   - 「この商品、どっちの店舗が安い？」ビュー
+   - 「この商品、どっちの店舗が安い？」ビュー（最安店舗の単価基準表示）
 
-6. **GitHub Actions CI 導入**
-   - PR トリガーで `pnpm lint` / `pnpm type-check` / `pnpm test` / `pnpm build` を実行
-   - 現状 Vercel Preview Comments のみで品質ゲートが CI 化されていない
+6. **GitHub Actions CI 導入** ✅
+   - `ci.yml`：PR トリガーで `pnpm lint` / `pnpm type-check` / `pnpm build` / `pnpm test` を実行
+   - テスト基盤を infrastructure / apps/web へ拡張（PGlite / Hono app.request / RTL + happy-dom。Docker 不要で CI 完結）
 
 ### 完了条件
 
-- [ ] 商品を 20 件程度登録できる
-- [ ] 価格を手動で記録できる
-- [ ] 店舗別の価格比較が画面で見える
-- [ ] PR に対して lint / type-check / test / build が自動で走る
+- [x] 商品を 20 件程度登録できる — 機能は完備（CRUD + API 7 本）。実登録は運用開始後
+- [x] 価格を手動で記録できる — 価格記録フォーム（店舗のその場追加込み）実装済み
+- [x] 店舗別の価格比較が画面で見える — 最安店舗ビュー + 価格履歴グラフ
+- [x] PR に対して lint / type-check / test / build が自動で走る — ci.yml 稼働確認済み
+
+### Sprint 2 完了サマリ（2026-07-01）
+
+- **全 6 タスク完了**。Store マスタ（Unit A）→ Product ドメイン → スキーマ → Application → API/画面 → テスト基盤拡張の順で縦スライス実装（PR #14〜#22）
+- **品質ゲート**: lint / type-check 全通過、Vitest 227 テスト通過（domain 129 + application 73 + infrastructure 16 + web 9）
+- **テスト基盤**: 全 4 層に Vitest 導入完了。infrastructure は PGlite（Docker 不要・実 PG プロトコル）、web は node/dom 2 プロジェクト構成
+- **開発体制メモ**: 本スプリントから Claude（計画・レビュー・テスト）と Codex（実装）の分業を試行。改善サイクルは IMP-2026-008 を採用
+- **残課題**（Sprint 3 以降 or バックログ）:
+  - 実 DB（Neon）接続込みの実操作スモーク — 商品登録・価格記録を実利用で確認
+  - `DrizzleRecipeRepository` の PGlite テスト（jsonb 往復）— テスト基盤の後続フェーズ
+  - テストのみ変更時の reviewer 省略条件の明文化 — 再発監視中（candidates/test-infra-expansion.md）
+
+### Sprint 2 のマイルストーン
+
+買い物時に価格を記録する習慣を開始できる状態。実利用しながら Sprint 3（MealPlan 献立作成）へ進む。
 
 ## Sprint 3：MealPlan 献立作成（1.5週間）
 
