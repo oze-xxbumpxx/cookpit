@@ -7,7 +7,6 @@ declare global {
   }
 }
 
-// eslint-disable-next-line no-restricted-globals
 const sw = self as unknown as WorkerGlobalScope & typeof globalThis;
 
 const serwist = new Serwist({
