@@ -13,7 +13,7 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
 ## 前提
 
 `<feature-name>` と変更レベル（L1/L2/L3）を確認する。`.claude/state/current-feature` の値、
-および `docs/document-policy.md` のレベル定義に従う。
+および `docs/claude-code/document-policy.md` のレベル定義に従う。
 
 ## チェックリスト
 
