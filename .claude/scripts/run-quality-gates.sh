@@ -64,7 +64,7 @@ if [ "$RUN_FORMAT" = "1" ] || [ "$RUN_ALL" = "1" ]; then
     skip_gate "format-check" "prettier unavailable"
   fi
 fi
-# tests（実在時は既定でも実行する。domain 層に Vitest を導入済み）
+# tests（実在時は既定でも実行する。Vitest は全層導入済み — 2026-07-01 PR #21）
 if has_script test; then run_gate "test" pnpm run test; else skip_gate "test" "unavailable"; fi
 
 echo "===== summary ====="

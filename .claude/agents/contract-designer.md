@@ -46,7 +46,8 @@ architecture-designer の設計後、契約の新設・変更がある場合に 
 3. 後方互換性を判定する。互換を壊す場合は移行・バージョニング方針を明記し、Orchestrator 経由で
    ユーザー確認を要すると記す。
 4. 「値なし」は `null` に統一（コーディング規約 `.claude/rules/coding-standards.md`）。
-   契約の境界は `.claude/rules/api-contracts.md` に従う。
+   入出力スキーマは Zod で `packages/api-contract` に定義して共有する
+   （`.claude/rules/presentation-layer.md` §バリデーション）。
 
 ## 出力
 

@@ -34,7 +34,7 @@
 | eval ベースライン再採点（テスト網羅性ほか） | 2026-06-25 実施済み。`INDEX-2026-06-25.md` に新ベースライン保存（IMP-2026-003/004/005・Application Vitest・Playwright 反映）。次回再採点は次の主要改善適用後。 | 完了 | 事象 2(a) |
 | IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
 | **IMP-2026-007 採否判断のための定量計測**（次の L3 タスクで実施）: reflection-agent が `duration_ms` / `tool uses` / 合計トークンの before/after を記録し、`docs/claude-code/improvements/evaluations/IMP-2026-007.md` の「実タスク計測」節に追記すること。計測後に人間が採否を最終判断する。 | **store-master（2026-06-28）で計測実施したが、orchestrator の notification 待ちループにより手動オーケストレーション状態となり、正常動作時の before 値として使いにくい**。次の L3 タスク（orchestrator 正常動作かつ notification ループ未発生）で再計測を推奨。evaluations/IMP-2026-007.md の「実タスク計測」節に詳細記録済み。 | reflection-agent + 人間 | IMP-2026-007 A案決定（2026-06-27）+ store-master 計測（2026-06-28）|
-| **orchestrator stop/resume 後の Sub-agent notification 待ちループ問題**（新規・重要）: orchestrator が background で Sub-agent を起動した後に stop すると、再開時に Sub-agent 完了通知を受け取れず無限待機に陥る。store-master で初観測。IMP-2026-007 の計測前提を崩す根本問題であり、並列化改善より先に解決が必要な可能性がある。候補ファイル: [candidates/store-master.md](candidates/store-master.md) 事象 1 参照。 | 未実施。manager が次の L3 タスク前に proposal 起票するか判断する。 | manager | store-master 事象 1（2026-06-28）|
+| **orchestrator stop/resume 後の Sub-agent notification 待ちループ問題**（新規・重要）: orchestrator が background で Sub-agent を起動した後に stop すると、再開時に Sub-agent 完了通知を受け取れず無限待機に陥る。store-master で初観測。IMP-2026-007 の計測前提を崩す根本問題であり、並列化改善より先に解決が必要な可能性がある。候補ファイル: [candidates/store-master.md](candidates/store-master.md) 事象 1 参照。 | **対応済み**: IMP-2026-008 として proposal 起票 → 2026-07-01 採用・本適用済み（v2）。 | 完了 | store-master 事象 1（2026-06-28）|
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
 
@@ -60,6 +60,9 @@
 | 設計書が非推奨 API を指定（Vitest defineWorkspace → test.projects へ実装時置換）。設計時に採用バージョンの現行 API 未確認 | test-infra-expansion | 1（再発で create-design-document Skill 昇格を検討） | architecture-designer Subagent Memory |
 | リモート（エフェメラル）環境では subagent-log が残らず record-task-metrics.sh の自動補完・横断計測が機能しない | test-infra-expansion | 1（IMP-2026-007 定量計測の前提にも影響・再発で reflect-task Skill 昇格を検討） | reflection-agent Subagent Memory |
 | テスト・設定のみ（プロダクションコード変更 0）の L2 で実装後 reviewer を省略しマージ（省略条件が未明文化） | test-infra-expansion | 1（判断が揺れたら classify-change / validate-deliverables へ明文化） | orchestrator Subagent Memory |
+| 環境の「現状」を書いた指示が状態変化後も残り食い違いになる（テスト基盤状態が8箇所で鮮度切れ） | skills-inventory-audit | 1（再発で create-implementation-plan Skill に grep 確認を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 1 |
+| 改善適用時に同内容を記載した他文書へ反映されず食い違いが残る（委譲フロー5文書の不一致） | skills-inventory-audit | 1（再発で proposals/_TEMPLATE.md に「反映先一覧」欄を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 2 |
+| Codex 実装の頻出ミス（識別子/Tailwind タイポ・結線漏れ・use client 漏れ 等）が4セッション反復 | skills-inventory-audit（logs 5/16〜6/16） | 4 → **昇格済み**: docs/06-ai-tools.md レビューチェックリスト（2026-07-02） | docs/06-ai-tools.md |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
@@ -71,4 +74,4 @@
 | recipe-edit-screen | Stop フック: 多段オーケストレーション進行中の毎ターン誤発火抑制（次回 L2/L3 再発で即昇格・Hook 変更は人間承認必須） | Hook（check-deliverables / check-improvement-cycle） | proposal 化済み（→ IMP-2026-005） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | recipe-edit-screen | contract-designer 起動条件の不明確さ（事象5）→ ベースライン再採点と統合し proposal 化 | docs/claude-code/orchestration-policy.md / orchestrator.md | proposal 化済み（→ IMP-2026-004） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | proposal 化済み（→ IMP-2026-007） | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |
-| store-master | **【昇格推奨】** orchestrator stop/resume 後の Sub-agent notification 待ちループ（手動オーケストレーションが必要になる根本問題・IMP-2026-007 計測前提を崩す） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | candidate（manager が proposal 起票を検討） | [candidates/store-master.md](candidates/store-master.md)（事象 1） |
+| store-master | orchestrator stop/resume 後の Sub-agent notification 待ちループ（手動オーケストレーションが必要になる根本問題・IMP-2026-007 計測前提を崩す） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | proposal 化済み（→ IMP-2026-008・2026-07-01 採用済み） | [candidates/store-master.md](candidates/store-master.md)（事象 1） |

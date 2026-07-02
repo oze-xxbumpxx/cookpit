@@ -201,6 +201,28 @@ Codex はプロジェクト起動時に `AGENTS.md` を自動で読み込む。
 | Infrastructure 層（Repository 実装） | 統合テスト（実 DB）                   | 必須          |
 | E2E                                  | -                                     | MVP1 は対象外 |
 
-テストランナーは **Vitest**。Domain 層（`packages/domain`）は co-located（`src/**/*.test.ts`）で
-導入済みで、`pnpm test`（= `turbo test`）で実行する。Application / Infrastructure 層の整備は
-後続フェーズ。
+テストランナーは **Vitest**。全層に導入済み — Domain（co-located `src/**/*.test.ts`）/
+Application（UseCase テスト）/ Infrastructure（PGlite Repository テスト）/ apps/web
+（Hono ルート + RTL。2026-07-01 PR #21）。`pnpm test`（= `turbo test`）で実行する。
+E2E は Playwright 設定のみ存在し、シナリオは feature 単位で整備する。
+
+---
+
+## 環境の既知の事実（AI セッション向け・実績由来）
+
+過去セッションで確認済みの環境固有の事実。**日付より古いログの記述はここが優先。**
+
+- **dev サーバーは素の `pnpm dev`（Turbopack）で起動できる**（2026-06-26 の
+  `next.config.ts` 修正で Serwist を本番ビルド限定化・commit 473ad09）。それ以前のログに
+  ある「`--webpack` フラグ必須」は**解消済みなので従わない**。
+- **`randomUUID` は `import { randomUUID } from 'node:crypto'`** を使う。グローバル
+  `crypto.randomUUID()` は使わない（`@types/node` 前提。出典: `logs/2026-05-16.md`）。
+- **turbo キャッシュは潜在エラーを隠す**: あるパッケージの変更で別パッケージの
+  lint / type-check が突然失敗したら、自分の変更が原因と決めつけず base コミットで再現し
+  「変更前から存在するエラーか」を確認する（出典:
+  `docs/claude-code/improvements/candidates/test-runner-introduction.md` 事象 1）。
+- **Neon はコールドスタートで初回レスポンスが 1 秒超**になることがある（個人利用では許容。
+  出典: `logs/2026-05-09.md`）。
+- **リモート（エフェメラル）環境では `DATABASE_URL` 未設定のため live DB 経路は動かない**。
+  画面の手動確認は確認できた項目と BLOCKED（理由つき）を分けて報告し、コードリーディングで
+  補完する（出典: `logs/2026-06-26.md` タスク3）。

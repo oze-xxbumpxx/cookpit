@@ -55,7 +55,8 @@
 - **契約の新設・変更があるときだけ**起動する（過剰工程の禁止）。
 - 成果は `docs/designs/<feature>.md` の Contract 節（大きければ `-contract.md` に分割）。
 - **実装コードは変更しない**（Zod/Drizzle/Hono の実装は implementer）。
-- 後方互換破壊はユーザー確認なしに確定しない。詳細ルールは `.claude/rules/api-contracts.md`。
+- 後方互換破壊はユーザー確認なしに確定しない。入出力スキーマは Zod で
+  `packages/api-contract` に定義して共有する（`.claude/rules/presentation-layer.md`）。
 
 ## implementation-planner
 
@@ -69,8 +70,8 @@
 
 - 確定済みの `docs/designs/<feature>.md` と `docs/implementation-plans/<feature>.md` を
   実装前に必ず確認する。
-- 計画に沿って実装し、必要な単体テストを作成、`pnpm lint` / `pnpm type-check`
-  （テスト導入後は該当テスト）を実行する。
+- 計画に沿って実装し、必要な単体テストを作成、`pnpm lint` / `pnpm type-check` /
+  該当パッケージの `pnpm test`（Vitest・全層導入済み）を実行する。
 - 設計から逸脱が必要になったら**独断で変更せず Orchestrator へ差し戻す。**
 - アーキテクチャ原則は `.claude/rules/` を遵守（特に domain 層の制約）。
 

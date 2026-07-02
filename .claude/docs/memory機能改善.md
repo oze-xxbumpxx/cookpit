@@ -1,5 +1,10 @@
 # 継続的なAgent改善機構の追加要件
 
+> **ARCHIVED（2026-07-02）**: このファイルは初期構築時の依頼文（歴史的記録）であり、
+> 現在の正典ではない。運用の正典は `docs/claude-code/`（usage-guide.md ほか）、
+> Agent 実体は `.claude/agents/`、Skill は `.claude/skills/` を参照すること。
+> このファイルへの参照は新規に追加しない。
+
 既存のマルチエージェント構成に、Claude CodeのAuto Memory、Subagent Memory、Skills、Hooksを利用した継続的改善機構を追加してください。
 
 目的は、タスクの実行結果、ユーザーからの修正、レビュー指摘、テスト失敗、手戻りを蓄積し、エージェント構成を段階的に改善することです。
