@@ -40,6 +40,10 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 - **L3 の例**: store-master — 新規 API（`GET/POST /api/stores`）+ DB スキーマ変更
   （stores テーブル）を含む全層変更 → L3
   （出典: `docs/requirements/store-master.md` / `docs/designs/store-master.md`）。
+- **L2 の例（テストのみの変更）**: test-infra-expansion — プロダクションコード変更 0 の
+  テスト基盤拡張だが、新規 9 ファイル・複数パッケージ（infrastructure / apps/web）に及ぶ
+  → 「軽微修正」ではなく L2。手戻りゼロで完走
+  （出典: `docs/claude-code/improvements/candidates/test-infra-expansion.md` 対象タスク概要・事象 1）。
 
 ## 出力（会話でユーザーへ提示）
 

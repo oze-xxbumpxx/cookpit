@@ -51,6 +51,14 @@ requirements-analyst が `docs/requirements/<feature-name>.md` を作成する�
 - 不明点・要確認事項が列挙されている。
 - 影響範囲が具体パスで示されている。
 
+## 良い例（実タスクの成果物）
+
+- `docs/requirements/store-master.md` §5 — 正常系 N-xx / 異常系 E-xx / 境界 B-xx の採番つき
+  観点表で列挙。この採番が下流工程の照合基準になり（create-test-plan 手順8 は「要件書を正」
+  として全観点の反映を照合する）、reviewer の「要件・設計・実装計画・実装の整合性」確認を
+  通過した（出典: `docs/reviews/store-master.md`。同レビュー Should-2 は、要件書 N-02 を
+  下流が省略したことを要件書側の採番のおかげで検出できた例でもある）。
+
 ## 禁止事項
 
 - コードの変更・設計の確定（設計は architecture-designer / contract-designer）。
