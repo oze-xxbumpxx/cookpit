@@ -9,6 +9,30 @@
 | Gemini      | 技術調査                       |
 | Perplexity  | ライブラリ検索                 |
 
+> 補足: L2/L3 の開発タスクでは Claude Code は Orchestrator として動き、実装を
+> implementer Subagent が担当することもある。使い分けは次節を参照。
+
+---
+
+## 実装ルートの使い分け（Codex 委譲 か Orchestrator/implementer か）
+
+実装ルートは 2 系統ある。タスク開始時に変更レベル（L0〜L3）の判定と一緒に、
+どちらのルートを使うかを宣言する（2026-07-02 明文化）。
+
+| 観点 | Codex 委譲 | Orchestrator / implementer（CLAUDE.md の開発ワークフロー） |
+| --- | --- | --- |
+| 向くタスク | 仕様・設計が確定済みで、定型・ボイラープレート比重が高い大量実装 | 工程管理と整合性保証が必要な L2/L3。探索的・対話的な変更 |
+| 進め方 | Claude Code が設計・実装計画・実装指示書を作成 → Codex が実装 → Claude Code がレビュー | Orchestrator が要求分析〜設計〜実装〜試験〜レビューを Subagent へ委譲 |
+| コスト | 別サブスクのため Claude Code の usage を消費しない（最大のコストレバー） | Subagent はコールドスタートで文脈を再取得するため usage は増える |
+| 実績 | Sprint 1 の各画面実装（`tasks/`）、Sprint 2 product-master（`docs/codex-tasks/`） | ビジュアルデザイン移行（2026-06-16）、store-master（2026-06-28） |
+
+判断の目安:
+
+- **指示書に書き切れるなら Codex**。実装中に設計判断が発生しうるなら Orchestrator。
+- どちらのルートでも設計判断と最終レビューは Claude Code が担う（下記の注意事項どおり）。
+- Codex 実装のレビューは頻出パターン（タイポ・結線漏れ・Tailwind クラス名のタイポ・
+  `'use client'` 付け忘れ）を重点確認する。
+
 ---
 
 ## 各ツールの詳細
