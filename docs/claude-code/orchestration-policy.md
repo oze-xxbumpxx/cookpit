@@ -46,24 +46,28 @@ Subagent へ依頼する際、最低限これらを明示する。
 ```
 requirements-analyst（任意・影響が読めない時）
   → architecture-designer        → docs/designs/<feature>.md
+  →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
   → implementation-planner       → docs/implementation-plans/<feature>.md
   → test-designer（計画と並行可） → docs/tests/<feature>.md
-  → implementer                  → 実装 + 単体テスト + lint/型チェック
+  → implementer                  → 実装 + 単体テスト + lint/型チェック/テスト
   → reviewer                     → 指摘（必要なら docs/reviews/<feature>.md）
   → security-reviewer            → セキュリティ指摘
+  → reflection-agent             → improvements/candidates/<task-id>.md
 ```
 
 ### Level 3
 ```
 requirements-analyst  → docs/requirements/<feature>.md
   → architecture-designer      → docs/designs/<feature>.md（+ ADR は docs/decisions/）
+  →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
   →〔外部I/O/大量データあれば performance-designer（planner と並行可）〕
   → implementation-planner     → docs/implementation-plans/<feature>.md
   → test-designer              → docs/tests/<feature>.md
-  → implementer                → 実装 + 単体テスト + lint/型チェック
+  → implementer                → 実装 + 単体テスト + lint/型チェック/テスト
   →〔E2E基盤整備済みなら e2e-test-implementer〕→ E2E テスト
   → reviewer                   → docs/reviews/<feature>.md
   → security-reviewer          → セキュリティ指摘
+  → reflection-agent           → improvements/candidates/<task-id>.md
 ```
 
 ## 並列実行の指針

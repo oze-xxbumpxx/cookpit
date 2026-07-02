@@ -60,8 +60,8 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
 ## 完了条件
 
 要求 → 設計 → 実装計画 → 実装 → 試験 に矛盾がなく、L2/L3 の必要成果物が揃い、
-`pnpm lint` / `pnpm type-check` / `pnpm test`（テストランナーは Vitest。Domain 層は導入済みで
-変更時は該当テストを追加・実行する）が通り、スコープ外変更が
+`pnpm lint` / `pnpm type-check` / `pnpm test`（テストランナーは Vitest。全層導入済みで、
+変更したパッケージの該当テストを追加・実行する）が通り、スコープ外変更が
 無いことを確認してから完了を報告する。詳細は development-workflow.md。
 
 ## アーキテクチャ原則（要約・実装時に必ず守る）

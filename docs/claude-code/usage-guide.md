@@ -28,7 +28,7 @@
 ```
 .claude/
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
-├── agents/   (11)         Orchestrator + 専門/改善 Subagent
+├── agents/   (14)         Orchestrator + 専門/改善 Subagent
 ├── skills/   (8)          再利用可能な作業手順とテンプレート
 ├── rules/    (4)          層・パス別の確定ルール
 ├── hooks/    (5 .mjs)     決定論的な検証・安全制御
@@ -39,7 +39,7 @@ docs/claude-code/          方針ドキュメントと改善記録（improvement
 docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  feature 単位の成果物
 ```
 
-### Agent（11）
+### Agent（14）
 
 
 | Agent                     | Model      | 役割                             | 起動条件       |
@@ -52,6 +52,9 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | implementation-planner    | sonnet-4-6 | 実装計画                           | L2/L3      |
 | implementer               | sonnet-4-6 | 実装・単体テスト・品質ゲート                 | L1〜L3      |
 | reviewer                  | sonnet-4-6 | 独立レビュー                         | L2/L3      |
+| security-reviewer         | sonnet-4-6 | セキュリティ専門レビュー                   | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
+| e2e-test-implementer      | sonnet-4-6 | E2E・結合テスト実装                    | L3・テスト基盤整備済みのとき |
+| performance-designer      | sonnet-4-6 | パフォーマンス設計                      | L3・外部I/O/大量データのとき |
 | reflection-agent          | sonnet-4-6 | 振り返り・改善候補抽出                    | L2/L3 完了後  |
 | agent-evaluator           | sonnet-4-6 | 固定ケースで回帰評価                     | 改善提案の評価時   |
 | agent-improvement-manager | opus-4-8   | 横断分析・改善提案                      | トリガー時のみ    |
@@ -90,8 +93,8 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | -------- | -------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------ |
 | **0 調査** | 原因調査・設計相談            | なし（読み取りのみ）                                                                       | なし                                               |
 | **1 軽微** | 文言・typo・単純 null チェック | implementer（必要なら reviewer）                                                       | なし（最終報告に理由）                                      |
-| **2 通常** | 既存API項目追加・ロジック変更     | architecture →〔contract〕→ (test ∥ planner) → implementer → reviewer → reflection | designs / implementation-plans / tests           |
-| **3 重要** | 新規API・DBスキーマ・移行・外部連携 | requirements → … → reviewer（+ADR）→ reflection                                    | + requirements / decisions(ADR) / reviews / 振り返り |
+| **2 通常** | 既存API項目追加・ロジック変更     | architecture →〔contract〕→ (test ∥ planner) → implementer → reviewer → security → reflection | designs / implementation-plans / tests           |
+| **3 重要** | 新規API・DBスキーマ・移行・外部連携 | requirements → … → reviewer（+ADR）→ security → reflection                                    | + requirements / decisions(ADR) / reviews / 振り返り |
 
 
 > Orchestrator は開始時に**レベルと判定理由**を提示する。小規模変更を Level 3 工程で重くしない。
@@ -99,8 +102,8 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 ### 完了条件（[definition-of-done.md](./definition-of-done.md)）
 
-レベル別 DoD を満たすこと。実在する品質コマンド（lint / type-check / build / format-check）
-のみをゲートにする。Reviewer の Critical/Major が残る間は完了にしない。
+レベル別 DoD を満たすこと。実在する品質コマンド（lint / type-check / test / build /
+format-check）のみをゲートにする。Reviewer の Critical/Major が残る間は完了にしない。
 
 ## 4. 主要コマンド
 
@@ -115,8 +118,9 @@ bash .claude/scripts/run-quality-gates.sh --level 2
 bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 ```
 
-> このリポジトリは MVP1 でテストランナー未導入。test 系ゲートは `unavailable`/`unknown` 扱い
-> （擬似コマンドを入れない）。導入時に DoD と run-quality-gates を更新する。
+> テストランナー（Vitest）は全層に導入済み（domain / application / infrastructure /
+> apps/web — 2026-07-01 PR #21）。`pnpm test` は run-quality-gates.sh の既定実行対象。
+> E2E（Playwright）は設定のみ存在し、シナリオは feature 単位で整備する。
 
 ## 5. 安全機構（Hook と権限）
 
@@ -140,7 +144,7 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 
 ### 保護ファイルと承認マーカー
 
-`CLAUDE.md` / `.claude/agents/`** / `.claude/settings.json` の変更は**人間承認が必要**
+`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` の変更は**人間承認が必要**
 （[improvement-cycle.md](./improvement-cycle.md) §承認境界）。`validate-agent-config` は
 未承認変更に警告を出す。承認済みのバッチを編集する間だけ
 `.claude/state/config-change-approved` を置き、終わったら削除する（警告抑止）。

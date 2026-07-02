@@ -40,8 +40,9 @@ docs/tests/<feature-name>.md
 
 ### Level 3：重要変更
 
-新規 API / DB スキーマ変更 / 認証・認可変更 / 新規画面 / 外部サービス連携 /
-アーキテクチャ変更 / 既存データの移行。
+新規 API / DB スキーマ変更 / 認証・認可変更 / 新規画面（**新規 API・DB 変更を伴う場合。
+既存 API・既存契約のみを使う画面追加は Level 2**。実判定: recipe-edit-screen） /
+外部サービス連携 / アーキテクチャ変更 / 既存データの移行。
 
 成果物：
 ```
@@ -86,7 +87,7 @@ Hook で機械的に判定できない整合性（要件と実装の意味的な
 
 ## 既存ドキュメントとの関係
 
-プロジェクトの恒久ドキュメント（`docs/01`〜`08`、`docs/adr/`、`docs/04-domain-model.md`
-など）は引き続き正典。feature 単位の成果物（`docs/designs/` 等）はそれらを参照し、
-重要な意思決定が恒久ドキュメントに昇格すべき場合は ADR（`docs/decisions/` または
-`docs/adr/`）として残す。
+プロジェクトの恒久ドキュメント（`docs/01`〜`08`、`docs/` 直下の ADR-001〜004、
+`docs/04-domain-model.md` など）は引き続き正典。feature 単位の成果物（`docs/designs/` 等）は
+それらを参照し、重要な意思決定が恒久ドキュメントに昇格すべき場合は ADR
+（`docs/decisions/`・採番は ADR-0005 から — `.claude/skills/create-adr/SKILL.md`）として残す。
