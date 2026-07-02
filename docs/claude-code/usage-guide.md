@@ -29,7 +29,7 @@
 .claude/
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
 ├── agents/   (14)         Orchestrator + 専門/改善 Subagent
-├── skills/   (8)          再利用可能な作業手順とテンプレート
+├── skills/   (11)         再利用可能な作業手順とテンプレート
 ├── rules/    (4)          層・パス別の確定ルール
 ├── hooks/    (5 .mjs)     決定論的な検証・安全制御
 ├── scripts/  (3 .sh)      コマンド検出・品質ゲート・メトリクス
@@ -62,11 +62,13 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。
 
-### Skills（8）
+### Skills（11）
 
 `classify-change`（レベル判定）/ `create-requirements-document` / `create-design-document` /
 `create-implementation-plan` / `create-test-plan` / `create-adr` / `validate-deliverables`
-（成果物整合チェック）/ `reflect-task`（振り返り）。Claude が場面に応じて自動選択する。
+（成果物整合チェック）/ `reflect-task`（振り返り）/ `write-work-log`（日次ログ）/
+`audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
+Claude が場面に応じて自動選択する。
 
 ### Rules（4）
 
