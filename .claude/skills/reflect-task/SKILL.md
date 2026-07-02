@@ -57,7 +57,8 @@ IMP-2026-008 の proposal → 採用（2026-07-01）につながった
 L3 タスクを完了した場合、`docs/claude-code/improvements/improvement-backlog.md` の申し送り表で
 「IMP-2026-007 採否判断のための定量計測」行が**完了になっているか**確認する。
 store-master（2026-06-28）で一度計測したが、orchestrator の notification 待ちループにより
-before 値として使えず**再計測待ち**の状態にある（出典: `evaluations/IMP-2026-007.md`
+before 値として使えず**再計測待ち**の状態にある（出典:
+`docs/claude-code/improvements/evaluations/IMP-2026-007.md`
 「実タスク計測」節・「計測の信頼性評価」）。ループ問題は IMP-2026-008（2026-07-01 採用）で
 対処済みのため、orchestrator が正常動作した次の L3 タスクが計測対象になる。
 再計測がまだなら以下を `docs/claude-code/improvements/evaluations/IMP-2026-007.md` の末尾に追記する。
@@ -68,6 +69,8 @@ before 値として使えず**再計測待ち**の状態にある（出典: `eva
 - 合計トークン（判明する範囲で）
 - 並列化（改善A）が実際に発動したか、先行調査（改善B）の効果が見られたか
 - 上記を記録したら申し送り表の当該行のステータスを「実施済み」に更新し、採否の人間判断を促す。
+- 申し送り表の当該行が既に「実施済み」なら、この節は役目を終えた一時追跡なので
+  スキルから削除してよい（削除はユーザー承認を得て行う）。
 
 ## メトリクス記録（L2/L3）
 
@@ -80,6 +83,10 @@ candidate ファイル作成後、タスクのメトリクスを記録する。
    - `quality.user_corrections`：会話上のユーザー修正・差し戻し回数。
    - `process.*_rework`：各フェーズの手戻り回数。
    - 判定できない値は `unknown` のまま残す（推測値を入れない）。
+   - リモート（エフェメラル）環境では `.claude/state/subagent-log.jsonl` がセッションを
+     跨いで残らず、自動補完が働かないことがある。その場合は会話ログから数えて手動記入し、
+     判別できない値は `unknown` とする（出典:
+     `docs/claude-code/improvements/candidates/test-infra-expansion.md` 事象 4）。
 
 ## 禁止事項
 

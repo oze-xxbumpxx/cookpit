@@ -45,7 +45,8 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
 ### 5. 品質ゲート
 - [ ] `pnpm lint` が通る
 - [ ] `pnpm type-check` が通る
-- [ ] （テスト導入後）該当テストが通る
+- [ ] `pnpm test` が通る（Vitest は domain / application / infrastructure / apps/web に
+  導入済み — 2026-07-01 PR #21 `docs/designs/test-infra-expansion.md`。E2E は未整備）
 
 ### 6. スコープ・運用
 - [ ] 依頼スコープ外の変更が混入していない

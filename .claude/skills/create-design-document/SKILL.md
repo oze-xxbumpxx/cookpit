@@ -73,3 +73,12 @@ description: >
   §19「契約テスト観点（test-designer への引き継ぎ）」— 既存実装との差分を明示し、
   試験観点を設計書側から test-designer へ渡している
   （出典: reviewer が設計との整合性を問題なしと確認 — `docs/reviews/store-master.md`）。
+
+## 悪い例（実タスクで手戻りになったもの）
+
+- **ライブラリ API を採用バージョンで未確認のまま指定**: `docs/designs/test-infra-expansion.md`
+  は Vitest の `defineWorkspace` を指定したが、インストールされた Vitest 3.2.6 では非推奨で、
+  実装時に `test.projects` への置き換えが必要になった。設定ファイル・フレームワーク API を
+  設計書に指定するときは、採用バージョンの現行 API か（非推奨でないか）を確認する
+  （出典: `docs/claude-code/improvements/candidates/test-infra-expansion.md` 事象 2。
+  ※1 回目の観測のため手順への必須化は保留 — 再発時に昇格検討）。

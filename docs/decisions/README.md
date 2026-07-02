@@ -1,5 +1,6 @@
 # docs/decisions
 
-feature に伴うアーキテクチャ意思決定記録（`ADR-<number>-<title>.md`）を置く。
-主に Level 3 で作成する。プロジェクト恒久の意思決定は従来どおり `docs/adr/` を正典とし、
-feature 起点で新たに発生した決定をここに記録して、必要に応じ `docs/adr/` へ昇格する。
+feature に伴うアーキテクチャ意思決定記録（`ADR-<番号>-<タイトル>.md`）を置く。
+主に Level 3 で作成する。既存のプロジェクト恒久 ADR（ADR-001〜004）は `docs/` 直下
+（`docs/001-web-not-native.md` など）にあり、そちらが正典。新規 ADR はここに
+`ADR-0005` から連番で作成する（採番規則は `.claude/skills/create-adr/SKILL.md`）。

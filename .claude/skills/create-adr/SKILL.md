@@ -18,9 +18,13 @@ description: >
 
 ## 採番
 
-- `docs/decisions/` の既存 ADR 連番の最大 +1。`ADR-0007-recipe-status-migration.md` の形式。
-- **既存 ADR が 1 件も無い場合は `ADR-0001` から始める**（2026-07 時点で `docs/decisions/` は
-  README のみ。`docs/adr/` は存在しない — 置き場所は `docs/decisions/` に統一する）。
+- 番号はプロジェクト全体で一意。**既存 ADR は `docs/` 直下に ADR-001〜004 が実在する**
+  （`docs/001-web-not-native.md` 〜 `docs/004-no-user-in-domain.md`。設計書・レビューから
+  「ADR-003 準拠」等で参照されている）。この連番を引き継ぐ。
+- 新規 ADR は `docs/decisions/` に **`ADR-0005-<タイトル>.md` から**作成する
+  （既存最大 004 の +1。以降は `docs/` 直下と `docs/decisions/` を合わせた最大 +1）。
+  `ADR-0001` から始めない — 既存 ADR-001 と番号が衝突する。
+- 既存 4 件は移動しない（移設・置き場所の統一はユーザー判断事項）。
 
 ## テンプレート
 
@@ -45,6 +49,13 @@ description: >
 - Status が設定されている。
 - Alternatives に非採用案と却下理由がある（「検討した」ことを残す）。
 - Migration / Rollback が判断されている（不要なら「対象外」と明記）。
+
+## 良い例（既存 ADR）
+
+- `docs/003-no-auth-in-mvp1.md`（ADR-003）— 検討した選択肢 A/B/C と採択理由が残っており、
+  後続の設計書（`docs/designs/store-master.md` §13 ほか）が「ADR-003 準拠」として参照できて
+  いる（出典: `docs/reviews/store-master.md` で意図的な設計判断として確認済み）。
+  ※旧形式のため Migration / Rollback 節が無い。新規作成では本スキルのテンプレートを使う。
 
 ## 注意
 

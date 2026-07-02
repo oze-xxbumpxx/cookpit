@@ -28,9 +28,11 @@
 
 ## ADR (Architecture Decision Records)
 
-主要な意思決定の経緯は `adr/` 以下に記録しています。「なぜこの選択をしたか」が必要になった時に参照してください。
+主要な意思決定の経緯を記録しています（ADR-001〜004 はこのディレクトリ直下、
+ADR-0005 以降の feature 起点の決定は `decisions/` に置く）。「なぜこの選択をしたか」が
+必要になった時に参照してください。
 
-- [ADR-001: Web アプリで実装する](./adr/001-web-not-native.md)
-- [ADR-002: Next.js 内に Hono をマウントする](./adr/002-nextjs-hono-mounted.md)
-- [ADR-003: MVP1 は認証なしで運用する](./adr/003-no-auth-in-mvp1.md)
-- [ADR-004: ドメインから User 集約を外す](./adr/004-no-user-in-domain.md)
+- [ADR-001: Web アプリで実装する](./001-web-not-native.md)
+- [ADR-002: Next.js 内に Hono をマウントする](./002-nextjs-hono-mounted.md)
+- [ADR-003: MVP1 は認証なしで運用する](./003-no-auth-in-mvp1.md)
+- [ADR-004: ドメインから User 集約を外す](./004-no-user-in-domain.md)

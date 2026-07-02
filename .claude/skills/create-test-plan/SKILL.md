@@ -44,7 +44,9 @@ description: >
    implementer が踏襲 → reviewer の Should-2 指摘で手戻り。
    `docs/claude-code/improvements/candidates/store-master.md` 事象 3 /
    `docs/reviews/store-master.md` Should-2）
-9. MVP1 でテストランナー未導入の場合も観点は設計する（導入時に実装へ落とせる形で残す）。
+9. テストランナー（Vitest）は domain / application / infrastructure / apps/web に導入済み
+   （2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）。E2E（Playwright UI）等の
+   未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
 
 ## 観点の選択基準（過剰適用を防ぐ）
 
