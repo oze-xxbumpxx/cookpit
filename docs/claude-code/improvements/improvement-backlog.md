@@ -60,6 +60,9 @@
 | 設計書が非推奨 API を指定（Vitest defineWorkspace → test.projects へ実装時置換）。設計時に採用バージョンの現行 API 未確認 | test-infra-expansion | 1（再発で create-design-document Skill 昇格を検討） | architecture-designer Subagent Memory |
 | リモート（エフェメラル）環境では subagent-log が残らず record-task-metrics.sh の自動補完・横断計測が機能しない | test-infra-expansion | 1（IMP-2026-007 定量計測の前提にも影響・再発で reflect-task Skill 昇格を検討） | reflection-agent Subagent Memory |
 | テスト・設定のみ（プロダクションコード変更 0）の L2 で実装後 reviewer を省略しマージ（省略条件が未明文化） | test-infra-expansion | 1（判断が揺れたら classify-change / validate-deliverables へ明文化） | orchestrator Subagent Memory |
+| 環境の「現状」を書いた指示が状態変化後も残り食い違いになる（テスト基盤状態が8箇所で鮮度切れ） | skills-inventory-audit | 1（再発で create-implementation-plan Skill に grep 確認を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 1 |
+| 改善適用時に同内容を記載した他文書へ反映されず食い違いが残る（委譲フロー5文書の不一致） | skills-inventory-audit | 1（再発で proposals/_TEMPLATE.md に「反映先一覧」欄を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 2 |
+| Codex 実装の頻出ミス（識別子/Tailwind タイポ・結線漏れ・use client 漏れ 等）が4セッション反復 | skills-inventory-audit（logs 5/16〜6/16） | 4 → **昇格済み**: docs/06-ai-tools.md レビューチェックリスト（2026-07-02） | docs/06-ai-tools.md |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
