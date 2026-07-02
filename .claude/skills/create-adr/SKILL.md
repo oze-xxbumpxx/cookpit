@@ -19,7 +19,8 @@ description: >
 ## 採番
 
 - `docs/decisions/` の既存 ADR 連番の最大 +1。`ADR-0007-recipe-status-migration.md` の形式。
-- 既存の恒久 ADR ディレクトリ（`docs/decisions/` または `docs/adr/`）があればそれに合わせる。
+- **既存 ADR が 1 件も無い場合は `ADR-0001` から始める**（2026-07 時点で `docs/decisions/` は
+  README のみ。`docs/adr/` は存在しない — 置き場所は `docs/decisions/` に統一する）。
 
 ## テンプレート
 

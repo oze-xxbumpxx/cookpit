@@ -47,18 +47,27 @@ reflection-agent がタスク完了後の振り返りを行い、Memory 候補�
 `docs/claude-code/improvements/candidates/_TEMPLATE.md`）。各候補に観測事象・発生回数・
 対象タスク・原因仮説・改善案・変更対象・想定副作用・評価方法を含める。
 
+良い例: `docs/claude-code/improvements/candidates/store-master.md` — 事象ごとに
+観測事実と原因仮説を分離し、昇格判定に理由を明記。事象 1 はこの起票がそのまま
+IMP-2026-008 の proposal → 採用（2026-07-01）につながった
+（出典: `docs/claude-code/improvements/improvement-backlog.md` IMP-2026-008 行）。
+
 ## IMP-2026-007 追跡計測（L3 タスクのみ・バックログ申し送り済み）
 
-L3 タスクを完了した場合、`docs/claude-code/improvements/improvement-backlog.md` の申し送り表に
-「IMP-2026-007 採否判断のための定量計測」行が未実施のまま残っているか確認する。
-残っている場合は以下を `docs/claude-code/improvements/evaluations/IMP-2026-007.md` の末尾に追記する。
+L3 タスクを完了した場合、`docs/claude-code/improvements/improvement-backlog.md` の申し送り表で
+「IMP-2026-007 採否判断のための定量計測」行が**完了になっているか**確認する。
+store-master（2026-06-28）で一度計測したが、orchestrator の notification 待ちループにより
+before 値として使えず**再計測待ち**の状態にある（出典: `evaluations/IMP-2026-007.md`
+「実タスク計測」節・「計測の信頼性評価」）。ループ問題は IMP-2026-008（2026-07-01 採用）で
+対処済みのため、orchestrator が正常動作した次の L3 タスクが計測対象になる。
+再計測がまだなら以下を `docs/claude-code/improvements/evaluations/IMP-2026-007.md` の末尾に追記する。
 
 - タスク名・日付
 - このタスクの `duration_ms`（subagent-log の最古〜最新 ts の差分）
 - 総 `tool uses` 数（subagent-log の entries 数）
 - 合計トークン（判明する範囲で）
 - 並列化（改善A）が実際に発動したか、先行調査（改善B）の効果が見られたか
-- 上記を記録したら申し送り表の「未実施」を「実施済み」に更新し、採否の人間判断を促す。
+- 上記を記録したら申し送り表の当該行のステータスを「実施済み」に更新し、採否の人間判断を促す。
 
 ## メトリクス記録（L2/L3）
 

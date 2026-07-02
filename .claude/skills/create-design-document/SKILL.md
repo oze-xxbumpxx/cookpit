@@ -64,3 +64,12 @@ description: >
 - 全セクションが存在し、対象外は明記されている。
 - 「未決事項」にユーザー確認が必要な点が列挙されている。
 - アーキテクチャ原則に反する設計が含まれていない。
+
+## 良い例（実タスクの成果物）
+
+- **トレードオフ併記 + 推奨（手順4の実例）**: `docs/designs/test-infra-expansion.md` §4 —
+  テスト DB 戦略を比較表（§4.2）で並べ、推奨 1 案（§4.3 PGlite）を理由つきで提示。
+- **後続 Agent への引き継ぎ**: `docs/designs/store-master.md` §18「Recipe 先例との構造的差分」
+  §19「契約テスト観点（test-designer への引き継ぎ）」— 既存実装との差分を明示し、
+  試験観点を設計書側から test-designer へ渡している
+  （出典: reviewer が設計との整合性を問題なしと確認 — `docs/reviews/store-master.md`）。

@@ -26,7 +26,20 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
    → Level 2。
 4. **新規 API・DB スキーマ変更・データ移行・認証認可・新規画面・外部/AWS 連携・
    アーキテクチャ変更・大規模リファクタ・後方互換に影響**するか？ → Level 3。
+   - ただし「新規画面」は**新規 API / DB 変更を伴う場合のみ** L3。既存 API・既存契約だけを
+     使う画面追加は L2（出典: `.claude/evals/cases/frontend-screen-addition.md` の定義、および
+     recipe-edit-screen での実判定 —
+     `docs/claude-code/improvements/candidates/recipe-edit-screen.md` 事象 3）。
 5. 境界例（例：API 項目追加だが DB スキーマも変わる）は**上位レベル**として扱う。
+
+### 判定例（実タスクの実績）
+
+- **L2 の例**: recipe-edit-screen — 新規画面だがバックエンド・契約は既存のまま
+  （Presentation 層のみ）→ L2。手戻りゼロで完走
+  （出典: `docs/claude-code/improvements/candidates/recipe-edit-screen.md` 事象 1・3）。
+- **L3 の例**: store-master — 新規 API（`GET/POST /api/stores`）+ DB スキーマ変更
+  （stores テーブル）を含む全層変更 → L3
+  （出典: `docs/requirements/store-master.md` / `docs/designs/store-master.md`）。
 
 ## 出力（会話でユーザーへ提示）
 
@@ -47,6 +60,7 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 
 ## 注意
 
-- 小規模変更に Level 3 相当の工程を当てない（指示書 §22.6 / §5）。
+- 小規模変更に Level 3 相当の工程を当てない（実施指示書
+  `.claude/docs/claude-code-multi-agent-implementation-instructions.md` §22.6 / §5）。
 - 判定後、L2/L3 では最初の Write 担当 Subagent が `.claude/state/current-feature` に
   feature-name を書く。L0/L1 では設定しない（Hook 誤検知防止）。

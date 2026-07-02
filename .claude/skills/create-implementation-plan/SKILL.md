@@ -51,7 +51,8 @@ description: >
 ## リスク
 ## ロールバック方法
 ## ドキュメント更新対象
-（docs/ 恒久ドキュメントや ADR の更新要否）
+（docs/ 恒久ドキュメントや ADR の更新要否。ドメインモデルを変更する場合は
+`docs/04-domain-model.md` の該当エンティティ定義が実装と一致するかを必ず確認対象に含める）
 ```
 
 ## 完了条件
@@ -59,3 +60,14 @@ description: >
 - すべてのステップに対象ファイル・変更内容・完了条件が揃っている。
 - 変更/新規ファイルのパスが実在のリポジトリ構成と整合している。
 - implementer がこの計画だけで実装に着手できる粒度になっている。
+- ドメインモデル変更を含む場合、「ドキュメント更新対象」に `docs/04-domain-model.md` の
+  整合確認が含まれている（出典: store-master で更新漏れが reviewer Nice-2 指摘になった —
+  `docs/reviews/store-master.md` Nice-2 /
+  `docs/claude-code/improvements/candidates/store-master.md` 事象 4）。
+
+## 良い例（実タスクの成果物）
+
+- `docs/implementation-plans/store-master.md` — 9 ステップ全てに対象ファイル・変更内容・
+  完了条件があり、依存関係グラフと品質ゲート（Step 9）・手動テスト観点まで含む。
+  この計画に沿った実装は reviewer の整合性チェック（要件・設計・実装計画・実装）を
+  問題なしで通過した（出典: `docs/reviews/store-master.md`「問題なし（確認済み項目）」）。
