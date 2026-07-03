@@ -93,6 +93,29 @@ requirements-analyst  → docs/requirements/<feature>.md
 - **クリアタイミング**: `reflection-agent` 起動時、または feature 完了報告前に空にする。
 - **追記責務**: 委譲指示の禁止事項に「`inflight-agents.json` の追記を成果物確定前に行わない」を
   明記し、部分書き込みによる完了誤判定を防ぐ。
+- **L1/L2 の同期委譲への拡張**（2026-07-03 ドライラン検証で発見）: `inflight-agents.json` は
+  L3 background 限定だが、L1/L2 の単一 Sub-agent 同期委譲でも resume 直後に「直前の委譲が完了したか
+  分からない」状況は起こりうる（実測: L2 タスクで architecture-designer が resume 後に二重起動）。
+  エントリの有無に関わらず、resume 直後で直前の一手が Sub-agent 委譲だった場合は期待成果物の存在・
+  更新時刻を確認してから次を決める（`.claude/agents/orchestrator.md` §進め方 4 参照）。
+
+### 既知の制約: Orchestrator を Agent ツールで子エージェントとして起動した場合
+
+2026-07-03 のドライラン検証（実タスクで改善ループを検証）で観測。本来の起動方法である
+`claude --agent orchestrator`（メインセッション）ではなく、Claude Code の `Agent` ツールで
+Orchestrator 自体を子エージェントとして起動すると（例: 検証目的の isolation 付き dry run）、
+以下の既知の制約がある。
+
+- Orchestrator からさらに委譲した孫 Sub-agent（例: contract-designer）の完了通知が、Orchestrator
+  本体ではなく最上位セッションへ直接届くことがある。Orchestrator 自身は完了を認識できない。
+- `isolation: worktree` で Orchestrator を分離しても、そこから委譲される孫 Sub-agent のファイル
+  I/O には継承されず、実ブランチへ直接書き込まれることがある。
+
+これは Cookpit の Agent 定義ではなく Claude Code 側の子エージェント委譲・通知配送の挙動に起因する。
+Orchestrator を本来の起動方法（メインセッション）で使う通常運用では発生しない想定だが、Orchestrator
+自体を検証目的で子エージェントとして呼び出す場合はこの制約を踏まえること。全工程を通した生の
+Orchestrator ドライランより、既存の `agent-evaluator` による dry run（`.claude/evals/cases` を
+使った評価、IMP-2026-006/007 で実績あり）の方が現状は安定した検証手段。
 
 ## contract-designer の必須起動トリガー
 
