@@ -248,6 +248,35 @@
 - [ ] 1週間分の献立を画面で組み立てられる
 - [ ] 過去 4 週間の献立を遡れる
 
+### 進め方（2026-07-03 計画確定）
+
+ユニット分割は Sprint 2 の縦割りパターンを踏襲する。
+
+| ユニット | 内容 | レベル | 実装ルート |
+| --- | --- | --- | --- |
+| Unit A: meal-plan-core | Domain（MealPlan / PlannedRecipe / WeekIdentifier / ステータス遷移）+ Drizzle スキーマ（meal_plans / planned_recipes）+ UseCase 5 本 + API | L3 | Orchestrator フルフロー（IMP-2026-007 の定量計測を兼ねる） |
+| Unit B: meal-plan-screens | 献立作成画面（レシピ選択・倍量・任意日付）+ 履歴ビュー | L2 見込み | Unit A 完了後、着手時に判定（既存 API のみ利用なら L2） |
+
+スコープ判断（ユーザー確定）:
+
+- ステータス遷移の UI と調理記録（markAsCooked）の UI は **Sprint 3 対象外**。
+  遷移ロジックと cookedAt はドメインには実装する。draft→shopping の遷移 UI は
+  Sprint 4（買い物リスト作成）と連動して出す方が自然なため、そちらで扱う。
+
+Unit A の要件定義で確定する未決事項:
+
+- **WeekIdentifier の週定義**: docs/04-domain-model.md は「ISO 8601 週番号」と
+  「土曜始まり想定」を併記しているが、ISO 週は月曜始まりのため両立しない。
+  運用（土曜に献立決め）に合わせて定義を確定する。
+- 倍量（scaleFactor）のプリセット: Recipe 詳細の固定ボタン（1×/1.5×/2×/3×）と揃えるか。
+- 履歴ビューの範囲: 完了条件は「過去 4 週間」。それ以前のページネーション要否。
+
+着手前の小タスク:
+
+- docs/04-domain-model.md の `Unit` 型が Sprint 1 の日本語統一を未反映（英語単位が残存）。
+  MealPlan 設計の入力文書のため、Unit A 設計前に実装と同期する（L1）。
+- product-master のレビュー記録が docs/reviews/ に無い。実施済みかを確認し、未実施なら回す。
+
 ## Sprint 4：ShoppingList 買い物リスト（2週間）
 
 ### ゴール
