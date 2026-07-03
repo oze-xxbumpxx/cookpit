@@ -28,9 +28,9 @@
 ```
 .claude/
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
-├── agents/   (14)         Orchestrator + 専門/改善 Subagent
+├── agents/   (15)         Orchestrator + 専門/改善 Subagent
 ├── skills/   (11)         再利用可能な作業手順とテンプレート
-├── rules/    (4)          層・パス別の確定ルール
+├── rules/    (3)          層・パス別の確定ルール（+ README）
 ├── hooks/    (5 .mjs)     決定論的な検証・安全制御
 ├── scripts/  (3 .sh)      コマンド検出・品質ゲート・メトリクス
 ├── evals/                 改善の回帰評価（10 ケース + rubric + baselines）
@@ -39,7 +39,7 @@ docs/claude-code/          方針ドキュメントと改善記録（improvement
 docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  feature 単位の成果物
 ```
 
-### Agent（14）
+### Agent（15）
 
 
 | Agent                     | Model      | 役割                             | 起動条件       |
@@ -55,12 +55,14 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | security-reviewer         | sonnet-4-6 | セキュリティ専門レビュー                   | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
 | e2e-test-implementer      | sonnet-4-6 | E2E・結合テスト実装                    | L3・テスト基盤整備済みのとき |
 | performance-designer      | sonnet-4-6 | パフォーマンス設計                      | L3・外部I/O/大量データのとき |
+| document-reviewer         | sonnet-4-6 | 文書成果物の専門レビュー                  | 文書レビュー依頼時（単体起動可） |
 | reflection-agent          | sonnet-4-6 | 振り返り・改善候補抽出                    | L2/L3 完了後  |
 | agent-evaluator           | sonnet-4-6 | 固定ケースで回帰評価                     | 改善提案の評価時   |
 | agent-improvement-manager | opus-4-8   | 横断分析・改善提案                      | トリガー時のみ    |
 
 
-詳細：[agent-responsibilities.md](./agent-responsibilities.md)。
+詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
+（正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-4-6`）。
 
 ### Skills（11）
 
@@ -70,7 +72,7 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 `audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
 Claude が場面に応じて自動選択する。
 
-### Rules（4）
+### Rules（3）
 
 [coding-standards.md](../../.claude/rules/coding-standards.md)（全TS）/
 [domain-layer.md](../../.claude/rules/domain-layer.md)（`packages/domain`・集約間）/

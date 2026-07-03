@@ -36,7 +36,7 @@
 | rules backend / frontend | `.claude/rules/domain-layer.md` / `presentation-layer.md` |
 | scripts/*.sh（検証系） | 一部は `.claude/hooks/*.mjs` で実装（validate-agent-config / check-deliverables）。品質ゲート・メトリクスは `.claude/scripts/*.sh` |
 
-## Agent 構成（14）
+## Agent 構成（15）
 
 正典は各 `.claude/agents/<name>.md` の frontmatter（下表は早見）。
 
@@ -53,6 +53,7 @@
 | security-reviewer | sonnet-4-6 | セキュリティ専門レビュー（L2/L3・reviewer の後） |
 | e2e-test-implementer | sonnet-4-6 | E2E・結合テスト実装（L3・基盤整備済みのみ） |
 | performance-designer | sonnet-4-6 | パフォーマンス設計（L3・外部I/O/大量データのみ） |
+| document-reviewer | sonnet-4-6 | 文書成果物の専門レビュー（開発フロー外でも単体起動可） |
 | reflection-agent | sonnet-4-6 | 振り返り・改善候補抽出 |
 | agent-evaluator | sonnet-4-6 | 固定評価ケースで回帰評価 |
 | agent-improvement-manager | opus-4-8 | 横断分析・改善提案（重要設定は提案のみ） |

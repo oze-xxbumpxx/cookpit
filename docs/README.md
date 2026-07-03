@@ -14,7 +14,7 @@
 | [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                  |
 | [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約） |
 | [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート            |
-| [adr/](./adr/)                                     | アーキテクチャ意思決定記録                         |
+| [decisions/](./decisions/)                         | feature 起点の ADR（ADR-0005〜。001〜004 は本ディレクトリ直下） |
 
 ## クイックスタート
 
