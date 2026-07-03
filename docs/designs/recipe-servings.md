@@ -270,6 +270,433 @@ servings: z.number().int().positive().nullable().optional()
 
 ---
 
+## Contract
+
+### 変更前後の契約差分
+
+#### `packages/api-contract/src/recipe.schema.ts`
+
+**`createRecipeSchema`（変更前）:**
+
+```typescript
+z.object({
+  name: nonBlankString,
+  ingredients: z.array(recipeIngredientSchema),
+  steps: z.array(cookingStepSchema),
+  baseServings: z.number().positive(),
+  tags: z.array(recipeTagSchema),
+  cookingTime: z.number().int().nonnegative().nullable(),
+  notes: z.string(),
+})
+// servings: 存在しない
+```
+
+**`createRecipeSchema` 差分（フィールド追加）:**
+
+```diff
+  z.object({
+    name: nonBlankString,
+    ingredients: z.array(recipeIngredientSchema),
+    steps: z.array(cookingStepSchema),
+    baseServings: z.number().positive(),
+    tags: z.array(recipeTagSchema),
+    cookingTime: z.number().int().nonnegative().nullable(),
+    notes: z.string(),
++   servings: z.number().int().positive().nullable().optional(),
+  })
+```
+
+**`updateRecipeSchema`（変更前）:**
+
+```typescript
+z.object({
+  name: nonBlankString,
+  ingredients: z.array(recipeIngredientSchema),
+  steps: z.array(cookingStepSchema),
+  tags: z.array(recipeTagSchema),
+  cookingTime: z.number().int().nonnegative().nullable(),
+  notes: z.string(),
+})
+// servings: 存在しない
+```
+
+**`updateRecipeSchema` 差分（フィールド追加）:**
+
+```diff
+  z.object({
+    name: nonBlankString,
+    ingredients: z.array(recipeIngredientSchema),
+    steps: z.array(cookingStepSchema),
+    tags: z.array(recipeTagSchema),
+    cookingTime: z.number().int().nonnegative().nullable(),
+    notes: z.string(),
++   servings: z.number().int().positive().nullable().optional(),
+  })
+```
+
+**エクスポート型（`z.infer` 経由で自動更新）:**
+
+| 型名 | 変更前 | 変更後 |
+|---|---|---|
+| `CreateRecipeBody` | `servings` なし | `servings?: number \| null` が追加 |
+| `UpdateRecipeBody` | `servings` なし | `servings?: number \| null` が追加 |
+
+新規の型エクスポートは不要。`z.infer<typeof createRecipeSchema>` の推論が自動的に `servings?: number | null` を含む。
+
+#### `packages/application/src/recipe/recipe.dto.ts`
+
+| インターフェース | 変更種別 | 追加フィールド | 型 | 備考 |
+|---|---|---|---|---|
+| `RecipeDto` | フィールド追加 | `servings` | `number \| null` | 必須フィールド（`?` なし）。レスポンスに常に存在 |
+| `CreateRecipeInputDto` | フィールド追加 | `servings` | `number \| null \| undefined` | 任意プロパティ（`?` あり） |
+| `UpdateRecipeInputDto` | フィールド追加 | `servings` | `number \| null \| undefined` | 任意プロパティ（`?` あり） |
+
+`RecipeDto.servings` が `servings?: number | null` ではなく `servings: number | null`（必須）であることに注意。
+UseCase が `input.servings ?? null` で正規化するため、レスポンス時に `undefined` が混入しない。
+
+#### `packages/infrastructure/src/db/schema.ts`
+
+```diff
+  export const recipes = pgTable('recipes', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    baseServings: integer('base_servings').notNull(),
+    cookingTime: integer('cooking_time'),
+    tags: text('tags').array().notNull().default([]),
+    notes: text('notes').notNull().default(''),
+    ingredients: jsonb('ingredients').notNull().default([]),
+    steps: jsonb('steps').notNull().default([]),
++   servings: integer('servings'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  });
+```
+
+- `.notNull()` なし → `NULL` 許可
+- `.default()` なし → 既存行への自動 DEFAULT 設定なし（マイグレーションで `NULL` になる）
+- `RecipeRow`（`typeof recipes.$inferSelect`）の推論型に `servings: number | null` が追加される
+
+---
+
+### `servings` フィールド仕様
+
+| 属性 | 仕様 |
+|---|---|
+| フィールド名 | `servings` |
+| DB 型 | `integer`（PostgreSQL 32 bit 符号付き整数） |
+| DB 制約 | NULL 許可、NOT NULL なし、DEFAULT なし |
+| `RecipeRow` 型（DB 行） | `number \| null` |
+| Entity 型（`packages/domain`） | `number \| null` |
+| `RecipeDto`（レスポンス） | `number \| null`（必須フィールド、常にレスポンスに存在） |
+| `CreateRecipeInputDto`（入力） | `number \| null \| undefined`（任意プロパティ） |
+| `UpdateRecipeInputDto`（入力） | `number \| null \| undefined`（任意プロパティ） |
+| Zod 推論型（リクエスト） | `number \| null \| undefined`（`.nullable().optional()`） |
+| 最小値 | 1（`.positive()` → 0 および負数は不可） |
+| 最大値 | 未規定（DB 実装上限: 2,147,483,647） |
+| 整数制約 | 必須（`.int()` および `Number.isInteger()` の両層で検証） |
+| null 可否 | null 許可（値なし = `null` に統一。`undefined` との混在なし） |
+| 省略時の扱い | UseCase 入口で `input.servings ?? null` により `null` に正規化 |
+
+**上限値について**: 現設計では上限を設けていない。`servings` は表示用アノテーションであり、
+実用上は 9,999 以下が想定される。上限追加は追加バリデーションであり既存クライアントへの
+破壊的変更にはならないため、後日 ADR で判断できる（今回スコープ外）。
+
+---
+
+### バリデーション単一情報源
+
+`servings` のバリデーションルールは 2 層に存在する。これは意図的な多層防御設計であり、重複定義ではない。
+
+| 層 | ファイル | ルール | 目的 |
+|---|---|---|---|
+| API 境界（Zod） | `packages/api-contract/src/recipe.schema.ts` | `z.number().int().positive().nullable().optional()` | HTTP リクエストの不正入力を 400 で拒否。外部クライアントからの保護 |
+| ドメイン境界 | `packages/domain/src/recipe/recipe.ts` | `Number.isInteger(v) && v >= 1`（null を除く） | ドメインルールの強制。UseCase から直接呼び出す経路も保護 |
+
+両層は同一ルール（null または 1 以上の整数）を表現している。
+将来ルールが変更される場合は両層を同時に更新する。乖離が生じた場合は `packages/api-contract` を正典とする。
+
+**レスポンス型の単一情報源**: `RecipeDto` TypeScript インターフェース（`packages/application/src/recipe/recipe.dto.ts`）。
+現状レスポンス用 Zod スキーマは存在しない（将来追加可能）。
+Hono RPC の `AppType` 型推論経由でフロントエンドに自動伝播する。
+
+---
+
+### エラー形式
+
+#### バリデーションエラー（HTTP 400）
+
+`@hono/zod-validator` のデフォルト動作（`apps/web/src/server/routes/recipes.ts` にカスタムフックなし）。
+
+```
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+```
+
+```json
+{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "too_small",
+        "minimum": 0,
+        "type": "number",
+        "inclusive": false,
+        "exact": false,
+        "message": "Number must be greater than 0",
+        "path": ["servings"]
+      }
+    ],
+    "name": "ZodError"
+  }
+}
+```
+
+`servings` のバリデーションエラーパターン:
+
+| 入力値 | `issues[].code` | 概要 |
+|---|---|---|
+| `0` | `too_small` | 正の整数でない（0 は不可） |
+| `-1` | `too_small` | 正の整数でない（負数は不可） |
+| `1.5` | `not_multiple_of` | 整数でない（小数は不可） |
+| `"4"` | `invalid_type` | 型不一致（文字列は不可） |
+| `true` | `invalid_type` | 型不一致（真偽値は不可） |
+
+`path` は `["servings"]` となる。
+エラーメッセージ文字列は Zod バージョンにより変わり得るため、クライアントは `code` で判定すること。
+
+#### ドメインバリデーション違反
+
+`Recipe.create()` / `Recipe.updateServings()` のドメインエラーは Zod が先に捕捉するため、
+正常なリクエストフローでは到達しない。万が一到達した場合は `app.ts` のエラーハンドラが 500 を返す。
+
+```json
+{ "error": "Internal Server Error" }
+```
+
+#### Not Found エラー（HTTP 404）— 変更なし
+
+```json
+{ "error": "Recipe not found: {id}" }
+```
+
+---
+
+### 後方互換性
+
+| 観点 | 判定 | 根拠 |
+|---|---|---|
+| 既存クライアント: リクエストに `servings` を送信しない | 後方互換 | Zod `.optional()` により省略可 |
+| 既存クライアント: レスポンスに `servings` フィールドが追加される | 後方互換 | JSON フィールド追加は非破壊的変更 |
+| 既存 DB データ: マイグレーション後の NULL 行 | 後方互換 | `ADD COLUMN` に `NOT NULL` なし・`DEFAULT` なし → 既存行は自動的に NULL |
+| `CreateRecipeBody` / `UpdateRecipeBody` 型: `servings` 追加 | 後方互換 | `servings?: number \| null` は任意プロパティ。既存コードはコンパイルエラーなし |
+| `RecipeDto` 型: `servings` 追加 | 後方互換 | フィールド追加のみ。既存フィールドの削除・型変更なし |
+
+**結論: 後方互換性を破壊する変更なし。Orchestrator 経由のユーザー確認は不要。**
+
+---
+
+### 冪等性
+
+| エンドポイント | 冪等性 | 備考 |
+|---|---|---|
+| `POST /api/recipes` | なし（現状維持） | 作成エンドポイントに冪等性キーなし（MVP1 スコープ外） |
+| `PUT /api/recipes/:id` | あり | `DrizzleRecipeRepository.save()` の `onConflictDoUpdate` パターンを踏襲。`servings` を `set` 句に含めることで再送時も同一状態に収束する |
+| `GET /api/recipes` / `GET /api/recipes/:id` | あり（読み取り） | 変更なし |
+
+---
+
+### リクエスト / レスポンスサンプル
+
+#### POST /api/recipes — `servings` を指定して作成
+
+**リクエスト:**
+
+```json
+POST /api/recipes
+Content-Type: application/json
+
+{
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "servings": 4,
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "tags": ["主菜"],
+  "cookingTime": 30,
+  "notes": ""
+}
+```
+
+**レスポンス（201）:**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "servings": 4,
+  "cookingTime": 30,
+  "tags": ["主菜"],
+  "notes": "",
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "createdAt": "2026-07-03T00:00:00.000Z",
+  "updatedAt": "2026-07-03T00:00:00.000Z"
+}
+```
+
+#### POST /api/recipes — `servings` 省略（既存クライアント互換）
+
+**リクエスト（`servings` フィールドなし）:**
+
+```json
+{
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "tags": ["主菜"],
+  "cookingTime": 30,
+  "notes": ""
+}
+```
+
+**レスポンス（201）— `servings: null` が必ず存在:**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "servings": null,
+  "cookingTime": 30,
+  "tags": ["主菜"],
+  "notes": "",
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "createdAt": "2026-07-03T00:00:00.000Z",
+  "updatedAt": "2026-07-03T00:00:00.000Z"
+}
+```
+
+#### PUT /api/recipes/:id — `servings` を null にクリア
+
+**リクエスト（`servings: null` で明示的にクリア）:**
+
+```json
+{
+  "name": "肉じゃが",
+  "servings": null,
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "tags": ["主菜"],
+  "cookingTime": 30,
+  "notes": ""
+}
+```
+
+**レスポンス（200）:**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "servings": null,
+  "cookingTime": 30,
+  "tags": ["主菜"],
+  "notes": "",
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "createdAt": "2026-07-03T00:00:00.000Z",
+  "updatedAt": "2026-07-03T12:00:00.000Z"
+}
+```
+
+#### バリデーションエラー — 無効な `servings` 値
+
+**リクエスト（`servings: 0`）:**
+
+```json
+POST /api/recipes
+Content-Type: application/json
+
+{
+  "name": "肉じゃが",
+  "baseServings": 4,
+  "servings": 0,
+  "ingredients": [],
+  "steps": [{"description": "材料を煮る"}],
+  "tags": ["主菜"],
+  "cookingTime": null,
+  "notes": ""
+}
+```
+
+**レスポンス（400）:**
+
+```json
+{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "too_small",
+        "minimum": 0,
+        "type": "number",
+        "inclusive": false,
+        "exact": false,
+        "message": "Number must be greater than 0",
+        "path": ["servings"]
+      }
+    ],
+    "name": "ZodError"
+  }
+}
+```
+
+---
+
+### 契約テスト観点（test-designer への引き継ぎ）
+
+以下の観点を test-designer に引き継ぐ。設計書「テスト方針」節（T-C01〜T-C07 / T-P01〜T-P05）と対応する。
+
+**Zod スキーマ境界値テスト（`packages/api-contract`）:**
+
+`createRecipeSchema` / `updateRecipeSchema` のそれぞれで以下を検証する。
+
+| 入力 | 期待結果 | 対応テスト |
+|---|---|---|
+| `servings: 1` | `parse()` 成功、値が `1` | T-C01 相当 |
+| `servings: null` | `parse()` 成功、値が `null` | T-C02 相当 |
+| `servings` フィールドなし | `parse()` 成功、値が `undefined` | T-C03 相当 |
+| `servings: 0` | `safeParse()` が `{ success: false }`、`issues[0].code === "too_small"` | T-C04 相当 |
+| `servings: -1` | `safeParse()` が `{ success: false }`、`issues[0].code === "too_small"` | T-C05 相当 |
+| `servings: 1.5` | `safeParse()` が `{ success: false }`、`issues[0].code === "not_multiple_of"` | T-C06 相当 |
+
+**後方互換テスト（`packages/api-contract`）:**
+
+- `servings` フィールドを含まない既存リクエストボディを `createRecipeSchema.parse()` して例外が発生しないこと（後方互換の自動化確認）
+
+**型の往復確認（TypeScript コンパイルで担保）:**
+
+- `CreateRecipeBody['servings']` が `number | null | undefined` 型であること
+- `RecipeDto['servings']` が `number | null` 型であること（`?` なし必須フィールド）
+
+**Hono ルートテスト（`apps/web/src/server/routes/` 配下）:**
+
+| ケース | 期待結果 | 対応テスト |
+|---|---|---|
+| `POST /api/recipes` with `servings: 4` | 201、レスポンス `servings === 4` | T-P01 相当 |
+| `POST /api/recipes` without `servings` | 201、レスポンス `servings === null` | T-P02 相当 |
+| `POST /api/recipes` with `servings: 0` | 400 | T-C04 のルートレベル検証 |
+| `PUT /api/recipes/:id` with `servings: 2` | 200、レスポンス `servings === 2` | T-P03 相当 |
+| `GET /api/recipes` | 200、各要素に `servings: number \| null` が存在 | T-P04 相当 |
+| `GET /api/recipes/:id` | 200、`servings: number \| null` が存在 | T-P05 相当 |
+
+---
+
 ## DB 設計
 
 ### 変更点
