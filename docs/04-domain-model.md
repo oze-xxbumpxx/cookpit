@@ -90,7 +90,13 @@ export class Quantity {
   }
 }
 
-export type Unit = 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup' | 'piece' | 'pinch';
+// 実装の正典: packages/domain/src/shared/unit.ts（Sprint 1 で日本語単位に統一）
+export type Unit =
+  | 'g' | 'kg' // 重量
+  | 'ml' | 'l' // 容量
+  | '大さじ' | '小さじ' | 'cup' // 調理単位
+  | '個' | '本' | '枚' | '玉' | '尾' | '切れ' // 個数・形状
+  | '束' | '袋' | '缶' | '合'; // まとまり
 ```
 
 ### WeekIdentifier
