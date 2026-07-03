@@ -25,7 +25,8 @@ description: >
 2. dev サーバーを起動する: `pnpm dev`（素の Turbopack で起動できる。Serwist は
    本番ビルド限定 — 2026-06-26 commit 473ad09。**古いログの「`--webpack` 必須」には
    従わない**。`docs/07-dev-rules.md` §環境の既知の事実）。
-3. Playwright（Chromium 同梱）で対象 URL へナビゲートし、項目を順に確認する。
+3. Playwright（Chromium 同梱）で `http://localhost:3000`（ポートは `pnpm dev` の出力に
+   従う）配下の対象 URL へナビゲートし、項目を順に確認する。
    スクリーンショットを撮って報告に添える。
 4. **環境制約の扱い**: リモート（エフェメラル）環境は `DATABASE_URL` 未設定のため
    live DB を通る経路（一覧取得・保存など）は動かない。

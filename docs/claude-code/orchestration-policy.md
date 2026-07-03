@@ -3,9 +3,10 @@
 Orchestrator（`claude-opus-4-8`）は**指揮役**であり、自分で詳細設計や大量の実装を
 完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-4-6`）へ委譲する。
 
-`Agent` ツールを持つのは Orchestrator だけ。他の Subagent は原則 `Agent` を持たず、
-互いを起動しない（例外：reviewer のみ、検証目的に限り requirements-analyst を
-起動できる。後述）。
+`Agent` ツールを持つのは orchestrator・reviewer・agent-improvement-manager の 3 つのみ。
+orchestrator は全実務 Agent を起動できる。reviewer は検証目的で requirements-analyst
+のみ（後述）、agent-improvement-manager は回帰評価目的で agent-evaluator のみ起動できる。
+他の Subagent は `Agent` を持たず、互いを起動しない。
 
 ## Orchestrator の責務
 
@@ -156,11 +157,14 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 
 ## モデル割り当て
 
+正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は全 15 Agent の早見）。
+
 | Agent | model |
 | --- | --- |
 | orchestrator | `claude-opus-4-8` |
 | requirements-analyst | `claude-sonnet-4-6` |
 | architecture-designer | `claude-sonnet-4-6` |
+| contract-designer | `claude-sonnet-4-6` |
 | implementation-planner | `claude-sonnet-4-6` |
 | implementer | `claude-sonnet-4-6` |
 | test-designer | `claude-sonnet-4-6` |
@@ -168,6 +172,10 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 | security-reviewer | `claude-sonnet-4-6` |
 | e2e-test-implementer | `claude-sonnet-4-6` |
 | performance-designer | `claude-sonnet-4-6` |
+| document-reviewer | `claude-sonnet-4-6` |
+| reflection-agent | `claude-sonnet-4-6` |
+| agent-evaluator | `claude-sonnet-4-6` |
+| agent-improvement-manager | `claude-opus-4-8` |
 
 > `CLAUDE_CODE_SUBAGENT_MODEL` は設定しない。設定すると全 Subagent のモデルを
 > 一律上書きし、Agent 定義の `model` より優先されてしまう。モデルは各 Agent ファイルの

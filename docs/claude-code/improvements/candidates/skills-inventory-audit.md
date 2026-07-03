@@ -76,6 +76,23 @@
 
 → 3 件とも `.claude/skills/` に作成済み（人間承認あり・同日コミット）。
 
+## 追記（2026-07-02・第3回 = document-reviewer による独立検証）
+
+新設した document-reviewer をセッション変更文書 30 件に初適用した結果、**人手（メイン
+セッション）の棚卸し 2 回が見逃した Must 2 件を検出**した。
+
+- M-1: CLAUDE.md「`Agent` を持つのは Orchestrator のみ」— reviewer /
+  agent-improvement-manager の frontmatter と矛盾する事実誤り（修正済み）
+- M-2: docs/README.md 冒頭の表に `docs/adr/` デッドリンクが残存 — 8743e97 は同ファイル
+  下部のリンクのみ修正し、表の行を見落としていた（修正済み）
+- Should 3 件（Rules 件数 4→3 / モデル割り当て表の 5 Agent 欠落 / orchestration-policy
+  冒頭の「Orchestrator だけ」自己矛盾）・Nice 3 件も修正済み。
+
+**知見**: 同一ファイル内の同種記述（リンク・数値）は 1 箇所直しても他が残る
+（M-2 の型）。修正時は「同ファイル内の同種参照を grep してから閉じる」こと。
+独立レビュアー（コールドスタート）は作業者本人のバイアス（自分が直した箇所は
+確認済みと思い込む）を補正できることが実証された。
+
 ## まとめ
 
 - 昇格して反映したもの: 事象 3（Codex チェックリスト → 06-ai-tools）、

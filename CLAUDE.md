@@ -21,7 +21,10 @@
 - **Orchestrator を使う条件**：複数工程・複数ファイル・複数層にまたがる開発タスク
   （機能追加、仕様変更、新規 API/画面、スキーマ変更など）。単発の質問や調査は不要。
 - **委譲方針**：Orchestrator は自分で詳細設計や大量実装を完結せず分配する。`Agent` を
-  持つのは Orchestrator のみ。実装は implementer、設計は architecture-designer に委譲する。
+  持つのは orchestrator（全実務 Agent）・reviewer（検証用 requirements-analyst のみ）・
+  agent-improvement-manager（agent-evaluator のみ）の 3 つ
+  （[agent-responsibilities.md](docs/claude-code/agent-responsibilities.md)）。
+  実装は implementer、設計は architecture-designer に委譲する。
 - 詳細は [docs/claude-code/orchestration-policy.md](docs/claude-code/orchestration-policy.md)
   と [docs/claude-code/development-workflow.md](docs/claude-code/development-workflow.md)。
 

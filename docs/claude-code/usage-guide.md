@@ -30,7 +30,7 @@
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
 ├── agents/   (15)         Orchestrator + 専門/改善 Subagent
 ├── skills/   (11)         再利用可能な作業手順とテンプレート
-├── rules/    (4)          層・パス別の確定ルール
+├── rules/    (3)          層・パス別の確定ルール（+ README）
 ├── hooks/    (5 .mjs)     決定論的な検証・安全制御
 ├── scripts/  (3 .sh)      コマンド検出・品質ゲート・メトリクス
 ├── evals/                 改善の回帰評価（10 ケース + rubric + baselines）
@@ -61,7 +61,8 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | agent-improvement-manager | opus-4-8   | 横断分析・改善提案                      | トリガー時のみ    |
 
 
-詳細：[agent-responsibilities.md](./agent-responsibilities.md)。
+詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
+（正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-4-6`）。
 
 ### Skills（11）
 
@@ -71,7 +72,7 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 `audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
 Claude が場面に応じて自動選択する。
 
-### Rules（4）
+### Rules（3）
 
 [coding-standards.md](../../.claude/rules/coding-standards.md)（全TS）/
 [domain-layer.md](../../.claude/rules/domain-layer.md)（`packages/domain`・集約間）/
