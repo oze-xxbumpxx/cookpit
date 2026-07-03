@@ -18,6 +18,7 @@
 | security-reviewer | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 指摘リスト | Read, Grep, Glob, Bash | しない |
 | e2e-test-implementer | E2E・結合テスト実装（L3・基盤整備済みのみ） | E2E テストコード | Read, Grep, Glob, Edit, Write, Bash | テストのみ |
 | performance-designer | パフォーマンス設計（L3・外部I/O/大量データ条件） | `docs/designs/<feature>.md` のパフォーマンス節 | Read, Grep, Glob, Write | しない |
+| document-reviewer | 文書成果物の検証（事実整合・矛盾・参照生存・鮮度・読者適合） | 指摘リスト（Must/Should/Nice） | Read, Grep, Glob, Bash | しない |
 | reflection-agent | 振り返り・改善候補抽出 | `docs/claude-code/improvements/candidates/<task-id>.md` | Read, Grep, Glob, Write | しない |
 | agent-evaluator | 固定評価ケースで回帰評価 | `docs/claude-code/improvements/evaluations/` | Read, Grep, Glob, Write | しない |
 | agent-improvement-manager | 横断分析・改善提案 | `docs/claude-code/improvements/proposals/` | Read, Grep, Glob, Write, Agent(agent-evaluator) | しない |
@@ -104,6 +105,15 @@
 - `docs/tests/<feature>.md` の結合/E2E 観点を Playwright または Hono テストクライアントで実装する。
 - 単体テストは実装しない（implementer の責務）。
 - テスト基盤未整備の観点は `docs/tests/<feature>.md` の「未実装観点（基盤待ち）」に記録する。
+
+## document-reviewer
+
+- 文書成果物（設計書・要件書・ADR・提案書・記事・LP・README 等）の専門レビュー。
+  開発フロー（L2/L3）の成果物にも、フロー外の文書にも単体起動で使える。
+- 観点: 事実整合（主張の裏取り）・内部/文書間矛盾・参照の生存（デッドパス）・鮮度
+  （現状記述の日付/出典）・完全性・読者適合（初見トレース）・主張の強度・表記一貫性。
+- 出力は Must/Should/Nice + 該当箇所 + 修正案。指摘ゼロでも確認観点を列挙する。
+- **文書もコードも変更しない。** コードのレビューは reviewer / security-reviewer の担当。
 
 ## performance-designer
 

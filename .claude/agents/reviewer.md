@@ -22,6 +22,11 @@ tools: Read, Grep, Glob, Bash, Agent(requirements-analyst)
   - (iii) **防御性観点**（Domain 層の場合）: 防御的コピー・不変条件保持・不正引数・
     副作用（updatedAt 更新等）のテストがあるか
 - ドキュメント更新漏れ
+- **UI 変更の静的チェックすり抜け**（`apps/web` の画面変更を含む場合のみ）:
+  `docs/06-ai-tools.md` の Codex レビューチェックリストの型 — 識別子/Tailwind クラスの
+  タイポ・イベントハンドラ結線漏れ・`'use client'` 漏れ — は tsc/eslint を通過するため、
+  コード目視で確認する。実画面確認が必要な場合は `manual-browser-verify` Skill の実施
+  （PASS/BLOCKED 記録）を Orchestrator へ推奨する。
 
 ### 障害設計の追加観点（対象タスクに外部 I/O / 障害設計が含まれる場合のみ）
 
