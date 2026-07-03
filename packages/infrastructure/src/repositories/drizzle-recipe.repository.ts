@@ -46,6 +46,7 @@ export class DrizzleRecipeRepository implements RecipeRepository {
         set: {
           name: row.name,
           baseServings: row.baseServings,
+          servings: row.servings,
           cookingTime: row.cookingTime,
           tags: row.tags,
           notes: row.notes,
@@ -87,6 +88,7 @@ export class DrizzleRecipeRepository implements RecipeRepository {
       tags: row.tags.map((tag) => toRecipeTag(tag)),
       cookingTime: row.cookingTime,
       notes: row.notes,
+      servings: row.servings ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -108,6 +110,7 @@ export class DrizzleRecipeRepository implements RecipeRepository {
       id: recipe.id.value,
       name: recipe.name,
       baseServings: recipe.baseServings,
+      servings: recipe.servings,
       cookingTime: recipe.cookingTime,
       tags: recipe.tags,
       notes: recipe.notes,

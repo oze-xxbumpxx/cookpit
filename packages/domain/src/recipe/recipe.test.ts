@@ -82,6 +82,81 @@ describe('Recipe.create', () => {
     });
     expect(recipe.cookingTime).toBe(0);
   });
+
+  // T-D01
+  it('servings: 4 で生成すると servings === 4 になる (T-D01)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: 4,
+    });
+    expect(recipe.servings).toBe(4);
+  });
+
+  // T-D07: 最小有効値
+  it('servings: 1（最小有効値）で生成すると servings === 1 になる (T-D07)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: 1,
+    });
+    expect(recipe.servings).toBe(1);
+  });
+
+  // T-D02
+  it('servings: null で生成すると servings === null になる (T-D02)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: null,
+    });
+    expect(recipe.servings).toBeNull();
+  });
+
+  // T-D03
+  it('servings を省略すると servings === null になる (T-D03)', () => {
+    const recipe = Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2 });
+    expect(recipe.servings).toBeNull();
+  });
+
+  // T-D04
+  it('servings: 0 は拒否する (T-D04)', () => {
+    expect(() =>
+      Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2, servings: 0 }),
+    ).toThrow('Recipe servings must be a positive integer');
+  });
+
+  // T-D05
+  it('servings: -1 は拒否する (T-D05)', () => {
+    expect(() =>
+      Recipe.create({
+        name: '肉じゃが',
+        ingredients: [],
+        steps: [],
+        baseServings: 2,
+        servings: -1,
+      }),
+    ).toThrow('Recipe servings must be a positive integer');
+  });
+
+  // T-D06
+  it('servings: 1.5（非整数）は拒否する (T-D06)', () => {
+    expect(() =>
+      Recipe.create({
+        name: '肉じゃが',
+        ingredients: [],
+        steps: [],
+        baseServings: 2,
+        servings: 1.5,
+      }),
+    ).toThrow('Recipe servings must be a positive integer');
+  });
 });
 
 describe('Recipe の状態変更', () => {
@@ -203,6 +278,73 @@ describe('Recipe の状態変更', () => {
     recipe.steps.pop();
     expect(recipe.steps).toHaveLength(1);
   });
+
+  // T-D08
+  it('updateServings(2) で servings === 2 かつ updatedAt が進む (T-D08)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: 4,
+    });
+    const before = recipe.updatedAt.getTime();
+    recipe.updateServings(2);
+    expect(recipe.servings).toBe(2);
+    expect(recipe.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  // T-D13: 最小有効値
+  it('updateServings(1)（最小有効値）で servings === 1 になる (T-D13)', () => {
+    const recipe = Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2 });
+    recipe.updateServings(1);
+    expect(recipe.servings).toBe(1);
+  });
+
+  // T-D09
+  it('updateServings(null) で servings === null になる (T-D09)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: 4,
+    });
+    recipe.updateServings(null);
+    expect(recipe.servings).toBeNull();
+  });
+
+  // T-D10
+  it('updateServings(0) は拒否する (T-D10)', () => {
+    const recipe = Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2 });
+    expect(() => recipe.updateServings(0)).toThrow('Recipe servings must be a positive integer');
+  });
+
+  // T-D11
+  it('updateServings(-5) は拒否する (T-D11)', () => {
+    const recipe = Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2 });
+    expect(() => recipe.updateServings(-5)).toThrow('Recipe servings must be a positive integer');
+  });
+
+  // T-D12
+  it('updateServings(1.5) は拒否する (T-D12)', () => {
+    const recipe = Recipe.create({ name: '肉じゃが', ingredients: [], steps: [], baseServings: 2 });
+    expect(() => recipe.updateServings(1.5)).toThrow('Recipe servings must be a positive integer');
+  });
+
+  // T-D08b: 失敗後も状態が汚染されない
+  it('updateServings 失敗後も servings の値が変わらない (T-D08b)', () => {
+    const recipe = Recipe.create({
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      servings: 4,
+    });
+    recipe.updateServings(2);
+    expect(() => recipe.updateServings(0)).toThrow('Recipe servings must be a positive integer');
+    expect(recipe.servings).toBe(2);
+  });
 });
 
 describe('Recipe.reconstruct', () => {
@@ -218,6 +360,7 @@ describe('Recipe.reconstruct', () => {
       tags: ['主菜'],
       cookingTime: 30,
       notes: 'メモ',
+      servings: null,
       createdAt,
       updatedAt,
     };
@@ -241,6 +384,7 @@ describe('Recipe.reconstruct', () => {
       tags: [],
       cookingTime: null,
       notes: '',
+      servings: null,
       createdAt,
       updatedAt,
     });
@@ -248,5 +392,41 @@ describe('Recipe.reconstruct', () => {
     updatedAt.setFullYear(2099);
     expect(recipe.createdAt.getFullYear()).toBe(2026);
     expect(recipe.updatedAt.getFullYear()).toBe(2026);
+  });
+
+  // T-D14
+  it('reconstruct({ servings: 3 }) で servings === 3 になる (T-D14)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('fixed-id'),
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      servings: 3,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    expect(recipe.servings).toBe(3);
+  });
+
+  // T-D15
+  it('reconstruct({ servings: null }) で servings === null になる (T-D15)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('fixed-id'),
+      name: '肉じゃが',
+      ingredients: [],
+      steps: [],
+      baseServings: 2,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      servings: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    expect(recipe.servings).toBeNull();
   });
 });

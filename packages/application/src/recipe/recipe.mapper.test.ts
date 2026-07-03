@@ -121,6 +121,7 @@ describe('toRecipeDto', () => {
       tags: ['主菜', '作り置き向き'],
       cookingTime: 30,
       notes: 'コツは弱火でじっくり',
+      servings: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     });
@@ -131,6 +132,7 @@ describe('toRecipeDto', () => {
     expect(dto.id).toBe('recipe-1');
     expect(dto.name).toBe('肉じゃが');
     expect(dto.baseServings).toBe(4);
+    expect(dto.servings).toBeNull();
     expect(dto.cookingTime).toBe(30);
     expect(dto.tags).toEqual(['主菜', '作り置き向き']);
     expect(dto.notes).toBe('コツは弱火でじっくり');
@@ -174,6 +176,7 @@ describe('toRecipeDto', () => {
       tags: [],
       cookingTime: null,
       notes: '',
+      servings: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
@@ -191,6 +194,7 @@ describe('toRecipeDto', () => {
       tags: [],
       cookingTime: null,
       notes: '',
+      servings: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
@@ -207,6 +211,7 @@ describe('toRecipeDto', () => {
       tags: [],
       cookingTime: null,
       notes: '',
+      servings: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
@@ -230,10 +235,49 @@ describe('toRecipeDto', () => {
       tags: [],
       cookingTime: 5,
       notes: '',
+      servings: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
     expect(toRecipeDto(recipe).ingredients[0]?.productRef).toBeNull();
+  });
+
+  // T-MAP01
+  it('servings: 4 のレシピを変換すると dto.servings === 4 になる (T-MAP01)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('recipe-6'),
+      name: 'テスト',
+      ingredients: [],
+      steps: [new CookingStep('手順')],
+      baseServings: 4,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      servings: 4,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    expect(toRecipeDto(recipe).servings).toBe(4);
+  });
+
+  // T-MAP02
+  it('servings: null のレシピを変換すると dto.servings === null になる (T-MAP02)', () => {
+    const recipe = Recipe.reconstruct({
+      id: RecipeId.fromString('recipe-7'),
+      name: 'テスト',
+      ingredients: [],
+      steps: [new CookingStep('手順')],
+      baseServings: 2,
+      tags: [],
+      cookingTime: null,
+      notes: '',
+      servings: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    expect(toRecipeDto(recipe).servings).toBeNull();
   });
 });

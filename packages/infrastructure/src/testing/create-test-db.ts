@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   notes text NOT NULL DEFAULT '',
   ingredients jsonb NOT NULL DEFAULT '[]',
   steps jsonb NOT NULL DEFAULT '[]',
+  servings integer,
   created_at timestamp NOT NULL DEFAULT now(),
   updated_at timestamp NOT NULL DEFAULT now()
 );
