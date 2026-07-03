@@ -1,6 +1,6 @@
 # 設計書: recipe-servings
 
-- ステータス: draft
+- ステータス: confirmed
 - レベル: L2
 - 関連: 変更なし（要件ドキュメント・ADR なし）
 

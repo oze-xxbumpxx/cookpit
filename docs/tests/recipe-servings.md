@@ -153,6 +153,13 @@ Domain / api-contract / Application / Infrastructure / Presentation の全 5 層
 
 **ファイル**: 新規作成 `packages/api-contract/src/recipe.schema.test.ts`
 
+> **実施状況（2026-07-03 reviewer 指摘 Should-3 反映）**: `packages/api-contract` に Vitest 設定が
+> 存在しないため、本タスクでは T-C01〜T-C18 は未実施（実装計画 §確認事項 2 の判断）。同等の境界値
+> 観点は Hono ルートテスト（`apps/web/src/server/routes/recipes.test.ts` の T-P04〜T-P06・T-P10）で
+> `zValidator` 経由の統合テストとして代替済み。`packages/api-contract` への Vitest 導入と
+> T-C01〜T-C18 の実装は、本 feature とは別タスクとして扱う（api-contract パッケージ全体への
+> テスト基盤導入であり recipe-servings 単体のスコープを超えるため）。
+
 ### 2-1. `createRecipeSchema`
 
 #### 正常系・境界値

@@ -158,6 +158,7 @@ export class Recipe {
     private _ingredients: RecipeIngredient[],
     private _steps: CookingStep[],
     private _baseServings: number,
+    private _servings: number | null,
     private _tags: RecipeTag[],
     private _cookingTime: Duration | null,
     private _notes: string,
@@ -176,6 +177,7 @@ export class Recipe {
       input.ingredients,
       input.steps,
       input.baseServings,
+      input.servings ?? null,
       input.tags ?? [],
       input.cookingTime ?? null,
       input.notes ?? '',
@@ -192,6 +194,15 @@ export class Recipe {
   rename(name: string): void {
     if (name.trim() === '') throw new Error('Recipe name required');
     this._name = name;
+    this._updatedAt = new Date();
+  }
+
+  // servings（何人前・任意の表示用アノテーション。baseServingsとは別概念）
+  updateServings(servings: number | null): void {
+    if (servings !== null && (!Number.isInteger(servings) || servings <= 0)) {
+      throw new Error('Servings must be a positive integer or null');
+    }
+    this._servings = servings;
     this._updatedAt = new Date();
   }
 
