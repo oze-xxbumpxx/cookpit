@@ -21,6 +21,11 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 - 実装計画のステップに沿った実装。
 - 必要な単体テストの作成（下記「テスト品質基準」に従う）。
+- **実装計画の「ドキュメント更新対象」に列挙された全項目を実施する**（恒久ドキュメント
+  （`docs/04-domain-model.md` 等）の更新、設計書ステータスの `confirmed` への変更など）。
+  コード変更と同格の完了条件として扱い、実施漏れを最終報告前に自己チェックする（出典:
+  recipe-servings で計画に明記された2件の非コード指示が実施されず reviewer 指摘になった —
+  `docs/claude-code/improvements/candidates/recipe-servings.md` 事象1）。
 - 静的チェックの実行：
   - `pnpm lint`
   - `pnpm type-check`
@@ -73,4 +78,5 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 ## 報告
 
 変更したファイル、実行した lint/型チェック/テストの結果、設計からの逸脱有無、
+実装計画「ドキュメント更新対象」の実施状況（全項目実施済み、または未実施項目とその理由）、
 スコープ外で気づいた点（あれば）を返す。
