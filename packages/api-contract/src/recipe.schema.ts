@@ -84,6 +84,7 @@ export const createRecipeSchema = z.object({
   tags: z.array(recipeTagSchema),
   cookingTime: z.number().int().nonnegative().nullable(),
   notes: z.string(),
+  servings: z.number().int().positive().nullable().optional(),
 });
 
 export const updateRecipeSchema = z.object({
@@ -93,6 +94,7 @@ export const updateRecipeSchema = z.object({
   tags: z.array(recipeTagSchema),
   cookingTime: z.number().int().nonnegative().nullable(),
   notes: z.string(),
+  servings: z.number().int().positive().nullable().optional(),
 });
 
 export type CreateRecipeBody = z.infer<typeof createRecipeSchema>;

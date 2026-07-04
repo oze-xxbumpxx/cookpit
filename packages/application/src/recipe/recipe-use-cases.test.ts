@@ -44,7 +44,7 @@ class InMemoryRecipeRepository implements RecipeRepository {
   }
 }
 
-function seededRecipe(id: string, name = 'カレー', baseServings = 4): Recipe {
+function seededRecipe(id: string, name = 'カレー', baseServings = 4, servings: number | null = null): Recipe {
   return Recipe.reconstruct({
     id: RecipeId.fromString(id),
     name,
@@ -54,6 +54,7 @@ function seededRecipe(id: string, name = 'カレー', baseServings = 4): Recipe 
     tags: [],
     cookingTime: null,
     notes: '',
+    servings,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   });
@@ -131,6 +132,24 @@ describe('CreateRecipeUseCase', () => {
     );
     expect(repository.saveCount).toBe(0);
   });
+
+  // T-A01
+  it('servings: 4 を指定すると DTO の servings === 4 になる (T-A01)', async () => {
+    const dto = await new CreateRecipeUseCase(repository).execute({ ...baseInput, servings: 4 });
+    expect(dto.servings).toBe(4);
+  });
+
+  // T-A02
+  it('servings を省略すると DTO の servings === null になる (T-A02)', async () => {
+    const dto = await new CreateRecipeUseCase(repository).execute(baseInput);
+    expect(dto.servings).toBeNull();
+  });
+
+  // T-A03
+  it('servings: null を指定すると DTO の servings === null になる (T-A03)', async () => {
+    const dto = await new CreateRecipeUseCase(repository).execute({ ...baseInput, servings: null });
+    expect(dto.servings).toBeNull();
+  });
 });
 
 describe('GetRecipeUseCase', () => {
@@ -147,6 +166,15 @@ describe('GetRecipeUseCase', () => {
     await expect(new GetRecipeUseCase(repository).execute('missing')).rejects.toBeInstanceOf(
       RecipeNotFoundError,
     );
+  });
+
+  // T-A08
+  it('servings: 3 のシード済みレシピを取得すると DTO に servings === 3 が存在する (T-A08)', async () => {
+    repository.seed(seededRecipe('id-1', 'みそ汁', 2, 3));
+
+    const dto = await new GetRecipeUseCase(repository).execute('id-1');
+
+    expect(dto.servings).toBe(3);
   });
 });
 
@@ -182,6 +210,19 @@ describe('GetRecipesUseCase', () => {
     expect(dtos[0]?.steps).toEqual([]);
     expect(dtos[0]?.createdAt).toBeDefined();
     expect(dtos[0]?.updatedAt).toBeDefined();
+  });
+
+  // T-A09
+  it('servings: 2 / null の 2 件を取得すると各 DTO に servings が正しく設定される (T-A09)', async () => {
+    repository.seed(seededRecipe('id-1', 'A', 2, 2));
+    repository.seed(seededRecipe('id-2', 'B', 2, null));
+
+    const dtos = await new GetRecipesUseCase(repository).execute();
+
+    expect(dtos).toHaveLength(2);
+    const byId = Object.fromEntries(dtos.map((d) => [d.id, d]));
+    expect(byId['id-1']?.servings).toBe(2);
+    expect(byId['id-2']?.servings).toBeNull();
   });
 });
 
@@ -243,6 +284,46 @@ describe('UpdateRecipeUseCase', () => {
     await expect(
       new UpdateRecipeUseCase(repository).execute({ ...updateInput, id: 'missing' }),
     ).rejects.toBeInstanceOf(RecipeNotFoundError);
+    expect(repository.saveCount).toBe(0);
+  });
+
+  // T-A04
+  it('servings: null のシード済みレシピに servings: 2 を指定すると DTO の servings === 2 になる (T-A04)', async () => {
+    repository.seed(seededRecipe('id-1', 'カレー', 4, null));
+
+    const dto = await new UpdateRecipeUseCase(repository).execute({ ...updateInput, servings: 2 });
+
+    expect(dto.servings).toBe(2);
+  });
+
+  // T-A05
+  it('servings: 4 のシード済みレシピに servings: null を指定すると DTO の servings === null になる (T-A05)', async () => {
+    repository.seed(seededRecipe('id-1', 'カレー', 4, 4));
+
+    const dto = await new UpdateRecipeUseCase(repository).execute({
+      ...updateInput,
+      servings: null,
+    });
+
+    expect(dto.servings).toBeNull();
+  });
+
+  // T-A06
+  it('servings: 4 のシード済みレシピで servings を省略すると DTO の servings === null になる（?? null 正規化）(T-A06)', async () => {
+    repository.seed(seededRecipe('id-1', 'カレー', 4, 4));
+
+    const dto = await new UpdateRecipeUseCase(repository).execute(updateInput);
+
+    expect(dto.servings).toBeNull();
+  });
+
+  // T-A07
+  it('servings: 0 を指定するとドメインバリデーションエラーになり保存されない (T-A07)', async () => {
+    repository.seed(seededRecipe('id-1'));
+
+    await expect(
+      new UpdateRecipeUseCase(repository).execute({ ...updateInput, servings: 0 }),
+    ).rejects.toThrow('Recipe servings must be a positive integer');
     expect(repository.saveCount).toBe(0);
   });
 });

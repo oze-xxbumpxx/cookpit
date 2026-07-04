@@ -9,6 +9,7 @@ export const recipes = pgTable('recipes', {
   notes: text('notes').notNull().default(''),
   ingredients: jsonb('ingredients').notNull().default([]),
   steps: jsonb('steps').notNull().default([]),
+  servings: integer('servings'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

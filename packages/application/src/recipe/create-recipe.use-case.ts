@@ -15,6 +15,7 @@ export class CreateRecipeUseCase {
       tags: input.tags,
       cookingTime: input.cookingTime,
       notes: input.notes,
+      servings: input.servings ?? null,
     });
 
     await this.recipeRepository.save(recipe);

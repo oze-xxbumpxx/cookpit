@@ -29,6 +29,7 @@ export function toRecipeDto(recipe: Recipe): RecipeDto {
     id: recipe.id.value,
     name: recipe.name,
     baseServings: recipe.baseServings,
+    servings: recipe.servings,
     cookingTime: recipe.cookingTime,
     tags: recipe.tags,
     notes: recipe.notes,

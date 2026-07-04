@@ -16,6 +16,7 @@ export interface RecipeDto {
   id: string;
   name: string;
   baseServings: number;
+  servings: number | null;
   cookingTime: number | null;
   tags: RecipeTag[];
   notes: string;
@@ -33,6 +34,7 @@ export interface CreateRecipeInputDto {
   tags: RecipeTag[];
   cookingTime: number | null;
   notes: string;
+  servings?: number | null;
 }
 
 export interface UpdateRecipeInputDto {
@@ -43,4 +45,5 @@ export interface UpdateRecipeInputDto {
   tags: RecipeTag[];
   cookingTime: number | null;
   notes: string;
+  servings?: number | null;
 }

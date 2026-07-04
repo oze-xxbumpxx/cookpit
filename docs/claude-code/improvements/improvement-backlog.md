@@ -17,6 +17,7 @@
 | IMP-2026-006 | 不足サブエージェント3種追加（security-reviewer / performance-designer / e2e-test-implementer）と障害設計の設計前倒し | .claude/agents/{security-reviewer,performance-designer,e2e-test-implementer}.md / orchestrator.md / orchestration-policy.md / agent-responsibilities.md / create-design-document SKILL | accepted | ユーザー要求（委譲ギャップ分析） | [proposals/IMP-2026-006.md](proposals/IMP-2026-006.md) | dry run 5ケース・悪化軸ゼロ（[evals/results/…SUMMARY.md](../../.claude/evals/results/agent-addition-security-perf-e2e--SUMMARY.md)） | 2026-06-27 採用（人間承認・本適用済み） |
 | IMP-2026-007 | orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（改善A: 設計系並列化 / 改善B: 先行調査共有） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | evaluated | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md)（**ユーザー指定の必須昇格**） | [proposals/IMP-2026-007.md](proposals/IMP-2026-007.md) | [evaluations/IMP-2026-007.md](evaluations/IMP-2026-007.md)（2026-06-27 実施・3ケース全軸悪化なし・効率改善は定量未確認・採用推奨[条件付き]） | 未決定（人間承認必須） |
 | IMP-2026-008 | orchestrator stop/resume 後の Sub-agent notification 待ちループを解消（状態ファイル + 通知非依存の冪等再開 / 単一委譲は同期既定） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md / .claude/state/inflight-agents.json | accepted | [candidates/store-master.md](candidates/store-master.md)（事象1） | [accepted/IMP-2026-008.md](accepted/IMP-2026-008.md) | [evaluations/IMP-2026-008.md](evaluations/IMP-2026-008.md)（v1 悪化2軸→v2 悪化ゼロ・条件付き採用推奨） | 2026-07-01 採用（人間承認・本適用済み・v2） |
+| IMP-2026-009 | IMP-2026-008 の冪等 resume 判定を L1/L2 の単一 Sub-agent 同期委譲にも拡張（`inflight-agents.json` 未使用でも resume 直後は期待成果物の存在確認を必須化） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | accepted | 改善ループ検証ドライラン（recipe-servings, 2026-07-03。L2 タスクで architecture-designer が resume 後に実際に二重起動） | （ドライラン中にユーザー承認のうえ即時適用。個別 proposal ファイルは未作成） | dry run 未再実施（次回 L1/L2 resume 発生タスクで実地確認予定） | 2026-07-03 採用（人間承認・本適用済み・簡易フロー） |
 
 凡例: ステータス = candidate / proposal / evaluated / accepted / rejected。
 「候補」「提案」「評価」「決定」列には該当ファイルへの相対リンクまたは日付を入れる。
@@ -35,6 +36,7 @@
 | IMP-2026-001 の実タスク事後確認（recipe-edit-screen で観点選択基準が正しく機能） | evaluations/IMP-2026-001.md への事後補記を manager に推奨 | manager | recipe-edit-screen 事象 2 |
 | **IMP-2026-007 採否判断のための定量計測**（次の L3 タスクで実施）: reflection-agent が `duration_ms` / `tool uses` / 合計トークンの before/after を記録し、`docs/claude-code/improvements/evaluations/IMP-2026-007.md` の「実タスク計測」節に追記すること。計測後に人間が採否を最終判断する。 | **store-master（2026-06-28）で計測実施したが、orchestrator の notification 待ちループにより手動オーケストレーション状態となり、正常動作時の before 値として使いにくい**。次の L3 タスク（orchestrator 正常動作かつ notification ループ未発生）で再計測を推奨。evaluations/IMP-2026-007.md の「実タスク計測」節に詳細記録済み。 | reflection-agent + 人間 | IMP-2026-007 A案決定（2026-06-27）+ store-master 計測（2026-06-28）|
 | **orchestrator stop/resume 後の Sub-agent notification 待ちループ問題**（新規・重要）: orchestrator が background で Sub-agent を起動した後に stop すると、再開時に Sub-agent 完了通知を受け取れず無限待機に陥る。store-master で初観測。IMP-2026-007 の計測前提を崩す根本問題であり、並列化改善より先に解決が必要な可能性がある。候補ファイル: [candidates/store-master.md](candidates/store-master.md) 事象 1 参照。 | **対応済み**: IMP-2026-008 として proposal 起票 → 2026-07-01 採用・本適用済み（v2）。 | 完了 | store-master 事象 1（2026-06-28）|
+| **Orchestrator を Agent ツールで子エージェントとして起動した場合の孫 Sub-agent 通知バイパス・isolation 未継承**（改善ループ検証ドライランで新規観測）: Orchestrator 自体を `claude --agent orchestrator`（本来の起動方法・メインセッション）ではなく Agent ツールの子エージェントとして起動すると、孫 Sub-agent の完了通知が Orchestrator 本体でなく最上位セッションへ直接届く、`isolation: worktree` が孫 Sub-agent のファイル I/O に継承されない、の2点を観測（recipe-servings ドライランで実ブランチに3ファイル漏洩・削除済み）。Cookpit の Agent 定義側では直接修正不可（Claude Code 側の子エージェント委譲・通知配送の挙動）。 | orchestration-policy.md「既知の制約」節に注記を追加（本来の起動方法＝メインセッションでの通常運用では未発生の想定）。全工程を通した生 Orchestrator ドライランより `agent-evaluator` ベースの dry run を優先する運用に倣う。恒久修正が必要なら Claude Code 側へのフィードバック対象（Cookpit リポジトリ外）。 | 人間（運用注記のみ・恒久修正は対象外） | 改善ループ検証ドライラン（recipe-servings, 2026-07-03）|
 
 ## 候補のうち「Memory 留め（昇格せず）」の記録
 
@@ -54,7 +56,7 @@
 | sw.js（Serwist 自動生成 Service Worker）が ESLint error（no-this-alias）を出す | Sprint 1 クローズ | 1 | ESLint 除外設定で対応可 |
 | architecture-designer 二重起動（orchestrator notification 待ちループの副産物） | store-master | 1 | orchestrator Subagent Memory（事象 1 解消で自然消滅） |
 | N-02 テスト（create → getAll 連携）が設計書テスト節省略により未実装（reviewer Should-2） | store-master | 1（再発監視中・次回同種 Should 指摘で create-test-plan Skill 昇格） | test-designer Subagent Memory |
-| docs/04-domain-model.md の Store エンティティ定義が実装と乖離（reviewer Nice-2） | store-master | 1（再発監視中・次回同種指摘で昇格） | implementer Subagent Memory |
+| docs/04-domain-model.md の Store エンティティ定義が実装と乖離（reviewer Nice-2） | store-master → recipe-servings（Should-1） | 2 → **昇格済み**（recipe-servings 事象 1 の一部として累計 3 件判定・[candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 1 参照） | implementer Subagent Memory → 昇格候補 |
 | hono バージョン ^4.12.18 に脆弱性（GHSA-88fw-hqm2-52qc）・最新パッチ以上に維持する運用ルール | store-master | 1 | implementer Subagent Memory |
 | 計画セッション分離型 L2（前日に計画確定→翌日実装）が手戻りゼロで完走（成功パターン） | test-infra-expansion | 1 | orchestrator Subagent Memory |
 | 設計書が非推奨 API を指定（Vitest defineWorkspace → test.projects へ実装時置換）。設計時に採用バージョンの現行 API 未確認 | test-infra-expansion | 1（再発で create-design-document Skill 昇格を検討） | architecture-designer Subagent Memory |
@@ -63,6 +65,9 @@
 | 環境の「現状」を書いた指示が状態変化後も残り食い違いになる（テスト基盤状態が8箇所で鮮度切れ） | skills-inventory-audit | 1（再発で create-implementation-plan Skill に grep 確認を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 1 |
 | 改善適用時に同内容を記載した他文書へ反映されず食い違いが残る（委譲フロー5文書の不一致） | skills-inventory-audit | 1（再発で proposals/_TEMPLATE.md に「反映先一覧」欄を昇格） | [candidates/skills-inventory-audit.md](candidates/skills-inventory-audit.md) 事象 2 |
 | Codex 実装の頻出ミス（識別子/Tailwind タイポ・結線漏れ・use client 漏れ 等）が4セッション反復 | skills-inventory-audit（logs 5/16〜6/16） | 4 → **昇格済み**: docs/06-ai-tools.md レビューチェックリスト（2026-07-02） | docs/06-ai-tools.md |
+| 並列実行した test-designer と implementation-planner の判断が食い違い、試験計画に実施不可能なテストが混入（Should-3） | recipe-servings | 1（再発監視中。並列実行構造上の再発リスクあり。次回同種で昇格） | [candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 2 |
+| devDependency happy-dom に critical RCE 脆弱性（GHSA-37j7-fg3j-429f 等）・本番非影響・対応フロー未整備 | recipe-servings | 1（同種が 3 タスク続いたら対応フロー整備を候補化） | implementer Subagent Memory |
+| check-deliverables.mjs が実内容ありのセクションを「空」と誤判定した疑い（非ブロック・原因不確定） | recipe-servings | 1（次回再現時に Hook コードを精査・確証で昇格） | [candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 4 |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
@@ -75,3 +80,4 @@
 | recipe-edit-screen | contract-designer 起動条件の不明確さ（事象5）→ ベースライン再採点と統合し proposal 化 | docs/claude-code/orchestration-policy.md / orchestrator.md | proposal 化済み（→ IMP-2026-004） | [candidates/recipe-edit-screen.md](candidates/recipe-edit-screen.md) |
 | orchestrator-parallelization | **【必須・ユーザー指定】** orchestrator L3 設計フェーズの逐次実行＋重複探索を改善（並列化 + 先行調査共有）| .claude/agents/orchestrator.md | proposal 化済み（→ IMP-2026-007） | [candidates/orchestrator-parallelization.md](candidates/orchestrator-parallelization.md) |
 | store-master | orchestrator stop/resume 後の Sub-agent notification 待ちループ（手動オーケストレーションが必要になる根本問題・IMP-2026-007 計測前提を崩す） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | proposal 化済み（→ IMP-2026-008・2026-07-01 採用済み） | [candidates/store-master.md](candidates/store-master.md)（事象 1） |
+| recipe-servings | implementer が実装計画の非コード指示（恒久ドキュメント更新・ステータス変更）を漏らす（累計 3 件: store-master 事象 4 + recipe-servings Should-1 + Should-2） | .claude/skills/create-implementation-plan/SKILL.md / .claude/agents/implementer.md | candidate（proposal 起票推奨） | [candidates/recipe-servings.md](candidates/recipe-servings.md)（事象 1） |

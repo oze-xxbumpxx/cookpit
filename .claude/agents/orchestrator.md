@@ -45,6 +45,12 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
      のみ、notification を待たず各エントリの期待成果物の存在を確認する。存在すれば完了とみなし
      当該エントリを除去して次工程へ進み、無ければ再委譲する（「完了待ちループ」に入らない）。
      stop していない通常フローでは本手順は発動しない。
+   - 上記は L3 background 委譲限定の仕組みだが、resume 直後は L1/L2 の同期委譲（`inflight-agents.json`
+     を使わない単一 Sub-agent への委譲）でも「直前に委譲した Sub-agent が完了したかどうか resume 後の
+     自分には分からない」という同じ状況が起こりうる。`inflight-agents.json` にエントリが無くても、
+     resume 直後で直前の一手が Sub-agent への委譲だった場合は、その Sub-agent の期待成果物（ファイル
+     パス）の存在と更新時刻を確認してから次を決める。存在すれば完了とみなし次工程へ進み、無ければ
+     初めて再委譲する。「まだ実行中のはず」という前提だけで無条件に再委譲しない（二重起動の防止）。
 5. 成果物を統合し、矛盾があれば該当 Subagent へ差し戻す。
 6. 完了条件（development-workflow.md）を確認してユーザーへ報告する。
 

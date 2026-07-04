@@ -46,3 +46,6 @@ designs/wireframes/*.pdf
 
 # Claude Code 一時作業状態（feature-name / Subagent ログ / 承認マーカーなど）
 .claude/state/
+
+# Claude Code isolated worktrees（Agent tool の isolation: "worktree" 実行用）
+.claude/worktrees/

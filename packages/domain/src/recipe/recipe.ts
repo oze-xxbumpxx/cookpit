@@ -12,6 +12,7 @@ export interface CreateRecipeInput {
   tags?: RecipeTag[];
   cookingTime?: number | null;
   notes?: string;
+  servings?: number | null;
 }
 
 export interface RecipeProps {
@@ -23,6 +24,7 @@ export interface RecipeProps {
   tags: RecipeTag[];
   cookingTime: number | null;
   notes: string;
+  servings: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,12 +35,14 @@ export class Recipe {
     private recipeName: string,
     private ingredientList: RecipeIngredient[],
     private cookingSteps: CookingStep[],
-    private servings: number,
+    // Renamed from `servings` to avoid collision with the `get servings()` getter below.
+    private baseServingsValue: number,
     private recipeTags: RecipeTag[],
     private cookingMinutes: number | null,
     private recipeNotes: string,
     private readonly createdDate: Date,
     private updatedDate: Date,
+    private servingsValue: number | null,
   ) {}
 
   static create(input: CreateRecipeInput): Recipe {
@@ -52,6 +56,12 @@ export class Recipe {
     if (input.cookingTime !== null && input.cookingTime !== undefined && input.cookingTime < 0) {
       throw new Error('Recipe cooking time must be non-negative');
     }
+
+    const servings = input.servings ?? null;
+    if (servings !== null && (!Number.isInteger(servings) || servings < 1)) {
+      throw new Error('Recipe servings must be a positive integer');
+    }
+
     const now = new Date();
 
     return new Recipe(
@@ -65,6 +75,7 @@ export class Recipe {
       input.notes ?? '',
       now,
       now,
+      servings,
     );
   }
 
@@ -80,6 +91,7 @@ export class Recipe {
       props.notes,
       new Date(props.createdAt),
       new Date(props.updatedAt),
+      props.servings,
     );
   }
 
@@ -120,6 +132,16 @@ export class Recipe {
     this.touch();
   }
 
+  // Display-only annotation for "how many people this serves".
+  // Not used for ingredient scaling (that is baseServings's role).
+  updateServings(servings: number | null): void {
+    if (servings !== null && (!Number.isInteger(servings) || servings < 1)) {
+      throw new Error('Recipe servings must be a positive integer');
+    }
+    this.servingsValue = servings;
+    this.touch();
+  }
+
   scaleIngredients(scaleFactor: number): RecipeIngredient[] {
     return this.ingredientList.map((ingredient) => ingredient.scale(scaleFactor));
   }
@@ -138,7 +160,7 @@ export class Recipe {
     return [...this.cookingSteps];
   }
   get baseServings(): number {
-    return this.servings;
+    return this.baseServingsValue;
   }
   get tags(): RecipeTag[] {
     return [...this.recipeTags];
@@ -150,6 +172,10 @@ export class Recipe {
 
   get notes(): string {
     return this.recipeNotes;
+  }
+
+  get servings(): number | null {
+    return this.servingsValue;
   }
 
   get createdAt(): Date {

@@ -19,6 +19,7 @@ export class UpdateRecipeUseCase {
     recipe.updateTags(input.tags);
     recipe.updateCookingTime(input.cookingTime);
     recipe.updateNotes(input.notes);
+    recipe.updateServings(input.servings ?? null);
 
     await this.recipeRepository.save(recipe);
 
