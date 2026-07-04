@@ -130,11 +130,6 @@ recipe-app/
 │   │   │   └── ...
 │   │   └── package.json
 │   │
-│   ├── ui/                           # 共通 UI コンポーネント
-│   │   ├── src/
-│   │   │   └── components/
-│   │   └── package.json
-│   │
 │   └── config/                       # 共通設定
 │       ├── eslint/
 │       ├── typescript/
@@ -153,8 +148,7 @@ apps/web
   ├─→ packages/domain
   ├─→ packages/application
   ├─→ packages/infrastructure
-  ├─→ packages/api-contract
-  └─→ packages/ui
+  └─→ packages/api-contract
 
 packages/application
   └─→ packages/domain
@@ -162,9 +156,6 @@ packages/application
 packages/infrastructure
   ├─→ packages/domain
   └─→ packages/api-contract（必要に応じて）
-
-packages/ui
-  └─→ なし（純粋な UI ライブラリ）
 
 packages/domain
   └─→ なし（純粋なドメインロジック）

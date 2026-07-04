@@ -250,21 +250,6 @@ importers:
         specifier: ^3.2.0
         version: 3.2.6(@types/node@20.19.40)(happy-dom@17.6.3)(jiti@2.7.0)(lightningcss@1.32.0)(msw@2.14.5(@types/node@20.19.40)(typescript@5.9.3))(tsx@4.21.0)
 
-  packages/ui:
-    devDependencies:
-      '@cookpit/config':
-        specifier: workspace:*
-        version: link:../config
-      eslint:
-        specifier: ^9.0.0
-        version: 9.39.4(jiti@2.7.0)
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.0.0
-        version: 8.59.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
-
 packages:
 
   '@alloc/quick-lru@5.2.0':
