@@ -1353,19 +1353,19 @@ Stop Hookの無限再実行を防止する。
 
 ## 推奨
 
-| Agent | Read | Grep/Glob | Write docs | Edit code | Bash | Agent起動 |
-|---|---:|---:|---:|---:|---:|---:|
-| Orchestrator | Yes | Yes | 原則No | No | 最小限 | Yes |
-| Requirements Analyst | Yes | Yes | No | No | 読み取りのみ | No |
-| Architecture Designer | Yes | Yes | Yes | No | 最小限 | No |
-| Contract Designer | Yes | Yes | Yes | 必要時限定 | 検証のみ | No |
-| Test Designer | Yes | Yes | Yes | No | 最小限 | No |
-| Implementation Planner | Yes | Yes | Yes | No | 最小限 | No |
-| Implementer | Yes | Yes | Yes | Yes | Yes | No |
-| Reviewer | Yes | Yes | レビュー文書のみ | No | テスト実行 | No |
-| Reflection Agent | Yes | Yes | 改善候補のみ | No | No | No |
-| Evaluator | Yes | Yes | 評価結果のみ | No | 評価実行 | No |
-| Improvement Manager | Yes | Yes | 提案のみ | No | 最小限 | 必要時限定 |
+| Agent                  | Read | Grep/Glob |       Write docs |  Edit code |         Bash |  Agent起動 |
+| ---------------------- | ---: | --------: | ---------------: | ---------: | -----------: | ---------: |
+| Orchestrator           |  Yes |       Yes |           原則No |         No |       最小限 |        Yes |
+| Requirements Analyst   |  Yes |       Yes |               No |         No | 読み取りのみ |         No |
+| Architecture Designer  |  Yes |       Yes |              Yes |         No |       最小限 |         No |
+| Contract Designer      |  Yes |       Yes |              Yes | 必要時限定 |     検証のみ |         No |
+| Test Designer          |  Yes |       Yes |              Yes |         No |       最小限 |         No |
+| Implementation Planner |  Yes |       Yes |              Yes |         No |       最小限 |         No |
+| Implementer            |  Yes |       Yes |              Yes |        Yes |          Yes |         No |
+| Reviewer               |  Yes |       Yes | レビュー文書のみ |         No |   テスト実行 |         No |
+| Reflection Agent       |  Yes |       Yes |     改善候補のみ |         No |           No |         No |
+| Evaluator              |  Yes |       Yes |     評価結果のみ |         No |     評価実行 |         No |
+| Improvement Manager    |  Yes |       Yes |         提案のみ |         No |       最小限 | 必要時限定 |
 
 現在のClaude Codeでより細かなツール・パス制限が可能な場合は利用する。
 

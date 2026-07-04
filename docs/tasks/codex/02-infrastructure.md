@@ -51,8 +51,12 @@ export type NewProductRow = typeof products.$inferInsert;
 
 export const priceRecords = pgTable('price_records', {
   id: text('id').primaryKey(),
-  productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
-  storeId: text('store_id').notNull().references(() => stores.id),
+  productId: text('product_id')
+    .notNull()
+    .references(() => products.id, { onDelete: 'cascade' }),
+  storeId: text('store_id')
+    .notNull()
+    .references(() => stores.id),
   priceAmount: numeric('price_amount', { precision: 10, scale: 1 }).notNull(),
   unitPriceAmount: numeric('unit_price_amount', { precision: 10, scale: 1 }).notNull(),
   packageSizeValue: numeric('package_size_value', { precision: 10, scale: 3 }).notNull(),
@@ -88,34 +92,40 @@ import { products, priceRecords, type ProductRow, type PriceRecordRow } from '..
 **実装する4メソッド:**
 
 `findById(id: ProductId): Promise<Product | null>`:
+
 - `products LEFT JOIN price_records ON products.id = price_records.product_id WHERE products.id = $id`
 - Drizzle の `leftJoin` + `where(eq(products.id, id.value))`
 - 結果行を JS 側で groupBy → `toEntity()` でドメイン変換
 - 結果が空 → `null`
 
 `findAll(): Promise<Product[]>`:
+
 - `products LEFT JOIN price_records` 全件
 - JS 側で `productId` ごとにグルーピング → `map(toEntity)`
 - `orderBy(products.createdAt)`
 
 `save(product: Product): Promise<void>`:
+
 - products テーブルへ upsert: `INSERT ... ON CONFLICT DO UPDATE`（`drizzle-recipe.repository.ts` の `onConflictDoUpdate` パターン踏襲）
 - `product.priceHistory` の各 PriceRecord を `price_records` テーブルへ upsert（PK = `id`）
 - add-only（既存 PriceRecord の削除は行わない）
 
 `delete(id: ProductId): Promise<void>`:
+
 - `DELETE FROM products WHERE id = $id`
 - `ON DELETE CASCADE` により `price_records` も自動削除
 
 **private ヘルパー:**
 
 `toEntity(productRow: ProductRow, priceRecordRows: PriceRecordRow[]): Product`:
+
 - `Product.reconstruct(...)` で復元
 - 各 PriceRecord は `PriceRecord.reconstruct(...)` で復元
 - `numeric` カラム（文字列）→ `Number()` 変換が必要
 - `toUnit()` / `toProductCategory()` ヘルパー関数を `drizzle-recipe.repository.ts` の `toUnit` / `toRecipeTag` と同パターンで定義
 
 `toProductCategory(value: string): ProductCategory`:
+
 ```typescript
 function toProductCategory(value: string): ProductCategory {
   switch (value) {

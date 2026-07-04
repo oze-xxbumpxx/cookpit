@@ -55,33 +55,33 @@ import { integer, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 ```typescript
 export const recipes = pgTable('recipes', {
-  id:           text('id').primaryKey(),
-  name:         text('name').notNull(),
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
   baseServings: integer('base_servings').notNull(),
-  cookingTime:  integer('cooking_time'),
-  tags:         text('tags').array().notNull().default([]),
-  notes:        text('notes').notNull().default(''),
-  ingredients:  jsonb('ingredients').notNull().default([]),
-  steps:        jsonb('steps').notNull().default([]),
-  createdAt:    timestamp('created_at').notNull().defaultNow(),
-  updatedAt:    timestamp('updated_at').notNull().defaultNow(),
+  cookingTime: integer('cooking_time'),
+  tags: text('tags').array().notNull().default([]),
+  notes: text('notes').notNull().default(''),
+  ingredients: jsonb('ingredients').notNull().default([]),
+  steps: jsonb('steps').notNull().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 ```
 
 ### 各カラムの仕様
 
-| カラム名        | 型               | 制約                     | 説明                                   |
-| --------------- | ---------------- | ------------------------ | -------------------------------------- |
-| `id`            | `text`           | PRIMARY KEY              | UUID 文字列（ドメイン側で採番）        |
-| `name`          | `text`           | NOT NULL                 | レシピ名                               |
-| `base_servings` | `integer`        | NOT NULL                 | 基準人数                               |
-| `cooking_time`  | `integer`        | NULL 許容                | 調理時間（分単位）                     |
-| `tags`          | `text[]`         | NOT NULL, DEFAULT `'{}'` | レシピタグの配列                       |
-| `notes`         | `text`           | NOT NULL, DEFAULT `''`   | メモ                                   |
-| `ingredients`   | `jsonb`          | NOT NULL, DEFAULT `'[]'` | 材料の配列（構造は下記参照）           |
-| `steps`         | `jsonb`          | NOT NULL, DEFAULT `'[]'` | 手順の配列（構造は下記参照）           |
-| `created_at`    | `timestamp`      | NOT NULL, DEFAULT NOW()  | 作成日時                               |
-| `updated_at`    | `timestamp`      | NOT NULL, DEFAULT NOW()  | 更新日時（アプリ側で更新すること）     |
+| カラム名        | 型          | 制約                     | 説明                               |
+| --------------- | ----------- | ------------------------ | ---------------------------------- |
+| `id`            | `text`      | PRIMARY KEY              | UUID 文字列（ドメイン側で採番）    |
+| `name`          | `text`      | NOT NULL                 | レシピ名                           |
+| `base_servings` | `integer`   | NOT NULL                 | 基準人数                           |
+| `cooking_time`  | `integer`   | NULL 許容                | 調理時間（分単位）                 |
+| `tags`          | `text[]`    | NOT NULL, DEFAULT `'{}'` | レシピタグの配列                   |
+| `notes`         | `text`      | NOT NULL, DEFAULT `''`   | メモ                               |
+| `ingredients`   | `jsonb`     | NOT NULL, DEFAULT `'[]'` | 材料の配列（構造は下記参照）       |
+| `steps`         | `jsonb`     | NOT NULL, DEFAULT `'[]'` | 手順の配列（構造は下記参照）       |
+| `created_at`    | `timestamp` | NOT NULL, DEFAULT NOW()  | 作成日時                           |
+| `updated_at`    | `timestamp` | NOT NULL, DEFAULT NOW()  | 更新日時（アプリ側で更新すること） |
 
 ### JSONB カラムの格納構造
 
@@ -91,11 +91,11 @@ JSONB の中身の型は DB では強制されないため、アプリ側で必�
 
 ```typescript
 type IngredientRow = {
-  productRef: string | null;   // ProductId の UUID 文字列、未登録なら null
-  displayName: string;         // 表示名（「玉ねぎ」など）
-  amountValue: number | null;  // 数値量。amountNote と排他（両方 null または片方のみ）
-  amountUnit: string | null;   // 単位（Unit 型の値）。amountValue が null なら null
-  amountNote: string | null;   // テキスト量（「少々」など）。amountValue と排他
+  productRef: string | null; // ProductId の UUID 文字列、未登録なら null
+  displayName: string; // 表示名（「玉ねぎ」など）
+  amountValue: number | null; // 数値量。amountNote と排他（両方 null または片方のみ）
+  amountUnit: string | null; // 単位（Unit 型の値）。amountValue が null なら null
+  amountNote: string | null; // テキスト量（「少々」など）。amountValue と排他
 };
 ```
 
@@ -103,7 +103,7 @@ type IngredientRow = {
 
 ```typescript
 type StepRow = {
-  description: string;   // 手順の説明文
+  description: string; // 手順の説明文
 };
 ```
 

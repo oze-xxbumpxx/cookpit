@@ -37,12 +37,12 @@ packages/domain/src/recipe/recipe-ingredient.ts
 
 `RecipeIngredient` の内部フィールドを以下にする。
 
-| フィールド | 型 | 説明 |
-| --- | --- | --- |
-| `productReference` | `ProductId \| null` | Product 集約への ID 参照。未紐付けなら `null` |
-| `ingredientDisplayName` | `string` | レシピ上の材料名 |
-| `ingredientAmount` | `Quantity \| null` | 数値と単位で表現できる量 |
-| `ingredientAmountNote` | `string \| null` | 「少々」「適量」などの量メモ |
+| フィールド              | 型                  | 説明                                          |
+| ----------------------- | ------------------- | --------------------------------------------- |
+| `productReference`      | `ProductId \| null` | Product 集約への ID 参照。未紐付けなら `null` |
+| `ingredientDisplayName` | `string`            | レシピ上の材料名                              |
+| `ingredientAmount`      | `Quantity \| null`  | 数値と単位で表現できる量                      |
+| `ingredientAmountNote`  | `string \| null`    | 「少々」「適量」などの量メモ                  |
 
 `ingredientAmount` と `ingredientAmountNote` は、どちらか一方だけを設定する。
 
@@ -88,13 +88,13 @@ if (hasAmount === hasAmountNote) {
 
 この条件により、以下の状態を表現できる。
 
-| amount | amountNote | 結果 |
-| --- | --- | --- |
-| `Quantity` | `null` | OK |
-| `null` | `'少々'` | OK |
-| `Quantity` | `'少々'` | NG |
-| `null` | `null` | NG |
-| `null` | `''` | NG |
+| amount     | amountNote | 結果 |
+| ---------- | ---------- | ---- |
+| `Quantity` | `null`     | OK   |
+| `null`     | `'少々'`   | OK   |
+| `Quantity` | `'少々'`   | NG   |
+| `null`     | `null`     | NG   |
+| `null`     | `''`       | NG   |
 
 ### scale の挙動
 
@@ -248,7 +248,7 @@ classDiagram
 
 ### 指示書のバリデーション例との差分
 
-`tasks/sprint1-recipe-ingredient-amountnote.md` のバリデーション例は、両方 `null` の禁止に寄っている。
+`docs/tasks/sprint1-recipe-ingredient-amountnote.md` のバリデーション例は、両方 `null` の禁止に寄っている。
 
 ただし仕様本文では「amount と amountNote はどちらか一方のみ設定する」とあるため、このガイドでは両方設定も禁止する。
 

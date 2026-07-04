@@ -37,12 +37,12 @@ packages/domain/src/recipe/recipe-ingredient.ts  ← 変更
 
 ### フィールド構成（変更後）
 
-| フィールド                 | 型               | 説明                               |
-| -------------------------- | ---------------- | ---------------------------------- |
-| `productReference`         | `ProductId\|null`| 変更なし                           |
-| `ingredientDisplayName`    | `string`         | 変更なし                           |
-| `ingredientAmount`         | `Quantity\|null` | `null` の場合は `amountNote` を使う |
-| `ingredientAmountNote`     | `string\|null`   | 「少々」「適量」など               |
+| フィールド              | 型                | 説明                                |
+| ----------------------- | ----------------- | ----------------------------------- |
+| `productReference`      | `ProductId\|null` | 変更なし                            |
+| `ingredientDisplayName` | `string`          | 変更なし                            |
+| `ingredientAmount`      | `Quantity\|null`  | `null` の場合は `amountNote` を使う |
+| `ingredientAmountNote`  | `string\|null`    | 「少々」「適量」など                |
 
 `amount` と `amountNote` は**どちらか一方のみ**設定する。両方 `null` は禁止。
 

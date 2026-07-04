@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`tasks/sprint1-recipe-usecase.md` の作業が完了していること（Recipe UseCase 一式が `packages/application/src/recipe/` に実装済み）。
+**前提**：`docs/tasks/sprint1-recipe-usecase.md` の作業が完了していること（Recipe UseCase 一式が `packages/application/src/recipe/` に実装済み）。
 
 ---
 
@@ -45,13 +45,13 @@ Hono ルートは **HTTP の境界**として次の3つに徹する。
 
 ### エンドポイント一覧
 
-| メソッド | パス               | UseCase               | 成功レスポンス        |
-| -------- | ------------------ | --------------------- | --------------------- |
-| GET      | `/api/recipes`     | `GetRecipesUseCase`   | `200` `RecipeDto[]`   |
-| GET      | `/api/recipes/:id` | `GetRecipeUseCase`    | `200` `RecipeDto`     |
-| POST     | `/api/recipes`     | `CreateRecipeUseCase` | `201` `RecipeDto`     |
-| PUT      | `/api/recipes/:id` | `UpdateRecipeUseCase` | `200` `RecipeDto`     |
-| DELETE   | `/api/recipes/:id` | `DeleteRecipeUseCase` | `204` （ボディ無し）  |
+| メソッド | パス               | UseCase               | 成功レスポンス       |
+| -------- | ------------------ | --------------------- | -------------------- |
+| GET      | `/api/recipes`     | `GetRecipesUseCase`   | `200` `RecipeDto[]`  |
+| GET      | `/api/recipes/:id` | `GetRecipeUseCase`    | `200` `RecipeDto`    |
+| POST     | `/api/recipes`     | `CreateRecipeUseCase` | `201` `RecipeDto`    |
+| PUT      | `/api/recipes/:id` | `UpdateRecipeUseCase` | `200` `RecipeDto`    |
+| DELETE   | `/api/recipes/:id` | `DeleteRecipeUseCase` | `204` （ボディ無し） |
 
 `/api` の basePath は既存 `app.ts` の `new Hono().basePath('/api')` が付与する。各ルートのパスは `/recipes` 以下で定義する。
 
@@ -380,5 +380,5 @@ curl -i -X POST http://localhost:3000/api/recipes -H 'Content-Type: application/
 - [ ] `AppType` に `/recipes` が含まれている（`hc` クライアントから型が見える）
 - [ ] `pnpm --filter @cookpit/api-contract type-check` と `pnpm --filter @cookpit/web type-check` がエラーなく通る
 - [ ] 実装後に Claude Code へレビュー依頼を行う
-</content>
-</invoke>
+      </content>
+      </invoke>

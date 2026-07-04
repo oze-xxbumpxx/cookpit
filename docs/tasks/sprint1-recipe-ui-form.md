@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`tasks/sprint1-recipe-ui-list.md` の作業が完了していること（`/recipes` 一覧画面が動作し、`/api/recipes` の `POST` が動く＝`CreateRecipeUseCase` が組み立て可能）。
+**前提**：`docs/tasks/sprint1-recipe-ui-list.md` の作業が完了していること（`/recipes` 一覧画面が動作し、`/api/recipes` の `POST` が動く＝`CreateRecipeUseCase` が組み立て可能）。
 
 ---
 
@@ -12,7 +12,7 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 
 - `docs/03-architecture.md`（Presentation 層・サーバーサイドの2つのアプローチ＝**書き込みは Hono RPC + Client Component** 方針）
 - `docs/07-dev-rules.md`（コーディング規約）
-- `designs/wireframes/recipe-wireframes.html`（**画面 3 「レシピ作成」**セクション。レイアウト・配置はこれに従う）
+- `docs/designs/wireframes/recipe-wireframes.html`（**画面 3 「レシピ作成」**セクション。レイアウト・配置はこれに従う）
 
 以下の実装済みファイル・型を読んでから実装すること。
 
@@ -73,12 +73,12 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 
 材料行の入力は `食材名 / 量 / 単位` の3カラムを維持しつつ、**「量」フィールドはテキストも受け付ける**。送信時に値を判定して DTO に変換する：
 
-| 「量」フィールドの入力 | 単位 | 送信する DTO |
-| ---------------------- | ---- | ------------ |
-| 数値（例：`200`）       | 選択あり | `{ amountValue: 200, amountUnit: 'g', amountNote: null }` |
-| 数値（例：`200`）       | 未選択 | **不正**（単位必須）→ 行エラー表示。送信させない |
-| テキスト（例：`少々`）  | 任意 | `{ amountValue: null, amountUnit: null, amountNote: '少々' }`（**単位は無視**） |
-| 空                      | 任意 | **不正**（量必須）→ 行エラー表示 |
+| 「量」フィールドの入力 | 単位     | 送信する DTO                                                                    |
+| ---------------------- | -------- | ------------------------------------------------------------------------------- |
+| 数値（例：`200`）      | 選択あり | `{ amountValue: 200, amountUnit: 'g', amountNote: null }`                       |
+| 数値（例：`200`）      | 未選択   | **不正**（単位必須）→ 行エラー表示。送信させない                                |
+| テキスト（例：`少々`） | 任意     | `{ amountValue: null, amountUnit: null, amountNote: '少々' }`（**単位は無視**） |
+| 空                     | 任意     | **不正**（量必須）→ 行エラー表示                                                |
 
 - 数値判定：`Number(trimmed)` が `NaN` でなく、かつ `trimmed !== ''` のときに数値量とみなす（全角数字は対象外で良い。MVP1 は半角前提）
 - テキスト量の場合、単位プルダウンの選択値は送信に含めない（`amountNote` のみ）
@@ -153,12 +153,18 @@ import type { Unit } from '@cookpit/domain/src/shared/unit';
 import { client } from '@/lib/api-client';
 // ... Input / Button / Textarea / IngredientRow / StepRow を import
 
-const TAG_OPTIONS = ['主菜', '副菜', '汁物', '作り置き向き', '冷凍可'] as const satisfies readonly RecipeTag[];
+const TAG_OPTIONS = [
+  '主菜',
+  '副菜',
+  '汁物',
+  '作り置き向き',
+  '冷凍可',
+] as const satisfies readonly RecipeTag[];
 
 interface IngredientRowState {
   displayName: string;
-  amountText: string;      // 数値でもテキストでも受ける生入力
-  amountUnit: Unit | '';   // 未選択は ''
+  amountText: string; // 数値でもテキストでも受ける生入力
+  amountUnit: Unit | ''; // 未選択は ''
 }
 
 interface StepRowState {
@@ -255,7 +261,9 @@ async function handleSubmit() {
 ### キャンセル
 
 ```tsx
-<button type="button" onClick={() => router.push('/recipes')}>キャンセル</button>
+<button type="button" onClick={() => router.push('/recipes')}>
+  キャンセル
+</button>
 ```
 
 ---
@@ -434,13 +442,7 @@ function isIngredientUnit(
   return unitOptions.some((unit) => unit === value);
 }
 
-export function IngredientRow({
-  value,
-  errorMessage,
-  onChange,
-  onRemove,
-  unitOptions,
-}: Props) {
+export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOptions }: Props) {
   const displayNameId = useId();
   const amountId = useId();
   const unitId = useId();
@@ -681,7 +683,9 @@ export function RecipeFormClient() {
   const canSubmit = name.trim() !== '' && !submitting;
 
   function toggleTag(tag: RecipeTag): void {
-    setTags((prev) => (prev.includes(tag) ? prev.filter((value) => value !== tag) : [...prev, tag]));
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((value) => value !== tag) : [...prev, tag],
+    );
   }
 
   function addIngredient(): void {
@@ -855,7 +859,10 @@ export function RecipeFormClient() {
 
   return (
     <main className="min-h-dvh bg-zinc-50">
-      <form onSubmit={handleSubmit} className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
+      <form
+        onSubmit={handleSubmit}
+        className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4"
+      >
         <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="flex justify-start">
             <Button
@@ -963,9 +970,7 @@ export function RecipeFormClient() {
                 onChange={(event) => setCookingTime(event.target.value)}
                 placeholder="25"
                 aria-invalid={fieldErrors.cookingTime !== null}
-                aria-describedby={
-                  fieldErrors.cookingTime === null ? undefined : cookingTimeErrorId
-                }
+                aria-describedby={fieldErrors.cookingTime === null ? undefined : cookingTimeErrorId}
                 className="h-11 rounded-xl bg-white"
               />
               {fieldErrors.cookingTime !== null && (

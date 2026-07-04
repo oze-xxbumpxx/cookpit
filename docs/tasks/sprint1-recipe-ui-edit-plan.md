@@ -1,6 +1,6 @@
 # Sprint 1 Recipe 編集 UI 実装計画
 
-- 前提となる指示書: `tasks/sprint1-recipe-ui-edit.md`
+- 前提となる指示書: `docs/tasks/sprint1-recipe-ui-edit.md`
 - レベル: L2
 - 対象スプリント: Sprint 1 Recipe CRUD
 
@@ -174,10 +174,7 @@ export interface BuildCommonResult {
 export function emptyCommonFieldErrors(): CommonFieldErrors;
 export function createIngredientRow(id: string): IngredientRowValue;
 export function createStepRow(id: string): StepRowValue;
-export function toIngredientRowValue(
-  dto: RecipeIngredientDto,
-  id: string,
-): IngredientRowValue;
+export function toIngredientRowValue(dto: RecipeIngredientDto, id: string): IngredientRowValue;
 export function buildCommonRecipeInput(args: {
   name: string;
   tags: UpdateRecipeBody['tags'];
@@ -645,10 +642,7 @@ export function createStepRow(id: string): StepRowValue {
   };
 }
 
-export function toIngredientRowValue(
-  dto: RecipeIngredientDto,
-  id: string,
-): IngredientRowValue {
+export function toIngredientRowValue(dto: RecipeIngredientDto, id: string): IngredientRowValue {
   if (dto.amountValue !== null) {
     return {
       id,

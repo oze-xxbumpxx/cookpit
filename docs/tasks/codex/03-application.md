@@ -274,6 +274,7 @@ async execute(): Promise<StoreDto[]>
 ### 6. `index.ts` + 親 index 追記
 
 `packages/application/src/product/index.ts` (新規):
+
 ```typescript
 export * from './create-product.use-case';
 export * from './get-products.use-case';
@@ -289,6 +290,7 @@ export * from './store-not-found.error';
 ```
 
 `packages/application/src/index.ts` に追記:
+
 ```typescript
 export * from './product';
 ```

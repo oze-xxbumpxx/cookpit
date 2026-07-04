@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`tasks/sprint1-drizzle-recipe-repository.md` の作業が完了していること（`DrizzleRecipeRepository` がレビュー済み）。
+**前提**：`docs/tasks/sprint1-drizzle-recipe-repository.md` の作業が完了していること（`DrizzleRecipeRepository` がレビュー済み）。
 
 ---
 

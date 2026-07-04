@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`tasks/sprint1-recipe-ui-list.md`（一覧）・`tasks/sprint1-recipe-ui-form.md`（作成フォーム）が完了していること。`/recipes` 一覧のカードから `/recipes/[id]` へのリンクは実装済み（`recipe-card.tsx` の `href={`/recipes/${recipe.id}`}`）。`GET /api/recipes/:id`（`GetRecipeUseCase`）・`DELETE /api/recipes/:id`（`DeleteRecipeUseCase`）はサーバー側で実装済み。
+**前提**：`docs/tasks/sprint1-recipe-ui-list.md`（一覧）・`docs/tasks/sprint1-recipe-ui-form.md`（作成フォーム）が完了していること。`/recipes` 一覧のカードから `/recipes/[id]` へのリンクは実装済み（`recipe-card.tsx` の `href={`/recipes/${recipe.id}`}`）。`GET /api/recipes/:id`（`GetRecipeUseCase`）・`DELETE /api/recipes/:id`（`DeleteRecipeUseCase`）はサーバー側で実装済み。
 
 ---
 
@@ -12,7 +12,7 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 
 - `docs/03-architecture.md`（Presentation 層の使い分け表＝**初期表示は Server Component 直接呼び出し**、**アクション（削除）は Hono RPC**）
 - `docs/07-dev-rules.md`（コーディング規約）／ `.claude/rules/presentation-layer.md` ／ `.claude/rules/coding-standards.md`
-- `designs/wireframes/recipe-wireframes.html`（**画面2「レシピ詳細」**。レイアウト・配置はこれに従う）
+- `docs/designs/wireframes/recipe-wireframes.html`（**画面2「レシピ詳細」**。レイアウト・配置はこれに従う）
 
 以下の実装済みファイル・型を読んでから実装すること。
 
@@ -43,6 +43,7 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 ```
 
 **サーバーサイド方針**：
+
 - **詳細の初期表示**は Server Component から `GetRecipeUseCase` を直接呼び出す（arch doc の使い分け表に従う。一覧画面と同じ流儀）。
 - **削除（アクション）**は Hono RPC（`client.api.recipes[':id'].$delete`）。
 
@@ -509,9 +510,7 @@ export function RecipeDetailClient({ recipe }: Props) {
                     ? ingredient.amountNote
                     : formatAmount(ingredient.amountValue * scale)}
                 </span>
-                <span className="w-10 text-right text-zinc-500">
-                  {ingredient.amountUnit ?? ''}
-                </span>
+                <span className="w-10 text-right text-zinc-500">{ingredient.amountUnit ?? ''}</span>
               </div>
             ))}
           </div>
@@ -559,9 +558,7 @@ export function RecipeDetailClient({ recipe }: Props) {
             />
             <AlertDialogContent>
               <AlertDialogTitle>このレシピを削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                削除すると元に戻せません。
-              </AlertDialogDescription>
+              <AlertDialogDescription>削除すると元に戻せません。</AlertDialogDescription>
               <div className="mt-4 flex justify-end gap-2">
                 <AlertDialogClose
                   render={
@@ -590,4 +587,7 @@ export function RecipeDetailClient({ recipe }: Props) {
 ```
 
 > 注：base-ui の `Trigger` / `Close` は `render` prop で任意要素に合成する流儀（v1.4.1）。`render` の引数・型はインストール済み型で確認すること。削除ボタン押下後にダイアログを閉じるかどうか（成功時 `router.push` で遷移するため自然に閉じる／失敗時は開いたままエラー表示）も挙動を確認する。
+
+```
+
 ```

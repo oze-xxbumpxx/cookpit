@@ -55,10 +55,10 @@ import { randomUUID } from 'node:crypto';
 
 export class StoreId {
   private constructor(private readonly storeIdValue: string) {}
-  static generate(): StoreId           // new StoreId(randomUUID())
-  static fromString(value: string): StoreId
-  equals(other: StoreId): boolean
-  get value(): string
+  static generate(): StoreId; // new StoreId(randomUUID())
+  static fromString(value: string): StoreId;
+  equals(other: StoreId): boolean;
+  get value(): string;
 }
 
 export class Store {
@@ -68,15 +68,15 @@ export class Store {
     private readonly createdDate: Date,
   ) {}
 
-  static create(input: { name: string }): Store
+  static create(input: { name: string }): Store;
   // name.trim() === '' → throw new Error('Store name is required')
   // new Store(StoreId.generate(), name, new Date())
 
-  static reconstruct(props: { id: StoreId; name: string; createdAt: Date }): Store
+  static reconstruct(props: { id: StoreId; name: string; createdAt: Date }): Store;
 
-  get id(): StoreId
-  get name(): string
-  get createdAt(): Date
+  get id(): StoreId;
+  get name(): string;
+  get createdAt(): Date;
 }
 ```
 
@@ -101,10 +101,10 @@ import { randomUUID } from 'node:crypto';
 
 export class ProductId {
   private constructor(private readonly productIdValue: string) {}
-  static generate(): ProductId
-  static fromString(value: string): ProductId
-  equals(other: ProductId): boolean
-  get value(): string
+  static generate(): ProductId;
+  static fromString(value: string): ProductId;
+  equals(other: ProductId): boolean;
+  get value(): string;
 }
 ```
 
@@ -115,10 +115,10 @@ ProductId と同パターン。
 ```typescript
 export class PriceRecordId {
   private constructor(private readonly priceRecordIdValue: string) {}
-  static generate(): PriceRecordId
-  static fromString(value: string): PriceRecordId
-  equals(other: PriceRecordId): boolean
-  get value(): string
+  static generate(): PriceRecordId;
+  static fromString(value: string): PriceRecordId;
+  equals(other: PriceRecordId): boolean;
+  get value(): string;
 }
 ```
 
@@ -138,12 +138,14 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 ```
 
 **PriceRecord 値オブジェクト**（イミュータブル）:
+
 - フィールド: `id: PriceRecordId`, `storeId: StoreId`, `price: Money`, `unitPrice: Money`, `packageSize: Quantity`, `observedAt: Date`
 - `static create(props: {...}): PriceRecord` — バリデーションなし（UseCase 入口で保証済み）
 - `static reconstruct(props: {...}): PriceRecord` — DB 復元用
 - 全フィールドのゲッター
 
 **Product 集約**:
+
 - フィールド: `id: ProductId`, `name: string`, `aliases: string[]`, `category: ProductCategory`, `defaultUnit: Unit`, `priceHistory: PriceRecord[]`, `createdAt: Date`, `updatedAt: Date`
 
 ```typescript

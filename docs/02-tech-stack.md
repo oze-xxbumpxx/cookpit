@@ -35,7 +35,7 @@ Next.js の API Routes として Hono を埋め込む構成（`app/api/[[...rout
 - 認証セッション共有の苦労なし
 - 将来モバイル対応する時は Hono ルーターを別プロジェクトに切り出せる
 
-完全分離（Cloudflare Workers + Vercel）ではなく中庸案を選んだ理由は [ADR-002](./adr/002-nextjs-hono-mounted.md) に記載。
+完全分離（Cloudflare Workers + Vercel）ではなく中庸案を選んだ理由は [ADR-002](./decisions/ADR-0002-nextjs-hono-mounted.md) に記載。
 
 ### Hono RPC + TanStack Query
 
@@ -69,7 +69,7 @@ TanStack Query でサーバー状態を管理（キャッシュ、再フェッ�
 
 ### MVP1 では認証なし
 
-Vercel の URL を 2 名で共有して使う運用とする。詳細は [ADR-003](./adr/003-no-auth-in-mvp1.md) を参照。
+Vercel の URL を 2 名で共有して使う運用とする。詳細は [ADR-003](./decisions/ADR-0003-no-auth-in-mvp1.md) を参照。
 
 Phase 2 以降で Better Auth の導入を検討する。
 

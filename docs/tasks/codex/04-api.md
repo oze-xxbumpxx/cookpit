@@ -132,26 +132,36 @@ export const productsRoute = new Hono()
     const product = await usecase.execute(id);
     return c.json(product);
   })
-  .put('/:id', zValidator('param', idParamSchema), zValidator('json', updateProductSchema), async (c) => {
-    const { id } = c.req.valid('param');
-    const body = c.req.valid('json');
-    const usecase = new UpdateProductUseCase(productRepository(), storeRepository());
-    const product = await usecase.execute({ id, ...body });
-    return c.json(product);
-  })
+  .put(
+    '/:id',
+    zValidator('param', idParamSchema),
+    zValidator('json', updateProductSchema),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new UpdateProductUseCase(productRepository(), storeRepository());
+      const product = await usecase.execute({ id, ...body });
+      return c.json(product);
+    },
+  )
   .delete('/:id', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');
     const usecase = new DeleteProductUseCase(productRepository());
     await usecase.execute(id);
     return c.body(null, 204);
   })
-  .post('/:id/price-records', zValidator('param', idParamSchema), zValidator('json', recordPriceSchema), async (c) => {
-    const { id } = c.req.valid('param');
-    const body = c.req.valid('json');
-    const usecase = new RecordPriceUseCase(productRepository(), storeRepository());
-    await usecase.execute({ productId: id, ...body });
-    return c.body(null, 200);
-  })
+  .post(
+    '/:id/price-records',
+    zValidator('param', idParamSchema),
+    zValidator('json', recordPriceSchema),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new RecordPriceUseCase(productRepository(), storeRepository());
+      await usecase.execute({ productId: id, ...body });
+      return c.body(null, 200);
+    },
+  )
   .get('/:id/cheapest-store', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');
     const usecase = new GetCheapestStoreUseCase(productRepository(), storeRepository());
@@ -172,17 +182,17 @@ function storeRepository() {
   return new DrizzleStoreRepository(getDb());
 }
 
-export const storesRoute = new Hono()
-  .get('/', async (c) => {
-    const usecase = new GetStoresUseCase(storeRepository());
-    const stores = await usecase.execute();
-    return c.json(stores);
-  });
+export const storesRoute = new Hono().get('/', async (c) => {
+  const usecase = new GetStoresUseCase(storeRepository());
+  const stores = await usecase.execute();
+  return c.json(stores);
+});
 ```
 
 ### 6. `apps/web/src/server/app.ts` — 追記
 
 既存コード:
+
 ```typescript
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
@@ -204,13 +214,18 @@ export default app;
 ```
 
 変更後:
+
 ```typescript
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
 import { recipesRoute } from './routes/recipes';
 import { productsRoute } from './routes/products';
 import { storesRoute } from './routes/stores';
-import { RecipeNotFoundError, ProductNotFoundError, StoreNotFoundError } from '@cookpit/application';
+import {
+  RecipeNotFoundError,
+  ProductNotFoundError,
+  StoreNotFoundError,
+} from '@cookpit/application';
 const app = new Hono().basePath('/api');
 
 const routes = app

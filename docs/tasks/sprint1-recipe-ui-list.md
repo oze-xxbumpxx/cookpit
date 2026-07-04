@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`tasks/sprint1-recipe-hono-api.md` の作業が完了していること（`/api/recipes` が動作する＝UseCase 一式が組み立て可能）。
+**前提**：`docs/tasks/sprint1-recipe-hono-api.md` の作業が完了していること（`/api/recipes` が動作する＝UseCase 一式が組み立て可能）。
 
 ---
 
@@ -12,7 +12,7 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 
 - `docs/03-architecture.md`（Presentation 層・サーバーサイドの2つのアプローチ＝**初期表示は Server Component が直接 UseCase を呼ぶ**方針）
 - `docs/07-dev-rules.md`（コーディング規約）
-- `designs/wireframes/recipe-wireframes.html`（**画面 1 「レシピ一覧」**セクション。レイアウト・配置はこれに従う）
+- `docs/designs/wireframes/recipe-wireframes.html`（**画面 1 「レシピ一覧」**セクション。レイアウト・配置はこれに従う）
 
 以下の実装済みファイル・型を読んでから実装すること。
 
@@ -203,7 +203,13 @@ export function RecipeListClient({ initialRecipes }: Props) {
 
 import type { RecipeTag } from '@cookpit/application';
 
-const ALL_TAGS = ['主菜', '副菜', '汁物', '作り置き向き', '冷凍可'] as const satisfies readonly RecipeTag[];
+const ALL_TAGS = [
+  '主菜',
+  '副菜',
+  '汁物',
+  '作り置き向き',
+  '冷凍可',
+] as const satisfies readonly RecipeTag[];
 
 export type TagFilterValue = 'all' | RecipeTag;
 
@@ -289,9 +295,7 @@ export function RecipeCard({ recipe }: Props) {
                 key={tag}
                 className={
                   'rounded px-1.5 py-0.5 text-[10px] ' +
-                  (index === 0
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-zinc-100 text-zinc-600')
+                  (index === 0 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-600')
                 }
               >
                 {tag}
@@ -386,5 +390,5 @@ pnpm --filter @cookpit/web dev --webpack   # webpack 起動（既存設定の都
 - `/recipes/[id]`（詳細画面） — `sprint1-recipe-ui-detail.md` で扱う
 - `/recipes/[id]/edit`（編集） — フォーム指針で扱う
 - 削除確認 AlertDialog — 詳細指針で扱う
-</content>
-</invoke>
+  </content>
+  </invoke>

@@ -5,6 +5,7 @@ Codex への実装指示書。実装後は必ず Claude Code でレビューを�
 **前提**：作成フォーム（`/recipes/new`）・詳細画面（`/recipes/[id]`）・ビジュアルデザイン「温かいキッチン」が実装済み。`UpdateRecipeUseCase` / `updateRecipeSchema`（`UpdateRecipeBody`）/ `PUT /api/recipes/:id` はサーバー側で実装済み。
 
 **このタスクの2本柱**：
+
 1. 作成フォームを **DRY に共通抽出**し、編集画面 `/recipes/[id]/edit` を新設する（PUT で更新）。
 2. 詳細画面に **編集ボタンを追加**する（前タスクで保留した導線）。
 
@@ -155,7 +156,7 @@ interface Props {
   tags: RecipeTag[];
   onToggleTag: (tag: RecipeTag) => void;
   tagOptions: readonly RecipeTag[];
-  baseServingsSlot: ReactNode;          // 作成=Input / 編集=読取専用表示
+  baseServingsSlot: ReactNode; // 作成=Input / 編集=読取専用表示
   cookingTime: string;
   onCookingTimeChange: (value: string) => void;
   notes: string;
@@ -168,7 +169,7 @@ interface Props {
   onAddStep: () => void;
   onUpdateStep: (next: StepRowValue) => void;
   onRemoveStep: (id: string) => void;
-  unitOptions: readonly IngredientRowValue['amountUnit'][];  // '' を除いた IngredientUnit[] を渡す
+  unitOptions: readonly IngredientRowValue['amountUnit'][]; // '' を除いた IngredientUnit[] を渡す
   errors: CommonFieldErrors;
 }
 ```
@@ -242,12 +243,9 @@ export default async function RecipeEditPage({ params }: Props) {
 ```tsx
 import Link from 'next/link';
 // ...
-<Link
-  href={`/recipes/${recipe.id}/edit`}
-  className="text-sm font-medium text-primary"
->
+<Link href={`/recipes/${recipe.id}/edit`} className="text-sm font-medium text-primary">
   編集
-</Link>
+</Link>;
 ```
 
 - 中央タイトルの中央寄せを崩さないよう、左の戻るボタンと幅バランスを取る（グリッド `grid-cols-[auto_1fr_auto]` は維持）。
