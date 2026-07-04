@@ -81,9 +81,14 @@ function emptySections(designPath) {
       empties.push(`${section}（セクション欠落）`);
       continue;
     }
+    // マッチした見出し自身のレベル（## なら2, ### なら3）。同レベル以下の見出しが
+    // 出てきたら次セクションとみなして打ち切る。より深いサブ見出し（### 等の子）は
+    // そのセクションの本文の一部として扱う（誤って「空」と判定しないため）。
+    const matchedLevel = lines[idx].match(/^(#{2,3})\s/)[1].length;
     let hasBody = false;
     for (let i = idx + 1; i < lines.length; i++) {
-      if (/^#{1,3}\s/.test(lines[i])) break;
+      const headingMatch = lines[i].match(/^(#{1,6})\s/);
+      if (headingMatch && headingMatch[1].length <= matchedLevel) break;
       if (lines[i].trim() !== '') {
         hasBody = true;
         break;
