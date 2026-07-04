@@ -8,22 +8,21 @@
 //   注意喚起する。L1（feature 未設定）では沈黙し誤検知を出さない。
 // - 強制はしない（常に exit 0）。改善ループの起動判断は Orchestrator / 人間に委ねる。
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲しない窓（30分）
+const LOG_STALE_DAYS = 3; // 作業ログがこの日数より古ければ督促（feature 未設定でも出す）
 
 // 同一の警告セットを毎ターン繰り返さないためのデバウンス。
 // 警告セットが変化したか、クールダウンを過ぎたときだけ true（= emit すべき）。
 // state 読み書き失敗時は fail-open（true を返し従来どおり警告する。沈黙して隠さない）。
 function shouldEmitNotice(key, feature, warnings) {
   const statePath = join(ROOT, '.claude/state/hook-notice-state.json');
-  const hash = createHash('sha1')
-    .update(feature)
-    .digest('hex');
+  const hash = createHash('sha1').update(feature).digest('hex');
   let state = {};
   try {
     if (existsSync(statePath)) state = JSON.parse(readFileSync(statePath, 'utf8')) || {};
@@ -68,9 +67,30 @@ function subagentLogHasEntries() {
   }
 }
 
+// logs/YYYY-MM-DD.md の最新日付が LOG_STALE_DAYS より古ければ警告文字列を返す。
+// ログが 1 本も無い・読めない場合は沈黙（fail-open で作業を妨げない）。
+function staleWorkLogWarning() {
+  try {
+    const files = readdirSync(join(ROOT, 'logs'))
+      .filter((f) => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
+      .sort();
+    const latest = files[files.length - 1];
+    if (!latest) return null;
+    const latestDate = new Date(`${latest.slice(0, 10)}T00:00:00Z`);
+    const ageDays = (Date.now() - latestDate.getTime()) / 86_400_000;
+    if (ageDays <= LOG_STALE_DAYS) return null;
+    return (
+      `作業ログが ${Math.floor(ageDays)} 日更新されていません（最新: logs/${latest}）。` +
+      `write-work-log スキルで今日のログを追記してください`
+    );
+  } catch {
+    return null;
+  }
+}
+
 function emit(additionalContext) {
   process.stdout.write(
-    JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext } })
+    JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext } }),
   );
 }
 
@@ -83,32 +103,43 @@ function main() {
   }
   if ((input.hook_event_name || 'Stop') !== 'Stop') process.exit(0);
 
+  const notices = [];
+
+  // 作業ログの鮮度は feature の有無に関係なく確認する（引き継ぎ切れ対策）
+  const logWarn = staleWorkLogWarning();
+  const today = new Date().toISOString().slice(0, 10);
+  if (logWarn && shouldEmitNotice('work-log-staleness:Stop', `log:${today}`, [logWarn])) {
+    notices.push(`⚠ ${logWarn}`);
+  }
+
   const feature = readFeatureName();
-  if (!feature) process.exit(0); // L1 等は沈黙
+  if (feature) {
+    const warnings = [];
+    const candidatePath = join(ROOT, `docs/claude-code/improvements/candidates/${feature}.md`);
+    const reviewPath = join(ROOT, `docs/reviews/${feature}.md`);
 
-  const warnings = [];
-  const candidatePath = join(ROOT, `docs/claude-code/improvements/candidates/${feature}.md`);
-  const reviewPath = join(ROOT, `docs/reviews/${feature}.md`);
+    if (subagentLogHasEntries() && !existsSync(candidatePath)) {
+      warnings.push(
+        `reflection-agent の振り返り候補が未作成: docs/claude-code/improvements/candidates/${feature}.md`,
+      );
+    }
+    if (!existsSync(reviewPath)) {
+      warnings.push(
+        `reviewer のレビュー記録が見当たりません（L3 など保存対象なら docs/reviews/${feature}.md）`,
+      );
+    }
 
-  if (subagentLogHasEntries() && !existsSync(candidatePath)) {
-    warnings.push(
-      `reflection-agent の振り返り候補が未作成: docs/claude-code/improvements/candidates/${feature}.md`
-    );
-  }
-  if (!existsSync(reviewPath)) {
-    warnings.push(
-      `reviewer のレビュー記録が見当たりません（L3 など保存対象なら docs/reviews/${feature}.md）`
-    );
+    if (warnings.length && shouldEmitNotice('check-improvement-cycle:Stop', feature, warnings)) {
+      notices.push(
+        `⚠ 改善サイクル・チェック（feature: ${feature}）— 完了前に確認してください:\n` +
+          warnings.map((w) => ` - ${w}`).join('\n') +
+          `\n（任意。改善ループの詳細は docs/claude-code/improvement-cycle.md。` +
+          `不要なら .claude/state/current-feature をクリア）`,
+      );
+    }
   }
 
-  if (warnings.length && shouldEmitNotice('check-improvement-cycle:Stop', feature, warnings)) {
-    emit(
-      `⚠ 改善サイクル・チェック（feature: ${feature}）— 完了前に確認してください:\n` +
-        warnings.map((w) => ` - ${w}`).join('\n') +
-        `\n（任意。改善ループの詳細は docs/claude-code/improvement-cycle.md。` +
-        `不要なら .claude/state/current-feature をクリア）`
-    );
-  }
+  if (notices.length) emit(notices.join('\n'));
   process.exit(0);
 }
 

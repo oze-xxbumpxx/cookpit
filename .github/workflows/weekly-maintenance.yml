@@ -1,0 +1,30 @@
+name: Weekly Maintenance
+
+# 週次のドリフト検査。PR が無い週でも main の品質ゲートと依存の脆弱性を確認する。
+on:
+  schedule:
+    - cron: '0 21 * * 0' # 月曜 06:00 JST
+  workflow_dispatch:
+
+jobs:
+  quality-gates:
+    name: Quality Gates (main)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm test
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: pnpm audit（high 以上で失敗）
+        run: pnpm audit --audit-level=high
+      - name: pnpm outdated（情報提供のみ）
+        if: always()
+        run: pnpm outdated --recursive || true

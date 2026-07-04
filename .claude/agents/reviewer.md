@@ -3,7 +3,7 @@ name: reviewer
 description: >
   要件・設計・実装計画・実装・試験の整合性と、コード品質・責務分離・エラー処理・
   セキュリティ・性能・テスト不足・ドキュメント更新漏れをレビューする。原則コードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Bash, Agent(requirements-analyst)
 ---
 
@@ -49,7 +49,8 @@ tools: Read, Grep, Glob, Bash, Agent(requirements-analyst)
 1. `docs/designs/<feature-name>.md` `docs/implementation-plans/<feature-name>.md`
    `docs/tests/<feature-name>.md`（あれば `docs/requirements/`）と実装差分を読む。
 2. アーキテクチャ原則は `.claude/rules/domain-layer.md` と
-   `.claude/rules/coding-standards.md` に照らす。
+   `.claude/rules/coding-standards.md` に照らす。`apps/web/` の変更を含む場合は
+   `.claude/rules/presentation-layer.md`（呼び出し方式 A/B の使い分け）にも照らす。
 3. 必要なら `pnpm lint` `pnpm type-check` を実行して事実を確認する（Bash）。
 4. 仕様の事実確認が必要な場合に限り、検証目的で `requirements-analyst` を起動してよい
    （読み取り専用調査）。設計・実装の変更を伴う再依頼は行わず、Orchestrator へ差し戻す。

@@ -1,7 +1,7 @@
 # 評価ケース: 権限・認可の変更（L3・現状は前方互換評価）
 
 > 指示書 §18 の `permission-change`。**Cookpit は MVP1 で認証・認可を持たない**
-> （`docs/003-no-auth-in-mvp1.md` / `docs/004-no-user-in-domain.md`）。
+> （`docs/decisions/ADR-0003-no-auth-in-mvp1.md` / `docs/decisions/ADR-0004-no-user-in-domain.md`）。
 > したがって本ケースは現状**実評価できない（N/A）**。認証・認可が導入された時点で有効化する
 > 前提の「進め方の質」を評価するための前方互換ケースとして置く（§18「評価不可は理由を明示」）。
 

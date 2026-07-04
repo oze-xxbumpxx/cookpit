@@ -3,7 +3,7 @@ name: test-designer
 description: >
   機能に対する試験観点・試験計画（単体/結合、正常系・異常系・境界値・権限・整合性・
   冪等性・回帰範囲・試験データ・完了条件）を作成し docs/tests/ に保存する。コードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

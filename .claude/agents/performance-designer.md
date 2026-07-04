@@ -4,7 +4,7 @@ description: >
   外部 I/O・大量データを伴う変更に対してパフォーマンス設計を行う。クエリ計画・
   キャッシュ戦略・レスポンスタイム予算・負荷試験シナリオを docs/designs/ に保存する。
   実装コードは変更しない。条件: L3 かつ外部 I/O または大量データ処理を含む変更のみ起動。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

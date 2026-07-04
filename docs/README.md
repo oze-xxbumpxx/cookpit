@@ -4,16 +4,16 @@
 
 ## ドキュメント構成
 
-| ファイル                                           | 内容                                               |
-| -------------------------------------------------- | -------------------------------------------------- |
-| [01-overview.md](./01-overview.md)                 | プロジェクト目的・対象ユーザー・スコープ           |
-| [02-tech-stack.md](./02-tech-stack.md)             | 技術スタックと選定理由                             |
-| [03-architecture.md](./03-architecture.md)         | アーキテクチャ・ディレクトリ構成                   |
-| [04-domain-model.md](./04-domain-model.md)         | ドメインモデル設計                                 |
-| [05-roadmap.md](./05-roadmap.md)                   | スプリント計画・ロードマップ                       |
-| [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                  |
-| [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約） |
-| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート            |
+| ファイル                                           | 内容                                                            |
+| -------------------------------------------------- | --------------------------------------------------------------- |
+| [01-overview.md](./01-overview.md)                 | プロジェクト目的・対象ユーザー・スコープ                        |
+| [02-tech-stack.md](./02-tech-stack.md)             | 技術スタックと選定理由                                          |
+| [03-architecture.md](./03-architecture.md)         | アーキテクチャ・ディレクトリ構成                                |
+| [04-domain-model.md](./04-domain-model.md)         | ドメインモデル設計                                              |
+| [05-roadmap.md](./05-roadmap.md)                   | スプリント計画・ロードマップ                                    |
+| [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                               |
+| [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約）              |
+| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート                         |
 | [decisions/](./decisions/)                         | feature 起点の ADR（ADR-0005〜。001〜004 は本ディレクトリ直下） |
 
 ## クイックスタート
@@ -32,7 +32,7 @@
 ADR-0005 以降の feature 起点の決定は `decisions/` に置く）。「なぜこの選択をしたか」が
 必要になった時に参照してください。
 
-- [ADR-001: Web アプリで実装する](./001-web-not-native.md)
-- [ADR-002: Next.js 内に Hono をマウントする](./002-nextjs-hono-mounted.md)
-- [ADR-003: MVP1 は認証なしで運用する](./003-no-auth-in-mvp1.md)
-- [ADR-004: ドメインから User 集約を外す](./004-no-user-in-domain.md)
+- [ADR-001: Web アプリで実装する](./decisions/ADR-0001-web-not-native.md)
+- [ADR-002: Next.js 内に Hono をマウントする](./decisions/ADR-0002-nextjs-hono-mounted.md)
+- [ADR-003: MVP1 は認証なしで運用する](./decisions/ADR-0003-no-auth-in-mvp1.md)
+- [ADR-004: ドメインから User 集約を外す](./decisions/ADR-0004-no-user-in-domain.md)

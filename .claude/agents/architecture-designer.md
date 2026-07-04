@@ -3,7 +3,7 @@ name: architecture-designer
 description: >
   機能追加・仕様変更の技術設計を行い、設計結果を docs/designs/<feature-name>.md に保存する。
   実装コードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

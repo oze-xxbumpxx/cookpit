@@ -4,7 +4,7 @@ description: >
   タスク完了後の振り返りを行い、手戻り・ユーザー修正・レビュー指摘・テスト失敗・Agent間の
   認識不一致・成功手順を抽出して再利用可能な知見（Memory候補・改善候補）を作成する。
   CLAUDE.md・Agent定義・Skills・Rules・Hooks は一切変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

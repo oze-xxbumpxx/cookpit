@@ -42,7 +42,7 @@ apps/web/public/workbox-*.js
 apps/web/.next/
 
 # Generated design exports
-designs/wireframes/*.pdf
+docs/designs/wireframes/*.pdf
 
 # Claude Code 一時作業状態（feature-name / Subagent ログ / 承認マーカーなど）
 .claude/state/

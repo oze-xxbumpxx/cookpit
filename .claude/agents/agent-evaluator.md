@@ -4,7 +4,7 @@ description: >
   改善前後のAgent構成を、過去の代表タスク（.claude/evals）で回帰評価する。要件理解・設計品質・
   実装整合性・テスト網羅・レビュー品質・ドキュメント品質・不要作業量・トークン効率を採点し、
   改善による悪化がないかを確認する。コードや設定は変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

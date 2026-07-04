@@ -114,10 +114,10 @@ const sources = [
 
 if (timestamps.length === 1) {
   console.log(
-    `${fmtDuration(10 * 60_000)}未満と推定（${targetDay} のイベントが1件のみ: ${timeInTz(first)} ${TZ} / ${sources}）`
+    `${fmtDuration(10 * 60_000)}未満と推定（${targetDay} のイベントが1件のみ: ${timeInTz(first)} ${TZ} / ${sources}）`,
   );
 } else {
   console.log(
-    `${fmtDuration(activeMs)}（自動推定・活動時間ベース / セッション帯 ${timeInTz(first)}〜${timeInTz(last)} ${TZ} / ${sources} / 空白${GAP_CAP_MIN}分超は除外）`
+    `${fmtDuration(activeMs)}（自動推定・活動時間ベース / セッション帯 ${timeInTz(first)}〜${timeInTz(last)} ${TZ} / ${sources} / 空白${GAP_CAP_MIN}分超は除外）`,
   );
 }

@@ -3,7 +3,7 @@ name: implementer
 description: >
   確定済みの設計書と実装計画に沿ってコードを実装し、必要な単体テストを作成して
   lint・型チェックを実行する。設計から逸脱が必要なら独断で変えず Orchestrator へ返す。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
@@ -40,7 +40,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 1. **public メソッド網羅**: 変更・追加した全 public メソッド・static ファクトリ・ゲッターに
    最低1つのテストケースがあること。試験計画に漏れがあれば自主的に追加する。
-2. **状態変更メソッドの正常系**: 状態を変更するメソッド（rename, update* 等）は、
+2. **状態変更メソッドの正常系**: 状態を変更するメソッド（rename, update\* 等）は、
    変更後の値が正しいことを検証する正常系テストを必ず含める。
 3. **防御性（Domain 層）**: Entity / Value Object を変更した場合、以下を検討する。
    - ゲッターが配列・Date を返す場合の防御的コピー検証
@@ -51,7 +51,8 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 ## アーキテクチャ・コーディング規約（厳守）
 
-`.claude/rules/` を遵守する。特に：
+`.claude/rules/` を遵守する（`domain-layer.md` / `coding-standards.md`、
+`apps/web/` を触る場合は `presentation-layer.md` も必読）。特に：
 
 - 依存方向 `Presentation → Application → Domain ← Infrastructure`。
   `packages/domain` は他に依存しない。Domain 層に Drizzle・HTTP の型を持ち込まない。

@@ -1,0 +1,22 @@
+# Git hooks（lefthook）。pnpm install 時に prepare スクリプトで自動インストールされる。
+# 品質ゲートを CI 到達前（コミット/プッシュ時）に前倒しする。
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      glob: '*.{ts,tsx,md,json,mjs,cjs,yml,yaml}'
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+    lint:
+      # turbo キャッシュにより未変更パッケージはスキップされるため全体 lint で十分速い
+      run: pnpm lint
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  commands:
+    type-check:
+      run: pnpm type-check

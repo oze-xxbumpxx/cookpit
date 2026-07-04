@@ -5,30 +5,30 @@
 
 ## 一覧
 
-| Agent | 役割 | 主な出力 | ツール | コード変更 |
-| --- | --- | --- | --- | --- |
-| orchestrator | 指揮・委譲・統合 | 委譲計画・統合報告 | Agent, Read, Grep, Glob | しない |
-| requirements-analyst | 要求整理・既存調査・観点抽出 | 要件メモ（L3 は `docs/requirements/`） | Read, Grep, Glob, Write* | しない |
-| architecture-designer | 技術設計 | `docs/designs/<feature>.md` | Read, Grep, Glob, Write | しない |
-| contract-designer | 契約設計（Zod/Drizzle/Hono RPC/DTO）。必要時のみ | `docs/designs/<feature>.md` の Contract 節 | Read, Grep, Glob, Write | しない |
-| implementation-planner | 実装計画 | `docs/implementation-plans/<feature>.md` | Read, Grep, Glob, Write | しない |
-| implementer | 実装・単体テスト・lint/型チェック | ソースコード・テスト | Read, Grep, Glob, Edit, Write, Bash | する |
-| test-designer | 試験観点・試験計画 | `docs/tests/<feature>.md` | Read, Grep, Glob, Write | しない |
-| reviewer | 整合性・品質・セキュリティ確認 | 指摘（必要なら `docs/reviews/<feature>.md`） | Read, Grep, Glob, Bash, Agent(requirements-analyst) | しない |
-| security-reviewer | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 指摘リスト | Read, Grep, Glob, Bash | しない |
-| e2e-test-implementer | E2E・結合テスト実装（L3・基盤整備済みのみ） | E2E テストコード | Read, Grep, Glob, Edit, Write, Bash | テストのみ |
-| performance-designer | パフォーマンス設計（L3・外部I/O/大量データ条件） | `docs/designs/<feature>.md` のパフォーマンス節 | Read, Grep, Glob, Write | しない |
-| document-reviewer | 文書成果物の検証（事実整合・矛盾・参照生存・鮮度・読者適合） | 指摘リスト（Must/Should/Nice） | Read, Grep, Glob, Bash | しない |
-| reflection-agent | 振り返り・改善候補抽出 | `docs/claude-code/improvements/candidates/<task-id>.md` | Read, Grep, Glob, Write | しない |
-| agent-evaluator | 固定評価ケースで回帰評価 | `docs/claude-code/improvements/evaluations/` | Read, Grep, Glob, Write | しない |
-| agent-improvement-manager | 横断分析・改善提案 | `docs/claude-code/improvements/proposals/` | Read, Grep, Glob, Write, Agent(agent-evaluator) | しない |
+| Agent                     | 役割                                                           | 主な出力                                                | ツール                                              | コード変更 |
+| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------- | ---------- |
+| orchestrator              | 指揮・委譲・統合                                               | 委譲計画・統合報告                                      | Agent, Read, Grep, Glob                             | しない     |
+| requirements-analyst      | 要求整理・既存調査・観点抽出                                   | 要件メモ（L3 は `docs/requirements/`）                  | Read, Grep, Glob, Write\*                           | しない     |
+| architecture-designer     | 技術設計                                                       | `docs/designs/<feature>.md`                             | Read, Grep, Glob, Write                             | しない     |
+| contract-designer         | 契約設計（Zod/Drizzle/Hono RPC/DTO）。必要時のみ               | `docs/designs/<feature>.md` の Contract 節              | Read, Grep, Glob, Write                             | しない     |
+| implementation-planner    | 実装計画                                                       | `docs/implementation-plans/<feature>.md`                | Read, Grep, Glob, Write                             | しない     |
+| implementer               | 実装・単体テスト・lint/型チェック                              | ソースコード・テスト                                    | Read, Grep, Glob, Edit, Write, Bash                 | する       |
+| test-designer             | 試験観点・試験計画                                             | `docs/tests/<feature>.md`                               | Read, Grep, Glob, Write                             | しない     |
+| reviewer                  | 整合性・品質・セキュリティ確認                                 | 指摘（必要なら `docs/reviews/<feature>.md`）            | Read, Grep, Glob, Bash, Agent(requirements-analyst) | しない     |
+| security-reviewer         | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 指摘リスト                                              | Read, Grep, Glob, Bash                              | しない     |
+| e2e-test-implementer      | E2E・結合テスト実装（L3・基盤整備済みのみ）                    | E2E テストコード                                        | Read, Grep, Glob, Edit, Write, Bash                 | テストのみ |
+| performance-designer      | パフォーマンス設計（L3・外部I/O/大量データ条件）               | `docs/designs/<feature>.md` のパフォーマンス節          | Read, Grep, Glob, Write                             | しない     |
+| document-reviewer         | 文書成果物の検証（事実整合・矛盾・参照生存・鮮度・読者適合）   | 指摘リスト（Must/Should/Nice）                          | Read, Grep, Glob, Bash                              | しない     |
+| reflection-agent          | 振り返り・改善候補抽出                                         | `docs/claude-code/improvements/candidates/<task-id>.md` | Read, Grep, Glob, Write                             | しない     |
+| agent-evaluator           | 固定評価ケースで回帰評価                                       | `docs/claude-code/improvements/evaluations/`            | Read, Grep, Glob, Write                             | しない     |
+| agent-improvement-manager | 横断分析・改善提案                                             | `docs/claude-code/improvements/proposals/`              | Read, Grep, Glob, Write, Agent(agent-evaluator)     | しない     |
 
 > ツール権限は最小限に絞る。`Agent`（Subagent 起動）を持つのは **orchestrator**（全実務 Agent）、
 > **reviewer**（検証目的の requirements-analyst のみ）、**agent-improvement-manager**
 > （回帰評価の agent-evaluator のみ）の 3 つに限る。プロダクションコードを変更するのは
 > **implementer** のみ。**e2e-test-implementer** はテストコードのみ変更可（プロダクションコード不可）。
 > 設計・計画・試験計画・振り返りは Write で `docs/` 配下のみに書く。
-> *requirements-analyst の Write は L3 の `docs/requirements/` 保存用。元計画の目安
+> \*requirements-analyst の Write は L3 の `docs/requirements/` 保存用。元計画の目安
 > （Read/Grep/Glob のみ）からの意図的な追加で、ソースコードには触れない。
 > 改善系 3 Agent の責務詳細は [improvement-cycle.md](./improvement-cycle.md) を参照。
 
@@ -110,6 +110,8 @@
 
 - 文書成果物（設計書・要件書・ADR・提案書・記事・LP・README 等）の専門レビュー。
   開発フロー（L2/L3）の成果物にも、フロー外の文書にも単体起動で使える。
+  **意図的に orchestrator の `Agent()` には含めていない**（単体起動専用。
+  オーケストレーション経路から呼びたくなったら orchestrator への追加を別途承認して行う）。
 - 観点: 事実整合（主張の裏取り）・内部/文書間矛盾・参照の生存（デッドパス）・鮮度
   （現状記述の日付/出典）・完全性・読者適合（初見トレース）・主張の強度・表記一貫性。
 - 出力は Must/Should/Nice + 該当箇所 + 修正案。指摘ゼロでも確認観点を列挙する。

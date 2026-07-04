@@ -15,7 +15,7 @@ Codex への実装委譲を「指示書生成 → 実行 → レビュー → �
        │
        ├─ Codex 委譲ルート
        │    1. Claude Code: 設計・実装計画を確定（L2/L3 は docs/designs + implementation-plans）
-       │    2. Claude Code: create-codex-brief Skill で docs/codex-tasks/<feature>/ を生成
+       │    2. Claude Code: create-codex-brief Skill で docs/tasks/codex/<feature>/ を生成
        │    3. 人間: Codex に指示書を渡して実行（下記コピペプロンプト）
        │    4. Claude Code: レビュー（06-ai-tools チェックリスト + 実画面確認）
        │    5. 差し戻しがあれば下記テンプレで再依頼 → 指摘全件の再レビュー
@@ -25,9 +25,9 @@ Codex への実装委譲を「指示書生成 → 実行 → レビュー → �
 
 ## 実行環境の選択肢
 
-| 環境 | 状態 | 備考 |
-| --- | --- | --- |
-| 手元の Codex（CLI / IDE） | **今すぐ可能** | 指示書はリポジトリにコミット済みなので、pull して貼るだけ |
+| 環境                                       | 状態           | 備考                                                                         |
+| ------------------------------------------ | -------------- | ---------------------------------------------------------------------------- |
+| 手元の Codex（CLI / IDE）                  | **今すぐ可能** | 指示書はリポジトリにコミット済みなので、pull して貼るだけ                    |
 | Claude Code リモート環境から直接 Codex API | **ブロック中** | proxy で `api.openai.com` が 403・`OPENAI_API_KEY` 未設定（2026-06-24 観測） |
 
 ### リモート実行の解除条件（人間の操作が必要・課金に注意）
@@ -52,7 +52,7 @@ AGENTS.md とそこに記載された docs/ を必ず読んでから着手して
 以下の実装指示書に従って実装してください。指示書に書かれていない設計判断が
 必要になった場合は、実装せずにその旨を報告して止まってください。
 
-対象: docs/codex-tasks/<feature>/<NN-layer>.md
+対象: docs/tasks/codex/<feature>/<NN-layer>.md
 
 完了条件:
 - pnpm lint / pnpm type-check / pnpm test が全 green

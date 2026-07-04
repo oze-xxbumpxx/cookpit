@@ -16,12 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm lint
 
   type-check:
@@ -29,12 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm type-check
 
   build:
@@ -43,12 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm build
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -59,10 +44,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm test
+
+  e2e:
+    name: E2E Smoke
+    # PR 時のみ実行。smoke は自己完結型 CRUD だが実 DB（DATABASE_URL）に書き込むため、
+    # secret 未設定なら明示的にスキップする。専用の Neon ブランチ DB の利用を推奨。
+    if: github.event_name == 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Skip (DATABASE_URL secret not configured)
+        if: env.DATABASE_URL == ''
+        run: echo "DATABASE_URL が未設定のため E2E smoke をスキップします"
+      - name: Apply DB migrations
+        # スキーマドリフト対策（例: 0004_add_recipe_servings 未適用で /recipes が 500）。
+        # drizzle-kit migrate は適用済み分をスキップするため冪等
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @cookpit/web db:migrate
+      - name: Install Playwright Chromium
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @cookpit/web exec playwright install --with-deps chromium
+      - name: Run E2E smoke
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @cookpit/web e2e

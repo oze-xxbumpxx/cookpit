@@ -4,7 +4,7 @@ description: >
   API・DB・イベント・DTO・バリデーションスキーマなど「契約」を設計する。型・必須/任意・
   nullability・バージョン・後方互換・エラー形式・冪等性キー・サンプル・契約テスト方針を定める。
   必要な場合（主に Level 3 や契約変更を伴う Level 2）だけ起動する。プロダクションコードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 
