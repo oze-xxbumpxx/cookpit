@@ -62,6 +62,11 @@ jobs:
       - name: Skip (DATABASE_URL secret not configured)
         if: env.DATABASE_URL == ''
         run: echo "DATABASE_URL が未設定のため E2E smoke をスキップします"
+      - name: Apply DB migrations
+        # スキーマドリフト対策（例: 0004_add_recipe_servings 未適用で /recipes が 500）。
+        # drizzle-kit migrate は適用済み分をスキップするため冪等
+        if: env.DATABASE_URL != ''
+        run: pnpm --filter @cookpit/web db:migrate
       - name: Install Playwright Chromium
         if: env.DATABASE_URL != ''
         run: pnpm --filter @cookpit/web exec playwright install --with-deps chromium
