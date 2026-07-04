@@ -45,8 +45,15 @@ description: >
    `docs/claude-code/improvements/candidates/store-master.md` 事象 3 /
    `docs/reviews/store-master.md` Should-2）
 9. テストランナー（Vitest）は domain / application / infrastructure / apps/web に導入済み
-   （2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）。E2E（Playwright UI）等の
-   未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
+   （2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）。**上記以外のパッケージ
+   （例: `packages/api-contract`）に試験観点を書く場合は、対象パッケージに実行環境
+   （`vitest.config.*` や `package.json` の `test` スクリプト）が実在するか先に確認する。
+   無ければ観点は削らず残しつつ「テスト基盤未整備のため本タスクでは未実装（実装計画で対応要否を
+   確認）」と明記し、実装される前提でファイルパスを断定しない**（出典: recipe-servings で
+   test-designer が api-contract の Vitest 未整備に気づかず全観点を実装前提で記述し、
+   implementation-planner のスコープ判断と食い違って reviewer 指摘になった —
+   `docs/claude-code/improvements/candidates/recipe-servings.md` 事象2）。E2E（Playwright UI）
+   等の未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
 
 ## 観点の選択基準（過剰適用を防ぐ）
 
