@@ -44,7 +44,7 @@ Cookpit 開発業務全体（アプリ機能開発・ハーネス運用・メタ
 | 3 | kickoff-session Skill（段取りの自動化） | セッション冒頭の文脈復元が毎回手作業。持ち越しが落ちる | 立ち上げ 10〜15 分 → 1〜2 分。持ち越しゼロ | Skill + briefing スクリプト | 低 | 1h | 低（読み取り専用） | **A（実装済）** |
 | 4 | create-codex-brief Skill（指示書生成の定型化） | Codex 指示書が都度手書き。品質ばらつきが既知ミス型を誘発 | usage を消費しない実装ルートが定型化。指示書作成 30 分 → 5 分 | Skill + テンプレート | 低 | 1.5h | 低（ドキュメント生成のみ） | **A（実装済）** |
 | 5 | Codex 委譲プレイブック | 実行手順・差し戻し・リモート解除条件が暗黙知 | 委譲判断と実行が迷わない。差し戻し取りこぼし防止 | 運用ドキュメント | 低 | 1h | 低 | **A（実装済）** |
-| 6 | GitHub Actions CI 導入 | 品質ゲートがローカル実行頼み。PR で自動検証されない | push 忘れ・ゲート飛ばしの構造的防止。レビュー前に green 保証 | ワークフロー yml | 低 | 1〜2h | 低（GitHub 無料枠内。roadmap Sprint 2 に計画済み） | B（次の開発セッションで） |
+| 6 | GitHub Actions CI 導入 | 品質ゲートがローカル実行頼み。PR で自動検証されない | push 忘れ・ゲート飛ばしの構造的防止。レビュー前に green 保証 | ワークフロー yml | 低 | 1〜2h | 低 | **済（分析時の事実誤り: `.github/workflows/ci.yml` が lint/type-check/build/test を PR で実行済み。roadmap Sprint 2 の記述が鮮度切れ）** |
 | 7 | pnpm audit の定期実行 | hono / happy-dom 脆弱性が場当たり検知（backlog 記録あり） | 脆弱性の検知が自動化 | CI ステップ or 週次 Routine | 低 | 30m | 低 | B（#6 に同梱） |
 | 8 | リモート環境の DB 検証経路 | ブラウザ手動テストが DATABASE_URL 無しで毎回 BLOCKED | 実画面確認までリモートで完結 | ローカル Postgres/PGlite シード起動スクリプト | 中 | 2〜4h | 中（Next.js ランタイムとの接続互換の検証が必要） | B |
 | 9 | 08-prompt-templates の Skill 化整理 | セッション開始テンプレが kickoff-session と重複 | 定型プロンプトの二重管理を解消 | docs 更新 | 低 | 30m | 低 | B（audit-skills の次回棚卸しで） |
@@ -91,8 +91,8 @@ Cookpit 開発業務全体（アプリ機能開発・ハーネス運用・メタ
 
 ## 次に作ると効果が大きいもの
 
-1. **GitHub Actions CI（#6 + #7）** — roadmap Sprint 2 に計画済み。次の開発セッションの
-   最初のタスクに適する（L1 相当・ワークフロー yml 追加のみ）。
+1. **pnpm audit の CI 組込み（#7）** — CI 本体（#6）は導入済みと判明（`.github/workflows/ci.yml`）。
+   audit ステップの追加のみ（15 分規模）。あわせて roadmap Sprint 2 タスク6 の鮮度切れ記述を更新する。
 2. **リモート DB 検証経路（#8）** — manual-browser-verify の BLOCKED 常態化を解消し、
    「依頼 1 行 → PR レビューだけ」に実画面確認まで含められる。
 3. **週次スプリントレビュー Skill（#11）** — 日曜レトロの logs 集計を自動化し、
