@@ -19,6 +19,7 @@
 | IMP-2026-008 | orchestrator stop/resume 後の Sub-agent notification 待ちループを解消（状態ファイル + 通知非依存の冪等再開 / 単一委譲は同期既定） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md / .claude/state/inflight-agents.json | accepted | [candidates/store-master.md](candidates/store-master.md)（事象1） | [accepted/IMP-2026-008.md](accepted/IMP-2026-008.md) | [evaluations/IMP-2026-008.md](evaluations/IMP-2026-008.md)（v1 悪化2軸→v2 悪化ゼロ・条件付き採用推奨） | 2026-07-01 採用（人間承認・本適用済み・v2） |
 | IMP-2026-009 | IMP-2026-008 の冪等 resume 判定を L1/L2 の単一 Sub-agent 同期委譲にも拡張（`inflight-agents.json` 未使用でも resume 直後は期待成果物の存在確認を必須化） | .claude/agents/orchestrator.md / docs/claude-code/orchestration-policy.md | accepted | 改善ループ検証ドライラン（recipe-servings, 2026-07-03。L2 タスクで architecture-designer が resume 後に実際に二重起動） | （ドライラン中にユーザー承認のうえ即時適用。個別 proposal ファイルは未作成） | dry run 未再実施（次回 L1/L2 resume 発生タスクで実地確認予定） | 2026-07-03 採用（人間承認・本適用済み・簡易フロー） |
 | IMP-2026-010 | implementer に「実装計画の『ドキュメント更新対象』全項目実施」をコード変更と同格の完了条件・報告義務として明記（累計3件の再発パターンへの対応） | .claude/agents/implementer.md | accepted | [candidates/recipe-servings.md](candidates/recipe-servings.md)（事象1・累計3件: store-master 事象4 + recipe-servings Should-1/2） | （create-implementation-plan Skill 側は既に「ドキュメント更新対象」を独立セクション化済みと判明したため対象外。implementer.md のみ改訂。個別 proposal ファイルは未作成） | 次回 L2/L3 タスクで reviewer 指摘（同パターンのShould）がゼロになるかを実地確認予定 | 2026-07-03 採用（人間承認・本適用済み・簡易フロー） |
+| IMP-2026-011 | check-deliverables.mjs の設計書セクション空判定を修正（h2セクション直下のh3サブ見出しを本文として扱う。同レベル以下の見出しのみで打ち切り） | .claude/hooks/check-deliverables.mjs | accepted | [candidates/recipe-servings.md](candidates/recipe-servings.md)（事象4・確証あり） | （手動再実行で再現・修正前後の差分をその場で比較確認。個別 proposal ファイルは未作成） | 修正前: `docs/designs/recipe-servings.md` で「変更後構成（空）, テスト方針（空）」を誤検知（再現）。修正後: 同ファイルで警告ゼロ（解消確認済み） | 2026-07-03 採用（人間承認・本適用済み・簡易フロー） |
 
 凡例: ステータス = candidate / proposal / evaluated / accepted / rejected。
 「候補」「提案」「評価」「決定」列には該当ファイルへの相対リンクまたは日付を入れる。
@@ -68,7 +69,7 @@
 | Codex 実装の頻出ミス（識別子/Tailwind タイポ・結線漏れ・use client 漏れ 等）が4セッション反復 | skills-inventory-audit（logs 5/16〜6/16） | 4 → **昇格済み**: docs/06-ai-tools.md レビューチェックリスト（2026-07-02） | docs/06-ai-tools.md |
 | 並列実行した test-designer と implementation-planner の判断が食い違い、試験計画に実施不可能なテストが混入（Should-3） | recipe-servings | 1（再発監視中。並列実行構造上の再発リスクあり。次回同種で昇格） | [candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 2 |
 | devDependency happy-dom に critical RCE 脆弱性（GHSA-37j7-fg3j-429f 等）・本番非影響・対応フロー未整備 | recipe-servings | 1（同種が 3 タスク続いたら対応フロー整備を候補化） | implementer Subagent Memory |
-| check-deliverables.mjs が実内容ありのセクションを「空」と誤判定した疑い（非ブロック・原因不確定） | recipe-servings | 1（次回再現時に Hook コードを精査・確証で昇格） | [candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 4 |
+| check-deliverables.mjs が実内容ありのセクションを「空」と誤判定した疑い（非ブロック） | recipe-servings | 1 → **昇格済み**: 手動再実行で確証を得て IMP-2026-011 として修正・適用（2026-07-03） | [candidates/recipe-servings.md](candidates/recipe-servings.md) 事象 4 → IMP-2026-011 |
 
 ## 昇格候補（candidate ファイルあり・proposal 起票待ち）
 
