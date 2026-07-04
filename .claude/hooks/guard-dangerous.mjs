@@ -8,9 +8,12 @@
 // - settings.json の permissions.deny と二層で併用する（こちらは理由つきの動的判定）。
 // - 一時的に無効化したい場合は settings.json の PreToolUse から本フックを外す（最終報告 §9）。
 //
-// 対象ツール: Bash（コマンド検査） / Read・Edit・Write・MultiEdit（秘密ファイル検査）。
+// 対象ツール: Bash（コマンド検査） / Read・Edit・Write・MultiEdit（秘密ファイル・保護構成ファイル検査）。
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 function readStdin() {
   try {
@@ -24,7 +27,7 @@ function deny(reason) {
   process.stderr.write(
     `⛔ 危険操作をブロックしました: ${reason}\n` +
       `この操作は人間の承認が必要です（本番影響・破壊的・秘密情報）。意図的な場合は手動で実行するか、\n` +
-      `.claude/settings.json の PreToolUse から guard-dangerous を一時的に外してください。\n`
+      `.claude/settings.json の PreToolUse から guard-dangerous を一時的に外してください。\n`,
   );
   process.exit(2);
 }
@@ -57,8 +60,7 @@ const ALWAYS_DENY = [
   { re: /\baws\s+(deploy|s3\s+rm|cloudformation\s+(deploy|delete))\b/, why: 'AWS 本番操作' },
 ];
 
-const READ_CMD =
-  /\b(cat|less|more|head|tail|bat|nl|od|xxd|strings|grep|rg|awk|sed|cp|scp|rsync)\b/;
+const READ_CMD = /\b(cat|less|more|head|tail|bat|nl|od|xxd|strings|grep|rg|awk|sed|cp|scp|rsync)\b/;
 
 function bashSecretRead(cmd) {
   if (/\bprintenv\b/.test(cmd)) return 'printenv（環境変数の露出）';
@@ -97,6 +99,28 @@ function isSecretPath(p) {
   );
 }
 
+// ── 保護構成ファイルへの書き込み判定（improvement-cycle.md §承認境界）─────
+// 承認マーカー（.claude/state/config-change-approved）が無い限り、Agent の指示・挙動を決める
+// 構成ファイルへの Edit/Write/MultiEdit をブロックする。従来は validate-agent-config.mjs の
+// 警告のみだったが、「read-only を宣言する Agent が Write を保持する」穴を決定論的に塞ぐ
+// （2026-07-04 セットアップ監査 / IMP-2026-013）。.claude/evals/ と .claude/state/ は
+// 成果物置き場のため対象外。
+function isProtectedConfigPath(p) {
+  if (typeof p !== 'string') return false;
+  const rel = p.startsWith(ROOT) ? p.slice(ROOT.length + 1) : p;
+  return (
+    rel === 'CLAUDE.md' ||
+    rel === '.claude/settings.json' ||
+    rel.startsWith('.claude/agents/') ||
+    rel.startsWith('.claude/hooks/') ||
+    rel.startsWith('.claude/rules/') ||
+    rel.startsWith('.claude/skills/')
+  );
+}
+function configChangeApproved() {
+  return existsSync(join(ROOT, '.claude/state/config-change-approved'));
+}
+
 function main() {
   let input = {};
   try {
@@ -110,6 +134,13 @@ function main() {
   if (tool === 'Bash') checkBash(ti.command);
   else if (tool === 'Read' || tool === 'Edit' || tool === 'Write' || tool === 'MultiEdit') {
     if (isSecretPath(ti.file_path)) deny(`秘密情報ファイルへのアクセス: ${ti.file_path}`);
+    if (tool !== 'Read' && isProtectedConfigPath(ti.file_path) && !configChangeApproved()) {
+      deny(
+        `保護構成ファイルへの未承認の書き込み: ${ti.file_path}\n` +
+          `人間が承認する場合は .claude/state/config-change-approved を作成してから再実行\n` +
+          `（touch .claude/state/config-change-approved。作業後は削除する）`,
+      );
+    }
   }
 
   process.exit(0); // 危険でなければ許可
