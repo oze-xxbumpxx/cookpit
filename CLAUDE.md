@@ -9,24 +9,20 @@
 
 作業前に必ず読み込む。
 
-- `docs/01-overview.md` / `docs/03-architecture.md` / `docs/04-domain-model.md` / `docs/07-dev-rules.md`
+- `docs/01-overview.md` / `docs/03-architecture.md`
+- `docs/04-domain-model.md` は**対象集約のセクションのみ**読む（全文を読み込まない）
+- コーディング規約は `.claude/rules/coding-standards.md`（詳細が必要な時のみ `docs/07-dev-rules.md`）
 
 前回作業は `logs/` の最新ファイル、定型依頼は `docs/08-prompt-templates.md` を参照。
 
 ## 開発ワークフロー（Orchestrator 主導）
 
-機能追加・修正は **Orchestrator** が指揮し、専門 Subagent へ調査・設計・計画・実装・
-試験・レビューを委譲する。Orchestrator は `claude --agent orchestrator` で起動する。
-
-- **Orchestrator を使う条件**：複数工程・複数ファイル・複数層にまたがる開発タスク
-  （機能追加、仕様変更、新規 API/画面、スキーマ変更など）。単発の質問や調査は不要。
-- **委譲方針**：Orchestrator は自分で詳細設計や大量実装を完結せず分配する。`Agent` を
-  持つのは orchestrator（全実務 Agent）・reviewer（検証用 requirements-analyst のみ）・
-  agent-improvement-manager（agent-evaluator のみ）の 3 つ
-  （[agent-responsibilities.md](docs/claude-code/agent-responsibilities.md)）。
-  実装は implementer、設計は architecture-designer に委譲する。
-- 詳細は [docs/claude-code/orchestration-policy.md](docs/claude-code/orchestration-policy.md)
-  と [docs/claude-code/development-workflow.md](docs/claude-code/development-workflow.md)。
+複数工程・複数ファイル・複数層にまたがる開発タスク（機能追加・仕様変更・新規 API/画面・
+スキーマ変更など）は **Orchestrator**（`claude --agent orchestrator`）が指揮し、専門 Subagent へ
+委譲する。単発の質問・調査には不要。委譲方針・`Agent` ツール保持者・工程の詳細は
+[orchestration-policy.md](docs/claude-code/orchestration-policy.md) /
+[development-workflow.md](docs/claude-code/development-workflow.md) /
+[agent-responsibilities.md](docs/claude-code/agent-responsibilities.md) を正典とする。
 
 ## ドキュメント方針（変更レベルと自動成果物）
 
@@ -62,10 +58,9 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
 
 ## 完了条件
 
-要求 → 設計 → 実装計画 → 実装 → 試験 に矛盾がなく、L2/L3 の必要成果物が揃い、
-`pnpm lint` / `pnpm type-check` / `pnpm test`（テストランナーは Vitest。全層導入済みで、
-変更したパッケージの該当テストを追加・実行する）が通り、スコープ外変更が
-無いことを確認してから完了を報告する。詳細は development-workflow.md。
+`pnpm lint` / `pnpm type-check` / `pnpm test`（Vitest。変更したパッケージの該当テストを
+追加・実行）が通り、L2/L3 の必要成果物が揃い、スコープ外変更が無いこと。正典は
+[definition-of-done.md](docs/claude-code/definition-of-done.md) と development-workflow.md。
 
 ## アーキテクチャ原則（要約・実装時に必ず守る）
 
@@ -83,15 +78,11 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
 
 ## 継続的改善（Memory / 改善サイクル）— 半自動型
 
-タスクの手戻り・ユーザー修正・レビュー指摘・テスト失敗・成功手順を蓄積し、Agent 構成を
-段階的に改善する。**候補収集と評価は自動、重要設定の変更は人間（または Opus の manager）承認が
-必要**な半自動型。原則だけ守ればよく、運用詳細は下記ドキュメントに委ねる。
-
-- 段階を飛ばさない：`単発 → Memory` / `繰り返す → 改善候補` / `検証済み → Agent・Skill・Rule`。
-- **毎タスク Agent 定義を書き換えない。** 改善＝指示追加ではなく、不要な指示の削除・移動も含む。
-- 保存先分類・昇格条件・誤情報の削除は [docs/claude-code/memory-policy.md](docs/claude-code/memory-policy.md)、
-  改善サイクル・承認境界・実行タイミングは
-  [docs/claude-code/improvement-cycle.md](docs/claude-code/improvement-cycle.md) を正典とする。
+候補収集と評価は自動、重要設定の変更は人間承認が必要な半自動型。原則は 2 つ：
+段階を飛ばさない（`単発 → Memory` / `繰り返す → 改善候補` / `検証済み → Agent・Skill・Rule`）、
+**毎タスク Agent 定義を書き換えない**（改善＝指示追加ではなく削除・移動も含む）。
+運用の正典は [memory-policy.md](docs/claude-code/memory-policy.md) と
+[improvement-cycle.md](docs/claude-code/improvement-cycle.md)。
 
 ## 参照ドキュメント
 
@@ -102,7 +93,9 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
 | [docs/03-architecture.md](docs/03-architecture.md) | アーキテクチャ・ディレクトリ構成 |
 | [docs/04-domain-model.md](docs/04-domain-model.md) | ドメインモデル設計 |
 | [docs/05-roadmap.md](docs/05-roadmap.md) | スプリント計画 |
+| [docs/06-ai-tools.md](docs/06-ai-tools.md) | AI ツールの分担（Claude / Codex / Gemini / Perplexity）と実装ルート基準 |
 | [docs/07-dev-rules.md](docs/07-dev-rules.md) | 開発ルール |
+| [docs/08-prompt-templates.md](docs/08-prompt-templates.md) | 定型依頼のプロンプトテンプレート |
 | [docs/claude-code/](docs/claude-code/) | Orchestration / ワークフロー / ドキュメント方針 / Agent 責務 |
 | [docs/claude-code/memory-policy.md](docs/claude-code/memory-policy.md) | Memory 分類・昇格条件・肥大化対策・誤情報削除 |
 | [docs/claude-code/improvement-cycle.md](docs/claude-code/improvement-cycle.md) | 改善サイクル・承認境界・回帰評価・実行タイミング |

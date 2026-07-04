@@ -22,39 +22,15 @@ Codex がこのプロジェクトで作業する際に守るべきルールを�
 - 設計判断は Claude Code が行う。Codex は**決定済みの設計に従って実装する**。
 - 設計方針が不明な場合は実装を止め、確認を求めること。
 
-## アーキテクチャ原則
+## アーキテクチャ原則・コーディング規約
 
-### 依存方向
+正典は以下の 2 ファイル。実装前に必ず読み、逸脱しないこと（本ファイルには再掲しない）。
 
-```
-Presentation → Application → Domain ← Infrastructure
-```
+- [.claude/rules/domain-layer.md](.claude/rules/domain-layer.md) — 依存方向・`create()`/`reconstruct()`・集約間参照
+- [.claude/rules/coding-standards.md](.claude/rules/coding-standards.md) — 型・構文・コメント・エラー処理・品質ゲート
 
-- `packages/domain` は他のパッケージに依存しない。
-- Domain 層に Drizzle・HTTP の型を持ち込まない。
-
-### ドメインモデルのパターン
-
-- Entity の生成は必ず `static create()` を通す。
-- DB からの復元は必ず `static reconstruct()` を通す。
-- ドメインロジックは Entity / Value Object に閉じ込める。UseCase や Repository に書かない。
-
-### 集約間の参照
-
-- 集約をまたぐ参照は **ID 参照のみ**。集約インスタンスを別集約に持たせない。
-- 集約をまたぐ操作は Application Layer の UseCase に置く。
-
-## コーディング規約
-
-命名規則・型・インポートの詳細は [docs/07-dev-rules.md](docs/07-dev-rules.md) を参照。
-
-### 要点
-
-- `any` 型は禁止。`unknown` を使う。
-- デフォルトエクスポートは禁止。名前付きエクスポートのみ。
-- 型のみのインポートは `import type` を使う。
-- `===` / `!==` を使う。`==` / `!=` は禁止。
-- 「値なし」は `null` に統一する（`undefined` と混在させない）。
+背景・詳細は [docs/03-architecture.md](docs/03-architecture.md) /
+[docs/04-domain-model.md](docs/04-domain-model.md) / [docs/07-dev-rules.md](docs/07-dev-rules.md)。
 
 ## 実装後のルール
 

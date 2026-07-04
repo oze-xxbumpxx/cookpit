@@ -6,6 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "type-check": "tsc --noEmit",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -17,7 +18,9 @@
     "@cookpit/config": "workspace:*",
     "@electric-sql/pglite": "^0.2.17",
     "@types/node": "^20",
+    "eslint": "^9.0.0",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^3.2.0"
   }
 }
