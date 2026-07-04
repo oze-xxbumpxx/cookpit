@@ -72,25 +72,13 @@ Cookpit 開発業務全体（アプリ機能開発・ハーネス運用・メタ
 3. **#4+#5（Codex 委譲パック）** — ユーザー指定のブロック解除対象。usage を消費しない
    実装ルートは最大のコストレバー（06-ai-tools）で、指示書生成までは鍵なしで今すぐ動く。
 
-## 承認待ちの提案: record-activity Hook の登録（要人間承認）
+## record-activity Hook の登録（2026-07-04 人間承認済み・適用済み）
 
-`.claude/settings.json` は保護ファイルのため、本タスクでは変更していない（auto モードの
-自己改変ガードが正しく拒否）。**承認する場合は以下を手動で適用する**。適用しなくても
-所要時間推定は当日コミットから動くが、Hook があると精度が上がる（プロンプト単位の活動時間）。
-
-`hooks` に追加する差分:
-
-```json
-"SessionStart": [
-  { "hooks": [ { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\"" } ] }
-],
-"UserPromptSubmit": [
-  { "hooks": [ { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\"" } ] }
-]
-```
-
-さらに既存 `Stop` 配列の先頭に同じコマンドを 1 エントリ追加すると、ターン終了時刻も
-記録される（任意）。記録内容は ts / event / session_id のみ（`record-activity.mjs` 参照）。
+`.claude/settings.json` の SessionStart / UserPromptSubmit / Stop に
+`record-activity.mjs` を登録した（初回提案時は auto モードの自己改変ガードが正しく拒否し、
+ユーザーの明示承認を得てから適用）。記録内容は ts / event / session_id のみで、
+プロンプト本文・秘密情報は保存しない（`record-activity.mjs` 参照）。
+これにより estimate-session-time.mjs がプロンプト・ターン単位の活動時間で推定できる。
 
 ## 明日からの運用手順
 
