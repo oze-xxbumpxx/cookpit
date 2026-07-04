@@ -3,7 +3,7 @@ name: requirements-analyst
 description: >
   ユーザー要求を整理し、不明点・制約・前提条件を抽出し、既存コードと既存仕様を調査して
   影響範囲と試験観点（正常系・異常系・境界条件）を洗い出す。コードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

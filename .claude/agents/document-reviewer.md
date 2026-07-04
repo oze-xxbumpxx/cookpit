@@ -5,7 +5,7 @@ description: >
   テキスト全般）を検証する専門レビュアー。事実の裏取り・内部矛盾・参照の生存・鮮度・
   完全性・読者適合・主張の強度を確認し、Must/Should/Nice で指摘する。
   コードのレビューは reviewer の担当。文書は変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Bash
 ---
 

@@ -40,23 +40,23 @@
 
 正典は各 `.claude/agents/<name>.md` の frontmatter（下表は早見）。
 
-| Agent                     | Model      | 役割                                                   |
-| ------------------------- | ---------- | ------------------------------------------------------ |
-| orchestrator              | opus-4-8   | 指揮・委譲・統合                                       |
-| requirements-analyst      | sonnet-4-6 | 要求整理・既存調査・観点抽出                           |
-| architecture-designer     | sonnet-4-6 | 技術設計                                               |
-| contract-designer         | sonnet-4-6 | 契約設計（API/DB/イベント/DTO/Zod）。必要時のみ        |
-| test-designer             | sonnet-4-6 | 試験観点・試験計画                                     |
-| implementation-planner    | sonnet-4-6 | 実装計画                                               |
-| implementer               | sonnet-4-6 | 実装・単体テスト・品質ゲート                           |
-| reviewer                  | sonnet-4-6 | 独立レビュー                                           |
-| security-reviewer         | sonnet-4-6 | セキュリティ専門レビュー（L2/L3・reviewer の後）       |
-| e2e-test-implementer      | sonnet-4-6 | E2E・結合テスト実装（L3・基盤整備済みのみ）            |
-| performance-designer      | sonnet-4-6 | パフォーマンス設計（L3・外部I/O/大量データのみ）       |
-| document-reviewer         | sonnet-4-6 | 文書成果物の専門レビュー（開発フロー外でも単体起動可） |
-| reflection-agent          | sonnet-4-6 | 振り返り・改善候補抽出                                 |
-| agent-evaluator           | sonnet-4-6 | 固定評価ケースで回帰評価                               |
-| agent-improvement-manager | opus-4-8   | 横断分析・改善提案（重要設定は提案のみ）               |
+| Agent                     | Model    | 役割                                                   |
+| ------------------------- | -------- | ------------------------------------------------------ |
+| orchestrator              | opus-4-8 | 指揮・委譲・統合                                       |
+| requirements-analyst      | sonnet-5 | 要求整理・既存調査・観点抽出                           |
+| architecture-designer     | sonnet-5 | 技術設計                                               |
+| contract-designer         | sonnet-5 | 契約設計（API/DB/イベント/DTO/Zod）。必要時のみ        |
+| test-designer             | sonnet-5 | 試験観点・試験計画                                     |
+| implementation-planner    | sonnet-5 | 実装計画                                               |
+| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート                           |
+| reviewer                  | sonnet-5 | 独立レビュー                                           |
+| security-reviewer         | sonnet-5 | セキュリティ専門レビュー（L2/L3・reviewer の後）       |
+| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装（L3・基盤整備済みのみ）            |
+| performance-designer      | sonnet-5 | パフォーマンス設計（L3・外部I/O/大量データのみ）       |
+| document-reviewer         | sonnet-5 | 文書成果物の専門レビュー（開発フロー外でも単体起動可） |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                                 |
+| agent-evaluator           | sonnet-5 | 固定評価ケースで回帰評価                               |
+| agent-improvement-manager | opus-4-8 | 横断分析・改善提案（重要設定は提案のみ）               |
 
 ## 運用開始
 

@@ -4,7 +4,7 @@ description: >
   確定した設計書を実装可能な単位へ分解し、変更対象ファイル・手順・依存関係・完了条件・
   テスト計画・リスク・ロールバックを実装計画として docs/implementation-plans/ に保存する。
   実装コードは変更しない。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 

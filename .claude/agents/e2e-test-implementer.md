@@ -3,7 +3,7 @@ name: e2e-test-implementer
 description: >
   試験計画の結合/E2E 観点を Playwright (UI) または Hono テストクライアント (API) で
   実装する。L3 かつ対象層に E2E テスト基盤が整備済みの場合のみ起動する。コードは変更しない（テストのみ）。
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

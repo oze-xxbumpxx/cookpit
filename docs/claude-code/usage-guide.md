@@ -5,10 +5,10 @@
 
 - 索引・命名対応表：[README.md](./README.md)
 - 正典：[development-workflow.md](./development-workflow.md) /
-[document-policy.md](./document-policy.md) / [definition-of-done.md](./definition-of-done.md) /
-[orchestration-policy.md](./orchestration-policy.md) /
-[agent-responsibilities.md](./agent-responsibilities.md) /
-[memory-policy.md](./memory-policy.md) / [improvement-cycle.md](./improvement-cycle.md)
+  [document-policy.md](./document-policy.md) / [definition-of-done.md](./definition-of-done.md) /
+  [orchestration-policy.md](./orchestration-policy.md) /
+  [agent-responsibilities.md](./agent-responsibilities.md) /
+  [memory-policy.md](./memory-policy.md) / [improvement-cycle.md](./improvement-cycle.md)
 
 ---
 
@@ -41,28 +41,26 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 ### Agent（15）
 
-
-| Agent                     | Model      | 役割                             | 起動条件       |
-| ------------------------- | ---------- | ------------------------------ | ---------- |
-| orchestrator              | opus-4-8   | 指揮・委譲・統合                       | 複数工程の開発タスク |
-| requirements-analyst      | sonnet-4-6 | 要求整理・既存調査                      | L3（必要な L2） |
-| architecture-designer     | sonnet-4-6 | 技術設計                           | L2/L3      |
-| contract-designer         | sonnet-4-6 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき  |
-| test-designer             | sonnet-4-6 | 試験観点・試験計画                      | L2/L3      |
-| implementation-planner    | sonnet-4-6 | 実装計画                           | L2/L3      |
-| implementer               | sonnet-4-6 | 実装・単体テスト・品質ゲート                 | L1〜L3      |
-| reviewer                  | sonnet-4-6 | 独立レビュー                         | L2/L3      |
-| security-reviewer         | sonnet-4-6 | セキュリティ専門レビュー                   | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
-| e2e-test-implementer      | sonnet-4-6 | E2E・結合テスト実装                    | L3・テスト基盤整備済みのとき |
-| performance-designer      | sonnet-4-6 | パフォーマンス設計                      | L3・外部I/O/大量データのとき |
-| document-reviewer         | sonnet-4-6 | 文書成果物の専門レビュー                  | 文書レビュー依頼時（単体起動可） |
-| reflection-agent          | sonnet-4-6 | 振り返り・改善候補抽出                    | L2/L3 完了後  |
-| agent-evaluator           | sonnet-4-6 | 固定ケースで回帰評価                     | 改善提案の評価時   |
-| agent-improvement-manager | opus-4-8   | 横断分析・改善提案                      | トリガー時のみ    |
-
+| Agent                     | Model    | 役割                                 | 起動条件                                           |
+| ------------------------- | -------- | ------------------------------------ | -------------------------------------------------- |
+| orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                               |
+| requirements-analyst      | sonnet-5 | 要求整理・既存調査                   | L3（必要な L2）                                    |
+| architecture-designer     | sonnet-5 | 技術設計                             | L2/L3                                              |
+| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                                 |
+| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                              |
+| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                              |
+| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                             |
+| reviewer                  | sonnet-5 | 独立レビュー                         | L2/L3                                              |
+| security-reviewer         | sonnet-5 | セキュリティ専門レビュー             | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
+| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                       |
+| performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                       |
+| document-reviewer         | sonnet-5 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）                   |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                       |
+| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                                   |
+| agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                     |
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
-（正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-4-6`）。
+（正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。
 
 ### Skills（11）
 
@@ -86,20 +84,18 @@ Claude が場面に応じて自動選択する。
 ### 起動
 
 - **複数工程の開発**（機能追加・仕様変更・新規API/画面・スキーマ変更）：
-`claude --agent orchestrator` で起動、または通常セッションで依頼すれば Orchestrator 相当の
-判定から始まる。
+  `claude --agent orchestrator` で起動、または通常セッションで依頼すれば Orchestrator 相当の
+  判定から始まる。
 - **単発の質問・調査**：通常どおり依頼（Level 0。Agent 委譲は不要）。
 
 ### 変更レベルと自動成果物（[document-policy.md](./document-policy.md)）
 
-
-| Level    | 例                    | 委譲フロー                                                                            | 自動で作る成果物                                         |
-| -------- | -------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **0 調査** | 原因調査・設計相談            | なし（読み取りのみ）                                                                       | なし                                               |
-| **1 軽微** | 文言・typo・単純 null チェック | implementer（必要なら reviewer）                                                       | なし（最終報告に理由）                                      |
-| **2 通常** | 既存API項目追加・ロジック変更     | architecture →〔contract〕→ (test ∥ planner) → implementer → reviewer → security → reflection | designs / implementation-plans / tests           |
+| Level      | 例                                  | 委譲フロー                                                                                    | 自動で作る成果物                                     |
+| ---------- | ----------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **0 調査** | 原因調査・設計相談                  | なし（読み取りのみ）                                                                          | なし                                                 |
+| **1 軽微** | 文言・typo・単純 null チェック      | implementer（必要なら reviewer）                                                              | なし（最終報告に理由）                               |
+| **2 通常** | 既存API項目追加・ロジック変更       | architecture →〔contract〕→ (test ∥ planner) → implementer → reviewer → security → reflection | designs / implementation-plans / tests               |
 | **3 重要** | 新規API・DBスキーマ・移行・外部連携 | requirements → … → reviewer（+ADR）→ security → reflection                                    | + requirements / decisions(ADR) / reviews / 振り返り |
-
 
 > Orchestrator は開始時に**レベルと判定理由**を提示する。小規模変更を Level 3 工程で重くしない。
 > L2/L3 では最初の Write 担当が `feature-name` を `.claude/state/current-feature` に記録する。
@@ -128,22 +124,20 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 
 ## 5. 安全機構（Hook と権限）
 
-
-| イベント         | Hook                          | 役割                                                |
-| ------------ | ----------------------------- | ------------------------------------------------- |
-| PreToolUse   | `guard-dangerous.mjs`         | 破壊的/本番/秘密情報操作を**ブロック**（exit 2）                    |
-| PostToolUse  | `check-deliverables.mjs`      | L2/L3 のソース変更に対し成果物の有無を警告                          |
-| PostToolUse  | `validate-agent-config.mjs`   | Agent/Skill/設定の構文・整合性検証（構文エラーはブロック、方針違反は警告）       |
-| SubagentStop | `record-subagent.mjs`         | Subagent 完了の機械的事実を `state/subagent-log.jsonl` に記録 |
-| Stop         | `check-improvement-cycle.mjs` | reflection/レビュー未実施を警告                             |
-
+| イベント     | Hook                          | 役割                                                                       |
+| ------------ | ----------------------------- | -------------------------------------------------------------------------- |
+| PreToolUse   | `guard-dangerous.mjs`         | 破壊的/本番/秘密情報操作を**ブロック**（exit 2）                           |
+| PostToolUse  | `check-deliverables.mjs`      | L2/L3 のソース変更に対し成果物の有無を警告                                 |
+| PostToolUse  | `validate-agent-config.mjs`   | Agent/Skill/設定の構文・整合性検証（構文エラーはブロック、方針違反は警告） |
+| SubagentStop | `record-subagent.mjs`         | Subagent 完了の機械的事実を `state/subagent-log.jsonl` に記録              |
+| Stop         | `check-improvement-cycle.mjs` | reflection/レビュー未実施を警告                                            |
 
 ### guard-dangerous がブロックするもの
 
 `rm -rf /`〜`~`/`$HOME`/`*`/`.`、`git push --force`/`-f`、`git reset --hard`、
 `npm/pnpm/yarn publish`、`terraform apply/destroy`、`vercel --prod`、`.env`/`.pem`/
 `id_rsa`/`.aws/credentials` の読み取り、`printenv` 等。`**rm -rf node_modules` 等の
-日常操作は許可**（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
+日常操作は許可\*\*（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
 `permissions.deny` も併用。
 
 ### 保護ファイルと承認マーカー
@@ -161,34 +155,31 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 ## 6. Memory と継続的改善（半自動）
 
 - **Memory の使い分け**：単発・検証中＝Auto/Subagent Memory、全体・確定＝CLAUDE.md/Rule/Skill。
-段階：`単発 → Memory` / `繰り返す → 改善候補` / `検証済み → Agent・Skill・Rule`。
-分類・昇格条件・誤情報削除は [memory-policy.md](./memory-policy.md)。
+  段階：`単発 → Memory` / `繰り返す → 改善候補` / `検証済み → Agent・Skill・Rule`。
+  分類・昇格条件・誤情報削除は [memory-policy.md](./memory-policy.md)。
 - **改善サイクル**：L2/L3 完了後に reflection-agent が
-`improvements/candidates/<task-id>.md` を起票 → 昇格条件（同問題3回 等）成立で
-agent-improvement-manager が `proposals/` に提案 → agent-evaluator が evals で before/after
-回帰評価 → **悪化なし＆承認**で反映。重要設定は人間承認まで提案止まり。
-詳細：[improvement-cycle.md](./improvement-cycle.md)、記録：[improvements/](./improvements/)。
+  `improvements/candidates/<task-id>.md` を起票 → 昇格条件（同問題3回 等）成立で
+  agent-improvement-manager が `proposals/` に提案 → agent-evaluator が evals で before/after
+  回帰評価 → **悪化なし＆承認**で反映。重要設定は人間承認まで提案止まり。
+  詳細：[improvement-cycle.md](./improvement-cycle.md)、記録：[improvements/](./improvements/)。
 - **回帰評価**：`.claude/evals/`（10 ケース・rubric 1〜5・baselines）。改善で1軸でも悪化したら
-採用しない。指示を増やすだけの改善も非採用（不要指示の削除・移動も改善に含む）。
+  採用しない。指示を増やすだけの改善も非採用（不要指示の削除・移動も改善に含む）。
 
 ## 7. よくある操作（早見）
 
-
-| やりたいこと        | どうする                                                          |
-| ------------- | ------------------------------------------------------------- |
-| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                               |
-| 品質ゲートを回す      | `bash .claude/scripts/run-quality-gates.sh --level <N>`       |
-| 改善提案を見る       | `docs/claude-code/improvements/` を見る                          |
-| 危険操作で止められた    | 意図的なら手動実行、または settings.json から guard を一時的に外す                  |
-| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、承認後に反映（重要設定は人間承認）           |
-| ルールを足したい      | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md` |
-
+| やりたいこと         | どうする                                                                    |
+| -------------------- | --------------------------------------------------------------------------- |
+| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                              |
+| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                     |
+| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                     |
+| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す          |
+| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、承認後に反映（重要設定は人間承認） |
+| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md` |
 
 ## 8. 設計上の原則（迷ったとき）
 
 - Orchestrator は詳細実装を抱え込まず委譲する。`Agent()` を持つのは orchestrator /
-reviewer / agent-improvement-manager のみ。
+  reviewer / agent-improvement-manager のみ。
 - 機械判定は Hook/スクリプト、意味判断は Reviewer。**Hook だけで品質保証したと主張しない。**
 - 指示を肥大化させない（同内容を複数所へ重複記載しない）。改善＝追加とは限らない。
 - 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は人間承認。
-

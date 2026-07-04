@@ -1,7 +1,7 @@
 # Orchestration ポリシー
 
 Orchestrator（`claude-opus-4-8`）は**指揮役**であり、自分で詳細設計や大量の実装を
-完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-4-6`）へ委譲する。
+完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-5`）へ委譲する。
 
 `Agent` ツールを持つのは orchestrator・reviewer・agent-improvement-manager の 3 つのみ。
 orchestrator は全実務 Agent を起動できる。reviewer は検証目的で requirements-analyst
@@ -40,10 +40,12 @@ Subagent へ依頼する際、最低限これらを明示する。
 ## 委譲フロー（レベル別）
 
 ### Level 1
+
 - 必要に応じ implementer に直接修正を依頼、または Orchestrator が確認のみで完結。
 - 設計書・計画は作らない。最終報告に変更理由と確認内容を記載。
 
 ### Level 2
+
 ```
 requirements-analyst（任意・影響が読めない時）
   → architecture-designer        → docs/designs/<feature>.md
@@ -57,6 +59,7 @@ requirements-analyst（任意・影響が読めない時）
 ```
 
 ### Level 3
+
 ```
 requirements-analyst  → docs/requirements/<feature>.md
   → architecture-designer      → docs/designs/<feature>.md（+ ADR は docs/decisions/）
@@ -141,12 +144,14 @@ contract-designer の起動を orchestrator の定性判断だけに委ねない
 **L2/L3 の全タスクで `reviewer` の後に必ず起動する。** L1 では起動しない。
 
 起動しない例外（L2/L3 でも省略してよいケース）:
+
 - ドキュメント / コメント / テキスト文言のみの変更（コード変更がない）。
 - `documentation-only-change` 相当の変更。
 
 判断に迷う場合は起動する側に倒す（コードが変わる変更は必ず起動）。
 
 `security-reviewer` は `reviewer` と役割を分担する:
+
 - `reviewer`: 品質・整合性・責務分離・エラー処理・テスト不足を見る。
 - `security-reviewer`: OWASP Top 10・認証/認可・秘密情報漏洩・依存脆弱性を見る。
 
@@ -182,22 +187,22 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 
 正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は全 15 Agent の早見）。
 
-| Agent | model |
-| --- | --- |
-| orchestrator | `claude-opus-4-8` |
-| requirements-analyst | `claude-sonnet-4-6` |
-| architecture-designer | `claude-sonnet-4-6` |
-| contract-designer | `claude-sonnet-4-6` |
-| implementation-planner | `claude-sonnet-4-6` |
-| implementer | `claude-sonnet-4-6` |
-| test-designer | `claude-sonnet-4-6` |
-| reviewer | `claude-sonnet-4-6` |
-| security-reviewer | `claude-sonnet-4-6` |
-| e2e-test-implementer | `claude-sonnet-4-6` |
-| performance-designer | `claude-sonnet-4-6` |
-| document-reviewer | `claude-sonnet-4-6` |
-| reflection-agent | `claude-sonnet-4-6` |
-| agent-evaluator | `claude-sonnet-4-6` |
+| Agent                     | model             |
+| ------------------------- | ----------------- |
+| orchestrator              | `claude-opus-4-8` |
+| requirements-analyst      | `claude-sonnet-5` |
+| architecture-designer     | `claude-sonnet-5` |
+| contract-designer         | `claude-sonnet-5` |
+| implementation-planner    | `claude-sonnet-5` |
+| implementer               | `claude-sonnet-5` |
+| test-designer             | `claude-sonnet-5` |
+| reviewer                  | `claude-sonnet-5` |
+| security-reviewer         | `claude-sonnet-5` |
+| e2e-test-implementer      | `claude-sonnet-5` |
+| performance-designer      | `claude-sonnet-5` |
+| document-reviewer         | `claude-sonnet-5` |
+| reflection-agent          | `claude-sonnet-5` |
+| agent-evaluator           | `claude-sonnet-5` |
 | agent-improvement-manager | `claude-opus-4-8` |
 
 > `CLAUDE_CODE_SUBAGENT_MODEL` は設定しない。設定すると全 Subagent のモデルを
