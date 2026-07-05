@@ -15,6 +15,22 @@ Domain / Application / Infrastructure / API-Contract / Presentation(API) の全�
 
 ---
 
+## 要件（要点。詳細は `docs/requirements/meal-plan-core.md` を参照）
+
+- 土曜日に「今週の献立」を決めるフローのバックエンド一式（週指定での MealPlan 作成、Recipe 追加・削除、
+  現在週の献立取得、過去の献立履歴取得）を実装する（要件書 §1-1）
+- 対象 UseCase 5 本: `CreateMealPlanUseCase` / `AddRecipeToMealPlanUseCase` /
+  `RemoveRecipeFromMealPlanUseCase` / `GetCurrentMealPlanUseCase` / `GetMealPlanHistoryUseCase`（要件書 §3-1）
+- 前提1: 週は土曜始まり（ユーザー確定。ISO 8601 週番号は不採用、ADR-0005 参照）
+- 前提2: ステータス遷移ロジック（draft→shopping→cooking→consuming→completed）は Domain に実装するが、
+  Sprint 3 では API エンドポイントとして公開しない（要件書 §2 前提2）
+- 前提3: `scaleFactor` は「正の数」のみを Domain で縛る。上限は定義しない（要件書 §2 前提3）
+- 完了条件: 1週間分の献立を組み立てられる／過去4週間の献立を遡れる（要件書・`docs/05-roadmap.md` Sprint 3）
+- 試験観点（正常系15・異常系15・境界12・ステータス遷移14経路）は要件書 §6 に確定済み。
+  試験計画への展開は `docs/tests/meal-plan-core.md` 参照
+
+---
+
 ## 2. スコープ
 
 ### 対象
