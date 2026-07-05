@@ -288,9 +288,9 @@ WeekIdentifier（案 A: Date ベース）
     // WeekIdentifier.fromDate(new Date())
 
   static fromString(value: string): WeekIdentifier
-    // value = "2026-07-04"（ISO date）
-    // new Date(value + 'T00:00:00') で local midnight の Date を構築
-    // Repository マッピング用。DB からの復元に使用
+    // value = "2026-07-04"（ISO date。DB 復元 or ユーザー指定週）
+    // new Date(value + 'T00:00:00') で local midnight を構築し fromDate に委譲
+    // → 非土曜入力も直前の土曜へスナップし、週開始日 = 土曜の不変条件を保証（レビュー N-A 対応）
 
   startDate(): Date   // 週開始日（土曜 00:00:00 local）
   endDate(): Date     // 週終了日（金曜 23:59:59.999 local）

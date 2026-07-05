@@ -15,7 +15,8 @@ export class WeekIdentifier {
   }
 
   static fromString(value: string): WeekIdentifier {
-    return new WeekIdentifier(new Date(value + 'T00:00:00'));
+    // 非土曜の入力（ユーザー指定週など）も直前の土曜へスナップし、週開始日 = 土曜の不変条件を保つ
+    return WeekIdentifier.fromDate(new Date(value + 'T00:00:00'));
   }
 
   startDate(): Date {

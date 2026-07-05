@@ -117,12 +117,18 @@ describe('WeekIdentifier', () => {
     );
   });
 
-  it('fromString と toString は YYYY-MM-DD でラウンドトリップする', () => {
-    const values = ['2026-07-04', '2026-01-01', '2026-12-26'];
+  it('fromString と toString は土曜入力で YYYY-MM-DD ラウンドトリップする', () => {
+    const values = ['2026-07-04', '2026-06-27', '2026-12-26'];
 
     for (const value of values) {
       expect(WeekIdentifier.fromString(value).toString()).toBe(value);
     }
+  });
+
+  it('fromString は非土曜の入力を直前の土曜へスナップする', () => {
+    expect(WeekIdentifier.fromString('2026-07-05').toString()).toBe('2026-07-04'); // 日曜
+    expect(WeekIdentifier.fromString('2026-07-10').toString()).toBe('2026-07-04'); // 金曜
+    expect(WeekIdentifier.fromString('2026-01-01').toString()).toBe('2025-12-27'); // 木曜（前年土曜へ）
   });
 
   it('toString はローカル日付として週開始日を返す', () => {
