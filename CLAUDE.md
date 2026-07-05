@@ -23,6 +23,8 @@
 [orchestration-policy.md](docs/claude-code/orchestration-policy.md) /
 [development-workflow.md](docs/claude-code/development-workflow.md) /
 [agent-responsibilities.md](docs/claude-code/agent-responsibilities.md) を正典とする。
+モデル采配（Haiku/Sonnet/Opus/Fable の 4 層基準・メインモデル切替の提案）は
+orchestration-policy.md §モデル割り当てに従う。
 
 ## ドキュメント方針（変更レベルと自動成果物）
 
@@ -86,17 +88,17 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
 
 ## 参照ドキュメント
 
-| ドキュメント | 内容 |
-| --- | --- |
-| [docs/01-overview.md](docs/01-overview.md) | プロジェクト概要・スコープ |
-| [docs/02-tech-stack.md](docs/02-tech-stack.md) | 技術スタック・選定理由 |
-| [docs/03-architecture.md](docs/03-architecture.md) | アーキテクチャ・ディレクトリ構成 |
-| [docs/04-domain-model.md](docs/04-domain-model.md) | ドメインモデル設計 |
-| [docs/05-roadmap.md](docs/05-roadmap.md) | スプリント計画 |
-| [docs/06-ai-tools.md](docs/06-ai-tools.md) | AI ツールの分担（Claude / Codex / Gemini / Perplexity）と実装ルート基準 |
-| [docs/07-dev-rules.md](docs/07-dev-rules.md) | 開発ルール |
-| [docs/08-prompt-templates.md](docs/08-prompt-templates.md) | 定型依頼のプロンプトテンプレート |
-| [docs/claude-code/](docs/claude-code/) | Orchestration / ワークフロー / ドキュメント方針 / Agent 責務 |
-| [docs/claude-code/memory-policy.md](docs/claude-code/memory-policy.md) | Memory 分類・昇格条件・肥大化対策・誤情報削除 |
-| [docs/claude-code/improvement-cycle.md](docs/claude-code/improvement-cycle.md) | 改善サイクル・承認境界・回帰評価・実行タイミング |
-| [docs/claude-code/improvements/](docs/claude-code/improvements/) | 改善候補・提案・評価・採否の記録置き場 |
+| ドキュメント                                                                   | 内容                                                                    |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [docs/01-overview.md](docs/01-overview.md)                                     | プロジェクト概要・スコープ                                              |
+| [docs/02-tech-stack.md](docs/02-tech-stack.md)                                 | 技術スタック・選定理由                                                  |
+| [docs/03-architecture.md](docs/03-architecture.md)                             | アーキテクチャ・ディレクトリ構成                                        |
+| [docs/04-domain-model.md](docs/04-domain-model.md)                             | ドメインモデル設計                                                      |
+| [docs/05-roadmap.md](docs/05-roadmap.md)                                       | スプリント計画                                                          |
+| [docs/06-ai-tools.md](docs/06-ai-tools.md)                                     | AI ツールの分担（Claude / Codex / Gemini / Perplexity）と実装ルート基準 |
+| [docs/07-dev-rules.md](docs/07-dev-rules.md)                                   | 開発ルール                                                              |
+| [docs/08-prompt-templates.md](docs/08-prompt-templates.md)                     | 定型依頼のプロンプトテンプレート                                        |
+| [docs/claude-code/](docs/claude-code/)                                         | Orchestration / ワークフロー / ドキュメント方針 / Agent 責務            |
+| [docs/claude-code/memory-policy.md](docs/claude-code/memory-policy.md)         | Memory 分類・昇格条件・肥大化対策・誤情報削除                           |
+| [docs/claude-code/improvement-cycle.md](docs/claude-code/improvement-cycle.md) | 改善サイクル・承認境界・回帰評価・実行タイミング                        |
+| [docs/claude-code/improvements/](docs/claude-code/improvements/)               | 改善候補・提案・評価・採否の記録置き場                                  |
