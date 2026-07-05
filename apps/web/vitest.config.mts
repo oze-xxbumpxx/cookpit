@@ -4,6 +4,6 @@ import { defineConfig } from 'vitest/config';
 // projects で 2 設定に分割する（設計書 §6.3 案 1）。
 export default defineConfig({
   test: {
-    projects: ['./vitest.node.config.ts', './vitest.dom.config.ts'],
+    projects: ['./vitest.node.config.mts', './vitest.dom.config.mts'],
   },
 });
