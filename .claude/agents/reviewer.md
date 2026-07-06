@@ -3,7 +3,7 @@ name: reviewer
 description: >
   要件・設計・実装計画・実装・試験の整合性と、コード品質・責務分離・エラー処理・
   セキュリティ・性能・テスト不足・ドキュメント更新漏れをレビューする。原則コードは変更しない。
-model: claude-sonnet-5
+model: claude-opus-4-8
 tools: Read, Grep, Glob, Bash, Agent(requirements-analyst)
 ---
 

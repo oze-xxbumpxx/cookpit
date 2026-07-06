@@ -50,11 +50,11 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                              |
 | implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                              |
 | implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                             |
-| reviewer                  | sonnet-5 | 独立レビュー                         | L2/L3                                              |
-| security-reviewer         | sonnet-5 | セキュリティ専門レビュー             | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
+| reviewer                  | opus-4-8 | 独立レビュー                         | L2/L3                                              |
+| security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L2/L3（reviewer の後。ドキュメントのみ変更は省略） |
 | e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                       |
 | performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                       |
-| document-reviewer         | sonnet-5 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）                   |
+| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）                   |
 | reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                       |
 | agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                                   |
 | agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                     |

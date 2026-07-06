@@ -186,24 +186,69 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 ## モデル割り当て
 
 正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は全 15 Agent の早見）。
+モデルは「作業量」ではなく「判断の重さ」で選ぶ。采配基準は次の 4 層。
 
-| Agent                     | model             |
-| ------------------------- | ----------------- |
-| orchestrator              | `claude-opus-4-8` |
-| requirements-analyst      | `claude-sonnet-5` |
-| architecture-designer     | `claude-sonnet-5` |
-| contract-designer         | `claude-sonnet-5` |
-| implementation-planner    | `claude-sonnet-5` |
-| implementer               | `claude-sonnet-5` |
-| test-designer             | `claude-sonnet-5` |
-| reviewer                  | `claude-sonnet-5` |
-| security-reviewer         | `claude-sonnet-5` |
-| e2e-test-implementer      | `claude-sonnet-5` |
-| performance-designer      | `claude-sonnet-5` |
-| document-reviewer         | `claude-sonnet-5` |
-| reflection-agent          | `claude-sonnet-5` |
-| agent-evaluator           | `claude-sonnet-5` |
-| agent-improvement-manager | `claude-opus-4-8` |
+### 采配基準（4 層）
+
+| 層                 | 作業タイプ                                                                    | モデル                                                   |
+| ------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 軽い               | ファイル確認・検索・差分や書式のチェック                                      | Haiku（組み込み `Explore` を `model: haiku` 指定で起動） |
+| 方針が決まっている | 確定済み方針での実装・編集・設計書/計画/試験計画の作成・ライティング          | `claude-sonnet-5`                                        |
+| 判断がいる         | レビュー・練り直し・横断分析・オーケストレーション                            | `claude-opus-4-8`                                        |
+| 特に重要           | L3 の全体設計・方針決め・重大トレードオフ・最終確認（失敗すると手戻りが重い） | Fable（動的オーバーライドまたはメイン切り替え）          |
+
+禁止事項（トークン浪費の典型パターン）：
+
+- 探すだけ・見比べるだけの作業を上位モデルに回さない（`Explore`/haiku へ委譲する）。
+- 決まりきった編集を上位モデルで大量にこなさない（implementer/sonnet へ委譲する）。
+- 散らかったままの大量ファイルを、軽いモデルで整理する前に上位モデルへ流し込まない。
+
+> `Explore` は Claude Code の組み込み Agent のため `.claude/agents/` に定義ファイルが無い。
+> Agent 設定チェック Hook の「参照先 Agent が存在しません: Explore」警告は誤検知として扱う。
+
+### Agent 別早見表
+
+| Agent                     | model                                                     |
+| ------------------------- | --------------------------------------------------------- |
+| orchestrator              | `claude-opus-4-8`                                         |
+| requirements-analyst      | `claude-sonnet-5`                                         |
+| architecture-designer     | `claude-sonnet-5`（L3 は Fable オーバーライド。下記参照） |
+| contract-designer         | `claude-sonnet-5`                                         |
+| implementation-planner    | `claude-sonnet-5`                                         |
+| implementer               | `claude-sonnet-5`                                         |
+| test-designer             | `claude-sonnet-5`                                         |
+| reviewer                  | `claude-opus-4-8`                                         |
+| security-reviewer         | `claude-opus-4-8`                                         |
+| e2e-test-implementer      | `claude-sonnet-5`                                         |
+| performance-designer      | `claude-sonnet-5`                                         |
+| document-reviewer         | `claude-opus-4-8`                                         |
+| reflection-agent          | `claude-sonnet-5`                                         |
+| agent-evaluator           | `claude-sonnet-5`                                         |
+| agent-improvement-manager | `claude-opus-4-8`                                         |
+| （組み込み）Explore       | 呼び出し時に `model: haiku` を指定                        |
+
+agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定型評価で呼び出し回数が多い
+（回帰評価で複数ケース実行）。悪化検知の最終判断は Opus の agent-improvement-manager が担う。
+
+### Fable の使い方（L3 限定）
+
+- frontmatter に Fable を固定しない（L2 の小さな設計でも動いてしまいコスト増のため）。
+- L3 判定時のみ、orchestrator が architecture-designer を Agent 呼び出しの `model: fable`
+  オーバーライド（呼び出し時パラメータ。frontmatter より優先）で起動する。
+- オーバーライドが CLI バージョンにより効かない場合のフォールバック：メインモデルを Fable に
+  切り替え（人間が実施）、設計判断だけメインで行い、成果物化は architecture-designer
+  （Sonnet）へ委譲する。
+
+### メインモデル切り替えガイド
+
+切り替えは人間が行う（`/model`）。orchestrator・メインセッションの Claude は、切り替えが
+有益な場面で**タイミングと切り替え先を明示して**提案する。
+
+| セッション/局面                           | 推奨メインモデル                |
+| ----------------------------------------- | ------------------------------- |
+| 単発の質問・軽い調査のみのセッション      | Sonnet                          |
+| 通常の開発タスク（orchestrator・L1/L2）   | Opus（現行 frontmatter どおり） |
+| L3 の方針決め・重大トレードオフ・最終確認 | Fable（提案して人間が切り替え） |
 
 > `CLAUDE_CODE_SUBAGENT_MODEL` は設定しない。設定すると全 Subagent のモデルを
 > 一律上書きし、Agent 定義の `model` より優先されてしまう。モデルは各 Agent ファイルの

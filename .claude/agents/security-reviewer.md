@@ -3,7 +3,7 @@ name: security-reviewer
 description: >
   セキュリティ観点の専門レビューを行う。OWASP Top 10・認証/認可・入力検証・
   秘密情報漏洩・依存パッケージ脆弱性を確認し、指摘と修正案を提示する。コードは変更しない。
-model: claude-sonnet-5
+model: claude-opus-4-8
 tools: Read, Grep, Glob, Bash
 ---
 
