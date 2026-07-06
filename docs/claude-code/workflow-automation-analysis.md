@@ -172,3 +172,24 @@ Cookpit 開発業務全体（アプリ機能開発・ハーネス運用・メタ
 2. **R5: close-session ナッジ強化** — 所要時間「記録なし」が 7/5 も再発。Hook 変更のため要承認。
 3. **R8: レシピ転記半自動化** — MealPlan 完成後の実運用開始と同時に着手（dev:pglite が
    検証環境として使える）。
+
+## 追加実装（2026-07-06 同日・B群4件）
+
+上記「次に作ると効果が大きいもの」のうち R15・R5 を含む B群4件を同日中に実装した（全て QA 済み）。
+
+1. **R15: import type 規約の eslint 化** — 共有 base config には導入済みだったため、欠けていた
+   apps/web（eslint-config-next のみ）へ同一ルールを追加。既存違反 2 件（vi.mock の
+   `typeof import()` 型注釈）は名前空間型 import へ書き換えて解消。これでレビューチェック
+   リストの静的検出可能項目は全て機械化された。
+2. **R5: close-session 発動忘れナッジ** — `check-improvement-cycle.mjs`（Stop hook）に
+   「今日のログの所要時間が未記録なら close-session を促す」通知を追加。既存の 30 分
+   デバウンスに乗せてノイズ化を回避。QA: 未記録→通知 / 記録済み・ログ無し→沈黙 /
+   連続実行→デバウンス / 常に exit 0 の 4 ケース確認。
+3. **R6: バックグラウンド割り込みの既知の制約** — orchestration-policy.md に
+   「フォアグラウンド割り込みによるバックグラウンドタスクの停止」を追記
+   （7/5 の Orchestrator killed 事象の恒久メモ化）。
+4. **R7: セッション開始テンプレの整理** — 08-prompt-templates.md の旧テンプレを
+   kickoff-session Skill へのポインタに置換（二重管理解消）。
+
+この時点の「次に作ると効果が大きいもの」: R8 レシピ転記半自動化（実転記開始時）、
+R14 permission-change eval ベースライン補完、R12 permission 許可リスト整備（要承認）。

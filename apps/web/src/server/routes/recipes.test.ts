@@ -9,6 +9,7 @@ import {
   RecipeNotFoundError,
 } from '@cookpit/application';
 import type { RecipeDto } from '@cookpit/application';
+import type * as ApplicationModule from '@cookpit/application';
 
 vi.mock('@/db/client', () => ({
   db: null,
@@ -16,7 +17,7 @@ vi.mock('@/db/client', () => ({
 }));
 
 vi.mock('@cookpit/application', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@cookpit/application')>();
+  const actual = await importOriginal<typeof ApplicationModule>();
   return {
     ...actual,
     GetRecipesUseCase: vi.fn(),
@@ -266,7 +267,7 @@ describe('recipesRoute', () => {
     const res = await app.request('/api/recipes');
 
     expect(res.status).toBe(200);
-    const body = await res.json() as RecipeDto[];
+    const body = (await res.json()) as RecipeDto[];
     expect(body).toHaveLength(2);
     const byId = Object.fromEntries(body.map((d) => [d.id, d]));
     expect(byId['id-1']?.servings).toBe(4);
