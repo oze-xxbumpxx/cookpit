@@ -203,9 +203,7 @@
    - 価格履歴表示（簡易グラフ）
    - 「この商品、どっちの店舗が安い？」ビュー
 
-6. **GitHub Actions CI 導入**
-   - PR トリガーで `pnpm lint` / `pnpm type-check` / `pnpm test` / `pnpm build` を実行
-   - 現状 Vercel Preview Comments のみで品質ゲートが CI 化されていない
+6. **GitHub Actions CI 導入** — **導入済み**（.github/workflows/ci.yml。PR で lint / type-check / build / test / E2E smoke を実行。2026-07-06 に pnpm audit ジョブを追加）
 
 ### 完了条件
 

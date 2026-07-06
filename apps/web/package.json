@@ -14,7 +14,9 @@
     "e2e:ui": "playwright test --ui",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "dev:pglite": "node scripts/setup-pglite-dev.mjs && DATABASE_URL=pglite://.pglite-dev next dev",
+    "db:seed:pglite": "node scripts/setup-pglite-dev.mjs --fresh"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -55,6 +57,7 @@
     "happy-dom": "^17.6.3",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.0"
+    "vitest": "^3.2.0",
+    "@electric-sql/pglite": "^0.2.17"
   }
 }

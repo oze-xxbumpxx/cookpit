@@ -73,3 +73,19 @@ jobs:
       - name: Run E2E smoke
         if: env.DATABASE_URL != ''
         run: pnpm --filter @cookpit/web e2e
+
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Audit production dependencies (blocking, high+)
+        # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
+        # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
+        # package.json の pnpm.auditConfig.ignoreGhsas を使う
+        run: pnpm audit --prod --audit-level=high
+      - name: Audit all dependencies (informational, critical+)
+        if: always()
+        continue-on-error: true
+        run: pnpm audit --audit-level=critical

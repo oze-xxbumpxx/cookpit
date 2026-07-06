@@ -1,7 +1,11 @@
 import type { NextConfig } from 'next';
 import withSerwist from '@serwist/next';
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  // dev の PGlite 経路（src/db/pglite-client.ts）用。wasm 同梱パッケージのため
+  // バンドルさせない。本番では pglite を import しないので実質 dev 専用の指定
+  serverExternalPackages: ['@electric-sql/pglite'],
+};
 
 // withSerwist は disable 時でも webpack 設定を注入するため、Turbopack 既定の dev
 // （next dev）では「webpack 設定併存」で Next 16 がエラーになる。本番ビルド

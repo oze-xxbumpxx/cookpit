@@ -49,3 +49,6 @@ docs/designs/wireframes/*.pdf
 
 # Claude Code isolated worktrees（Agent tool の isolation: "worktree" 実行用）
 .claude/worktrees/
+
+# PGlite dev DB（リモート実画面確認用。scripts/setup-pglite-dev.mjs が生成）
+apps/web/.pglite-dev/
