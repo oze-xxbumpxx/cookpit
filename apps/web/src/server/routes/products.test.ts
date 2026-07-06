@@ -8,6 +8,7 @@ import {
   ProductNotFoundError,
 } from '@cookpit/application';
 import type { ProductDto } from '@cookpit/application';
+import type * as ApplicationModule from '@cookpit/application';
 
 vi.mock('@/db/client', () => ({
   db: null,
@@ -15,7 +16,7 @@ vi.mock('@/db/client', () => ({
 }));
 
 vi.mock('@cookpit/application', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@cookpit/application')>();
+  const actual = await importOriginal<typeof ApplicationModule>();
   return {
     ...actual,
     GetProductsUseCase: vi.fn(),
