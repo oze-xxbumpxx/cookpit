@@ -22,14 +22,16 @@ description: >
 
 1. **確認項目を先に列挙する**（初期表示 / 入力・保存 / エラー系 / 遷移・キャンセル等）。
    試験計画 `docs/tests/<feature>.md` があればその FE 観点を項目にする。
-2. dev サーバーを起動する: `pnpm dev`（素の Turbopack で起動できる。Serwist は
+2. dev サーバーを起動する。**リモート（DATABASE_URL 未設定）環境では PGlite 経路を使う**:
+   `pnpm --filter @cookpit/web dev:pglite`（マイグレーション + シード + pglite:// で起動。
+   apps/web/scripts/setup-pglite-dev.mjs 参照）。ローカルは `pnpm dev`（素の Turbopack で起動できる。Serwist は
    本番ビルド限定 — 2026-06-26 commit 473ad09。**古いログの「`--webpack` 必須」には
    従わない**。`docs/07-dev-rules.md` §環境の既知の事実）。
 3. Playwright（Chromium 同梱）で `http://localhost:3000`（ポートは `pnpm dev` の出力に
    従う）配下の対象 URL へナビゲートし、項目を順に確認する。
    スクリーンショットを撮って報告に添える。
-4. **環境制約の扱い**: リモート（エフェメラル）環境は `DATABASE_URL` 未設定のため
-   live DB を通る経路（一覧取得・保存など）は動かない。
+4. **環境制約の扱い**: リモート環境は `dev:pglite` で DB 経路も live 確認できる。
+   BLOCKED は PGlite でも動かない項目（Neon 固有機能・PWA/Service Worker 等）に限定する。
    - 動かない項目は **BLOCKED（理由: DB 未接続）** とし、擬似的に PASS 扱いしない。
    - BLOCKED 項目は該当コードのコードリーディングで実装の正しさを確認し、
      「コード確認済み・DB 接続があれば PASS 見込み」と補足する
