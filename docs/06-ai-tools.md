@@ -38,6 +38,9 @@ Sprint 1〜2 の全 Codex 実装レビューで繰り返し検出したミスの
 通過する**ため、静的チェック green でも目視・実画面確認を省略しない。
 （出典: `logs/2026-05-16.md` / `2026-05-17.md` / `2026-06-06.md` / `2026-06-16.md`）
 
+> 先に機械検出を回す: `node .claude/scripts/check-codex-implementation.mjs --brief docs/tasks/codex/<feature>`
+> （review-codex-implementation Skill が本チェックリストとゲート・実画面確認を一括実行する）
+
 - [ ] **識別子のタイポ**: フィールド名・ゲッター名・引数名・関数名・型名
       （例: `matchsQuery`・`RecipeDetaiulPage`・`RecipeNow`。指示書の命名と突き合わせる）
 - [ ] **Tailwind クラス名のタイポ・連結ミス**: `w-fll`・`bg-zinc-90`・
