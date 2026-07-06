@@ -15,6 +15,6 @@
     "@cookpit/config": "workspace:*",
     "eslint": "^9.0.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.62.1"
   }
 }
