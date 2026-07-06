@@ -120,6 +120,20 @@ Orchestrator を本来の起動方法（メインセッション）で使う通�
 Orchestrator ドライランより、既存の `agent-evaluator` による dry run（`.claude/evals/cases` を
 使った評価、IMP-2026-006/007 で実績あり）の方が現状は安定した検証手段。
 
+### 既知の制約: フォアグラウンド割り込みによるバックグラウンドタスクの停止
+
+2026-07-05 に観測（`logs/2026-07-05.md`）。バックグラウンドで実行中の Orchestrator /
+Sub-agent は、ユーザーのフォアグラウンド割り込み操作（Escape 等）で `killed` 状態になる
+ことがある。フォアグラウンドの操作だけを中断したつもりでも、紐づくバックグラウンドタスク
+ごと停止する。
+
+- 長時間のバックグラウンド委譲中は `TaskOutput`（`block: false`）で時々状態を確認する。
+- ユーザーが割り込む可能性がある場面では、委譲を細かい単位に分け、各 Sub-agent の成果物を
+  こまめに確定させる（killed 時の損失を最小化）。
+- killed になった場合は notification を待たず**成果物の存在で進捗を冪等判定**し
+  （上記 stop/resume と同じ扱い）、未完了の工程だけを再委譲する。実績: 2026-07-05 は
+  contract/plan/test の成果物が確定済みだったため、implementer 以降のみ Codex 委譲へ切替できた。
+
 ## contract-designer の必須起動トリガー
 
 contract-designer の起動を orchestrator の定性判断だけに委ねない。次のいずれかに該当したら
