@@ -49,6 +49,27 @@ CREATE TABLE IF NOT EXISTS price_records (
 );
 
 CREATE INDEX IF NOT EXISTS price_records_product_id_idx ON price_records (product_id);
+
+CREATE TABLE IF NOT EXISTS meal_plans (
+  id text PRIMARY KEY,
+  week_start_date date NOT NULL UNIQUE,
+  status text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT now(),
+  completed_at timestamp
+);
+
+CREATE TABLE IF NOT EXISTS planned_recipes (
+  id text PRIMARY KEY,
+  meal_plan_id text NOT NULL REFERENCES meal_plans(id) ON DELETE CASCADE,
+  recipe_id text NOT NULL,
+  scale_factor numeric(10, 3) NOT NULL,
+  scheduled_date date,
+  cooked_at timestamp,
+  notes text NOT NULL DEFAULT '',
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS planned_recipes_meal_plan_id_idx ON planned_recipes (meal_plan_id);
 `;
 
 export async function createTestDb(): Promise<DrizzleClient> {
