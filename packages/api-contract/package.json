@@ -6,15 +6,19 @@
   "types": "./src/index.ts",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run"
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cookpit/application": "workspace:*",
     "@cookpit/config": "workspace:*",
+    "@cookpit/domain": "workspace:*",
     "eslint": "^9.0.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.2.0"
   }
 }
