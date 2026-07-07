@@ -73,5 +73,27 @@ echo "FAIL: ${FAIL[*]:-(none)}"
 echo "SKIP/unknown: ${SKIP[*]:-(none)}"
 echo
 
+# 実行結果を .claude/state/quality-gates-log.jsonl へ機械記録する
+# （collect-task-metrics.mjs が手戻りプロキシ = FAIL サイクル数として集計する。記録失敗でゲート結果は変えない）
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+node -e '
+const { appendFileSync, mkdirSync } = require("node:fs");
+const [branch, level, pass, fail, skip] = process.argv.slice(1);
+const split = (s) => (s ? s.split("\u0001") : []);
+const entry = {
+  ts: new Date().toISOString(),
+  branch,
+  level: Number(level),
+  pass: split(pass),
+  fail: split(fail),
+  skip: split(skip),
+};
+mkdirSync(".claude/state", { recursive: true });
+appendFileSync(".claude/state/quality-gates-log.jsonl", JSON.stringify(entry) + "\n");
+' "$BRANCH" "$LEVEL" \
+  "$(IFS=$'\001'; echo "${PASS[*]:-}")" \
+  "$(IFS=$'\001'; echo "${FAIL[*]:-}")" \
+  "$(IFS=$'\001'; echo "${SKIP[*]:-}")" 2>/dev/null || true
+
 if [ "${#FAIL[@]}" -gt 0 ]; then echo "RESULT: FAIL (${#FAIL[@]} gate(s) failed)"; exit 1; fi
 echo "RESULT: OK (実行ゲートは全て成功。SKIP は unknown のまま)"

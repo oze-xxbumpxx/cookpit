@@ -151,9 +151,15 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@cookpit/application':
+        specifier: workspace:*
+        version: link:../application
       '@cookpit/config':
         specifier: workspace:*
         version: link:../config
+      '@cookpit/domain':
+        specifier: workspace:*
+        version: link:../domain
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@2.7.0)
@@ -163,6 +169,9 @@ importers:
       typescript-eslint:
         specifier: ^8.0.0
         version: 8.59.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.6(@types/node@20.19.40)(happy-dom@17.6.3)(jiti@2.7.0)(lightningcss@1.32.0)(msw@2.14.5(@types/node@20.19.40)(typescript@5.9.3))(tsx@4.21.0)
 
   packages/application:
     dependencies:

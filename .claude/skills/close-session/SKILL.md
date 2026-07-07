@@ -30,9 +30,18 @@ description: >
      環境でもコミットがあれば動く。
 3. **日次ログ**: write-work-log Skill の手順で `logs/YYYY-MM-DD.md` を作成・追記する。
    kickoff-session で雛形を作っていれば残りの節を埋める。
-4. **メトリクス**（L2/L3 の機能タスクを完了した場合のみ）:
-   `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行し、
-   自動補完されない値を会話の記憶から埋める（不明値は unknown のまま）。
+4. **メトリクス**（L2/L3 の機能タスクに関与したセッションは毎回）:
+   `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行する。
+   - 初回は雛形を作成、2 回目以降は `machine:` セクションだけ再集計して累積する（冪等）。
+   - 所要時間・トークン・ツール/Agent 呼び出し・ゲート実行（手戻りプロキシ）は
+     `collect-task-metrics.mjs` が transcript と quality-gates-log から自動で埋める。
+     transcript はローカルマシンにしか残らないため、タスク完了時ではなく
+     **セッションごと**に実行して YAML へ固定化する（複数日タスクの取りこぼし防止）。
+   - ブランチ名に feature 名が含まれないブランチで作業した場合は
+     `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --branch <ブランチ部分一致> --task-id <task-id> --write`
+     で対象ブランチを明示して再実行する。
+   - 意味的な値（quality/process の手戻り・レビュー指摘・ユーザー修正数）は自動化対象外。
+     タスク完了時に reflection-agent / 人間が会話の記憶から埋める（不明値は unknown のまま）。
 5. **振り返り**（L2/L3 のみ）: reflection-agent へ委譲し reflect-task Skill で
    candidate を作成する。L0/L1 はスキップ（過剰工程にしない）。
 6. **コミット & プッシュ**: 指定の作業ブランチへコミットし `git push -u origin <branch>` する

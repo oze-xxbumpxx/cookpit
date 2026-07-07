@@ -35,13 +35,13 @@ Domain / Application / Infrastructure / API-Contract / Presentation(API) の全�
 
 ### 対象
 
-| 層 | 実装対象 |
-|---|---|
-| Domain | MealPlan 集約、PlannedRecipe（集約内エンティティ）、MealPlanId、PlannedRecipeId、MealPlanStatus、WeekIdentifier（shared/） |
-| Infrastructure | `meal_plans` / `planned_recipes` Drizzle スキーマ、マイグレーション、DrizzleMealPlanRepository |
-| Application | UseCase 5本（後述）、MealPlanDto / PlannedRecipeDto、MealPlanMapper、エラークラス 3本 |
-| API Contract | Zod スキーマの項目一覧（詳細は contract-designer が確定） |
-| Presentation (API) | Hono ルート 5本、app.ts へのマウント |
+| 層                 | 実装対象                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Domain             | MealPlan 集約、PlannedRecipe（集約内エンティティ）、MealPlanId、PlannedRecipeId、MealPlanStatus、WeekIdentifier（shared/） |
+| Infrastructure     | `meal_plans` / `planned_recipes` Drizzle スキーマ、マイグレーション、DrizzleMealPlanRepository                             |
+| Application        | UseCase 5本（後述）、MealPlanDto / PlannedRecipeDto、MealPlanMapper、エラークラス 3本                                      |
+| API Contract       | Zod スキーマの項目一覧（詳細は contract-designer が確定）                                                                  |
+| Presentation (API) | Hono ルート 5本、app.ts へのマウント                                                                                       |
 
 ### 対象外
 
@@ -57,12 +57,12 @@ Domain / Application / Infrastructure / API-Contract / Presentation(API) の全�
 
 以下の 4 判断はユーザー確認により**全て案 A（推奨案）で確定**した。
 
-| # | 判断項目 | 案 A | 案 B | 案 C | 確定 | 影響範囲 |
-|---|---|---|---|---|---|---|
-| **C-1** | WeekIdentifier の内部表現 | 週開始日の `Date`（例: 2026-07-04） | 年 + 独自週番号（例: 2026-27） | — | **案 A（確定）** | DB スキーマ確定に直結。`week_start_date` カラム型・`toString()` の形式・Repository マッピング全体 |
-| **C-2** | planned_recipes の正規化方針 | 独立テーブル（JOIN 復元） | meal_plans への JSONB 集約保存 | — | **案 A（確定）** | スキーマ設計の根幹。後からの変更コストが高い |
-| **C-3** | 同一週 MealPlan の一意性 / CreateMealPlan の冪等性 | 冪等（既存あれば既存を返す） | 409 エラー（MealPlanAlreadyExistsError） | 複数許容（制約なし） | **案 A（確定）** | DB の UNIQUE 制約有無・UseCase のロジック・GetCurrentMealPlan の語義。ステータスに関わらず冪等で返す |
-| **C-4** | 削除済み Recipe を参照する PlannedRecipe の扱い | recipeId のみ保持（UI が「削除済み」と表示） | MealPlan から自動削除（カスケード） | Recipe を論理削除 | **案 A（確定）** | RecipeRepository への依存有無・Domain のクリーン度 |
+| #       | 判断項目                                           | 案 A                                         | 案 B                                     | 案 C                 | 確定             | 影響範囲                                                                                             |
+| ------- | -------------------------------------------------- | -------------------------------------------- | ---------------------------------------- | -------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| **C-1** | WeekIdentifier の内部表現                          | 週開始日の `Date`（例: 2026-07-04）          | 年 + 独自週番号（例: 2026-27）           | —                    | **案 A（確定）** | DB スキーマ確定に直結。`week_start_date` カラム型・`toString()` の形式・Repository マッピング全体    |
+| **C-2** | planned_recipes の正規化方針                       | 独立テーブル（JOIN 復元）                    | meal_plans への JSONB 集約保存           | —                    | **案 A（確定）** | スキーマ設計の根幹。後からの変更コストが高い                                                         |
+| **C-3** | 同一週 MealPlan の一意性 / CreateMealPlan の冪等性 | 冪等（既存あれば既存を返す）                 | 409 エラー（MealPlanAlreadyExistsError） | 複数許容（制約なし） | **案 A（確定）** | DB の UNIQUE 制約有無・UseCase のロジック・GetCurrentMealPlan の語義。ステータスに関わらず冪等で返す |
+| **C-4** | 削除済み Recipe を参照する PlannedRecipe の扱い    | recipeId のみ保持（UI が「削除済み」と表示） | MealPlan から自動削除（カスケード）      | Recipe を論理削除    | **案 A（確定）** | RecipeRepository への依存有無・Domain のクリーン度                                                   |
 
 各確定案の根拠・非採用案とのトレードオフは「セクション 17. 未確定事項」（現在は確定記録として参照）に詳述する。
 
@@ -71,12 +71,12 @@ Domain / Application / Infrastructure / API-Contract / Presentation(API) の全�
 これらは推奨案を設計書に明記し、ユーザー確認を要さない設計者判断として扱う。
 ただし別案を選ぶ場合の影響箇所を明記する。
 
-| # | 判断項目 | 推奨案 | 別案との差分（デルタ） |
-|---|---|---|---|
-| **D-4** | GET /current で MealPlan なし時の HTTP ステータス | `200 + { data: null }` | 204 を選ぶ場合: Hono RPC 型定義が分岐し、フロント側で `response.status` チェックが必要になる |
-| **D-5** | GetMealPlanHistoryUseCase の limit 最大値 | max 12（デフォルト 4） | 上限を大きくする場合: findRecent の ORDER BY + LIMIT クエリは変わらないが、LIMIT 値の Zod バリデーション調整のみ |
-| **D-6** | scaleFactor の DB 精度 | `numeric(10, 3)` | `numeric(10, 2)` にする場合: PlannedRecipe.create の検証ロジックは変わらず、スキーマとマッピングのみ変更 |
-| **D-7** | PlannedRecipeDto に recipeName を含めるか | **含めない**（recipeId のみ） | 含める場合: AddRecipeToMealPlanUseCase に RecipeRepository を追加 DI する。deleted Recipe への対応で null 補完も必要になる |
+| #       | 判断項目                                          | 推奨案                        | 別案との差分（デルタ）                                                                                                     |
+| ------- | ------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **D-4** | GET /current で MealPlan なし時の HTTP ステータス | `200 + { data: null }`        | 204 を選ぶ場合: Hono RPC 型定義が分岐し、フロント側で `response.status` チェックが必要になる                               |
+| **D-5** | GetMealPlanHistoryUseCase の limit 最大値         | max 12（デフォルト 4）        | 上限を大きくする場合: findRecent の ORDER BY + LIMIT クエリは変わらないが、LIMIT 値の Zod バリデーション調整のみ           |
+| **D-6** | scaleFactor の DB 精度                            | `numeric(10, 3)`              | `numeric(10, 2)` にする場合: PlannedRecipe.create の検証ロジックは変わらず、スキーマとマッピングのみ変更                   |
+| **D-7** | PlannedRecipeDto に recipeName を含めるか         | **含めない**（recipeId のみ） | 含める場合: AddRecipeToMealPlanUseCase に RecipeRepository を追加 DI する。deleted Recipe への対応で null 補完も必要になる |
 
 ---
 
@@ -114,33 +114,33 @@ PlannedRecipeId  // 同上パターン
 
 ```typescript
 export type MealPlanStatus =
-  | 'draft'      // 献立検討中（初期状態）
-  | 'shopping'   // 買い物中（ShoppingList 生成後。Sprint 4 連動）
-  | 'cooking'    // 作り置き中
-  | 'consuming'  // 平日消費中
+  | 'draft' // 献立検討中（初期状態）
+  | 'shopping' // 買い物中（ShoppingList 生成後。Sprint 4 連動）
+  | 'cooking' // 作り置き中
+  | 'consuming' // 平日消費中
   | 'completed'; // 週終了
 ```
 
-| 現在 \ 次 | draft | shopping | cooking | consuming | completed |
-|---|---|---|---|---|---|
-| draft | — | 可 | 不可 | 不可 | 不可 |
-| shopping | 可（やり直し） | — | 可 | 不可 | 不可 |
-| cooking | 不可 | 不可 | — | 可 | 不可 |
-| consuming | 不可 | 不可 | 不可 | — | 可 |
-| completed | 不可 | 不可 | 不可 | 不可 | — |
+| 現在 \ 次 | draft          | shopping | cooking | consuming | completed |
+| --------- | -------------- | -------- | ------- | --------- | --------- |
+| draft     | —              | 可       | 不可    | 不可      | 不可      |
+| shopping  | 可（やり直し） | —        | 可      | 不可      | 不可      |
+| cooking   | 不可           | 不可     | —       | 可        | 不可      |
+| consuming | 不可           | 不可     | 不可    | —         | 可        |
+| completed | 不可           | 不可     | 不可    | 不可      | —         |
 
 遷移テーブルは `Record<MealPlanStatus, MealPlanStatus[]>` で `canTransitionTo` に閉じ込める。`transitionTo` が `canTransitionTo` を内部呼び出しし、`false` なら `Error` を throw。
 
 ### 4-4. PlannedRecipe エンティティ（集約内）
 
-| フィールド | 型 | 不変条件 |
-|---|---|---|
-| id | PlannedRecipeId | 不変 |
-| recipeId | RecipeId | 不変。集約またぎは ID 参照のみ |
-| scaleFactor | number | > 0。`create()` 入口で検証。上限なし |
-| scheduledDate | Date \| null | null = 日付未指定（ビュッフェ運用のデフォルト） |
-| cookedAt | Date \| null | null = 未調理 |
-| notes | string | 空文字許容 |
+| フィールド    | 型              | 不変条件                                        |
+| ------------- | --------------- | ----------------------------------------------- |
+| id            | PlannedRecipeId | 不変                                            |
+| recipeId      | RecipeId        | 不変。集約またぎは ID 参照のみ                  |
+| scaleFactor   | number          | > 0。`create()` 入口で検証。上限なし            |
+| scheduledDate | Date \| null    | null = 日付未指定（ビュッフェ運用のデフォルト） |
+| cookedAt      | Date \| null    | null = 未調理                                   |
+| notes         | string          | 空文字許容                                      |
 
 ```
 PlannedRecipe
@@ -180,14 +180,14 @@ MealPlan (集約ルート)
 
 **フィールド一覧**
 
-| フィールド | 型 | 説明 |
-|---|---|---|
-| id | MealPlanId | 不変 |
-| weekOf | WeekIdentifier | 不変。どの週に属するか |
-| plannedRecipes | PlannedRecipe[] | 集約内エンティティのリスト |
-| status | MealPlanStatus | 現在のステータス |
-| createdAt | Date | 不変 |
-| completedAt | Date \| null | completed 遷移時に `new Date()` を設定 |
+| フィールド     | 型              | 説明                                   |
+| -------------- | --------------- | -------------------------------------- |
+| id             | MealPlanId      | 不変                                   |
+| weekOf         | WeekIdentifier  | 不変。どの週に属するか                 |
+| plannedRecipes | PlannedRecipe[] | 集約内エンティティのリスト             |
+| status         | MealPlanStatus  | 現在のステータス                       |
+| createdAt      | Date            | 不変                                   |
+| completedAt    | Date \| null    | completed 遷移時に `new Date()` を設定 |
 
 **振る舞い**
 
@@ -356,23 +356,25 @@ export const mealPlans = pgTable('meal_plans', {
 export type MealPlanRow = typeof mealPlans.$inferSelect;
 export type NewMealPlanRow = typeof mealPlans.$inferInsert;
 
-export const plannedRecipes = pgTable('planned_recipes', {
-  id: text('id').primaryKey(),
-  mealPlanId: text('meal_plan_id')
-    .notNull()
-    .references(() => mealPlans.id, { onDelete: 'cascade' }),
-  recipeId: text('recipe_id').notNull(),
-  // ↑ Recipe 集約への参照は ID 参照のみ（外部キー制約なし）
-  //   削除済み Recipe への参照を保持し続けるため（C-4 推奨案 A）
-  scaleFactor: numeric('scale_factor', { precision: 10, scale: 3 }).notNull(),
-  // ↑ D-6: numeric(10, 3) 推奨。1.5, 2.0, 3.0 等を保存
-  scheduledDate: date('scheduled_date'),
-  cookedAt: timestamp('cooked_at'),
-  notes: text('notes').notNull().default(''),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('planned_recipes_meal_plan_id_idx').on(table.mealPlanId),
-]);
+export const plannedRecipes = pgTable(
+  'planned_recipes',
+  {
+    id: text('id').primaryKey(),
+    mealPlanId: text('meal_plan_id')
+      .notNull()
+      .references(() => mealPlans.id, { onDelete: 'cascade' }),
+    recipeId: text('recipe_id').notNull(),
+    // ↑ Recipe 集約への参照は ID 参照のみ（外部キー制約なし）
+    //   削除済み Recipe への参照を保持し続けるため（C-4 推奨案 A）
+    scaleFactor: numeric('scale_factor', { precision: 10, scale: 3 }).notNull(),
+    // ↑ D-6: numeric(10, 3) 推奨。1.5, 2.0, 3.0 等を保存
+    scheduledDate: date('scheduled_date'),
+    cookedAt: timestamp('cooked_at'),
+    notes: text('notes').notNull().default(''),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('planned_recipes_meal_plan_id_idx').on(table.mealPlanId)],
+);
 
 export type PlannedRecipeRow = typeof plannedRecipes.$inferSelect;
 export type NewPlannedRecipeRow = typeof plannedRecipes.$inferInsert;
@@ -380,12 +382,12 @@ export type NewPlannedRecipeRow = typeof plannedRecipes.$inferInsert;
 
 **C-2 正規化方針の根拠（独立テーブル推奨理由）**
 
-| 観点 | 案 A（独立テーブル、推奨） | 案 B（JSONB 集約） |
-|---|---|---|
-| PlannedRecipe の独立性 | 各 PlannedRecipe が PlannedRecipeId を持ち、個別の removeRecipe が O(1) で発行可能 | JSONB 全体を上書きするため、1件削除でも MealPlan 行全体を UPDATE |
-| scheduleForDay / markAsCooked の更新 | 特定の plannedRecipes 行のみ UPDATE 可能（将来の部分更新 API に対応しやすい） | JSONB 全体を書き直す必要あり |
-| Recipe との整合 | Recipe.ingredients が JSONB 集約なのは RecipeIngredient に独立 ID がないから。PlannedRecipe は独立 ID を持つため異なる扱いが適切 | パターン統一の観点だけで JSONB にすると PlannedRecipeId が名目だけになる |
-| 実装コスト | DrizzleProductRepository（price_records）と同じ JOIN パターン。実装コストは既知 | JOIN 不要だがシリアライズ/デシリアライズが必要 |
+| 観点                                 | 案 A（独立テーブル、推奨）                                                                                                       | 案 B（JSONB 集約）                                                       |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| PlannedRecipe の独立性               | 各 PlannedRecipe が PlannedRecipeId を持ち、個別の removeRecipe が O(1) で発行可能                                               | JSONB 全体を上書きするため、1件削除でも MealPlan 行全体を UPDATE         |
+| scheduleForDay / markAsCooked の更新 | 特定の plannedRecipes 行のみ UPDATE 可能（将来の部分更新 API に対応しやすい）                                                    | JSONB 全体を書き直す必要あり                                             |
+| Recipe との整合                      | Recipe.ingredients が JSONB 集約なのは RecipeIngredient に独立 ID がないから。PlannedRecipe は独立 ID を持つため異なる扱いが適切 | パターン統一の観点だけで JSONB にすると PlannedRecipeId が名目だけになる |
+| 実装コスト                           | DrizzleProductRepository（price_records）と同じ JOIN パターン。実装コストは既知                                                  | JOIN 不要だがシリアライズ/デシリアライズが必要                           |
 
 Recipe（JSONB）と Product（独立テーブル）の二方針が現状共存しているが、PlannedRecipe は Product の price_records に近い性質（独立 ID あり・個別更新あり）のため独立テーブルを推奨する。
 
@@ -434,25 +436,25 @@ class DrizzleMealPlanRepository implements MealPlanRepository {
 
 **ドメイン → DB 行 マッピング**
 
-| ドメインフィールド | DB カラム | 変換 |
-|---|---|---|
-| `mealPlan.weekOf.toString()` | `week_start_date` | `"2026-07-04"` 文字列 |
-| `mealPlan.status` | `status` | text そのまま |
-| `mealPlan.createdAt` | `created_at` | Date → timestamp |
-| `mealPlan.completedAt` | `completed_at` | Date \| null → timestamp \| null |
-| `plannedRecipe.scaleFactor` | `scale_factor` | number → string（numeric） |
-| `plannedRecipe.scheduledDate` | `scheduled_date` | Date \| null → date 文字列 \| null |
-| `plannedRecipe.cookedAt` | `cooked_at` | Date \| null → timestamp \| null |
+| ドメインフィールド            | DB カラム         | 変換                               |
+| ----------------------------- | ----------------- | ---------------------------------- |
+| `mealPlan.weekOf.toString()`  | `week_start_date` | `"2026-07-04"` 文字列              |
+| `mealPlan.status`             | `status`          | text そのまま                      |
+| `mealPlan.createdAt`          | `created_at`      | Date → timestamp                   |
+| `mealPlan.completedAt`        | `completed_at`    | Date \| null → timestamp \| null   |
+| `plannedRecipe.scaleFactor`   | `scale_factor`    | number → string（numeric）         |
+| `plannedRecipe.scheduledDate` | `scheduled_date`  | Date \| null → date 文字列 \| null |
+| `plannedRecipe.cookedAt`      | `cooked_at`       | Date \| null → timestamp \| null   |
 
 **DB 行 → ドメイン reconstruct マッピング**
 
-| DB カラム | ドメインフィールド | 変換 |
-|---|---|---|
-| `week_start_date` | `weekOf` | `WeekIdentifier.fromString(row.weekStartDate)` |
-| `status` | `status` | `row.status as MealPlanStatus`（型アサーション） |
-| `scale_factor` | `scaleFactor` | `Number(row.scaleFactor)` |
-| `scheduled_date` | `scheduledDate` | `row.scheduledDate ? new Date(row.scheduledDate + 'T00:00:00') : null` |
-| `cooked_at` | `cookedAt` | `row.cookedAt ?? null` |
+| DB カラム         | ドメインフィールド | 変換                                                                   |
+| ----------------- | ------------------ | ---------------------------------------------------------------------- |
+| `week_start_date` | `weekOf`           | `WeekIdentifier.fromString(row.weekStartDate)`                         |
+| `status`          | `status`           | `row.status as MealPlanStatus`（型アサーション）                       |
+| `scale_factor`    | `scaleFactor`      | `Number(row.scaleFactor)`                                              |
+| `scheduled_date`  | `scheduledDate`    | `row.scheduledDate ? new Date(row.scheduledDate + 'T00:00:00') : null` |
+| `cooked_at`       | `cookedAt`         | `row.cookedAt ?? null`                                                 |
 
 **findRecent での N+1 対策**
 
@@ -480,26 +482,26 @@ MVP1 規模（月数十件）では JOIN + グルーピングで十分。将来�
 export type MealPlanStatus = 'draft' | 'shopping' | 'cooking' | 'consuming' | 'completed';
 
 export interface PlannedRecipeDto {
-  id: string;                    // PlannedRecipeId.value
-  recipeId: string;              // RecipeId.value（ID 参照のみ。D-7: recipeName は含めない）
-  scaleFactor: number;           // > 0
-  scheduledDate: string | null;  // ISO date "2026-07-06" | null
-  cookedAt: string | null;       // ISO 8601 datetime | null
-  notes: string;                 // 空文字許容
+  id: string; // PlannedRecipeId.value
+  recipeId: string; // RecipeId.value（ID 参照のみ。D-7: recipeName は含めない）
+  scaleFactor: number; // > 0
+  scheduledDate: string | null; // ISO date "2026-07-06" | null
+  cookedAt: string | null; // ISO 8601 datetime | null
+  notes: string; // 空文字許容
 }
 
 export interface MealPlanDto {
-  id: string;                         // MealPlanId.value
-  weekIdentifier: string;             // WeekIdentifier.toString() "2026-07-04"（案 A）
+  id: string; // MealPlanId.value
+  weekIdentifier: string; // WeekIdentifier.toString() "2026-07-04"（案 A）
   status: MealPlanStatus;
   plannedRecipes: PlannedRecipeDto[];
-  createdAt: string;                  // ISO 8601 datetime
-  completedAt: string | null;         // ISO 8601 datetime | null
+  createdAt: string; // ISO 8601 datetime
+  completedAt: string | null; // ISO 8601 datetime | null
 }
 
 // UseCase 入力 DTO（Hono ルートから UseCase へ渡す）
 export interface CreateMealPlanInputDto {
-  weekIdentifier: string;  // "2026-07-04"（Hono ルートで Zod バリデーション済み）
+  weekIdentifier: string; // "2026-07-04"（Hono ルートで Zod バリデーション済み）
 }
 
 export interface AddRecipeToMealPlanInputDto {
@@ -514,7 +516,7 @@ export interface RemoveRecipeFromMealPlanInputDto {
 }
 
 export interface GetMealPlanHistoryInputDto {
-  limit?: number;  // デフォルト 4、最大 12（D-5）
+  limit?: number; // デフォルト 4、最大 12（D-5）
 }
 ```
 
@@ -523,13 +525,13 @@ export interface GetMealPlanHistoryInputDto {
 **ファイル**: `packages/application/src/meal-plan/meal-plan.mapper.ts`
 
 ```typescript
-export function toMealPlanDto(mealPlan: MealPlan): MealPlanDto
-  // Entity → DTO 変換。Entity を境界外に漏らさない
+export function toMealPlanDto(mealPlan: MealPlan): MealPlanDto;
+// Entity → DTO 変換。Entity を境界外に漏らさない
 
-export function toPlannedRecipeDto(plannedRecipe: PlannedRecipe): PlannedRecipeDto
-  // scheduledDate: scheduledDate?.toISOString().slice(0, 10) ?? null
-  //   → Date | null → ISO date 文字列 | null
-  // cookedAt: cookedAt?.toISOString() ?? null
+export function toPlannedRecipeDto(plannedRecipe: PlannedRecipe): PlannedRecipeDto;
+// scheduledDate: scheduledDate?.toISOString().slice(0, 10) ?? null
+//   → Date | null → ISO date 文字列 | null
+// cookedAt: cookedAt?.toISOString() ?? null
 ```
 
 ### 6-3. エラークラス
@@ -701,15 +703,16 @@ export * from './invalid-meal-plan-state.error';
 
 ### 7-1. エンドポイント一覧
 
-| メソッド | パス | UseCase | 正常レスポンス |
-|---|---|---|---|
-| POST | `/api/meal-plans` | CreateMealPlanUseCase | 201 + MealPlanDto |
-| GET | `/api/meal-plans/current` | GetCurrentMealPlanUseCase | 200 + `{ data: MealPlanDto }` または `{ data: null }`（D-4） |
-| GET | `/api/meal-plans/history` | GetMealPlanHistoryUseCase | 200 + MealPlanDto[] |
-| POST | `/api/meal-plans/:id/recipes` | AddRecipeToMealPlanUseCase | 201 + PlannedRecipeDto |
-| DELETE | `/api/meal-plans/:id/recipes/:plannedRecipeId` | RemoveRecipeFromMealPlanUseCase | 204 |
+| メソッド | パス                                           | UseCase                         | 正常レスポンス                                               |
+| -------- | ---------------------------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| POST     | `/api/meal-plans`                              | CreateMealPlanUseCase           | 201 + MealPlanDto                                            |
+| GET      | `/api/meal-plans/current`                      | GetCurrentMealPlanUseCase       | 200 + `{ data: MealPlanDto }` または `{ data: null }`（D-4） |
+| GET      | `/api/meal-plans/history`                      | GetMealPlanHistoryUseCase       | 200 + MealPlanDto[]                                          |
+| POST     | `/api/meal-plans/:id/recipes`                  | AddRecipeToMealPlanUseCase      | 201 + PlannedRecipeDto                                       |
+| DELETE   | `/api/meal-plans/:id/recipes/:plannedRecipeId` | RemoveRecipeFromMealPlanUseCase | 204                                                          |
 
 Sprint 3 で**公開しないエンドポイント**:
+
 - ステータス遷移（`POST /api/meal-plans/:id/transition`）
 - markAsCooked（`POST /api/meal-plans/:id/recipes/:plannedRecipeId/cooked`）
 - scheduleForDay（`PATCH /api/meal-plans/:id/recipes/:plannedRecipeId`）
@@ -719,13 +722,13 @@ Sprint 3 で**公開しないエンドポイント**:
 詳細な Zod スキーマ確定は contract-designer の担当（セクション 12 参照）。
 Hono ルートで使う入力スキーマの概要のみ示す。
 
-| スキーマ | 主な検証項目 |
-|---|---|
-| `createMealPlanSchema` | `weekIdentifier: z.string().regex(ISO date パターン)` |
-| `addRecipeToMealPlanSchema` | `recipeId: z.uuid()`、`scaleFactor: z.number().positive()` |
-| `mealPlanIdParamSchema` | `id: z.uuid()` |
-| `plannedRecipeIdParamSchema` | `id: z.uuid()`、`plannedRecipeId: z.uuid()` |
-| `getMealPlanHistoryQuerySchema` | `limit?: z.number().int().min(1).max(12).default(4)` |
+| スキーマ                        | 主な検証項目                                               |
+| ------------------------------- | ---------------------------------------------------------- |
+| `createMealPlanSchema`          | `weekIdentifier: z.string().regex(ISO date パターン)`      |
+| `addRecipeToMealPlanSchema`     | `recipeId: z.uuid()`、`scaleFactor: z.number().positive()` |
+| `mealPlanIdParamSchema`         | `id: z.uuid()`                                             |
+| `plannedRecipeIdParamSchema`    | `id: z.uuid()`、`plannedRecipeId: z.uuid()`                |
+| `getMealPlanHistoryQuerySchema` | `limit?: z.number().int().min(1).max(12).default(4)`       |
 
 ### 7-3. Hono ルート骨子
 
@@ -747,7 +750,7 @@ export const mealPlansRoute = new Hono()
   .get('/current', async (c) => {
     const useCase = new GetCurrentMealPlanUseCase(mealPlanRepository());
     const dto = await useCase.execute();
-    return c.json({ data: dto });  // D-4: null でも 200 + { data: null }
+    return c.json({ data: dto }); // D-4: null でも 200 + { data: null }
   })
   .get('/history', zValidator('query', getMealPlanHistoryQuerySchema), async (c) => {
     const { limit } = c.req.valid('query');
@@ -755,7 +758,8 @@ export const mealPlansRoute = new Hono()
     const dtos = await useCase.execute({ limit });
     return c.json(dtos);
   })
-  .post('/:id/recipes',
+  .post(
+    '/:id/recipes',
     zValidator('param', mealPlanIdParamSchema),
     zValidator('json', addRecipeToMealPlanSchema),
     async (c) => {
@@ -764,16 +768,17 @@ export const mealPlansRoute = new Hono()
       const useCase = new AddRecipeToMealPlanUseCase(mealPlanRepository());
       const dto = await useCase.execute({ mealPlanId: id, ...body });
       return c.json(dto, 201);
-    }
+    },
   )
-  .delete('/:id/recipes/:plannedRecipeId',
+  .delete(
+    '/:id/recipes/:plannedRecipeId',
     zValidator('param', plannedRecipeIdParamSchema),
     async (c) => {
       const { id, plannedRecipeId } = c.req.valid('param');
       const useCase = new RemoveRecipeFromMealPlanUseCase(mealPlanRepository());
       await useCase.execute({ mealPlanId: id, plannedRecipeId });
       return c.body(null, 204);
-    }
+    },
   );
 ```
 
@@ -796,28 +801,32 @@ if (err instanceof InvalidMealPlanStateError) {
 
 **エラー → HTTP ステータス対応表**
 
-| エラー種別 | 発生箇所 | HTTP | 処理 |
-|---|---|---|---|
-| MealPlanNotFoundError | UseCase | 404 | app.ts onError |
-| PlannedRecipeNotFoundError | UseCase | 404 | app.ts onError |
-| InvalidMealPlanStateError | UseCase | 422 | app.ts onError |
-| Zod バリデーション失敗 | Hono zValidator | 400 | @hono/zod-validator 自動処理 |
-| MealPlanAlreadyExistsError（C-3 案 B 採用時のみ） | UseCase | 409 | app.ts onError（案 B 時に追加） |
-| DB 接続エラー / 未知の Error | — | 500 | 既存 console.error + 500 JSON |
+| エラー種別                                        | 発生箇所        | HTTP | 処理                            |
+| ------------------------------------------------- | --------------- | ---- | ------------------------------- |
+| MealPlanNotFoundError                             | UseCase         | 404  | app.ts onError                  |
+| PlannedRecipeNotFoundError                        | UseCase         | 404  | app.ts onError                  |
+| InvalidMealPlanStateError                         | UseCase         | 422  | app.ts onError                  |
+| Zod バリデーション失敗                            | Hono zValidator | 400  | @hono/zod-validator 自動処理    |
+| MealPlanAlreadyExistsError（C-3 案 B 採用時のみ） | UseCase         | 409  | app.ts onError（案 B 時に追加） |
+| DB 接続エラー / 未知の Error                      | —               | 500  | 既存 console.error + 500 JSON   |
 
 ### 7-5. app.ts へのマウント
 
 ```typescript
 // apps/web/src/server/app.ts（追記）
 import { mealPlansRoute } from './routes/meal-plans';
-import { MealPlanNotFoundError, PlannedRecipeNotFoundError, InvalidMealPlanStateError } from '@cookpit/application';
+import {
+  MealPlanNotFoundError,
+  PlannedRecipeNotFoundError,
+  InvalidMealPlanStateError,
+} from '@cookpit/application';
 
 export const routes = app
   .route('/health', healthRoute)
   .route('/recipes', recipesRoute)
   .route('/products', productsRoute)
   .route('/stores', storesRoute)
-  .route('/meal-plans', mealPlansRoute);  // 追加
+  .route('/meal-plans', mealPlansRoute); // 追加
 ```
 
 ### 7-6. 手動 DI の組み立て箇所
@@ -874,22 +883,22 @@ apps/web/src/server/routes/
 
 ### 8-2. 既存ファイルへの追記
 
-| ファイル | 変更内容 |
-|---|---|
-| `packages/infrastructure/src/db/schema.ts` | `mealPlans` / `plannedRecipes` テーブル定義を追記 |
-| `packages/infrastructure/src/index.ts` | `DrizzleMealPlanRepository` の re-export 追加 |
-| `packages/application/src/index.ts` | `export * from './meal-plan'` を追加 |
-| `packages/api-contract/src/index.ts` | `export * from './meal-plan.schema'` を追加 |
-| `apps/web/src/server/app.ts` | `mealPlansRoute` のマウント・3 エラーの `onError` ハンドリング追加 |
+| ファイル                                   | 変更内容                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| `packages/infrastructure/src/db/schema.ts` | `mealPlans` / `plannedRecipes` テーブル定義を追記                  |
+| `packages/infrastructure/src/index.ts`     | `DrizzleMealPlanRepository` の re-export 追加                      |
+| `packages/application/src/index.ts`        | `export * from './meal-plan'` を追加                               |
+| `packages/api-contract/src/index.ts`       | `export * from './meal-plan.schema'` を追加                        |
+| `apps/web/src/server/app.ts`               | `mealPlansRoute` のマウント・3 エラーの `onError` ハンドリング追加 |
 
 ### 8-3. 既存集約への影響
 
-| 集約 | 影響 |
-|---|---|
-| Recipe | RecipeId を ID 参照するのみ。Recipe 側の変更なし |
-| Product | 影響なし |
-| Store | 影響なし |
-| ShoppingList | 影響なし（Sprint 4 以降で連携） |
+| 集約         | 影響                                             |
+| ------------ | ------------------------------------------------ |
+| Recipe       | RecipeId を ID 参照するのみ。Recipe 側の変更なし |
+| Product      | 影響なし                                         |
+| Store        | 影響なし                                         |
+| ShoppingList | 影響なし（Sprint 4 以降で連携）                  |
 
 ---
 
@@ -937,14 +946,14 @@ GET /api/meal-plans/current
 
 ## 10. エラー処理
 
-| エラー | 発生箇所 | HTTP | 処理 |
-|---|---|---|---|
-| `MealPlanNotFoundError` | UseCase（AddRecipe / RemoveRecipe） | 404 | app.ts onError |
-| `PlannedRecipeNotFoundError` | UseCase（RemoveRecipe） | 404 | app.ts onError |
-| `InvalidMealPlanStateError` | UseCase（AddRecipe / RemoveRecipe） | 422 | app.ts onError |
-| Zod バリデーション失敗 | Hono zValidator | 400 | 自動 |
-| `MealPlanAlreadyExistsError`（C-3 案 B 時） | CreateMealPlanUseCase | 409 | app.ts onError（案 B 採用時のみ追加） |
-| DB エラー / 未知 | — | 500 | 既存 onError フォールバック |
+| エラー                                      | 発生箇所                            | HTTP | 処理                                  |
+| ------------------------------------------- | ----------------------------------- | ---- | ------------------------------------- |
+| `MealPlanNotFoundError`                     | UseCase（AddRecipe / RemoveRecipe） | 404  | app.ts onError                        |
+| `PlannedRecipeNotFoundError`                | UseCase（RemoveRecipe）             | 404  | app.ts onError                        |
+| `InvalidMealPlanStateError`                 | UseCase（AddRecipe / RemoveRecipe） | 422  | app.ts onError                        |
+| Zod バリデーション失敗                      | Hono zValidator                     | 400  | 自動                                  |
+| `MealPlanAlreadyExistsError`（C-3 案 B 時） | CreateMealPlanUseCase               | 409  | app.ts onError（案 B 採用時のみ追加） |
+| DB エラー / 未知                            | —                                   | 500  | 既存 onError フォールバック           |
 
 ---
 
@@ -982,14 +991,14 @@ MVP1（2名利用・週1回の献立作成）では `meal_plans` が年 50 件�
 
 contract-designer が `packages/api-contract/src/meal-plan.schema.ts` で確定すべき項目。
 
-| 項目 | 概要 / 方針 | 未解決 |
-|---|---|---|
-| `createMealPlanSchema.weekIdentifier` | ISO date 形式（`"2026-07-04"`）の正規表現または `z.string().date()` | C-1 確定後に書式が確定する |
-| `addRecipeToMealPlanSchema.scaleFactor` | `z.number().positive()`（0 超） | 上限値は不問（MVP1） |
-| `getMealPlanHistoryQuerySchema.limit` | `z.coerce.number().int().min(1).max(12).default(4)` | max 値は D-5 推奨 12 |
-| `MealPlanDto` / `PlannedRecipeDto` の response スキーマ | DTO 構造と一致。nullability は上記 DTO 定義に従う | — |
-| エラーレスポンス形式 | 既存 `{ error: string }` と統一 | — |
-| 契約テスト方針 | Vitest で Zod スキーマの `parse()` テストを行う | — |
+| 項目                                                    | 概要 / 方針                                                         | 未解決                     |
+| ------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------- |
+| `createMealPlanSchema.weekIdentifier`                   | ISO date 形式（`"2026-07-04"`）の正規表現または `z.string().date()` | C-1 確定後に書式が確定する |
+| `addRecipeToMealPlanSchema.scaleFactor`                 | `z.number().positive()`（0 超）                                     | 上限値は不問（MVP1）       |
+| `getMealPlanHistoryQuerySchema.limit`                   | `z.coerce.number().int().min(1).max(12).default(4)`                 | max 値は D-5 推奨 12       |
+| `MealPlanDto` / `PlannedRecipeDto` の response スキーマ | DTO 構造と一致。nullability は上記 DTO 定義に従う                   | —                          |
+| エラーレスポンス形式                                    | 既存 `{ error: string }` と統一                                     | —                          |
+| 契約テスト方針                                          | Vitest で Zod スキーマの `parse()` テストを行う                     | —                          |
 
 ---
 
@@ -1008,14 +1017,14 @@ contract-designer が `packages/api-contract/src/meal-plan.schema.ts` で確定�
 
 ### C-1: WeekIdentifier の内部表現
 
-| 項目 | 案 A（推奨）| 案 B |
-|---|---|---|
-| 内部表現 | 週開始日の `Date`（土曜 00:00:00 local） | 年 + 独自週番号（例: year=2026, weekNumber=1） |
-| `toString()` 外部表現 | `"2026-07-04"`（ISO date 文字列） | `"2026-W27"` 相当の独自書式 |
-| DB カラム | `week_start_date date NOT NULL UNIQUE` | `week_start_text text NOT NULL UNIQUE` または年/週番号の複合 |
-| `fromDate()` 計算 | 直前の土曜を求める算術（曜日オフセット）。シンプル | 年をまたぐ週の番号計算が複雑 |
-| `equals()` 比較 | `Date.getTime()` 比較 | 年と週番号の両方比較 |
-| 年またぎ週（2026-12-26〜2027-01-01） | `weekStartDate = 2026-12-26`。年またぎ自然に表現 | どちらの年に属するかのルールが必要 |
+| 項目                                 | 案 A（推奨）                                       | 案 B                                                         |
+| ------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------ |
+| 内部表現                             | 週開始日の `Date`（土曜 00:00:00 local）           | 年 + 独自週番号（例: year=2026, weekNumber=1）               |
+| `toString()` 外部表現                | `"2026-07-04"`（ISO date 文字列）                  | `"2026-W27"` 相当の独自書式                                  |
+| DB カラム                            | `week_start_date date NOT NULL UNIQUE`             | `week_start_text text NOT NULL UNIQUE` または年/週番号の複合 |
+| `fromDate()` 計算                    | 直前の土曜を求める算術（曜日オフセット）。シンプル | 年をまたぐ週の番号計算が複雑                                 |
+| `equals()` 比較                      | `Date.getTime()` 比較                              | 年と週番号の両方比較                                         |
+| 年またぎ週（2026-12-26〜2027-01-01） | `weekStartDate = 2026-12-26`。年またぎ自然に表現   | どちらの年に属するかのルールが必要                           |
 
 **推奨**: 案 A。土曜であることが Date に直接反映され ISO 週番号との混同が生じない。DB は `date` 型が最も意味論的に正確。
 
@@ -1025,14 +1034,14 @@ contract-designer が `packages/api-contract/src/meal-plan.schema.ts` で確定�
 
 ### C-2: planned_recipes の正規化方針
 
-| 項目 | 案 A（独立テーブル、推奨） | 案 B（JSONB） |
-|---|---|---|
-| 永続化構造 | `planned_recipes` 独立テーブル。JOIN で復元 | `meal_plans.planned_recipes jsonb` |
-| PlannedRecipeId | DB の first-class citizen として機能 | ID はあるが JSONB 内の値 |
-| removeRecipe の永続化 | NOT IN (currentIds) DELETE + upsert | meal_plan 行全体の JSONB 上書き |
-| scheduleForDay / markAsCooked の将来 | 特定行のみ UPDATE 可能 | JSONB 全体書き直し |
-| 実装パターン | DrizzleProductRepository (price_records) と同一 | DrizzleRecipeRepository (ingredients) と同一 |
-| 変更コスト | 今回設計通り | JSONB シリアライズ/デシリアライズ実装が必要 |
+| 項目                                 | 案 A（独立テーブル、推奨）                      | 案 B（JSONB）                                |
+| ------------------------------------ | ----------------------------------------------- | -------------------------------------------- |
+| 永続化構造                           | `planned_recipes` 独立テーブル。JOIN で復元     | `meal_plans.planned_recipes jsonb`           |
+| PlannedRecipeId                      | DB の first-class citizen として機能            | ID はあるが JSONB 内の値                     |
+| removeRecipe の永続化                | NOT IN (currentIds) DELETE + upsert             | meal_plan 行全体の JSONB 上書き              |
+| scheduleForDay / markAsCooked の将来 | 特定行のみ UPDATE 可能                          | JSONB 全体書き直し                           |
+| 実装パターン                         | DrizzleProductRepository (price_records) と同一 | DrizzleRecipeRepository (ingredients) と同一 |
+| 変更コスト                           | 今回設計通り                                    | JSONB シリアライズ/デシリアライズ実装が必要  |
 
 **推奨**: 案 A（独立テーブル）。PlannedRecipe は独立した ID を持ち個別更新のユースケースがあることが、Recipe の ingredients（ID なし・一括更新）と根本的に異なる。
 
@@ -1042,12 +1051,12 @@ contract-designer が `packages/api-contract/src/meal-plan.schema.ts` で確定�
 
 ### C-3: 同一週 MealPlan の一意性 / CreateMealPlan の冪等性
 
-| 項目 | 案 A（冪等、推奨） | 案 B（409） | 案 C（複数許容） |
-|---|---|---|---|
-| 挙動 | 既存があれば既存を返す | MealPlanAlreadyExistsError（409） | 制約なし |
-| DB 制約 | UNIQUE 制約あり | UNIQUE 制約あり | UNIQUE 制約なし |
-| UI 副作用 | 重複 HTTP リクエストに安全 | エラーハンドリングが必要 | GetCurrentMealPlan が「どれか」を返すロジックが必要 |
-| GetCurrentMealPlan との整合 | 1 週に最大 1 件が保証される | 同上 | 壊れる（複数ある場合の定義が必要） |
+| 項目                        | 案 A（冪等、推奨）          | 案 B（409）                       | 案 C（複数許容）                                    |
+| --------------------------- | --------------------------- | --------------------------------- | --------------------------------------------------- |
+| 挙動                        | 既存があれば既存を返す      | MealPlanAlreadyExistsError（409） | 制約なし                                            |
+| DB 制約                     | UNIQUE 制約あり             | UNIQUE 制約あり                   | UNIQUE 制約なし                                     |
+| UI 副作用                   | 重複 HTTP リクエストに安全  | エラーハンドリングが必要          | GetCurrentMealPlan が「どれか」を返すロジックが必要 |
+| GetCurrentMealPlan との整合 | 1 週に最大 1 件が保証される | 同上                              | 壊れる（複数ある場合の定義が必要）                  |
 
 **推奨**: 案 A（冪等）。2名の個人アプリでは誤操作・リトライを考慮すると最も安全。
 
@@ -1057,12 +1066,12 @@ contract-designer が `packages/api-contract/src/meal-plan.schema.ts` で確定�
 
 ### C-4: 削除済み Recipe を参照する PlannedRecipe の扱い
 
-| 項目 | 案 A（ID 保持、推奨） | 案 B（カスケード削除） | 案 C（論理削除） |
-|---|---|---|---|
-| PlannedRecipe の扱い | recipeId を保持したまま。Recipe が存在しなくても PlannedRecipe は残る | Recipe 削除時に MealPlan.removeRecipe を呼ぶ | Recipe に削除フラグを追加 |
-| Domain の純粋性 | 高い（ID 参照原則を厳守） | Recipe 削除 UseCase が MealPlanRepository に依存する（依存方向違反のリスク） | Recipe 設計変更が必要。Sprint 3 スコープ外 |
-| 実装コスト | 最小 | Recipe 削除 UseCase の変更が必要 | Recipe 全体の変更が必要 |
-| 履歴の意味 | 過去の献立に「削除済みレシピを使った」記録が残る | 過去の献立からレシピが消える | 参照整合性が常に保たれる |
+| 項目                 | 案 A（ID 保持、推奨）                                                 | 案 B（カスケード削除）                                                       | 案 C（論理削除）                           |
+| -------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------ |
+| PlannedRecipe の扱い | recipeId を保持したまま。Recipe が存在しなくても PlannedRecipe は残る | Recipe 削除時に MealPlan.removeRecipe を呼ぶ                                 | Recipe に削除フラグを追加                  |
+| Domain の純粋性      | 高い（ID 参照原則を厳守）                                             | Recipe 削除 UseCase が MealPlanRepository に依存する（依存方向違反のリスク） | Recipe 設計変更が必要。Sprint 3 スコープ外 |
+| 実装コスト           | 最小                                                                  | Recipe 削除 UseCase の変更が必要                                             | Recipe 全体の変更が必要                    |
+| 履歴の意味           | 過去の献立に「削除済みレシピを使った」記録が残る                      | 過去の献立からレシピが消える                                                 | 参照整合性が常に保たれる                   |
 
 **推奨**: 案 A。Domain の ID 参照原則を守り、最小実装で Sprint 3 を完結させる。UI 側（Unit B）で `recipeName: null` などを適切に表示する責務を持つ。
 
@@ -1169,7 +1178,13 @@ export type GetMealPlanHistoryQuery = z.infer<typeof getMealPlanHistoryQuerySche
 `storeResponseSchema`（`store.schema.ts`、store-master D-1/D-2 の先例）と同じ方針を踏襲する。すなわち、レスポンス構造は Zod スキーマとして `api-contract` に定義するが、Hono ルートの `zValidator` には使わない（既存 `products.ts` / `stores.ts` と同様、UseCase の戻り値型で型安全性を担保し、レスポンススキーマは Mapper 出力の構造検証専用の契約テストとして使う）。
 
 ```typescript
-export const mealPlanStatusSchema = z.enum(['draft', 'shopping', 'cooking', 'consuming', 'completed']);
+export const mealPlanStatusSchema = z.enum([
+  'draft',
+  'shopping',
+  'cooking',
+  'consuming',
+  'completed',
+]);
 
 export const plannedRecipeResponseSchema = z.object({
   id: z.uuid(),
@@ -1206,12 +1221,12 @@ export type MealPlanHistoryResponse = z.infer<typeof mealPlanHistoryResponseSche
 
 nullability は DTO（§6-1）と完全一致させる。
 
-| フィールド | 型 | `null` の意味 |
-|---|---|---|
-| `plannedRecipeResponseSchema.scheduledDate` | `string \| null` | 日付未指定（ビュッフェ運用のデフォルト） |
-| `plannedRecipeResponseSchema.cookedAt` | `string \| null` | 未調理 |
-| `mealPlanResponseSchema.completedAt` | `string \| null` | `completed` 未到達 |
-| `getCurrentMealPlanResponseSchema.data` | `MealPlanResponse \| null` | 現在週に MealPlan が存在しない（D-4） |
+| フィールド                                  | 型                         | `null` の意味                            |
+| ------------------------------------------- | -------------------------- | ---------------------------------------- |
+| `plannedRecipeResponseSchema.scheduledDate` | `string \| null`           | 日付未指定（ビュッフェ運用のデフォルト） |
+| `plannedRecipeResponseSchema.cookedAt`      | `string \| null`           | 未調理                                   |
+| `mealPlanResponseSchema.completedAt`        | `string \| null`           | `completed` 未到達                       |
+| `getCurrentMealPlanResponseSchema.data`     | `MealPlanResponse \| null` | 現在週に MealPlan が存在しない（D-4）    |
 
 ### 19-7. エラーレスポンス形式
 
@@ -1232,14 +1247,14 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
 ### 19-8. HTTP ステータスマッピング表
 
-| エンドポイント | 正常 | 異常 |
-|---|---|---|
-| `POST /api/meal-plans` | 201 + `MealPlanResponse` | 400（`weekIdentifier` 形式不正。zValidator 既定形） |
-| `GET /api/meal-plans/current` | 200 + `{ data: MealPlanResponse \| null }`（D-4） | （バリデーション対象パラメータなし） |
-| `GET /api/meal-plans/history` | 200 + `MealPlanResponse[]` | 400（`limit` 不正） |
-| `POST /api/meal-plans/:id/recipes` | 201 + `PlannedRecipeResponse` | 400（`id` / `recipeId` / `scaleFactor` 不正）／404（`MealPlanNotFoundError`）／422（`InvalidMealPlanStateError`） |
-| `DELETE /api/meal-plans/:id/recipes/:plannedRecipeId` | 204（body なし） | 400（`id` / `plannedRecipeId` 不正）／404（`MealPlanNotFoundError` または `PlannedRecipeNotFoundError`）／422（`InvalidMealPlanStateError`） |
-| 全エンドポイント共通 | — | 500（未知エラー。`{ error: 'Internal Server Error' }`） |
+| エンドポイント                                        | 正常                                              | 異常                                                                                                                                         |
+| ----------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/meal-plans`                                | 201 + `MealPlanResponse`                          | 400（`weekIdentifier` 形式不正。zValidator 既定形）                                                                                          |
+| `GET /api/meal-plans/current`                         | 200 + `{ data: MealPlanResponse \| null }`（D-4） | （バリデーション対象パラメータなし）                                                                                                         |
+| `GET /api/meal-plans/history`                         | 200 + `MealPlanResponse[]`                        | 400（`limit` 不正）                                                                                                                          |
+| `POST /api/meal-plans/:id/recipes`                    | 201 + `PlannedRecipeResponse`                     | 400（`id` / `recipeId` / `scaleFactor` 不正）／404（`MealPlanNotFoundError`）／422（`InvalidMealPlanStateError`）                            |
+| `DELETE /api/meal-plans/:id/recipes/:plannedRecipeId` | 204（body なし）                                  | 400（`id` / `plannedRecipeId` 不正）／404（`MealPlanNotFoundError` または `PlannedRecipeNotFoundError`）／422（`InvalidMealPlanStateError`） |
+| 全エンドポイント共通                                  | —                                                 | 500（未知エラー。`{ error: 'Internal Server Error' }`）                                                                                      |
 
 C-3（冪等、案 A で確定）のため **409 は発生しない**。`MealPlanAlreadyExistsError` および対応する Zod/HTTP マッピングは本契約に含めない（設計 §7-4 の「C-3 案 B 採用時のみ」の記載通り、案 A 確定により不要）。
 
@@ -1247,18 +1262,18 @@ C-3（冪等、案 A で確定）のため **409 は発生しない**。`MealPla
 
 要件 `docs/requirements/meal-plan-core.md` §6 の観点と対応させ、Vitest で `packages/api-contract/src/meal-plan.schema.test.ts`（新規）に実装する。試験計画の確定は test-designer が行う。
 
-| 観点 | 対象スキーマ | 対応する要件試験観点 |
-|---|---|---|
-| 正常な `weekIdentifier` の `parse()` 通過 | `createMealPlanSchema` | N-01 の前提 |
-| 不正フォーマット・不正暦日の reject | `createMealPlanSchema` | E-13（例: `"2026/07/04"`、`"2026-13-01"`、`"2026-02-30"`） |
-| UUID 不正の reject | `mealPlanIdParamSchema` / `plannedRecipeIdParamSchema` / `addRecipeToMealPlanSchema.recipeId` | E-14 |
-| `scaleFactor` 境界 | `addRecipeToMealPlanSchema` | E-05（`0`）／E-06（負数）／B-07（`0.001`）／B-08（`3`） |
-| `limit` の coerce・default・境界 | `getMealPlanHistoryQuerySchema` | B-06（`limit=1`）／D-5 の `max=12`／未指定時 `default=4` |
-| `limit` の異常系 | `getMealPlanHistoryQuerySchema` | `limit=0` reject／`limit=13` reject／`limit=""` reject／`limit="abc"` reject／`limit=2.5` reject |
-| レスポンス構造の型往復（Mapper 出力の契約適合） | `mealPlanResponseSchema` / `plannedRecipeResponseSchema` | `toMealPlanDto` / `toPlannedRecipeDto`（§6-2）の出力が `parse()` を通過すること（store-master の型往復テストパターンを踏襲） |
-| nullable フィールドの通過 | `plannedRecipeResponseSchema`（`scheduledDate` / `cookedAt`）、`mealPlanResponseSchema`（`completedAt`）、`getCurrentMealPlanResponseSchema`（`data`） | N-09（現在週に MealPlan なし → `data: null`） |
-| 400 の契約は「ステータスのみ」検証（body 構造は固定契約にしない） | 全 json / param / query スキーマ | E-13 / E-14（Hono ルート統合テスト側。§19-7 参照） |
-| 既存契約への非破壊確認 | `product.schema.ts` / `store.schema.ts` / `recipe.schema.ts` | 本契約は新規ファイル追加のみのため、既存 `.test.ts` が green のまま保たれること |
+| 観点                                                              | 対象スキーマ                                                                                                                                           | 対応する要件試験観点                                                                                                         |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| 正常な `weekIdentifier` の `parse()` 通過                         | `createMealPlanSchema`                                                                                                                                 | N-01 の前提                                                                                                                  |
+| 不正フォーマット・不正暦日の reject                               | `createMealPlanSchema`                                                                                                                                 | E-13（例: `"2026/07/04"`、`"2026-13-01"`、`"2026-02-30"`）                                                                   |
+| UUID 不正の reject                                                | `mealPlanIdParamSchema` / `plannedRecipeIdParamSchema` / `addRecipeToMealPlanSchema.recipeId`                                                          | E-14                                                                                                                         |
+| `scaleFactor` 境界                                                | `addRecipeToMealPlanSchema`                                                                                                                            | E-05（`0`）／E-06（負数）／B-07（`0.001`）／B-08（`3`）                                                                      |
+| `limit` の coerce・default・境界                                  | `getMealPlanHistoryQuerySchema`                                                                                                                        | B-06（`limit=1`）／D-5 の `max=12`／未指定時 `default=4`                                                                     |
+| `limit` の異常系                                                  | `getMealPlanHistoryQuerySchema`                                                                                                                        | `limit=0` reject／`limit=13` reject／`limit=""` reject／`limit="abc"` reject／`limit=2.5` reject                             |
+| レスポンス構造の型往復（Mapper 出力の契約適合）                   | `mealPlanResponseSchema` / `plannedRecipeResponseSchema`                                                                                               | `toMealPlanDto` / `toPlannedRecipeDto`（§6-2）の出力が `parse()` を通過すること（store-master の型往復テストパターンを踏襲） |
+| nullable フィールドの通過                                         | `plannedRecipeResponseSchema`（`scheduledDate` / `cookedAt`）、`mealPlanResponseSchema`（`completedAt`）、`getCurrentMealPlanResponseSchema`（`data`） | N-09（現在週に MealPlan なし → `data: null`）                                                                                |
+| 400 の契約は「ステータスのみ」検証（body 構造は固定契約にしない） | 全 json / param / query スキーマ                                                                                                                       | E-13 / E-14（Hono ルート統合テスト側。§19-7 参照）                                                                           |
+| 既存契約への非破壊確認                                            | `product.schema.ts` / `store.schema.ts` / `recipe.schema.ts`                                                                                           | 本契約は新規ファイル追加のみのため、既存 `.test.ts` が green のまま保たれること                                              |
 
 ### 19-10. 後方互換性判定
 
@@ -1268,4 +1283,4 @@ C-3（冪等、案 A で確定）のため **409 は発生しない**。`MealPla
 
 - Domain 層 `WeekIdentifier.fromString`（設計 §4-6）は曜日（土曜であること）を検証しない。本契約の `z.iso.date()` も同様に曜日検証を行わないため、**Zod と Domain の間に新たな矛盾は生じない**。
 - ただし、非土曜日の `weekIdentifier`（例: `"2026-07-05"` 日曜）を `POST /api/meal-plans` に渡した場合、現行設計のままでは Zod・Domain いずれもこれを拒否せず、`MealPlan.weekOf.startDate()` が実際の土曜日と一致しない不整合な週データが生成され得る。これは Zod 契約側で解決すべき事項ではなく Domain 層（`WeekIdentifier.fromString` に曜日検証を追加するか否か）の設計判断であるため、本契約では確定しない。実装時に顕在化した場合は architecture-designer / Orchestrator へ差し戻すこと。
-- `scaleFactor` に `Infinity` を渡した場合、`z.number().positive()` は `Infinity > 0` が真のため accept してしまう可能性がある（要件・設計とも上限を定めていないため契約違反ではないが、実運用上は無意味な値になり得る）。MVP1 では対応不要と判断するが、test-designer が境界値として検討する場合の参考情報として記載する。
+- ~~`scaleFactor` に `Infinity` を渡した場合、`z.number().positive()` は `Infinity > 0` が真のため accept してしまう可能性がある~~ **→ 2026-07-07 の実装レビューで実測により否定**。Zod v4 の `z.number()` はデフォルトで `Infinity` / `NaN` を reject するため（`zod@4.4.3` で確認）、`scaleFactor: Infinity` は accept されない。この申し送りは解消済みで、Zod スキーマ・Domain バリデーションとも対応不要。
