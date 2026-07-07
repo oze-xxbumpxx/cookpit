@@ -79,6 +79,14 @@ requirements-analyst  → docs/requirements/<feature>.md
 - `requirements-analyst` の調査結果が前提になるため、まず先行させる。
 - `architecture-designer` 完了後、`implementation-planner` と `test-designer` は
   並列に進められる（どちらも設計書を入力にするため）。
+- `contract-designer` は、契約の骨子（既存 `schema.ts` / `packages/api-contract` から確定
+  できる型・nullability・エラー形式）が立てられる場合に限り、`architecture-designer` と
+  **並列に先行起動できる**。並列化したときは:
+  - 契約書に設計書への参照リンク（「§集約設計は `docs/designs/<feature>.md` を参照」）を必ず入れる。
+  - `architecture-designer` が集約境界・新規 Entity・層責務を確定したら、その確定差分を
+    orchestrator が `contract-designer` へ追送し、契約を再確認させる（差し戻しでなく追補）。
+  - 整合チェックは orchestrator の統合フェーズで行う。
+  - **集約構造が未確定で契約の骨子が立てられない L3（新規ドメイン中心）では並列化せず直列**にする。
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
 
