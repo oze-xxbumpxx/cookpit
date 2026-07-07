@@ -24,7 +24,11 @@ OUT="$OUT_DIR/${TASK_ID}.yml"
 mkdir -p "$OUT_DIR"
 
 if [ -e "$OUT" ]; then
-  echo "already exists (上書きしない): $OUT" >&2
+  echo "already exists (雛形は上書きしない): $OUT" >&2
+  echo "machine セクションのみ再集計して累積する" >&2
+  node "$ROOT/.claude/scripts/collect-task-metrics.mjs" \
+    --feature "$FEATURE" --task-id "$TASK_ID" --write || \
+    echo "⚠ collect-task-metrics.mjs の自動集計に失敗" >&2
   exit 0
 fi
 
@@ -76,4 +80,12 @@ fs.writeFileSync('$OUT', t);
 " 2>/dev/null && echo "process.missing_documents を自動補完: $MISSING"
 fi
 
-echo "（残りの数値は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"
+# machine セクション（所要時間・トークン・Agent 呼び出し・ゲート実行）を transcript から自動集計
+if node "$ROOT/.claude/scripts/collect-task-metrics.mjs" \
+  --feature "$FEATURE" --task-id "$TASK_ID" --write; then
+  :
+else
+  echo "⚠ collect-task-metrics.mjs の自動集計に失敗（machine セクションはテンプレのまま。手動で再実行可）" >&2
+fi
+
+echo "（意味的な数値 = quality/process は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"

@@ -2,16 +2,16 @@
 # 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
 task_id: TASK-YYYY-NNN
 feature_name: example-feature
-change_level: 2          # 0 | 1 | 2 | 3
+change_level: 2 # 0 | 1 | 2 | 3
 date: YYYY-MM-DD
 
 agents:
-  calls: unknown          # Agent 呼び出し回数
-  retries: unknown        # 再依頼回数
+  calls: unknown # Agent 呼び出し回数
+  retries: unknown # 再依頼回数
   unnecessary_calls: unknown
 
 quality:
-  tests_added: unknown    # MVP1 はテストランナー未導入のため通常 unknown
+  tests_added: unknown # MVP1 はテストランナー未導入のため通常 unknown
   initial_test_failures: unknown
   reviewer_critical: 0
   reviewer_major: 0
@@ -25,3 +25,10 @@ process:
   implementation_rework: 0
   missing_documents: 0
   unresolved_items: 0
+
+machine:
+  # collect-task-metrics.mjs が transcript / quality-gates-log から自動で埋める（手で編集しない）。
+  # 内容: セッション別の所要時間（活動時間）・トークン・ツール/Agent 呼び出し・ゲート実行記録と
+  # 合計値（agent_restarts / gate_rework_rate は手戻りプロキシ）。複数セッションのタスクは
+  # 各セッション末に再実行すると session_id / ts 単位で累積される。
+  # 実行: node .claude/scripts/collect-task-metrics.mjs --feature <feature> --task-id <task-id> --write
