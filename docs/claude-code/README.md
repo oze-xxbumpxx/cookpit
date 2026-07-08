@@ -50,7 +50,7 @@
 | implementation-planner    | sonnet-5 | 実装計画                                               |
 | implementer               | sonnet-5 | 実装・単体テスト・品質ゲート                           |
 | reviewer                  | opus-4-8 | 独立レビュー                                           |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー（L2/L3・reviewer の後）       |
+| security-reviewer         | opus-4-8 | セキュリティ専門レビュー（L3 原則必須 / L2 は省略可）  |
 | e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装（L3・基盤整備済みのみ）            |
 | performance-designer      | sonnet-5 | パフォーマンス設計（L3・外部I/O/大量データのみ）       |
 | document-reviewer         | opus-4-8 | 文書成果物の専門レビュー（開発フロー外でも単体起動可） |

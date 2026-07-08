@@ -91,6 +91,11 @@ function staleWorkLogWarning() {
 // 今日のログの「所要時間」が未記録なら close-session を促す（R5・2026-07-06）。
 // 発動忘れで「所要時間: 記録なし」が常態化する再発対策（7/5 も再発）。
 // 30 分クールダウン（shouldEmitNotice）で毎ターンのノイズにはしない。常に非ブロッキング。
+//
+// 判定はセクション本文の「完全一致」寄りにする（meal-plan-core 事象1）。
+// 部分一致だと「約 30 分（…先行セッションは記録なし）」のような注記付き記録済み行を
+// 未記録と誤判定するため、trim 後の本文行がプレースホルダのみ／空のときだけ未記録とする。
+// 時間表現（数字 + 分/時間/h）があれば記録済みとみなす。
 function timeUnrecordedNudge() {
   try {
     const tz = process.env.COOKPIT_TZ || 'Asia/Tokyo';
@@ -101,7 +106,13 @@ function timeUnrecordedNudge() {
     const idx = content.indexOf('## 所要時間');
     if (idx === -1) return null;
     const section = content.slice(idx + '## 所要時間'.length).split('\n## ')[0];
-    const unrecorded = /記録なし|\[作業時間\]/.test(section) || section.trim() === '';
+    const body = section
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .join('\n');
+    if (/\d+\s*(分|時間|h)\b/i.test(body)) return null;
+    const unrecorded = body === '' || body === '記録なし' || body === '[作業時間]';
     if (!unrecorded) return null;
     return {
       date: today,

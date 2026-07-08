@@ -23,6 +23,20 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
 プロジェクト固有の前提は `docs/01-overview.md` `docs/03-architecture.md`
 `docs/04-domain-model.md` `docs/07-dev-rules.md` を参照。
 
+## 先行調査フェーズ（L3 のみ・任意）
+
+各 Subagent が同一ファイルを重複探索するのを避けるため、L3 では委譲前に主要ファイルを
+orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示に埋め込んでよい。
+
+- 対象は次の **3 種に限定**する（手を広げない）:
+  1. 対象スキーマの `schema.ts`（Drizzle DB 契約）1 本
+  2. 変更対象に最も近い既存 repository 実装 1 本
+  3. 関連する `packages/api-contract`（Zod）1 本
+- 要約は「どこに何があるか」の**所在情報にとどめる**。設計判断は各 Subagent に委ねる。
+- 要約には「これは所在情報であり、設計判断に必要な一次情報は各 Subagent が確認すること」と
+  明記し、不完全な要約で後段が誤前提に立たないようにする。
+- L1/L2 では行わない（過剰調査の禁止・トークン増の抑制）。
+
 ## 進め方
 
 1. **変更レベルを判定**（L1/L2/L3）し、判定理由を簡潔にユーザーへ提示する。
@@ -82,13 +96,21 @@ tools: Agent(requirements-analyst, architecture-designer, contract-designer, imp
 
 - L0：調査・相談のみ。コード変更なし・成果物なし（必要なら提案書）。
 - L1：implementer へ直接修正、または確認のみ。設計書・計画は作らない。
-- L2：architecture-designer →〔契約変更あれば contract-designer〕→ (implementation-planner ∥ test-designer) → implementer → reviewer → security-reviewer → reflection-agent
+- L2：architecture-designer →〔契約変更あれば contract-designer〕→ (implementation-planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→ reflection-agent
 - L3：requirements-analyst → architecture-designer →〔契約あれば contract-designer〕→〔外部I/O/大量データあれば performance-designer（planner と並行可）〕→ (planner ∥ test-designer) → implementer →〔E2E基盤整備済みなら e2e-test-implementer〕→ reviewer（+ ADR）→ security-reviewer → reflection-agent
+
+> 並列化（詳細は orchestration-policy.md §並列実行の指針）: 契約の骨子が既存 schema /
+> api-contract から立てられる L3 では contract-designer を architecture-designer と
+> 並列先行できる（設計確定後に orchestrator が確定差分を追送）。集約構造が未確定なら直列に戻す。
+> performance-designer・implementation-planner・test-designer の並列余地も活かす。
 
 > contract-designer の起動は orchestration-policy.md §contract-designer の必須起動トリガー
 > に従う。Zod / Drizzle / Hono RPC 型 / DTO のフィールド追加・変更・削除・必須/任意・
 > nullability・バリデーション境界の変更があれば **L2 でも必ず起動**する。契約の形が変わらない
 > 変更（内部リファクタ・文言のみ）では起動しない（過剰工程の禁止）。
+
+> security-reviewer の起動は orchestration-policy.md §security-reviewer の起動条件に従う。
+> L3 は原則必須。L2 はセキュリティ触点があるとき必須、省略条件に該当すれば省略可。
 
 ## 改善サイクルへの接続（詳細は improvement-cycle.md）
 
