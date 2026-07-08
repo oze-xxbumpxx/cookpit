@@ -21,7 +21,7 @@ Orchestrator … 変更レベル判定（L1/L2/L3）・タスク分解・委譲�
   ├─(L2/L3)→ test-designer … 試験観点 → docs/tests/<feature>.md
   ├────────→ implementer … 実装 + 単体テスト + lint/型チェック/テスト
   ├─(L2/L3)→ reviewer … 整合性・品質のレビュー
-  ├─(L2/L3)→ security-reviewer … セキュリティ専門レビュー（ドキュメントのみ変更は省略）
+  ├─(L2/L3)→ security-reviewer … セキュリティ専門レビュー（L2 は省略条件あり・正典は orchestration-policy）
   └─(L2/L3)→ reflection-agent … 振り返り → improvements/candidates/<task-id>.md
   │
   ▼

@@ -54,7 +54,7 @@ requirements-analyst（任意・影響が読めない時）
   → test-designer（計画と並行可） → docs/tests/<feature>.md
   → implementer                  → 実装 + 単体テスト + lint/型チェック/テスト
   → reviewer                     → 指摘（必要なら docs/reviews/<feature>.md）
-  → security-reviewer            → セキュリティ指摘
+  →〔security-reviewer（省略条件あり・§起動条件参照）〕→ セキュリティ指摘
   → reflection-agent             → improvements/candidates/<task-id>.md
 ```
 
@@ -79,6 +79,16 @@ requirements-analyst  → docs/requirements/<feature>.md
 - `requirements-analyst` の調査結果が前提になるため、まず先行させる。
 - `architecture-designer` 完了後、`implementation-planner` と `test-designer` は
   並列に進められる（どちらも設計書を入力にするため）。
+- `contract-designer` は、契約の骨子（既存 `schema.ts` / `packages/api-contract` から確定
+  できる型・nullability・エラー形式）が立てられる場合に限り、`architecture-designer` と
+  **並列に先行起動できる**。並列化したときは:
+  - 契約書に設計書への参照リンク（「§集約設計は `docs/designs/<feature>.md` を参照」）を必ず入れる。
+  - `architecture-designer` が集約境界・新規 Entity・層責務を確定したら、その確定差分を
+    orchestrator が `contract-designer` へ追送し、契約を再確認させる（差し戻しでなく追補）。
+  - 整合チェックは orchestrator の統合フェーズで行う。
+  - **集約構造が未確定で契約の骨子が立てられない L3（新規ドメイン中心）では並列化せず直列**にする。
+- `performance-designer` は起動条件を満たすとき、`implementation-planner` / `test-designer` と
+  並列に進められる（§performance-designer の起動条件を参照）。
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
 
@@ -155,14 +165,35 @@ contract-designer の起動を orchestrator の定性判断だけに委ねない
 
 ## security-reviewer の起動条件
 
-**L2/L3 の全タスクで `reviewer` の後に必ず起動する。** L1 では起動しない。
+**L1 では起動しない。** L3 は原則必須（下記のドキュメントのみ例外を除く）。
+L2 はセキュリティ触点があるとき必須、省略条件に該当すれば省略してよい。
 
-起動しない例外（L2/L3 でも省略してよいケース）:
+### 必ず起動する（L2/L3）
+
+次のいずれかに該当したら `reviewer` の後に必ず起動する。
+
+1. 認証・認可・セッション・Cookie / セキュリティヘッダーの新設・変更がある。
+2. 秘密情報（トークン・API キー・個人情報）の取り扱いが変わる、またはログ出力経路が変わる。
+3. Infrastructure 経由の外部 API / 外部ストレージ I/O を新設・変更する。
+4. 依存パッケージの追加・メジャー更新がある（`package.json` / lockfile）。
+5. 入力境界（Hono ルート・Zod 契約）の新設・変更で、未検証入力が Domain / UseCase に
+   届きうる変更がある。
+6. L3 の全層変更（新規 API / DB スキーマ / データ移行を含むもの）。
+
+### 省略してよい（L2 限定・過剰工程の禁止）
+
+次の**すべて**を満たす L2 では省略してよい。省略した場合は最終報告に「省略理由」を 1 行書く。
+
+- Presentation のみ、または契約・DB・認証に触れない内部リファクタ / テスト基盤のみ。
+- 依存パッケージの追加・メジャー更新がない。
+- 秘密情報・外部 I/O・認証認可に触れていない。
+
+L2/L3 共通で省略してよいケース:
 
 - ドキュメント / コメント / テキスト文言のみの変更（コード変更がない）。
 - `documentation-only-change` 相当の変更。
 
-判断に迷う場合は起動する側に倒す（コードが変わる変更は必ず起動）。
+判断に迷う場合は起動する側に倒す。
 
 `security-reviewer` は `reviewer` と役割を分担する:
 

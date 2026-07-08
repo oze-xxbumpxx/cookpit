@@ -93,7 +93,9 @@
 
 ## security-reviewer
 
-- L2/L3 全タスクで `reviewer` の後に起動（ドキュメントのみ変更を除く）。
+- 起動条件の正典は [orchestration-policy.md](./orchestration-policy.md) §security-reviewer。
+  L3 は原則必須。L2 はセキュリティ触点があるとき必須、省略条件に該当すれば省略可
+  （Presentation のみ / 契約不変の内部リファクタ / テスト基盤のみ 等）。
 - OWASP Top 10・入力検証（Zod 境界）・認証/認可の漏れ・秘密情報のログ漏洩・
   `pnpm audit` による依存脆弱性・セキュリティヘッダー（フロント変更時のみ）を確認する。
 - `reviewer` と役割を分担: reviewer は品質/整合性を担当、security-reviewer はセキュリティ深掘り。
