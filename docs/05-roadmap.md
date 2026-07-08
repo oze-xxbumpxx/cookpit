@@ -243,8 +243,40 @@
 
 ### 完了条件
 
-- [ ] 1週間分の献立を画面で組み立てられる
-- [ ] 過去 4 週間の献立を遡れる
+- [ ] 1週間分の献立を画面で組み立てられる（Unit B: meal-plan-screens）
+- [ ] 過去 4 週間の献立を遡れる（Unit B: meal-plan-screens）
+
+### 進め方（2026-07-03 計画確定・2026-07-08 復元）
+
+ユニット分割は Sprint 2 の縦割りパターンを踏襲する。
+（注: 本節は `07837e7` で確定したが main へ未マージのまま消えていたため、Unit A 完了時点で復元）
+
+| ユニット                  | 内容                                                                                                                                       | レベル    | 実装ルート                                              | 状態                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------------------------------------------------- | ---------------------------------- |
+| Unit A: meal-plan-core    | Domain（MealPlan / PlannedRecipe / WeekIdentifier / ステータス遷移）+ Drizzle スキーマ（meal_plans / planned_recipes）+ UseCase 5 本 + API | L3        | Codex 委譲（01〜05）                                    | **完了**（PR #37/#42/#44/#45/#46） |
+| Unit B: meal-plan-screens | 献立作成画面（レシピ選択・倍量・任意日付）+ 履歴ビュー                                                                                     | L2 見込み | Unit A 完了後、着手時に判定（既存 API のみ利用なら L2） | **未着手**（Sprint 3 残）          |
+
+スコープ判断（ユーザー確定・2026-07-03）:
+
+- **献立作成画面・履歴ビュー（Unit B）は Sprint 3 の残タスク**として扱う（Sprint 4 へ丸ごと移す決定ではない）。
+- ステータス遷移の UI と調理記録（markAsCooked）の UI は **Sprint 3 対象外**。
+  遷移ロジックと cookedAt はドメインには実装済み。draft→shopping の遷移 UI は
+  Sprint 4（買い物リスト作成）と連動して出す方が自然なため、そちらで扱う。
+
+Unit A で確定済みだった未決事項（対応済み）:
+
+- **WeekIdentifier の週定義**: 土曜始まり・Date ベースを採用（ADR-0005）。`docs/04-domain-model.md` も同期済み（E-8）。
+- 倍量（scaleFactor）のプリセット: Domain は正の数のみ。固定ボタンは Unit B の UI 判断。
+- 履歴ビューの範囲: API は `limit` デフォルト 4・最大 12（D-5）。画面側の表示は Unit B。
+
+### Unit A 完了記録（2026-07-08）
+
+- [x] MealPlan ドメインモデル実装（PR #37）
+- [x] Drizzle スキーマ + Repository（PR #42）
+- [x] Use Case 5 本（PR #44）
+- [x] API Contract（PR #45）
+- [x] Presentation API（Hono ルート）（PR #46）
+- [x] `docs/04-domain-model.md` の WeekIdentifier / MealPlan を実装・ADR に同期（E-8）
 
 ## Sprint 4：ShoppingList 買い物リスト（2週間）
 

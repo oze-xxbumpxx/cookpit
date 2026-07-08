@@ -35,13 +35,15 @@ Sprint 3 で MealPlan 集約を実装するにあたり、「週」をどう識�
 ## Consequences（良い影響・悪い影響・残るリスク）
 
 **良い影響**:
+
 - 週開始日が `Date` に直接反映され、ISO 週番号との混同が生じない
 - DB カラムを `date` 型にでき、範囲検索・UNIQUE 制約が素直に効く
 - 年またぎ週（例: 2026-12-26〜2027-01-01）も特殊なロジックなしに自然に表現できる
 
 **悪い影響・残るリスク**:
-- `docs/04-domain-model.md` の既存コードスニペットと実装が乖離する（本 ADR 決定に合わせて同ドキュメントの
-  該当箇所を更新する必要がある。フォローアップ参照）
+
+- ~~`docs/04-domain-model.md` の既存コードスニペットと実装が乖離する~~ → **解消済み**
+  （2026-07-08・E-8。WeekIdentifier / MealPlan を本 ADR・実装に同期）
 - 将来 ISO 週番号ベースの外部システムと連携する場合、変換ロジックが別途必要になる（MVP1 では想定なし）
 
 ## Migration（移行が必要な場合の手順）
@@ -59,4 +61,4 @@ Sprint 3 で MealPlan 集約を実装するにあたり、「週」をどう識�
 
 - `docs/requirements/meal-plan-core.md`（前提1、6-3節 境界条件 B-01〜B-05・B-11）
 - `docs/designs/meal-plan-core.md`（3章 C-1、4-6節 WeekIdentifier設計、16章 ADR候補、17章 確定記録）
-- `docs/04-domain-model.md`（WeekIdentifier 既存記述。本 ADR の決定に合わせて更新予定）
+- `docs/04-domain-model.md`（WeekIdentifier / MealPlan。2026-07-08 に本 ADR・実装へ同期済み）
