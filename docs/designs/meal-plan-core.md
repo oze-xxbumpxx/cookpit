@@ -1,6 +1,6 @@
 # 設計書: meal-plan-core
 
-- ステータス: 確定（2026-07-05 ユーザー確認完了。C-1〜C-4 は全て推奨案 A で確定）
+- ステータス: 実装済み（2026-07-08。Unit A バックエンド PR #37/#42/#44/#45/#46 マージ済み。画面 UI は Unit B）
 - レベル: L3
 - スプリント: Sprint 3 Unit A
 - 関連: `docs/requirements/meal-plan-core.md`（要件定義）、`docs/04-domain-model.md`、`docs/03-architecture.md`

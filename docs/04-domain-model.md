@@ -95,30 +95,34 @@ export type Unit = 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup' | 'piece' | 
 
 ### WeekIdentifier
 
+> 実装済み（Sprint 3 Unit A / ADR-0005）。ISO 8601 週番号は不採用。
+> 週は「直近の土曜日を開始日とする 7 日間（土曜〜金曜）」。内部は週開始日の `Date`、
+> 外部表現は `"YYYY-MM-DD"`（例: `"2026-07-04"`）。
+
 ```typescript
 export class WeekIdentifier {
-  private constructor(
-    private readonly _year: number,
-    private readonly _weekNumber: number,
-  ) {}
+  private constructor(private readonly weekStartDate: Date) {}
 
   static fromDate(date: Date): WeekIdentifier {
-    // ISO 8601 週番号で算出
+    // 直前の土曜へスナップ（daysFromSaturday = (getDay() + 1) % 7）
   }
 
   static current(): WeekIdentifier {
     return WeekIdentifier.fromDate(new Date());
   }
 
-  startDate(): Date {
-    /* 土曜始まり想定（運用に合わせる） */
+  static fromString(value: string): WeekIdentifier {
+    // 'T00:00:00' を付与してローカル解釈し、fromDate 経由で土曜へスナップ
   }
-  endDate(): Date {}
+
+  startDate(): Date {}
+  endDate(): Date {} // 開始日 + 6 日（金曜 23:59:59.999）
   next(): WeekIdentifier {}
   previous(): WeekIdentifier {}
+  equals(other: WeekIdentifier): boolean {}
 
   toString(): string {
-    return `${this._year}-W${this._weekNumber}`;
+    // getFullYear/getMonth/getDate から "YYYY-MM-DD" を組み立て（toISOString は使わない）
   }
 }
 ```
@@ -325,16 +329,24 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 ### MealPlan 集約
 
 週次の献立。ビュッフェ方式に対応するため、日付とレシピを 1:1 で固定しない柔軟な設計。
+実装済み（Sprint 3 Unit A）。詳細は `docs/designs/meal-plan-core.md` / ADR-0005。
 
 ```typescript
+export type MealPlanStatus =
+  | 'draft' // 献立検討中
+  | 'shopping' // 買い物中（ShoppingList 生成後。遷移 UI は Sprint 4）
+  | 'cooking' // 作り置き中
+  | 'consuming' // 平日消費中
+  | 'completed'; // 終了
+
 export class MealPlan {
   private constructor(
-    private readonly _id: MealPlanId,
-    private readonly _weekOf: WeekIdentifier,
-    private _plannedRecipes: PlannedRecipe[],
-    private _status: MealPlanStatus,
-    private readonly _createdAt: Date,
-    private _completedAt: Date | null,
+    private readonly mealPlanId: MealPlanId,
+    private readonly mealPlanWeekOf: WeekIdentifier,
+    private mealPlanPlannedRecipes: PlannedRecipe[],
+    private mealPlanStatus: MealPlanStatus,
+    private readonly createdDate: Date,
+    private completedDate: Date | null,
   ) {}
 
   static create(weekOf: WeekIdentifier): MealPlan {
@@ -345,88 +357,58 @@ export class MealPlan {
     /* ... */
   }
 
-  addRecipe(recipeId: RecipeId, scaleFactor: number = 1): PlannedRecipeId {
-    if (this._status !== 'draft' && this._status !== 'shopping') {
-      throw new Error('Cannot add recipe to a plan that is already cooking');
-    }
-    const planned = PlannedRecipe.create(recipeId, scaleFactor);
-    this._plannedRecipes.push(planned);
-    return planned.id;
+  addRecipe(recipeId: RecipeId, scaleFactor: number): PlannedRecipeId {
+    // draft / shopping のみ可。scaleFactor は Domain で > 0 を検証
   }
 
   removeRecipe(plannedRecipeId: PlannedRecipeId): void {
-    /* ... */
+    // draft / shopping のみ可。未検出は Error
   }
 
   scheduleForDay(plannedRecipeId: PlannedRecipeId, date: Date): void {
-    const target = this._plannedRecipes.find((p) => p.id.equals(plannedRecipeId));
-    if (!target) throw new Error('PlannedRecipe not found');
-    target.scheduleFor(date);
+    /* PlannedRecipe.scheduleFor */
   }
 
-  markAsCooked(plannedRecipeId: PlannedRecipeId): void {
-    const target = this._plannedRecipes.find((p) => p.id.equals(plannedRecipeId));
-    if (!target) throw new Error('PlannedRecipe not found');
-    target.markAsCooked(new Date());
+  markAsCooked(plannedRecipeId: PlannedRecipeId, at: Date): void {
+    /* PlannedRecipe.markAsCooked。調理記録 UI は Sprint 3 対象外 */
   }
 
-  /** ステータス遷移 */
   transitionTo(newStatus: MealPlanStatus): void {
-    if (!this.canTransitionTo(newStatus)) {
-      throw new Error(`Cannot transition from ${this._status} to ${newStatus}`);
-    }
-    this._status = newStatus;
-    if (newStatus === 'completed') this._completedAt = new Date();
-  }
-
-  private canTransitionTo(newStatus: MealPlanStatus): boolean {
-    const transitions: Record<MealPlanStatus, MealPlanStatus[]> = {
-      draft: ['shopping'],
-      shopping: ['cooking', 'draft'],
-      cooking: ['consuming'],
-      consuming: ['completed'],
-      completed: [],
-    };
-    return transitions[this._status].includes(newStatus);
+    // draft→shopping / shopping→draft|cooking / cooking→consuming /
+    // consuming→completed。completed は終端。API 公開は Sprint 3 対象外
   }
 }
 
 export class PlannedRecipe {
   private constructor(
-    private readonly _id: PlannedRecipeId,
-    private readonly _recipeId: RecipeId,
-    private readonly _scaleFactor: number,
-    private _scheduledDate: Date | null,
-    private _cookedAt: Date | null,
-    private _notes: string,
+    private readonly plannedRecipeId: PlannedRecipeId,
+    private readonly plannedRecipeRecipeId: RecipeId,
+    private readonly plannedRecipeScaleFactor: number,
+    private scheduledDateValue: Date | null,
+    private cookedAtValue: Date | null,
+    private readonly plannedRecipeNotes: string,
   ) {}
 
-  static create(recipeId: RecipeId, scaleFactor: number = 1): PlannedRecipe {
-    return new PlannedRecipe(PlannedRecipeId.generate(), recipeId, scaleFactor, null, null, '');
+  static create(recipeId: RecipeId, scaleFactor: number): PlannedRecipe {
+    // scaleFactor <= 0 は Error。notes 初期値は ''
   }
 
-  scheduleFor(date: Date): void {
-    this._scheduledDate = date;
+  static reconstruct(props: PlannedRecipeProps): PlannedRecipe {
+    /* ... */
   }
-  markAsCooked(at: Date): void {
-    this._cookedAt = at;
-  }
+
+  scheduleFor(date: Date): void {}
+  markAsCooked(at: Date): void {}
 }
-
-export type MealPlanStatus =
-  | 'draft' // 献立検討中
-  | 'shopping' // 買い物中
-  | 'cooking' // 作り置き中
-  | 'consuming' // 平日消費中
-  | 'completed'; // 終了
 ```
 
 #### 設計ポイント
 
 - `scheduledDate` を nullable にすることで、ビュッフェ運用（日付なし）と日付指定運用の両方に対応
 - `cookedAt` を持たせることで、「過去のレシピを見る」ユースケースを実現
-- `MealPlanStatus` のステータス遷移ルールをドメイン内に閉じ込め
+- `MealPlanStatus` のステータス遷移ルールをドメイン内に閉じ込め（遷移 UI は Sprint 4 連動）
 - 過去の献立を遡って参照できる（紙のレシピブックの代替として機能）
+- 削除済み Recipe への参照は `recipeId` のみ保持（カスケード削除しない。C-4）
 
 ### ShoppingList 集約
 
