@@ -74,6 +74,28 @@ requirements-analyst  → docs/requirements/<feature>.md
   → reflection-agent           → improvements/candidates/<task-id>.md
 ```
 
+## 実装ルートの分岐（Codex 委譲）
+
+実装ルートは 2 系統ある（選定基準の正典は `docs/06-ai-tools.md` §実装ルートの使い分け、
+実行手順は `docs/claude-code/codex-delegation-playbook.md`）。**どちらのルートでも
+implementer 工程以外は共通**であり、上流（要件〜試験計画）と下流（振り返り）を省略しない。
+
+```
+…→ implementation-planner → test-designer →┬→ implementer（Orchestrator 経路）────────────┬→ reviewer →…
+                                           └→ create-codex-brief → Codex 実装（人間が実行） ┘
+                                              → review-codex-implementation（受け入れレビュー）
+```
+
+Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・レビュー記録なしの再発防止）:
+
+1. **作業ブランチ必須**。main への直コミットは禁止（lefthook pre-commit の branch-guard がブロック）。
+2. **受け入れレビュー必須**。`review-codex-implementation` Skill を PR 作成前に実行し、
+   結果（機械チェック・品質ゲート・チェックリスト判定）を PR 本文または `docs/reviews/` に記録する。
+   受け入れレビューが Orchestrator 経路の reviewer 工程に相当する（省略ではなく代替）。
+3. **reflection-agent は Codex ルートでも実施**する（feature 完了時）。
+4. 実装途中でルートを切り替えた場合（Orchestrator ⇔ Codex）、実装計画の「実装ルート」欄を
+   更新し、切替理由を日次ログに残す。
+
 ## 並列実行の指針
 
 - `requirements-analyst` の調査結果が前提になるため、まず先行させる。

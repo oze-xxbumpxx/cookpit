@@ -2,7 +2,9 @@
 
 - 前提となる設計書: `docs/designs/meal-plan-screens.md`（confirmed・2026-07-09）
 - レベル: L2
-- 実装ルート: Codex 委譲（ブリーフ: `docs/tasks/codex/meal-plan-screens/`。本計画から生成）
+- 実装ルート: Orchestrator 経路（implementer）— 2026-07-09 ユーザー判断で Codex 委譲から変更
+  （ハーネス改善 IMP-009/010/012/014/016 の実地検証を兼ねるため。
+  生成済み Codex ブリーフ `docs/tasks/codex/meal-plan-screens/` は参照資料として残置）
 
 ## 変更対象ファイル
 
