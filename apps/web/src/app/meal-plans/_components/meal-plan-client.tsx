@@ -136,7 +136,12 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
         {mealPlan === null ? (
           <section className="flex flex-col items-center gap-4 py-12 text-center">
             <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
-            <Button type="button" onClick={handleCreate} disabled={submitting} className="h-11 px-6">
+            <Button
+              type="button"
+              onClick={handleCreate}
+              disabled={submitting}
+              className="h-11 px-6"
+            >
               {submitting ? '作成中' : '今週の献立をはじめる'}
             </Button>
           </section>

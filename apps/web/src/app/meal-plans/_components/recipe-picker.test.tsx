@@ -44,9 +44,7 @@ describe('RecipePicker', () => {
   it('WC-K-02: 未選択時は [献立に追加] が disabled', () => {
     render(<RecipePicker recipes={RECIPES} onAdd={vi.fn()} submitting={false} />);
 
-    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('WC-K-03: 倍量未選択でレシピのみ選択すると onAdd はデフォルト 1 で呼ばれる', async () => {
@@ -80,9 +78,7 @@ describe('RecipePicker', () => {
     await user.click(screen.getByRole('button', { name: '肉じゃが' }));
     await user.click(screen.getByRole('button', { name: '献立に追加' }));
 
-    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByLabelText('レシピを検索')).toHaveProperty('value', '肉');
   });
 
@@ -92,9 +88,7 @@ describe('RecipePicker', () => {
 
     await user.click(screen.getByRole('button', { name: '肉じゃが' }));
 
-    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(screen.getByRole('button', { name: '献立に追加' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('WC-K-07: 検索結果 0 件で該当なし文言が表示される', async () => {
