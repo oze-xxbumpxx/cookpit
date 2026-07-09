@@ -32,7 +32,7 @@ export function RecipeListClient({ initialRecipes }: Props) {
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start">
+          <div className="flex justify-start gap-1">
             <Link
               href="/products"
               className={cn(
@@ -41,6 +41,15 @@ export function RecipeListClient({ initialRecipes }: Props) {
               )}
             >
               商品
+            </Link>
+            <Link
+              href="/meal-plans"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-9 px-2 text-foreground',
+              )}
+            >
+              献立
             </Link>
           </div>
           <h1 className="text-lg font-semibold text-foreground">レシピ</h1>
