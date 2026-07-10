@@ -99,4 +99,18 @@ describe('RecipePicker', () => {
 
     expect(screen.getByText('該当するレシピがありません')).toBeDefined();
   });
+
+  it('WC-K-08: 倍量プリセットは 1×/1.5×/2×/3× の 4 個がすべて描画される', () => {
+    render(<RecipePicker recipes={RECIPES} onAdd={vi.fn()} submitting={false} />);
+
+    // 設計 S-2 の仕様値 [1, 1.5, 2, 3] を集合として固定する（部分一致の回帰を防ぐ）
+    const labels = ['1×', '1.5×', '2×', '3×'];
+    for (const label of labels) {
+      expect(screen.getByRole('button', { name: label })).toBeDefined();
+    }
+    const presetButtons = screen
+      .getAllByRole('button')
+      .filter((b) => /^\d+(\.\d+)?×$/.test(b.textContent ?? ''));
+    expect(presetButtons.map((b) => b.textContent)).toEqual(labels);
+  });
 });
