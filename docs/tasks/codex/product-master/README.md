@@ -37,7 +37,7 @@ pnpm test        # 全 green（Domain + Application 新規テスト含む）
 ## 参照ドキュメント
 
 - 設計書: `docs/designs/product-master.md`
-- API 契約: `docs/designs/product-master.contract.md`
+- API 契約: `docs/designs/product-master-contract.md`
 - 実装計画: `docs/implementation-plans/product-master.md`
 - 試験計画: `docs/tests/product-master.md`
 - 要件定義: `docs/requirements/product-master.md`

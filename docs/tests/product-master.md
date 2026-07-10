@@ -6,7 +6,7 @@
 - 参照:
   - `docs/requirements/product-master.md`（§7 試験観点 N1〜N18 / E1〜E13 / B1〜B8）
   - `docs/designs/product-master.md`（§5 計算ロジック / §6 永続化 / §7 DB スキーマ / §11 エラー処理）
-  - `docs/designs/product-master.contract.md`（§7 契約テスト方針）
+  - `docs/designs/product-master-contract.md`（§7 契約テスト方針）
 
 ---
 

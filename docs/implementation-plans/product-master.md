@@ -1,6 +1,6 @@
 # 実装計画: product-master
 
-- 前提となる設計書: `docs/designs/product-master.md` / `docs/designs/product-master.contract.md`
+- 前提となる設計書: `docs/designs/product-master.md` / `docs/designs/product-master-contract.md`
 - 要件定義: `docs/requirements/product-master.md`
 - レベル: L3
 - 作成日: 2026-06-26
@@ -1057,7 +1057,7 @@ if (err instanceof StoreNotFoundError) {
 | ドキュメント | 更新内容 |
 |---|---|
 | `docs/designs/product-master.md` | ステータスを `draft` → `approved` に更新（architecture-designer の責務） |
-| `docs/designs/product-master.contract.md` | 同上 |
+| `docs/designs/product-master-contract.md` | 同上 |
 | `docs/04-domain-model.md` | Product / PriceRecord / Store / Money が実装済みとなったことを記録（任意） |
 | `docs/05-roadmap.md` | Sprint 2 完了マーク |
 

@@ -14,6 +14,7 @@
 | [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                               |
 | [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約）              |
 | [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート                         |
+| [09-file-placement-rules.md](./09-file-placement-rules.md) | ファイル配置の判断ルール（どこに何を置くか）             |
 | [decisions/](./decisions/)                         | feature 起点の ADR（ADR-0005〜。001〜004 は本ディレクトリ直下） |
 
 ## クイックスタート
