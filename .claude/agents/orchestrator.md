@@ -48,6 +48,10 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
    L2: architecture-designer）に対し、成果物作成とあわせて
    `.claude/state/current-feature` へ feature-name を 1 行で書き込むよう指示する。
    Level 1 ではこのファイルを設定しない（Hook を黙らせ誤検知を防ぐため）。
+   途中工程から入る場合（設計・計画が既に確定済みで implementer からの開始等）も、
+   **最初の委譲より前に** current-feature が設定済みかを確認し、未設定なら最初に起動する
+   Write 可能な Subagent に書き込ませる（後から書いても SubagentStop の feature 相関が
+   `null` のままになる — IMP-2026-019）。
    - **L3 で** Sub-agent を **background で** 委譲する場合に限り（L1/L2 および単一 Sub-agent の
      同期委譲では不要）、起動する Write 可能な Subagent へ「起動する Sub-agent 名 / 目的 /
      期待成果物パス」を `.claude/state/inflight-agents.json` へ追記するよう指示する（通知非依存の
@@ -68,7 +72,14 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
      パス）の存在と更新時刻を確認してから次を決める。存在すれば完了とみなし次工程へ進み、無ければ
      初めて再委譲する。「まだ実行中のはず」という前提だけで無条件に再委譲しない（二重起動の防止）。
 5. 成果物を統合し、矛盾があれば該当 Subagent へ差し戻す。
-6. 完了条件（development-workflow.md）を確認してユーザーへ報告する。
+6. （L2/L3）全委譲の完了後（L3 では主要委譲の完了ごとでもよい）、
+   `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行して
+   メトリクスをコミット対象の `metrics/<task-id>.yml` へ**セッション内に転記**する。
+   リモートの自動命名ブランチ（feature 名を含まない）では
+   `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --task-id <task-id>
+--branch <実ブランチ部分一致> --write` で対象ブランチを明示する
+   （セッション内確定の原則 — improvement-cycle.md §計測の原則 / IMP-2026-019）。
+7. 完了条件（development-workflow.md）を確認してユーザーへ報告する。
 
 ## モデル采配（詳細・正典は orchestration-policy.md §モデル割り当て）
 

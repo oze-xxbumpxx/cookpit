@@ -83,8 +83,10 @@ candidate ファイル作成後、タスクのメトリクスを記録する。
    - `quality.user_corrections`：会話上のユーザー修正・差し戻し回数。
    - `process.*_rework`：各フェーズの手戻り回数。
    - 判定できない値は `unknown` のまま残す（推測値を入れない）。
-   - リモート（エフェメラル）環境では `.claude/state/subagent-log.jsonl` がセッションを
-     跨いで残らず、自動補完が働かないことがある。その場合は会話ログから数えて手動記入し、
+   - 横断集計・振り返りの入力は**コミット済みの `metrics/*.yml` を正**とする。
+     `.claude/state/subagent-log.jsonl` は同一セッション内でのみ有効で、リモート
+     （エフェメラル）環境ではセッションを跨いで残らない（improvement-cycle.md §計測の原則 /
+     IMP-2026-019）。同一セッション内で自動補完が働かない値は会話ログから数えて手動記入し、
      判別できない値は `unknown` とする（出典:
      `docs/claude-code/improvements/candidates/test-infra-expansion.md` 事象 4）。
 

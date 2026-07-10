@@ -33,6 +33,9 @@ description: >
 4. **メトリクス**（L2/L3 の機能タスクに関与したセッションは毎回）:
    `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行する。
    - 初回は雛形を作成、2 回目以降は `machine:` セクションだけ再集計して累積する（冪等）。
+   - **feature が未完了でも先送りしない**。`machine:` セクションの転記は毎セッション実行する
+     （意味値の記入だけタスク完了時でよい。セッション内確定の原則 — improvement-cycle.md
+     §計測の原則 / IMP-2026-019）。
    - 所要時間・トークン・ツール/Agent 呼び出し・ゲート実行（手戻りプロキシ）は
      `collect-task-metrics.mjs` が transcript と quality-gates-log から自動で埋める。
      transcript はローカルマシンにしか残らないため、タスク完了時ではなく
