@@ -36,13 +36,13 @@ machine:
         'date': '2026-07-10',
         'branches': ['claude/harness-architecture-routing-zun1fl'],
         'matched_by': 'branch',
-        'active_minutes': 51,
+        'active_minutes': 109,
         'tokens':
-          { 'input': 20833, 'output': 48095, 'cache_creation': 469176, 'cache_read': 13542787 },
-        'tool_uses': 168,
-        'user_prompts': 6,
-        'agent_calls': { 'implementer': 1 },
-        'models': ['claude-fable-5', 'claude-sonnet-5'],
+          { 'input': 40926, 'output': 103133, 'cache_creation': 950656, 'cache_read': 25238708 },
+        'tool_uses': 271,
+        'user_prompts': 10,
+        'agent_calls': { 'reflection-agent': 1, 'reviewer': 1, 'implementer': 1 },
+        'models': ['<synthetic>', 'claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5'],
       }
   gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
     - {
@@ -54,16 +54,16 @@ machine:
       }
   totals:
     sessions: 1
-    active_minutes: 51 # 約51分（活動時間ベース・空白30分超は除外）
-    tokens_input: 20833
-    tokens_output: 48095
-    tokens_cache_creation: 469176
-    tokens_cache_read: 13542787
-    tokens_total: 14080891
-    tool_uses: 168
-    user_prompts: 6
-    agent_calls: 1
-    agent_calls_by_type: { 'implementer': 1 }
+    active_minutes: 109 # 約1時間49分（活動時間ベース・空白30分超は除外）
+    tokens_input: 40926
+    tokens_output: 103133
+    tokens_cache_creation: 950656
+    tokens_cache_read: 25238708
+    tokens_total: 26333423
+    tool_uses: 271
+    user_prompts: 10
+    agent_calls: 3
+    agent_calls_by_type: { 'reflection-agent': 1, 'reviewer': 1, 'implementer': 1 }
     agent_restarts: 0 # 同一 Subagent 種の再起動数（手戻りプロキシ）
     gate_runs: 1
     gate_fail_runs: 0
