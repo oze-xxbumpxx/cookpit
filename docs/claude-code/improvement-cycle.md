@@ -56,6 +56,21 @@ agent-improvement-manager を起動するのは次のいずれか。**毎タス�
 > 短期的事象に過剰適応せず、複数タスクで再現した傾向だけを正式設定へ反映する。
 > reflection-agent は毎タスク動いてよい（候補を貯めるだけで設定は変えないため）。
 
+## 計測の原則（セッション内確定 / IMP-2026-019 方針 A）
+
+計測データは**セッション終了前にコミット対象ファイルへ確定する**。リモート（エフェメラル）
+環境では `.claude/state/`（subagent-log / activity-log / quality-gates-log）がコンテナ回収と
+ともに消えるため、「後からまとめて集計」は構造的に成立しない。
+
+- 転記先の正は `improvements/metrics/<task-id>.yml`。横断集計・振り返り・改善評価の入力は
+  **コミット済みの metrics YAML のみ**とする（subagent-log を過去に遡って読む前提を置かない）。
+- 転記タイミング: orchestrator は L2/L3 の委譲完了後（L3 では主要委譲の完了ごとでもよい）、
+  close-session は毎セッション（feature 未完了でも `machine:` セクションは転記する）。
+- 相関の前提 2 件（2026-07-09 実地トライアルで確認）: ①`.claude/state/current-feature` は
+  **Sub-agent 委譲より前**に設定されていること（SubagentStop Hook が記録時点の値を読むため）。
+  ②リモートの自動命名ブランチ（feature 名を含まない）では
+  `collect-task-metrics.mjs --branch <実ブランチ部分一致>` を明示すること。
+
 ## 承認境界
 
 ### 自動実行可能（LLM/自動で完結してよい）

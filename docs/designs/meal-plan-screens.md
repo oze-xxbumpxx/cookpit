@@ -1,6 +1,6 @@
 # 設計書: meal-plan-screens
 
-- ステータス: confirmed（2026-07-09 設計判断 8 点ユーザー確定）
+- ステータス: 実装済み（2026-07-09）
 - レベル: L2
 - スプリント: Sprint 3 Unit B
 - 関連: `docs/designs/meal-plan-core.md`（Unit A 設計・C-1〜C-4 / D-4〜D-7）、

@@ -54,6 +54,7 @@
 | WC-K-05 | 追加後に選択リセット | WC-K-03 実施後                   | render 確認            | [献立に追加] が再び disabled（検索テキストは維持） | 正常 |
 | WC-K-06 | 送信中は追加不可     | `submitting: true`・選択あり     | render                 | [献立に追加] disabled                              | 正常 |
 | WC-K-07 | 検索 0 件            | 検索語が全レシピに不一致         | render                 | 該当なしの文言表示                                 | 境界 |
+| WC-K-08 | プリセット集合の固定 | —                                | render                 | `1×`/`1.5×`/`2×`/`3×` の 4 個が過不足なく描画      | 正常 |
 
 ### meal-plan-client（WC-M）
 
@@ -123,7 +124,7 @@
 | meal-plan-view.ts       | `buildRecipeNameMap`                              | U-V-04〜05                                                   |
 | meal-plan-view.ts       | `resolveHistoryLimit`                             | U-V-06〜10                                                   |
 | planned-recipe-item.tsx | `PlannedRecipeItem`                               | WC-I-01〜06                                                  |
-| recipe-picker.tsx       | `RecipePicker`                                    | WC-K-01〜07                                                  |
+| recipe-picker.tsx       | `RecipePicker`                                    | WC-K-01〜08（08 はレビュー指摘 Should-1 で追加・2026-07-09） |
 | meal-plan-client.tsx    | `MealPlanClient`                                  | WC-M-01〜11                                                  |
 | history-week-card.tsx   | `HistoryWeekCard`                                 | WC-H-01〜06                                                  |
 | meal-plans/page.tsx     | default 相当の SC（named export なし・Next 規約） | MB-01〜04（async SC は RTL 非対応のため実画面で担保）        |
