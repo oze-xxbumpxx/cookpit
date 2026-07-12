@@ -17,6 +17,13 @@ export class Quantity {
     return Quantity.of(this.quantityValue * factor, this.quantityUnit);
   }
 
+  add(other: Quantity): Quantity {
+    if (this.quantityUnit !== other.quantityUnit) {
+      throw new Error('Cannot add different units');
+    }
+    return Quantity.of(this.quantityValue + other.quantityValue, this.quantityUnit);
+  }
+
   get value(): number {
     return this.quantityValue;
   }
