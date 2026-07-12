@@ -29,4 +29,24 @@ describe('Quantity', () => {
   it('multiply に負のファクターを渡すと非負制約でスロー (Q-GAP-1)', () => {
     expect(() => Quantity.of(100, 'g').multiply(-1)).toThrow('Quantity must be non-negative');
   });
+
+  it('add で同じ単位の値を加算する', () => {
+    const result = Quantity.of(100, 'g').add(Quantity.of(200, 'g'));
+
+    expect(result.value).toBe(300);
+    expect(result.unit).toBe('g');
+  });
+
+  it('add で異なる単位は拒否する', () => {
+    expect(() => Quantity.of(100, 'g').add(Quantity.of(200, 'ml'))).toThrow(
+      'Cannot add different units',
+    );
+  });
+
+  it('add で 0 と加算すると元の値になる', () => {
+    const result = Quantity.of(0, 'g').add(Quantity.of(200, 'g'));
+
+    expect(result.value).toBe(200);
+    expect(result.unit).toBe('g');
+  });
 });
