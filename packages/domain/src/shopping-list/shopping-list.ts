@@ -46,6 +46,11 @@ export class ShoppingItem {
     private readonly itemSource: ItemSource,
   ) {}
 
+  /**
+   * requiredAmount と amountNote はどちらか一方のみ指定する（両方 null・両方非 null は不可）。
+   *
+   * @throws Error displayName が空白のみ、または requiredAmount / amountNote の排他制約違反
+   */
   static create(input: CreateShoppingItemInput): ShoppingItem {
     if (input.displayName.trim() === '') {
       throw new Error('Display name is required');
@@ -89,14 +94,18 @@ export class ShoppingItem {
     );
   }
 
-  // bought の再適用と skipped からの購入確定は、最新の実績で上書きする。
+  /** bought の再適用と skipped からの購入確定は、最新の実績で上書きする。 */
   markAsBought(price: Money, store: StoreId): void {
     this.itemStatus = 'bought';
     this.itemActualPrice = price;
     this.itemActualStore = store;
   }
 
-  // 購入実績を残したまま skipped にすると不整合になるため、pending からのみ許可する。
+  /**
+   * 購入実績を残したまま skipped にすると不整合になるため、pending からのみ許可する。
+   *
+   * @throws Error status が pending 以外
+   */
   markAsSkipped(): void {
     if (this.itemStatus !== 'pending') {
       throw new Error(`Cannot skip a ShoppingItem with status '${this.itemStatus}'`);
@@ -104,7 +113,7 @@ export class ShoppingItem {
     this.itemStatus = 'skipped';
   }
 
-  // 購入予定店舗の変更は、確定済みの購入実績に影響させない。
+  /** 購入予定店舗の変更は、確定済みの購入実績（actualPrice / actualStore）に影響させない。 */
   reassignStore(newStore: StoreId): void {
     this.itemTargetStore = newStore;
   }
@@ -169,6 +178,10 @@ export interface CreateShoppingListInput {
   shoppingDate: Date;
 }
 
+/**
+ * 買い物リスト集約。すべての更新操作（addItem / markAsBought / reassignStore /
+ * markAsSkipped / complete）は active 状態でのみ可能で、completed では Error を投げる。
+ */
 export class ShoppingList {
   private constructor(
     private readonly shoppingListId: ShoppingListId,
@@ -206,16 +219,19 @@ export class ShoppingList {
     this.listItems.push(item);
   }
 
+  /** @throws Error active でない、または itemId の品目が存在しない場合 */
   markAsBought(itemId: ShoppingItemId, price: Money, store: StoreId): void {
     this.assertActive('markAsBought');
     this.findItem(itemId).markAsBought(price, store);
   }
 
+  /** @throws Error active でない、または itemId の品目が存在しない場合 */
   reassignStore(itemId: ShoppingItemId, newStore: StoreId): void {
     this.assertActive('reassignStore');
     this.findItem(itemId).reassignStore(newStore);
   }
 
+  /** @throws Error active でない、itemId の品目が存在しない、または品目が pending 以外の場合 */
   markAsSkipped(itemId: ShoppingItemId): void {
     this.assertActive('markAsSkipped');
     this.findItem(itemId).markAsSkipped();
@@ -234,6 +250,7 @@ export class ShoppingList {
     return this.listMealPlanId;
   }
 
+  /** 防御的コピーを返す。配列への変更は集約に反映されない。 */
   get items(): ShoppingItem[] {
     return [...this.listItems];
   }

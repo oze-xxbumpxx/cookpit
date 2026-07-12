@@ -8,6 +8,14 @@ import { toShoppingItemDto } from './shopping-list.mapper';
 import { ShoppingItemNotFoundError } from './shopping-item-not-found.error';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
+/**
+ * 品目の購入予定店舗を変更する。確定済みの購入実績（actualPrice / actualStoreId）には
+ * 影響しない（S-11c）。
+ *
+ * @throws ShoppingListNotFoundError リストが存在しない
+ * @throws InvalidShoppingListStateError リストが completed
+ * @throws ShoppingItemNotFoundError itemId の品目が存在しない
+ */
 export class ReassignStoreUseCase {
   constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
 

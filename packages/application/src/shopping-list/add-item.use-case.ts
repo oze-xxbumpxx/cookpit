@@ -9,6 +9,12 @@ import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 import type { AddItemInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';
 
+/**
+ * active な買い物リストへ手動品目（source: 'manually_added'）を追加する。
+ *
+ * @throws ShoppingListNotFoundError リストが存在しない
+ * @throws InvalidShoppingListStateError リストが completed
+ */
 export class AddItemUseCase {
   constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
 
