@@ -233,8 +233,13 @@ export class ShoppingItem {
     this.itemActualStore = store;
   }
 
-  // S-9: pending 以外からの遷移も含め、寛容方針でガードを設けない
+  // S-9: 設計の規定どおり pending → skipped のみ許可（統合レビュー時確定・SI-TR-07）。
+  // bought→skipped を許すと actualPrice/actualStore が残る不整合状態になるため不可。
+  // 「やっぱり買わない」の訂正（bought→pending 解除）は Unit B で要否判断（S-11d）
   markAsSkipped(): void {
+    if (this.itemStatus !== 'pending') {
+      throw new Error(`Cannot skip a ShoppingItem with status '${this.itemStatus}'`);
+    }
     this.itemStatus = 'skipped';
   }
 
@@ -422,7 +427,8 @@ export interface ShoppingListRepository {
   skipped の item への適用（S-11b、skipped→bought）
 - `ShoppingItem.reassignStore()`: `targetStore` のみ変更、`status='bought'` の item に適用しても
   `actualPrice`/`actualStore` は変わらない（S-11c）
-- `ShoppingItem.markAsSkipped()`: pending→skipped
+- `ShoppingItem.markAsSkipped()`: pending→skipped／bought から throw・skipped から throw
+  （`'Cannot skip a ShoppingItem with status ...'`。SI-TR-07 確定）
 - `ShoppingItem.isBought()`: bought で true、それ以外で false
 - `ShoppingList.create()`: `status='active'`、`createdAt` が設定される
 - `ShoppingList.addItem()`: active で成功／`status='completed'` で throw（D-2）
