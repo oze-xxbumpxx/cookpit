@@ -65,3 +65,67 @@ feature 全体のレビュー記録。タスク単位（Codex 委譲 Task 1〜5�
    `ShoppingItem` に直接 `markAsBought()` を呼ぶと completed ガード（D-2）を迂回できる。
    MealPlan の `plannedRecipes` と同じ既存パターン（設計正典どおり）のため指摘ではなく、
    UseCase 側で必ず `ShoppingList` のメソッド経由で操作するという運用前提の再確認。
+
+---
+
+## Task 2: Infrastructure 層 — DB スキーマ・DrizzleShoppingListRepository（受け入れレビュー）
+
+- 実施日: 2026-07-12
+- 実装ルート: Codex 委譲（指示書: `docs/tasks/codex/shopping-list-core/02-infrastructure.md`）
+- レビュー手順: review-codex-implementation Skill（機械チェック → 品質ゲート → 人間チェックリスト → 敵対的精査パス）
+- ブランチ: `feature/shopping-list-core-domain`（基準コミット `b33ee20`。レビュー時点では未コミットの作業ツリー）
+- **判定: 受け入れ可（差し戻しなし。Must 0 / Should 0 / 申し送り 2）**
+
+### レビュー範囲（Task 2）
+
+| ファイル                                                                                  | 内容                                                                   |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `packages/infrastructure/src/db/schema.ts`                                                | `shoppingLists`/`shoppingItems` テーブル定義 + 型 4 種（末尾追記のみ） |
+| `packages/infrastructure/src/testing/create-test-db.ts`                                   | PGlite テスト DDL に 2 テーブル + インデックス追記                     |
+| `apps/web/src/db/migrations/0006_previous_jamie_braddock.sql` + `meta/0006_snapshot.json` | drizzle-kit 自動生成（UNIQUE・CASCADE FK・インデックス含む）           |
+| `apps/web/src/db/migrations/meta/_journal.json`                                           | idx 6 エントリ追記（既存 0000〜0005 変更なし）                         |
+| `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.ts`            | `DrizzleShoppingListRepository`（findById / findByMealPlanId / save）  |
+| `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.test.ts`       | PGlite 統合テスト 8 件                                                 |
+| `packages/infrastructure/src/index.ts`                                                    | バレルエクスポート 1 行追記                                            |
+
+### 機械チェック + 品質ゲート（Task 2）
+
+- check-codex-implementation.mjs: **FAIL 0 / WARN 3 / INFO 0** — WARN 3 件はすべて目視で誤検出と確定:
+  - `schema.ts:52` `priceRecords` / `:75` `mealPlans` → 今回変更していない既存テーブル定義（スクリプトは変更ファイル全体を走査するため検出）
+  - `schema.ts:106` `shoppingLists` の "lists" → 指示書が明示要求する複数形テーブル名そのもの（初出のためスクリプト辞書に無いだけ。マージ後は辞書に入り再発しない）
+- run-quality-gates.sh: lint / type-check / test すべて **PASS**
+- turbo キャッシュ非経由の直接 Vitest 実行で新規統合テスト **8/8 green**（PGlite 実 DB 往復）
+
+### チェックリスト（Task 2 / docs/06-ai-tools.md 全 8 項目）
+
+| 項目                  | 判定             | 根拠                                                                                                                                                      |
+| --------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 識別子のタイポ        | PASS             | WARN 3 件すべて誤検出と確定 + 指示書シグネチャと目視照合で完全一致                                                                                        |
+| Tailwind タイポ・連結 | PASS（対象なし） | Infrastructure 層のみ、UI 変更なし                                                                                                                        |
+| ハンドラ結線漏れ      | PASS（対象なし） | 同上                                                                                                                                                      |
+| 'use client'          | PASS（対象なし） | 同上                                                                                                                                                      |
+| `import type` 規約    | PASS             | `ShoppingListRepository`/`DrizzleClient`/Row 型/`ShoppingItemProps` は `import type`（または inline `type`）、runtime 使用のクラスは値インポート          |
+| 命名の傾向ずれ        | PASS             | テーブル複数形（指示書指定）・カラム snake_case・`*Row`/`New*Row` 型は既存規約どおり                                                                      |
+| 差し戻しの部分反映    | N/A              | 初回レビュー                                                                                                                                              |
+| バリデーション分岐    | PASS             | `toShoppingListStatus`/`toItemStatus`/`toItemSource` の switch が全列挙 + unknown で throw。numeric→`Number()` 変換・nullability マッピングも指示書どおり |
+
+実画面確認は画面変更を含まないため対象外。
+
+### 敵対的精査パスで確認した点（Task 2・問題なし）
+
+- **既存 6 テーブル・既存マイグレーション 0000〜0005 への変更なし**（全 diff が追記のみ）
+- **タイムゾーンの罠を回避**: `date` カラムは `'T00:00:00'` 付与のローカル解釈 + `toDateString` 手動整形（`toISOString().slice()` 不使用）。round-trip テストあり
+- **upsert の `set` は `status` のみ**（`mealPlanId`/`shoppingDate`/`createdAt` 不変）— 変更を試みても維持されることをテストで検証済み
+- **`notInArray` 削除同期**: item 削除の再 save 反映・0 件時の全 DELETE 分岐ともテスト済み（MealPlan と同一パターン）
+- **UNIQUE(meal_plan_id)**: S-6「1 MealPlan : 最大 1 ShoppingList」の制約違反テストあり
+- テストが items の取得順に依存しない書き方（`find()` ベース）になっている点も適切
+
+### 申し送り（修正不要・Task 3〜5 への引き継ぎ）
+
+1. **items の並び順は未保証**: 復元時の `shopping_items` に ORDER BY が無く、行順は DB 実装依存
+   （MealPlan の `plannedRecipes` と同じ既存パターンで、設計書にも並び順要件なし）。
+   画面で安定した表示順が必要になったら、Application/Presentation 層でソート
+   （`createdAt` or `displayName`）を入れること。
+2. **save() は非トランザクション**: list upsert → items DELETE → items upsert が個別ステートメントで、
+   途中失敗時に部分状態が残りうる。MealPlan と同一の既存トレードオフのため指摘ではなく、
+   トランザクション化を検討する際は両 Repository まとめて、という申し送り。

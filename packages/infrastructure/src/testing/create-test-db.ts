@@ -70,6 +70,32 @@ CREATE TABLE IF NOT EXISTS planned_recipes (
 );
 
 CREATE INDEX IF NOT EXISTS planned_recipes_meal_plan_id_idx ON planned_recipes (meal_plan_id);
+
+CREATE TABLE IF NOT EXISTS shopping_lists (
+  id text PRIMARY KEY,
+  meal_plan_id text NOT NULL UNIQUE,
+  shopping_date date NOT NULL,
+  status text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS shopping_items (
+  id text PRIMARY KEY,
+  shopping_list_id text NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+  product_id text,
+  display_name text NOT NULL,
+  required_amount_value numeric(10, 3),
+  required_amount_unit text,
+  amount_note text,
+  target_store_id text,
+  status text NOT NULL,
+  actual_price_amount numeric(10, 1),
+  actual_store_id text,
+  source text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS shopping_items_shopping_list_id_idx ON shopping_items (shopping_list_id);
 `;
 
 export async function createTestDb(): Promise<DrizzleClient> {
