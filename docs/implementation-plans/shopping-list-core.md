@@ -33,22 +33,22 @@ Presentation（route → app.ts）→ 各層テスト → 品質ゲート**。Sp
 設計書冒頭の確定記録どおり、S-1〜S-11 は全件ユーザー確定済み。以下は実装で必ず踏襲する確定値の
 要約（詳細根拠は設計書 §設計判断リストを参照）。
 
-| ID | 確定内容 |
-| --- | --- |
-| S-1 | `shopping_items` は別テーブル（JSONB 不採用） |
-| S-2 | Pantry 依存なし（`GenerateShoppingListUseCase` は `PantryRepository` を注入しない） |
-| S-3 | Product 名寄せは `productRef` 引き継ぎのみ（ランタイム alias マッチングなし） |
-| S-4 | 材料集計は同一キー・同一単位のみ `Quantity.add()` で合算。共有 VO への純追加 |
-| S-5 | `ShoppingItem.requiredAmount: Quantity \| null` + `amountNote: string \| null`（排他） |
-| S-6 | `GenerateShoppingListUseCase` が MealPlan の `draft→shopping` 遷移を担い、冪等（既存 active を返す）。`shopping_lists.meal_plan_id` UNIQUE。部分失敗は再実行時に自己修復 |
-| S-7 | `GetShoppingListUseCase` + `GET /api/shopping-lists/:id` を Unit A に追加 |
-| S-8 | `ShoppingList.complete()` は Domain 実装（API 非公開）。`getBoughtItemsForPantry()` は実装しない |
-| S-9 | `ShoppingItem.markAsSkipped()` は Domain 実装（UseCase/API は作らない） |
-| S-10 | `shoppingDate = mealPlan.weekOf.startDate()`（週開始土曜固定） |
-| S-11 | markAsBought は現状態を問わず上書き許容。reassignStore は bought でも targetStore のみ変更可。チェック解除（bought→pending）は Unit A では作らない |
-| D-1〜D-8 | 設計者裁量・確定済み（targetStore null 許容 / active ガード全操作共通 / storeId 実在チェックなし / findByIds 新設せず findById ループ / 変更系戻り値は更新後 Dto / enum は text カラム・FK は集約内親子のみ / 空 plannedRecipes 許容 / 削除済み Recipe はスキップ） |
-| §契約確定仕様 §8 | `errorResponseSchema` は `meal-plan.schema.ts` から import して再利用（再定義しない） |
-| §契約確定仕様 §10 | Generate は新規 201 / 冪等（既存 active リスト返却）200 |
+| ID                | 確定内容                                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S-1               | `shopping_items` は別テーブル（JSONB 不採用）                                                                                                                                                                                                                       |
+| S-2               | Pantry 依存なし（`GenerateShoppingListUseCase` は `PantryRepository` を注入しない）                                                                                                                                                                                 |
+| S-3               | Product 名寄せは `productRef` 引き継ぎのみ（ランタイム alias マッチングなし）                                                                                                                                                                                       |
+| S-4               | 材料集計は同一キー・同一単位のみ `Quantity.add()` で合算。共有 VO への純追加                                                                                                                                                                                        |
+| S-5               | `ShoppingItem.requiredAmount: Quantity \| null` + `amountNote: string \| null`（排他）                                                                                                                                                                              |
+| S-6               | `GenerateShoppingListUseCase` が MealPlan の `draft→shopping` 遷移を担い、冪等（既存 active を返す）。`shopping_lists.meal_plan_id` UNIQUE。部分失敗は再実行時に自己修復                                                                                            |
+| S-7               | `GetShoppingListUseCase` + `GET /api/shopping-lists/:id` を Unit A に追加                                                                                                                                                                                           |
+| S-8               | `ShoppingList.complete()` は Domain 実装（API 非公開）。`getBoughtItemsForPantry()` は実装しない                                                                                                                                                                    |
+| S-9               | `ShoppingItem.markAsSkipped()` は Domain 実装（UseCase/API は作らない）                                                                                                                                                                                             |
+| S-10              | `shoppingDate = mealPlan.weekOf.startDate()`（週開始土曜固定）                                                                                                                                                                                                      |
+| S-11              | markAsBought は現状態を問わず上書き許容。reassignStore は bought でも targetStore のみ変更可。チェック解除（bought→pending）は Unit A では作らない                                                                                                                  |
+| D-1〜D-8          | 設計者裁量・確定済み（targetStore null 許容 / active ガード全操作共通 / storeId 実在チェックなし / findByIds 新設せず findById ループ / 変更系戻り値は更新後 Dto / enum は text カラム・FK は集約内親子のみ / 空 plannedRecipes 許容 / 削除済み Recipe はスキップ） |
+| §契約確定仕様 §8  | `errorResponseSchema` は `meal-plan.schema.ts` から import して再利用（再定義しない）                                                                                                                                                                               |
+| §契約確定仕様 §10 | Generate は新規 201 / 冪等（既存 active リスト返却）200                                                                                                                                                                                                             |
 
 ---
 
@@ -59,15 +59,15 @@ Presentation（route → app.ts）→ 各層テスト → 品質ゲート**。Sp
 G-1〜G-3 と同じ性質（設計判断の変更ではなく機械的な整合）のため、Orchestrator への差し戻しは
 不要と判断した。
 
-| # | 差異・補足 | 内容 | 対応 |
-| --- | --- | --- | --- |
-| IMP-1 | マイグレーション出力先 | `apps/web/drizzle.config.ts` の `out: './src/db/migrations'` により出力先は **`apps/web/src/db/migrations/`**（`packages/infrastructure/src/db/migrations/` ではない。meal-plan-core G-1 と同一事情）。現在の最大連番は `0005_faulty_xorn.sql` のため、本ユニットでの生成物は `0006_xxxxx.sql`（ファイル名の adjective-noun 部分は `drizzle-kit generate` が自動採番するため執筆時点では確定しない） | Task 2（Infrastructure）で対応 |
-| IMP-2 | PGlite テスト DDL | `packages/infrastructure/src/testing/create-test-db.ts` は migrations を使わず `schema.ts` と手動同期した DDL 文字列を PGlite に直接適用している。`shopping_lists`/`shopping_items` の `CREATE TABLE` をこの DDL に追記しないと `drizzle-shopping-list.repository.test.ts` が全滅する（meal-plan-core G-2 と同一事情） | Task 2 で対応 |
-| IMP-3 | `requiredAmount.unit` の DTO 型 | 設計 §Application 設計のコード例では `ShoppingItemDto.requiredAmount.unit: string` / `AddItemInputDto.requiredAmount.unit: string` だが、実装は既存 `product.dto.ts`（`PriceRecordDto.packageSizeUnit: Unit`、`CreateProductInputDto.defaultUnit: Unit` 等）の precedent に倣い **`Unit`**（`@cookpit/domain/src/shared/unit` の `import type`）に統一する。値集合は api-contract の `unitSchema`（`recipe.schema.ts` の 17 値 enum）と完全一致するため契約・レスポンス双方に影響しない。`Quantity.of(value, unit)` へ渡す際の unsafe cast や独自 `toUnit` 複製が不要になる実装上の理由による型統一であり、S-x/D-x の確定判断を変更するものではない | Task 3 で適用。§契約確定仕様の Zod 定義（`unitSchema` 再利用）自体は変更しない |
-| IMP-4 | Generate の 201/200 分岐の戻り値 | §契約確定仕様 §10 で確定した「新規 201・冪等 200」をルート層で実装するための情報が必要。設計 §Application 設計のコード例は `GenerateShoppingListUseCase.execute(): Promise<ShoppingListDto>` だが、実装は **`Promise<GenerateShoppingListResultDto>`**（`{ shoppingList: ShoppingListDto; created: boolean }`）とする。レスポンスボディ自体（`shoppingList` の中身）は設計どおりで、戻り値のラップのみの変更。Hono ルートで `c.json(result.shoppingList, result.created ? 201 : 200)` と呼び分ける | Task 3・Task 5 で対応 |
-| IMP-5 | `ProductId` の名前衝突 | `RecipeIngredient.productRef` の型は `recipe-ingredient.ts` ローカルで `export interface ProductId { readonly value: string }` として定義されており、`product/product-id.ts` の `ProductId` クラスと**同名**（設計 §現状構成で既に指摘済み）。`GenerateShoppingListUseCase` で両方を扱う箇所では `product/product-id.ts` の `ProductId` のみを名前付きインポートし、`recipe-ingredient.ts` 側の型は明示インポートしない（`ingredient.productRef?.value` でアクセスすれば型推論で足り、名前衝突は発生しない） | Task 3（Generate 実装時に厳守） |
-| IMP-6 | `packages/api-contract` の Vitest | meal-plan-core 実装時（G-3）に `package.json`/`vitest.config.ts` を導入済み（`packages/api-contract/vitest.config.ts` 現存確認済み）。本ユニットでは追加設定不要 | 対応不要（確認のみ） |
-| IMP-7 | `ShoppingItemId` のテストファイル | 設計 §変更後構成の新規ファイル一覧には `shopping-item-id.test.ts` が明記されていないが、`product-id.test.ts`/`price-record-id.test.ts`（同一パッケージ内 2 ID VO をそれぞれ個別にテストする既存 precedent）に倣い追加する | Task 1 で対応 |
+| #     | 差異・補足                        | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | 対応                                                                           |
+| ----- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| IMP-1 | マイグレーション出力先            | `apps/web/drizzle.config.ts` の `out: './src/db/migrations'` により出力先は **`apps/web/src/db/migrations/`**（`packages/infrastructure/src/db/migrations/` ではない。meal-plan-core G-1 と同一事情）。現在の最大連番は `0005_faulty_xorn.sql` のため、本ユニットでの生成物は `0006_xxxxx.sql`（ファイル名の adjective-noun 部分は `drizzle-kit generate` が自動採番するため執筆時点では確定しない）                                                                                                                                                                                                                                                | Task 2（Infrastructure）で対応                                                 |
+| IMP-2 | PGlite テスト DDL                 | `packages/infrastructure/src/testing/create-test-db.ts` は migrations を使わず `schema.ts` と手動同期した DDL 文字列を PGlite に直接適用している。`shopping_lists`/`shopping_items` の `CREATE TABLE` をこの DDL に追記しないと `drizzle-shopping-list.repository.test.ts` が全滅する（meal-plan-core G-2 と同一事情）                                                                                                                                                                                                                                                                                                                              | Task 2 で対応                                                                  |
+| IMP-3 | `requiredAmount.unit` の DTO 型   | 設計 §Application 設計のコード例では `ShoppingItemDto.requiredAmount.unit: string` / `AddItemInputDto.requiredAmount.unit: string` だが、実装は既存 `product.dto.ts`（`PriceRecordDto.packageSizeUnit: Unit`、`CreateProductInputDto.defaultUnit: Unit` 等）の precedent に倣い **`Unit`**（`@cookpit/domain/src/shared/unit` の `import type`）に統一する。値集合は api-contract の `unitSchema`（`recipe.schema.ts` の 17 値 enum）と完全一致するため契約・レスポンス双方に影響しない。`Quantity.of(value, unit)` へ渡す際の unsafe cast や独自 `toUnit` 複製が不要になる実装上の理由による型統一であり、S-x/D-x の確定判断を変更するものではない | Task 3 で適用。§契約確定仕様の Zod 定義（`unitSchema` 再利用）自体は変更しない |
+| IMP-4 | Generate の 201/200 分岐の戻り値  | §契約確定仕様 §10 で確定した「新規 201・冪等 200」をルート層で実装するための情報が必要。設計 §Application 設計のコード例は `GenerateShoppingListUseCase.execute(): Promise<ShoppingListDto>` だが、実装は **`Promise<GenerateShoppingListResultDto>`**（`{ shoppingList: ShoppingListDto; created: boolean }`）とする。レスポンスボディ自体（`shoppingList` の中身）は設計どおりで、戻り値のラップのみの変更。Hono ルートで `c.json(result.shoppingList, result.created ? 201 : 200)` と呼び分ける                                                                                                                                                  | Task 3・Task 5 で対応                                                          |
+| IMP-5 | `ProductId` の名前衝突            | `RecipeIngredient.productRef` の型は `recipe-ingredient.ts` ローカルで `export interface ProductId { readonly value: string }` として定義されており、`product/product-id.ts` の `ProductId` クラスと**同名**（設計 §現状構成で既に指摘済み）。`GenerateShoppingListUseCase` で両方を扱う箇所では `product/product-id.ts` の `ProductId` のみを名前付きインポートし、`recipe-ingredient.ts` 側の型は明示インポートしない（`ingredient.productRef?.value` でアクセスすれば型推論で足り、名前衝突は発生しない）                                                                                                                                        | Task 3（Generate 実装時に厳守）                                                |
+| IMP-6 | `packages/api-contract` の Vitest | meal-plan-core 実装時（G-3）に `package.json`/`vitest.config.ts` を導入済み（`packages/api-contract/vitest.config.ts` 現存確認済み）。本ユニットでは追加設定不要                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 対応不要（確認のみ）                                                           |
+| IMP-7 | `ShoppingItemId` のテストファイル | 設計 §変更後構成の新規ファイル一覧には `shopping-item-id.test.ts` が明記されていないが、`product-id.test.ts`/`price-record-id.test.ts`（同一パッケージ内 2 ID VO をそれぞれ個別にテストする既存 precedent）に倣い追加する                                                                                                                                                                                                                                                                                                                                                                                                                           | Task 1 で対応                                                                  |
 
 ---
 
@@ -76,13 +76,13 @@ G-1〜G-3 と同じ性質（設計判断の変更ではなく機械的な整合�
 `docs/tasks/codex/meal-plan-core/` と同じ形式（層単位・1 指示書=1PR 相当）で分割する。
 各タスクは自己完結（前タスクの成果物への依存のみで、後続タスクの内容を先取りしない）。
 
-| # | 対象層 | 概要 |
-| --- | --- | --- |
-| 1 | Domain | `Quantity.add()` / `ShoppingListId` / `ShoppingItemId` / `ShoppingList` 集約 + `ShoppingItem` エンティティ / `ShoppingListRepository` IF + テスト |
-| 2 | Infrastructure | DB スキーマ追記 / PGlite DDL 追記 / マイグレーション生成 / `DrizzleShoppingListRepository` 実装 + テスト |
-| 3 | Application | DTO / Mapper / エラー3種 / UseCase 5本（Generate/AddItem/MarkAsBought/ReassignStore/GetShoppingList）+ テスト |
-| 4 | API Contract | `shopping-list.schema.ts`（Zod）+ 契約テスト |
-| 5 | Presentation (API) | Hono ルート6本 / `app.ts` 統合（マウント + onError 3分岐追記） |
+| #   | 対象層             | 概要                                                                                                                                              |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Domain             | `Quantity.add()` / `ShoppingListId` / `ShoppingItemId` / `ShoppingList` 集約 + `ShoppingItem` エンティティ / `ShoppingListRepository` IF + テスト |
+| 2   | Infrastructure     | DB スキーマ追記 / PGlite DDL 追記 / マイグレーション生成 / `DrizzleShoppingListRepository` 実装 + テスト                                          |
+| 3   | Application        | DTO / Mapper / エラー3種 / UseCase 5本（Generate/AddItem/MarkAsBought/ReassignStore/GetShoppingList）+ テスト                                     |
+| 4   | API Contract       | `shopping-list.schema.ts`（Zod）+ 契約テスト                                                                                                      |
+| 5   | Presentation (API) | Hono ルート6本 / `app.ts` 統合（マウント + onError 3分岐追記）                                                                                    |
 
 ---
 
@@ -92,17 +92,17 @@ G-1〜G-3 と同じ性質（設計判断の変更ではなく機械的な整合�
 
 **対象ファイル**
 
-| 種別 | ファイル | 内容 |
-| --- | --- | --- |
-| 追記 | `packages/domain/src/shared/quantity.ts` | `add(other: Quantity): Quantity` を追加（S-4） |
-| 追記 | `packages/domain/src/shared/quantity.test.ts` | `add()` のテストケース追加 |
-| 新規 | `packages/domain/src/shopping-list/shopping-list-id.ts` | `ShoppingListId`（`ProductId` パターン踏襲） |
-| 新規 | `packages/domain/src/shopping-list/shopping-item-id.ts` | `ShoppingItemId`（同上） |
-| 新規 | `packages/domain/src/shopping-list/shopping-list.ts` | `ShoppingList` 集約 + `ShoppingItem` エンティティ + 型3種 |
-| 新規 | `packages/domain/src/shopping-list/shopping-list.repository.ts` | `ShoppingListRepository` IF |
-| 新規 | `packages/domain/src/shopping-list/shopping-list-id.test.ts` | `ShoppingListId` 単体テスト |
-| 新規 | `packages/domain/src/shopping-list/shopping-item-id.test.ts` | `ShoppingItemId` 単体テスト（IMP-7） |
-| 新規 | `packages/domain/src/shopping-list/shopping-list.test.ts` | `ShoppingList`/`ShoppingItem` 集約テスト |
+| 種別 | ファイル                                                        | 内容                                                      |
+| ---- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| 追記 | `packages/domain/src/shared/quantity.ts`                        | `add(other: Quantity): Quantity` を追加（S-4）            |
+| 追記 | `packages/domain/src/shared/quantity.test.ts`                   | `add()` のテストケース追加                                |
+| 新規 | `packages/domain/src/shopping-list/shopping-list-id.ts`         | `ShoppingListId`（`ProductId` パターン踏襲）              |
+| 新規 | `packages/domain/src/shopping-list/shopping-item-id.ts`         | `ShoppingItemId`（同上）                                  |
+| 新規 | `packages/domain/src/shopping-list/shopping-list.ts`            | `ShoppingList` 集約 + `ShoppingItem` エンティティ + 型3種 |
+| 新規 | `packages/domain/src/shopping-list/shopping-list.repository.ts` | `ShoppingListRepository` IF                               |
+| 新規 | `packages/domain/src/shopping-list/shopping-list-id.test.ts`    | `ShoppingListId` 単体テスト                               |
+| 新規 | `packages/domain/src/shopping-list/shopping-item-id.test.ts`    | `ShoppingItemId` 単体テスト（IMP-7）                      |
+| 新規 | `packages/domain/src/shopping-list/shopping-list.test.ts`       | `ShoppingList`/`ShoppingItem` 集約テスト                  |
 
 #### 1-1. `Quantity.add()`（設計 §Domain 設計「Quantity.add()」節をそのまま実装）
 
@@ -247,16 +247,36 @@ export class ShoppingItem {
     return this.itemStatus === 'bought';
   }
 
-  get id(): ShoppingItemId { return this.shoppingItemId; }
-  get productId(): ProductId | null { return this.itemProductId; }
-  get displayName(): string { return this.itemDisplayName; }
-  get requiredAmount(): Quantity | null { return this.itemRequiredAmount; }
-  get amountNote(): string | null { return this.itemAmountNote; }
-  get targetStore(): StoreId | null { return this.itemTargetStore; }
-  get status(): ItemStatus { return this.itemStatus; }
-  get actualPrice(): Money | null { return this.itemActualPrice; }
-  get actualStore(): StoreId | null { return this.itemActualStore; }
-  get source(): ItemSource { return this.itemSource; }
+  get id(): ShoppingItemId {
+    return this.shoppingItemId;
+  }
+  get productId(): ProductId | null {
+    return this.itemProductId;
+  }
+  get displayName(): string {
+    return this.itemDisplayName;
+  }
+  get requiredAmount(): Quantity | null {
+    return this.itemRequiredAmount;
+  }
+  get amountNote(): string | null {
+    return this.itemAmountNote;
+  }
+  get targetStore(): StoreId | null {
+    return this.itemTargetStore;
+  }
+  get status(): ItemStatus {
+    return this.itemStatus;
+  }
+  get actualPrice(): Money | null {
+    return this.itemActualPrice;
+  }
+  get actualStore(): StoreId | null {
+    return this.itemActualStore;
+  }
+  get source(): ItemSource {
+    return this.itemSource;
+  }
 }
 
 export interface ShoppingListProps {
@@ -333,12 +353,24 @@ export class ShoppingList {
     this.listStatus = 'completed';
   }
 
-  get id(): ShoppingListId { return this.shoppingListId; }
-  get mealPlanId(): MealPlanId { return this.listMealPlanId; }
-  get items(): ShoppingItem[] { return [...this.listItems]; }
-  get shoppingDate(): Date { return new Date(this.listShoppingDate); }
-  get status(): ShoppingListStatus { return this.listStatus; }
-  get createdAt(): Date { return new Date(this.createdDate); }
+  get id(): ShoppingListId {
+    return this.shoppingListId;
+  }
+  get mealPlanId(): MealPlanId {
+    return this.listMealPlanId;
+  }
+  get items(): ShoppingItem[] {
+    return [...this.listItems];
+  }
+  get shoppingDate(): Date {
+    return new Date(this.listShoppingDate);
+  }
+  get status(): ShoppingListStatus {
+    return this.listStatus;
+  }
+  get createdAt(): Date {
+    return new Date(this.createdDate);
+  }
 
   // D-2: items 変更系操作すべてに active ガード
   private assertActive(operation: string): void {
@@ -429,15 +461,15 @@ Mapper が Domain の内部状態を書き換えてしまう事故につなが�
 
 **対象ファイル**
 
-| 種別 | ファイル | 内容 |
-| --- | --- | --- |
-| 追記 | `packages/infrastructure/src/db/schema.ts` | `shoppingLists`/`shoppingItems` テーブル定義・型 |
-| 追記 | `packages/infrastructure/src/testing/create-test-db.ts` | DDL 文字列に2テーブル追記（IMP-2） |
-| 新規 | `apps/web/src/db/migrations/0006_xxxxx.sql` + `meta/0006_snapshot.json` | `drizzle-kit generate` 自動生成（IMP-1） |
-| 追記 | `apps/web/src/db/migrations/meta/_journal.json` | 自動更新（新エントリ追記） |
-| 新規 | `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.ts` | `DrizzleShoppingListRepository` |
-| 新規 | `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.test.ts` | PGlite 統合テスト |
-| 追記 | `packages/infrastructure/src/index.ts` | `export * from './repositories/drizzle-shopping-list.repository'` |
+| 種別 | ファイル                                                                            | 内容                                                              |
+| ---- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 追記 | `packages/infrastructure/src/db/schema.ts`                                          | `shoppingLists`/`shoppingItems` テーブル定義・型                  |
+| 追記 | `packages/infrastructure/src/testing/create-test-db.ts`                             | DDL 文字列に2テーブル追記（IMP-2）                                |
+| 新規 | `apps/web/src/db/migrations/0006_xxxxx.sql` + `meta/0006_snapshot.json`             | `drizzle-kit generate` 自動生成（IMP-1）                          |
+| 追記 | `apps/web/src/db/migrations/meta/_journal.json`                                     | 自動更新（新エントリ追記）                                        |
+| 新規 | `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.ts`      | `DrizzleShoppingListRepository`                                   |
+| 新規 | `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.test.ts` | PGlite 統合テスト                                                 |
+| 追記 | `packages/infrastructure/src/index.ts`                                              | `export * from './repositories/drizzle-shopping-list.repository'` |
 
 #### 2-1. `schema.ts` 追記（設計 §DB 設計をそのまま転記。S-1 案A・D-6）
 
@@ -829,21 +861,21 @@ Repository 実装配線は Task 5（Presentation）で行う。
 **対象ファイル**（すべて `packages/application/src/shopping-list/` に新規作成。既存
 `packages/application/src/index.ts` に1行追記）
 
-| # | ファイル | 内容 |
-| --- | --- | --- |
-| 1 | `shopping-list.dto.ts` | DTO 群（IMP-3/IMP-4 反映） |
-| 2 | `shopping-list.mapper.ts` | `toShoppingListDto`/`toShoppingItemDto` |
-| 3 | `shopping-list-not-found.error.ts` | `ShoppingListNotFoundError` |
-| 4 | `shopping-item-not-found.error.ts` | `ShoppingItemNotFoundError` |
-| 5 | `invalid-shopping-list-state.error.ts` | `InvalidShoppingListStateError` |
-| 6 | `generate-shopping-list.use-case.ts` | `GenerateShoppingListUseCase` |
-| 7 | `add-item.use-case.ts` | `AddItemUseCase` |
-| 8 | `mark-as-bought.use-case.ts` | `MarkAsBoughtUseCase` |
-| 9 | `reassign-store.use-case.ts` | `ReassignStoreUseCase` |
-| 10 | `get-shopping-list.use-case.ts` | `GetShoppingListUseCase`（S-7） |
-| 11 | `index.ts` | バレルエクスポート |
-| 12 | `shopping-list-use-cases.test.ts` | 5 UseCase のモック(InMemory)Repository テスト |
-| — | `packages/application/src/index.ts`（既存・追記） | `export * from './shopping-list'` |
+| #   | ファイル                                          | 内容                                          |
+| --- | ------------------------------------------------- | --------------------------------------------- |
+| 1   | `shopping-list.dto.ts`                            | DTO 群（IMP-3/IMP-4 反映）                    |
+| 2   | `shopping-list.mapper.ts`                         | `toShoppingListDto`/`toShoppingItemDto`       |
+| 3   | `shopping-list-not-found.error.ts`                | `ShoppingListNotFoundError`                   |
+| 4   | `shopping-item-not-found.error.ts`                | `ShoppingItemNotFoundError`                   |
+| 5   | `invalid-shopping-list-state.error.ts`            | `InvalidShoppingListStateError`               |
+| 6   | `generate-shopping-list.use-case.ts`              | `GenerateShoppingListUseCase`                 |
+| 7   | `add-item.use-case.ts`                            | `AddItemUseCase`                              |
+| 8   | `mark-as-bought.use-case.ts`                      | `MarkAsBoughtUseCase`                         |
+| 9   | `reassign-store.use-case.ts`                      | `ReassignStoreUseCase`                        |
+| 10  | `get-shopping-list.use-case.ts`                   | `GetShoppingListUseCase`（S-7）               |
+| 11  | `index.ts`                                        | バレルエクスポート                            |
+| 12  | `shopping-list-use-cases.test.ts`                 | 5 UseCase のモック(InMemory)Repository テスト |
+| —   | `packages/application/src/index.ts`（既存・追記） | `export * from './shopping-list'`             |
 
 #### 3-1. DTO（`shopping-list.dto.ts`）
 
@@ -1032,7 +1064,10 @@ import { ShoppingItem, ShoppingList } from '@cookpit/domain/src/shopping-list/sh
 import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
 import { InvalidMealPlanStateError } from '../meal-plan/invalid-meal-plan-state.error';
 import { MealPlanNotFoundError } from '../meal-plan/meal-plan-not-found.error';
-import type { GenerateShoppingListInputDto, GenerateShoppingListResultDto } from './shopping-list.dto';
+import type {
+  GenerateShoppingListInputDto,
+  GenerateShoppingListResultDto,
+} from './shopping-list.dto';
 import { toShoppingListDto } from './shopping-list.mapper';
 
 interface ResolvedIngredient {
@@ -1134,7 +1169,10 @@ export class GenerateShoppingListUseCase {
   private aggregateIngredients(
     resolved: Array<{ plannedRecipe: PlannedRecipe; recipe: Recipe }>,
   ): ResolvedIngredient[] {
-    const aggregated = new Map<string, { productId: ProductId | null; displayName: string; requiredAmount: Quantity }>();
+    const aggregated = new Map<
+      string,
+      { productId: ProductId | null; displayName: string; requiredAmount: Quantity }
+    >();
     const individual: ResolvedIngredient[] = [];
 
     for (const { plannedRecipe, recipe } of resolved) {
@@ -1424,11 +1462,11 @@ pnpm lint
 
 **対象ファイル**
 
-| 種別 | ファイル | 内容 |
-| --- | --- | --- |
-| 新規 | `packages/api-contract/src/shopping-list.schema.ts` | Zod スキーマ一式 |
-| 新規 | `packages/api-contract/src/shopping-list.schema.test.ts` | 契約テスト |
-| 追記 | `packages/api-contract/src/index.ts` | `export * from './shopping-list.schema'` |
+| 種別 | ファイル                                                 | 内容                                     |
+| ---- | -------------------------------------------------------- | ---------------------------------------- |
+| 新規 | `packages/api-contract/src/shopping-list.schema.ts`      | Zod スキーマ一式                         |
+| 新規 | `packages/api-contract/src/shopping-list.schema.test.ts` | 契約テスト                               |
+| 追記 | `packages/api-contract/src/index.ts`                     | `export * from './shopping-list.schema'` |
 
 #### 4-1. `shopping-list.schema.ts`（§契約確定仕様 §1〜§7 をそのまま転記）
 
@@ -1602,11 +1640,11 @@ pnpm --filter @cookpit/api-contract type-check  # 通過
 
 **対象ファイル**
 
-| 種別 | ファイル | 内容 |
-| --- | --- | --- |
-| 新規 | `apps/web/src/server/routes/shopping-lists.ts` | `shoppingListsRoute`（Hono、6 エンドポイント） |
-| 新規 | `apps/web/src/server/routes/shopping-lists.test.ts` | Hono テストクライアントによるルートテスト |
-| 追記 | `apps/web/src/server/app.ts` | マウント + `onError` に新規エラー3種の分岐追加 |
+| 種別 | ファイル                                            | 内容                                           |
+| ---- | --------------------------------------------------- | ---------------------------------------------- |
+| 新規 | `apps/web/src/server/routes/shopping-lists.ts`      | `shoppingListsRoute`（Hono、6 エンドポイント） |
+| 新規 | `apps/web/src/server/routes/shopping-lists.test.ts` | Hono テストクライアントによるルートテスト      |
+| 追記 | `apps/web/src/server/app.ts`                        | マウント + `onError` に新規エラー3種の分岐追加 |
 
 #### 5-1. `shoppingListsRoute`（`meal-plans.ts` のパターン踏襲。手動 DI ファクトリ関数）
 
@@ -1819,17 +1857,17 @@ pnpm lint
 
 ### 既存ファイルへの追記（8 ファイル）
 
-| # | ファイルパス | 変更内容 | タスク |
-| --- | --- | --- | --- |
-| 1 | `packages/domain/src/shared/quantity.ts` | `add()` 追加 | Task 1 |
-| 2 | `packages/domain/src/shared/quantity.test.ts` | `add()` テスト追加 | Task 1 |
-| 3 | `packages/infrastructure/src/db/schema.ts` | `shoppingLists`/`shoppingItems` 追記 | Task 2 |
-| 4 | `packages/infrastructure/src/testing/create-test-db.ts` | DDL 追記（IMP-2） | Task 2 |
-| 5 | `apps/web/src/db/migrations/meta/_journal.json` | 自動更新 | Task 2 |
-| 6 | `packages/infrastructure/src/index.ts` | `DrizzleShoppingListRepository` export 追記 | Task 2 |
-| 7 | `packages/application/src/index.ts` | `export * from './shopping-list'` 追記 | Task 3 |
-| 8 | `packages/api-contract/src/index.ts` | `export * from './shopping-list.schema'` 追記 | Task 4 |
-| 9 | `apps/web/src/server/app.ts` | マウント + onError 3分岐追記 | Task 5 |
+| #   | ファイルパス                                            | 変更内容                                      | タスク |
+| --- | ------------------------------------------------------- | --------------------------------------------- | ------ |
+| 1   | `packages/domain/src/shared/quantity.ts`                | `add()` 追加                                  | Task 1 |
+| 2   | `packages/domain/src/shared/quantity.test.ts`           | `add()` テスト追加                            | Task 1 |
+| 3   | `packages/infrastructure/src/db/schema.ts`              | `shoppingLists`/`shoppingItems` 追記          | Task 2 |
+| 4   | `packages/infrastructure/src/testing/create-test-db.ts` | DDL 追記（IMP-2）                             | Task 2 |
+| 5   | `apps/web/src/db/migrations/meta/_journal.json`         | 自動更新                                      | Task 2 |
+| 6   | `packages/infrastructure/src/index.ts`                  | `DrizzleShoppingListRepository` export 追記   | Task 2 |
+| 7   | `packages/application/src/index.ts`                     | `export * from './shopping-list'` 追記        | Task 3 |
+| 8   | `packages/api-contract/src/index.ts`                    | `export * from './shopping-list.schema'` 追記 | Task 4 |
+| 9   | `apps/web/src/server/app.ts`                            | マウント + onError 3分岐追記                  | Task 5 |
 
 ### 新規作成ファイル
 
@@ -1885,14 +1923,14 @@ Task 1（Domain: Quantity.add + ShoppingList集約 + Repository IF）
 
 ## 各タスクの完了条件（横断チェックリスト）
 
-| Task | 品質ゲート | 追加チェック |
-| --- | --- | --- |
-| 1 Domain | `pnpm --filter @cookpit/domain test/type-check`, `pnpm lint` | S-5 排他検証・D-2 active ガード・S-11 寛容方針（上書き許容）がテストで担保、全 getter が防御的コピー |
+| Task             | 品質ゲート                                                           | 追加チェック                                                                                                               |
+| ---------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1 Domain         | `pnpm --filter @cookpit/domain test/type-check`, `pnpm lint`         | S-5 排他検証・D-2 active ガード・S-11 寛容方針（上書き許容）がテストで担保、全 getter が防御的コピー                       |
 | 2 Infrastructure | `pnpm --filter @cookpit/infrastructure test/type-check`, `pnpm lint` | 既存6テーブル無変更、マイグレーションが `apps/web/src/db/migrations/` に生成、`save()` が不変フィールドを set 対象外にする |
-| 3 Application | `pnpm --filter @cookpit/application test/type-check`, `pnpm lint` | Generate の冪等性・部分失敗修復・D-8 スキップ・D-7 空リスト許容がテストで担保 |
-| 4 API Contract | `pnpm --filter @cookpit/api-contract test/type-check` | `errorResponseSchema` 再定義なし、既存4契約ファイル無変更 |
-| 5 Presentation | `pnpm --filter @cookpit/web test/type-check`, `pnpm lint` | 201/200 分岐の実動作確認、既存 onError 6分岐無変更 |
-| 全体 | `pnpm lint` / `pnpm type-check` / `pnpm test`（ルート） | 既存テスト（Recipe/Product/Store/MealPlan/health）に regression なし |
+| 3 Application    | `pnpm --filter @cookpit/application test/type-check`, `pnpm lint`    | Generate の冪等性・部分失敗修復・D-8 スキップ・D-7 空リスト許容がテストで担保                                              |
+| 4 API Contract   | `pnpm --filter @cookpit/api-contract test/type-check`                | `errorResponseSchema` 再定義なし、既存4契約ファイル無変更                                                                  |
+| 5 Presentation   | `pnpm --filter @cookpit/web test/type-check`, `pnpm lint`            | 201/200 分岐の実動作確認、既存 onError 6分岐無変更                                                                         |
+| 全体             | `pnpm lint` / `pnpm type-check` / `pnpm test`（ルート）              | 既存テスト（Recipe/Product/Store/MealPlan/health）に regression なし                                                       |
 
 ---
 
@@ -1920,19 +1958,19 @@ Task 1（Domain: Quantity.add + ShoppingList集約 + Repository IF）
 
 設計 §リスク（R-1〜R-6）に加え、本実装計画で識別した実装レベルのリスクを併記する。
 
-| # | リスク | 影響 | 緩和 |
-| --- | --- | --- | --- |
-| 設計R-1 | S-x 未確定のまま着手（対応済み） | 手戻り | 2026-07-12 に S-1〜S-11 全件ユーザー確定済み。本計画はそれを前提に作成 |
-| 設計R-2 | S-3 案A では targetStore がほぼ null になりがち | roadmap「価格比較インジケーター」の価値低下 | 既知の MVP1 制約として受容。Unit B の「店舗未定」グルーピングで受け止める（本ユニット対応不要） |
-| 設計R-3 | Generate の2集約更新が非トランザクション | 部分失敗の窓 | S-6-3 の修復分岐（Task 3）+ DB UNIQUE（Task 2）で収束。Task 3 のテストで修復分岐を明示的に検証する |
-| 設計R-4 | 買い物中の save が集約全体書き込み | 低速回線での体感悪化の可能性 | MVP1 では許容（MealPlan と同型）。Unit B 実測後の改善候補として申し送り（対応不要） |
-| 設計R-5 | チェック解除（bought→pending）が Unit A に不在 | Unit B の UX 検証で必要と判明する可能性 | S-11(d) で明示済み。必要時は小さな UseCase 追加で対応可能な構造にしてある（対応不要） |
-| 設計R-6 | `docs/04-domain-model.md` との乖離放置 | 後続実装が古い擬似コードを参照 | 本計画の「ドキュメント更新対象」で同期タスクを明記（下記） |
-| IMP-R1 | IMP-2（PGlite DDL 追記）漏れ | Infrastructure テストが DB エラーで全滅 | Task 2 の完了条件に明記。テスト実行で即座に検知できる |
-| IMP-R2 | IMP-5（`ProductId` 名前衝突）を誤って両方 import | TypeScript コンパイルエラー、または誤った型で解決してしまう | Task 3 のコード例どおり `product/product-id.ts` の `ProductId` のみ import。`recipe-ingredient.ts` 側は構造的型のため明示 import 不要である旨を明記済み |
-| IMP-R3 | IMP-4（`created` フラグ）の判定漏れ | 契約確定済みの 201/200 分岐が機能しない | Task 5 のルートテストで両ケースを明示的に検証 |
-| IMP-R4 | `aggregateIngredients` の集計キー実装ミス | 材料が誤って合算される／されるべきものが分離される（S-4 の中核価値） | Task 3 の単体テストで境界ケース（同一 displayName 異なる unit／同一 productId 異なる displayName）を明示的にカバー |
-| IMP-R5 | `numeric`/`date` カラムの変換漏れ（`Number()`/`'T00:00:00'`） | DTO が文字列型のまま返る／日付が前日にずれる | Task 2 のコード例に全箇所明記。DrizzleMealPlanRepository/DrizzleProductRepository の precedent と同一パターンのため実装時に見比べやすい |
+| #       | リスク                                                        | 影響                                                                 | 緩和                                                                                                                                                    |
+| ------- | ------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 設計R-1 | S-x 未確定のまま着手（対応済み）                              | 手戻り                                                               | 2026-07-12 に S-1〜S-11 全件ユーザー確定済み。本計画はそれを前提に作成                                                                                  |
+| 設計R-2 | S-3 案A では targetStore がほぼ null になりがち               | roadmap「価格比較インジケーター」の価値低下                          | 既知の MVP1 制約として受容。Unit B の「店舗未定」グルーピングで受け止める（本ユニット対応不要）                                                         |
+| 設計R-3 | Generate の2集約更新が非トランザクション                      | 部分失敗の窓                                                         | S-6-3 の修復分岐（Task 3）+ DB UNIQUE（Task 2）で収束。Task 3 のテストで修復分岐を明示的に検証する                                                      |
+| 設計R-4 | 買い物中の save が集約全体書き込み                            | 低速回線での体感悪化の可能性                                         | MVP1 では許容（MealPlan と同型）。Unit B 実測後の改善候補として申し送り（対応不要）                                                                     |
+| 設計R-5 | チェック解除（bought→pending）が Unit A に不在                | Unit B の UX 検証で必要と判明する可能性                              | S-11(d) で明示済み。必要時は小さな UseCase 追加で対応可能な構造にしてある（対応不要）                                                                   |
+| 設計R-6 | `docs/04-domain-model.md` との乖離放置                        | 後続実装が古い擬似コードを参照                                       | 本計画の「ドキュメント更新対象」で同期タスクを明記（下記）                                                                                              |
+| IMP-R1  | IMP-2（PGlite DDL 追記）漏れ                                  | Infrastructure テストが DB エラーで全滅                              | Task 2 の完了条件に明記。テスト実行で即座に検知できる                                                                                                   |
+| IMP-R2  | IMP-5（`ProductId` 名前衝突）を誤って両方 import              | TypeScript コンパイルエラー、または誤った型で解決してしまう          | Task 3 のコード例どおり `product/product-id.ts` の `ProductId` のみ import。`recipe-ingredient.ts` 側は構造的型のため明示 import 不要である旨を明記済み |
+| IMP-R3  | IMP-4（`created` フラグ）の判定漏れ                           | 契約確定済みの 201/200 分岐が機能しない                              | Task 5 のルートテストで両ケースを明示的に検証                                                                                                           |
+| IMP-R4  | `aggregateIngredients` の集計キー実装ミス                     | 材料が誤って合算される／されるべきものが分離される（S-4 の中核価値） | Task 3 の単体テストで境界ケース（同一 displayName 異なる unit／同一 productId 異なる displayName）を明示的にカバー                                      |
+| IMP-R5  | `numeric`/`date` カラムの変換漏れ（`Number()`/`'T00:00:00'`） | DTO が文字列型のまま返る／日付が前日にずれる                         | Task 2 のコード例に全箇所明記。DrizzleMealPlanRepository/DrizzleProductRepository の precedent と同一パターンのため実装時に見比べやすい                 |
 
 ---
 
@@ -1974,12 +2012,12 @@ L2/L3 のドキュメント方針（`docs/claude-code/document-policy.md`）に�
 ドキュメント更新を明記する。**ADR 作成自体はメイン側（Orchestrator/reviewer 工程）が行うため、
 本計画では「ADR 候補あり」の記録にとどめる。**
 
-| # | 対象ドキュメント | 更新内容 | 誰が・いつ |
-| --- | --- | --- | --- |
-| 1 | `docs/04-domain-model.md` §ShoppingList 集約 | (a) `ShoppingItem.requiredAmount` を `Quantity \| null` に修正し `amountNote: string \| null` を追加（S-5。現行の擬似コードは非null前提で矛盾）。(b) `shoppingDate` の意味論を「`mealPlan.weekOf.startDate()`（週開始土曜固定）」に明記（S-10。現行の擬似コードは生成時 `new Date()` を示唆しており乖離）。(c) 擬似コード（`pantryRepo.find()` 呼び出し等）と実装の差異を解消し、Sprint 4 実装が Pantry 依存を持たないこと（S-2）を反映。(d) `getBoughtItemsForPantry()` は **Sprint 4 では未実装**（S-8。型のみ Sprint 5 で確定）である旨の注記を追加 | Task 5（全 Codex タスク）完了後、実装完了後のフォローアップとしてメインエージェント（reviewer 工程）が対応。ADR-0005 の E-8 対応と同じフォローアップ方式（設計 §後方互換性・§リスク R-6 で申し送り済み） |
-| 2 | `docs/05-roadmap.md` Sprint 4 タスク表 | Unit A（ShoppingList バックエンド一式: Domain/Infrastructure/Application/API Contract/Presentation）を完了マークに更新。**`GetShoppingListUseCase` + `GET /api/shopping-lists/:id` が S-7 で Unit A に追加されたこと**を Sprint 4 タスク表に反映する（当初計画にない追加スコープのため、roadmap 上でも明示しておかないと Unit B 設計時に見落とされるリスクがある） | 実装完了後（品質ゲート通過後）、メインエージェントが対応 |
-| 3 | `docs/designs/shopping-list-core.md` | ステータスを「draft」→「確定」または「実装済み」に更新する（本設計書冒頭は現在「draft」表記だが、S-1〜S-11 は既に2026-07-12確定済みであるため、実装完了時点で表記を整合させる） | 実装完了後、メインエージェントが対応 |
-| — | ADR 候補（作成は本タスクの対象外） | 設計 §ADR 候補の3件（S-6: 1MealPlan:最大1ShoppingList の一意性と冪等性／S-4: 材料合算は同一単位完全一致のみ・Quantity.add() 導入／S-3: Product名寄せはproductRef引き継ぎのみ）は恒久決定に昇格する候補として記録されている。ADR 化の要否判断・作成は Orchestrator/reviewer 工程が実装完了後に行う | 参照のみ。本計画では作成しない |
+| #   | 対象ドキュメント                             | 更新内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 誰が・いつ                                                                                                                                                                                               |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs/04-domain-model.md` §ShoppingList 集約 | (a) `ShoppingItem.requiredAmount` を `Quantity \| null` に修正し `amountNote: string \| null` を追加（S-5。現行の擬似コードは非null前提で矛盾）。(b) `shoppingDate` の意味論を「`mealPlan.weekOf.startDate()`（週開始土曜固定）」に明記（S-10。現行の擬似コードは生成時 `new Date()` を示唆しており乖離）。(c) 擬似コード（`pantryRepo.find()` 呼び出し等）と実装の差異を解消し、Sprint 4 実装が Pantry 依存を持たないこと（S-2）を反映。(d) `getBoughtItemsForPantry()` は **Sprint 4 では未実装**（S-8。型のみ Sprint 5 で確定）である旨の注記を追加 | Task 5（全 Codex タスク）完了後、実装完了後のフォローアップとしてメインエージェント（reviewer 工程）が対応。ADR-0005 の E-8 対応と同じフォローアップ方式（設計 §後方互換性・§リスク R-6 で申し送り済み） |
+| 2   | `docs/05-roadmap.md` Sprint 4 タスク表       | Unit A（ShoppingList バックエンド一式: Domain/Infrastructure/Application/API Contract/Presentation）を完了マークに更新。**`GetShoppingListUseCase` + `GET /api/shopping-lists/:id` が S-7 で Unit A に追加されたこと**を Sprint 4 タスク表に反映する（当初計画にない追加スコープのため、roadmap 上でも明示しておかないと Unit B 設計時に見落とされるリスクがある）                                                                                                                                                                                     | 実装完了後（品質ゲート通過後）、メインエージェントが対応                                                                                                                                                 |
+| 3   | `docs/designs/shopping-list-core.md`         | ステータスを「draft」→「確定」または「実装済み」に更新する（本設計書冒頭は現在「draft」表記だが、S-1〜S-11 は既に2026-07-12確定済みであるため、実装完了時点で表記を整合させる）                                                                                                                                                                                                                                                                                                                                                                        | 実装完了後、メインエージェントが対応                                                                                                                                                                     |
+| —   | ADR 候補（作成は本タスクの対象外）           | 設計 §ADR 候補の3件（S-6: 1MealPlan:最大1ShoppingList の一意性と冪等性／S-4: 材料合算は同一単位完全一致のみ・Quantity.add() 導入／S-3: Product名寄せはproductRef引き継ぎのみ）は恒久決定に昇格する候補として記録されている。ADR 化の要否判断・作成は Orchestrator/reviewer 工程が実装完了後に行う                                                                                                                                                                                                                                                      | 参照のみ。本計画では作成しない                                                                                                                                                                           |
 
 ---
 
