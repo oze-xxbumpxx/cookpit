@@ -12,6 +12,9 @@ Vitest は導入済み（追加設定不要）。
 
 - 入出力スキーマは Zod で定義し API 契約として共有する（`packages/api-contract`）
 - `any` 禁止 / default export 禁止 / 型のみは `import type` / `===` `!==`
+- 公開エクスポートのうち、型・Zod スキーマに表せない契約情報（フォーマット・不変条件・
+  冪等性など）がある場合のみ JSDoc を付ける（coding-standards.md 2026-07-12 改定。
+  型の言い換えは書かない）
 - 既存スキーマファイル（`recipe.schema.ts`/`product.schema.ts`/`store.schema.ts`/
   `meal-plan.schema.ts`）は**一切変更しない**
 
@@ -139,7 +142,13 @@ export * from './shopping-list.schema';
   名前衝突になる。必要なら `import { errorResponseSchema } from './meal-plan.schema'`
   （本ファイル内で使わないなら import 自体不要）
 - `requiredAmount.value`/`actualPrice.amount` は `z.number().min(0)`（**0 以上**。`.positive()` に
-  しない。`Quantity.of`/`Money.of` の非負検証と一致させる）
+  しない。`Quantity.of`/`Money.of` の非負検証と一致させる）。
+  **`actualPrice.amount` の `.min(0)` は削除・緩和禁止**: Task 3 レビューで
+  `MarkAsBoughtUseCase` の catch が try 内で評価される `Money.of`（負値で throw）の例外を
+  `ShoppingItemNotFoundError` に誤変換する潜在バグが判明しており
+  （`docs/claude-code/improvements/candidates/shopping-list-core.md` 事象 2）、負値をこの
+  スキーマで reject することが現状唯一のガード（Task 5 のルートが本スキーマを
+  `zValidator` で通す前提）
 - `actualPrice.currency` は `z.literal('JPY')` 固定
 - `addItemSchema` の `productId`/`targetStoreId` は `.nullable()` **のみ**（`.optional()` を
   付けない。キー省略は reject・`null` の明示のみ許容）

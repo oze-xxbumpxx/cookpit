@@ -26,6 +26,14 @@ interface ResolvedIngredient {
   amountNote: string | null;
 }
 
+/**
+ * MealPlan（draft）から買い物リストを生成し、MealPlan を shopping へ遷移させる。
+ * 冪等: 既存リストがあれば新規生成せずそれを返す（created: false）。その際 MealPlan が
+ * draft のままなら shopping へ遷移させ、部分失敗状態を自己修復する（S-6）。
+ *
+ * @throws MealPlanNotFoundError mealPlanId の MealPlan が存在しない
+ * @throws InvalidMealPlanStateError MealPlan が draft 以外で、かつ既存リストもない
+ */
 export class GenerateShoppingListUseCase {
   constructor(
     private readonly mealPlanRepository: MealPlanRepository,

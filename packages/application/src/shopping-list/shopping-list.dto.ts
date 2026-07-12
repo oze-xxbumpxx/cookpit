@@ -8,6 +8,7 @@ export interface ShoppingItemDto {
   id: string;
   productId: string | null;
   displayName: string;
+  /** requiredAmount と amountNote はどちらか一方のみ非 null（S-5）。 */
   requiredAmount: { value: number; unit: Unit } | null;
   amountNote: string | null;
   targetStoreId: string | null;
@@ -20,9 +21,11 @@ export interface ShoppingItemDto {
 export interface ShoppingListDto {
   id: string;
   mealPlanId: string;
+  /** "2026-07-11" 形式のローカル日付（ISO datetime ではない。S-10）。 */
   shoppingDate: string;
   status: ShoppingListStatus;
   items: ShoppingItemDto[];
+  /** ISO 8601 datetime。 */
   createdAt: string;
 }
 
@@ -32,6 +35,7 @@ export interface GenerateShoppingListInputDto {
 
 export interface GenerateShoppingListResultDto {
   shoppingList: ShoppingListDto;
+  /** true なら新規生成（ルート層で 201）、false なら既存返却（200）。IMP-4 */
   created: boolean;
 }
 

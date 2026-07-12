@@ -9,6 +9,14 @@ import { toShoppingItemDto } from './shopping-list.mapper';
 import { ShoppingItemNotFoundError } from './shopping-item-not-found.error';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
+/**
+ * 品目を購入済みにし、実売価格と購入店舗を記録する。bought への再適用・skipped からの
+ * 購入確定は最新の実績で上書きする（S-11a/S-11b）。
+ *
+ * @throws ShoppingListNotFoundError リストが存在しない
+ * @throws InvalidShoppingListStateError リストが completed
+ * @throws ShoppingItemNotFoundError itemId の品目が存在しない
+ */
 export class MarkAsBoughtUseCase {
   constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
 
