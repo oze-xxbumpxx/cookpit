@@ -43,7 +43,7 @@
 ## 対象範囲
 
 | 層                 | 実装対象                                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------------- |
+| ------------------ | --------------------------------------------------------------------------------------------- |
 | Domain             | ShoppingList 集約・ShoppingItem・ID VO 2 種・ステータス型 3 種・ShoppingListRepository IF    |
 | Domain（shared）   | `Quantity.add()` の追加（S-4 案 B 採用時のみ。共有 VO への後方互換的追加）                   |
 | Infrastructure     | `shopping_lists` / `shopping_items` スキーマ（S-1 案 A 前提）、DrizzleShoppingListRepository |
@@ -72,7 +72,14 @@ Sprint 3 meal-plan-core の C-x / D-x 方式に倣う。**S-x はユーザー確
 確定しない）、**D-x は既存の確定先例に素直に倣う設計者裁量の判断**（理由付きで確定として記録。
 別案を選ぶ場合の差分も明記）。
 
-### S-x サマリ（ユーザー確定が必要）
+> **確定記録（2026-07-12）**: S-1〜S-11 の全件を**推奨案どおりユーザー確定**
+> （S-1: 案 A 別テーブル / S-2: 案 A 依存なし / S-3: 案 A productRef 引き継ぎのみ /
+> S-4: 案 B 合算 + `Quantity.add()` 新設 / S-5: 案 β null 許容 + amountNote /
+> S-6: 案 A + B2 冪等 / S-7: 案 B Unit A に追加 / S-8: complete() のみ実装 /
+> S-9: 案 A markAsSkipped のみ / S-10: 案 A 週開始土曜固定 / S-11: 寛容方針・
+> チェック解除は Unit B で要否判断）。以下の各節の「推奨」は判断根拠の記録として残す。
+
+### S-x サマリ（ユーザー確定済み・2026-07-12）
 
 | #    | 論点                                                                      | 推奨案                                                             |
 | ---- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -96,7 +103,7 @@ Sprint 3 meal-plan-core の C-x / D-x 方式に倣う。**S-x はユーザー確
 | D-2 | items 変更系操作すべてに `status === 'active'` ガード（要件 8-10）       | `MealPlan.addRecipe` / `removeRecipe` のステータスガード           |
 | D-3 | `storeId` の UseCase 層での実在チェックはしない（要件 8-12）             | MealPlan の RecipeId 非チェック方針（C-4 案 A）                    |
 | D-4 | `findByIds` は新設せず `findById` ループで取得（要件 8-6）               | findRecent の「MVP1 規模なら十分」判断・既存 IF 無変更の最小変更   |
-| D-5 | MarkAsBought / ReassignStore の戻り値は更新後 `ShoppingItemDto`          | AddRecipeToMealPlan が `PlannedRecipeDto` を返す先例               |
+| D-5 | MarkAsBought / ReassignStore の戻り値は更新後 `ShoppingItemDto`          | AddRecipeToMealPlan が `PlannedRecipeDto` を返す先例                |
 | D-6 | status/source は `text` カラム（pgEnum 不採用）。FK は親子関係のみ       | 既存 schema.ts 全テーブル（pgEnum 不使用）・planned_recipes の C-4 |
 | D-7 | plannedRecipes 0 件の MealPlan からも生成を許容（空 items のリスト作成） | 拒否する積極的理由がなく、AddItem での手動運用を妨げないため       |
 | D-8 | 削除済み Recipe を参照する PlannedRecipe は生成時にスキップ              | C-4 案 A（削除済み Recipe への参照を許容する精神）                 |
@@ -155,7 +162,7 @@ Repository は DrizzleRecipeRepository の ingredients 変換パターンを踏�
 Pantry 集約は未実装（Sprint 5）。
 
 | 案  | 内容                                                                          | 長所                                    | 短所                                                                                |
-| --- | ----------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
+| --- | ----------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
 | A   | 依存なし。コンストラクタに PantryRepository を含めない。必要量 = 集計値のまま | 最小・YAGNI 準拠。Sprint 5 で改めて設計 | Sprint 5 でコンストラクタ変更（呼び出しは Hono ルート 1 箇所 + テストのみで影響小） |
 | B   | PantryRepository IF だけ先行定義し「常に空」の null オブジェクトを DI         | Sprint 5 の差し替えが実装追加のみ       | 使われない抽象の先行導入。null オブジェクトとテストの二重管理コスト                 |
 | C   | 在庫引き算ロジックを UseCase 内に実装し「在庫は常に 0」とみなす               | 拡張ポイントが明示される                | Pantry なしでは検証不能なロジック。テストが形骸化する                               |
@@ -194,7 +201,7 @@ Sprint 5 で Pantry の実設計（`calculateRequiredAmount` の端数・切り�
 （Recipe / Product も使用）への `add()` 追加が必要（実コードに不在であることを確認済み）。
 
 | 案  | 内容                                                                                                                | 長所                                                       | 短所                                                                                       |
-| --- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| --- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | A   | 集計しない。材料をそのまま個別 ShoppingItem に展開                                                                  | `Quantity.add()` 不要。実装最小                            | 「玉ねぎが 3 行」問題。買い物中の UX を直撃（Unit B のグルーピングでも行数自体は減らない） |
 | B   | `(productId ?? 正規化 displayName) + unit` の完全一致でグルーピングし `Quantity.add()` で合算。不一致は個別行のまま | 単位変換なしの MVP1 制約と整合しつつ実用上の合算が得られる | 共有 VO への `add()` 追加（後方互換的だが共有 VO 変更のため要確認）                        |
 | C   | Product の `defaultUnit` へ完全変換してから合算                                                                     | UX 最良                                                    | 完全な単位変換の実装が必要で MVP1 制約（実装しない）を超える。S-3 の解決にも依存           |
@@ -246,7 +253,7 @@ ADR-0005 の E-8 対応と同じフォローアップ方式）。
 **論点 (a)**: `GenerateShoppingListUseCase` が MealPlan の取得・遷移・保存まで担うか。
 
 | 案  | 内容                                        | 評価                                                                                                             |
-| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | A   | 担う（生成成功時に自動で `draft→shopping`） | **推奨**。meal-plan-core 設計書・roadmap の前方参照（「shopping への遷移は Sprint 4 の生成と連動」）と直接整合   |
 | B   | 担わない（遷移は別 UseCase）                | ドキュメントと矛盾。Sprint 4 完了後も MealPlan が draft のままになり「買い物中」が MealPlan から判別できない     |
 | C   | 遷移するが失敗してもロールバックしない      | 案 A でも DB トランザクションを使わない現行 Repository 構成では実質同じ問題を持つ。下記 (b) の修復設計で吸収する |
@@ -255,7 +262,7 @@ ADR-0005 の E-8 対応と同じフォローアップ方式）。
 と同型の論点。
 
 | 案  | 内容                                         | 評価                                                                                                 |
-| --- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | B1  | エラー（MealPlan.status ≠ draft → 422）      | リトライ・誤操作・2人同時操作に弱い。roadmap 完了条件「2人で同じリストを見る」と相性が悪い           |
 | B2  | 冪等（既存 ShoppingList があればそれを返す） | **推奨**。C-3 の確定判断（冪等）と同じ理由: 2 名利用の個人アプリでは重複リクエストに安全なのが最重要 |
 | B3  | 再生成（既存を破棄して作り直す）             | 買い物途中のチェック状態が消える危険。明示的な「作り直し」機能は将来の別 UseCase とすべき            |
@@ -289,7 +296,7 @@ Unit B（画面）はページ再訪問・他端末からの参照（roadmap 完
 読み取り API を必要とする。
 
 | 案  | 内容                                                    | 長所                                                                                                             | 短所                                                                               |
-| --- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
 | A   | 現行確定スコープ維持。Unit B の冒頭タスクとして追加する | Unit A のスコープが要件確定どおり動かない                                                                        | 画面ユニット（L2）にバックエンド全層縦断の実装が混入し、ユニット分割の意図が崩れる |
 | B   | Unit A に `GetShoppingListUseCase` + GET 1 本を追加する | Unit A の API が単体で完結・検証可能になる。追加コストは小（Repository の findById / Mapper / ルート再利用のみ） | ユーザー確定済みスコープの拡張になる（だからこそ S でユーザー確定に回す）          |
 
@@ -330,7 +337,7 @@ Unit B（画面）はページ再訪問・他端末からの参照（roadmap 完
 **論点**: 型に `'skipped'` があるのに、対象 4 UseCase のどれも skipped に遷移させない。
 
 | 案  | 内容                                                       | 評価                                                                                     |
-| --- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | A   | Domain に `markAsSkipped` を実装、UseCase / API は作らない | **推奨**。transitionTo 先例（Domain 実装・API 非公開）と同型。状態機械が完結しテスト可能 |
 | B   | 型のみ残し Domain メソッドも作らない                       | 実装最小だが、DB・型に存在する値が到達不能のまま残る                                     |
 | C   | UseCase / API まで作る（MarkAsSkippedUseCase）             | UI 要求（Unit B）が固まっていないのに操作を公開するのは先走り                            |
@@ -346,7 +353,7 @@ Unit B（画面）はページ再訪問・他端末からの参照（roadmap 完
 **論点**: `ShoppingList.shoppingDate: Date` を何の日付とするか。
 
 | 案  | 内容                                                  | 長所                                                                                      | 短所                                                                 |
-| --- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| --- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | A   | `mealPlan.weekOf.startDate()`（週開始の土曜）に固定   | 運用実態（土曜買い物）・ADR-0005 と一貫。生成時刻に依存せず決定的（テスト安定）。入力不要 | 「実際に買った日」ではない（例: 日曜に買った場合もズレる）           |
 | B   | 生成時の `new Date()`（ドメインモデル擬似コード踏襲） | 実装が素直                                                                                | 金曜夜に生成すると金曜の日付になる等、「買い物対象日」の意味とずれる |
 | C   | API 入力で任意指定（デフォルトは A か B）             | 柔軟                                                                                      | Sprint 4 に UI 要求がなく、契約・検証が増えるだけ                    |
@@ -363,7 +370,7 @@ Unit B（画面）はページ再訪問・他端末からの参照（roadmap 完
 上書きを許す寛容方針。C-3 冪等の判断と同じ精神）:
 
 | #   | 論点                                              | 推奨                                                                                                                                                                                                  | 別案                                   |
-| --- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| --- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | (a) | `bought` の item への markAsBought 再適用         | **上書き許容**（actualPrice / actualStore を最新値で置き換え。金額の入力ミス訂正がこの操作 1 つで済む）                                                                                               | 422 エラー（訂正に別操作が必要になる） |
 | (b) | `skipped` の item への markAsBought               | **許容**（「やっぱり買った」を自然に表現。skipped → bought）                                                                                                                                          | 422 エラー                             |
 | (c) | `bought` の item への reassignStore               | **許容**（`targetStore` のみ変更。`actualPrice` / `actualStore` には触れない。計画情報と実績情報は独立）                                                                                              | pending / skipped のみ許可             |
@@ -506,7 +513,7 @@ apps/web/src/server/routes/
 ### 既存ファイルへの追記・変更
 
 | ファイル                                   | 変更内容                                                                                |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------- |
 | `packages/domain/src/shared/quantity.ts`   | `add()` メソッド追加（**S-4 案 B 採用時のみ**。共有 VO への後方互換的追加）+ テスト追加 |
 | `packages/infrastructure/src/db/schema.ts` | `shoppingLists` / `shoppingItems` テーブル定義を追記（S-1 案 A 前提）                   |
 | `packages/infrastructure/src/index.ts`     | `DrizzleShoppingListRepository` の re-export 追加                                       |
@@ -522,7 +529,7 @@ apps/web/src/server/routes/
 ### 層責務（誰が何をするか）
 
 | 層             | 責務                                                                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Presentation   | Hono ルートで Zod 検証（形式のみ）→ 手動 DI で UseCase 組み立て → execute → DTO を JSON で返す。ドメインロジックを書かない              |
 | Application    | UseCase が集約またぎのオーケストレーション（MealPlan 取得・Recipe/Product 取得・集計・ShoppingList 生成・遷移）。エラー変換は入口で行う |
 | Domain         | ShoppingList / ShoppingItem が不変条件（active ガード・排他検証・状態遷移）を保持。他パッケージ・Drizzle・HTTP に依存しない             |
@@ -575,7 +582,7 @@ AddItem / ReassignStore も同型（findById → 事前 status チェック → 
 エンドポイント案。HTTP メソッド・パスの最終確定と Zod 詳細は contract-designer（§未決事項の申し送り参照）。
 
 | メソッド | パス                                                 | UseCase                     | 正常                     | 異常                                     |
-| -------- | ---------------------------------------------------- | --------------------------- | ------------------------ | ---------------------------------------- |
+| -------- | ----------------------------------------------------- | ---------------------------- | ------------------------ | ------------------------------------------ |
 | POST     | `/api/shopping-lists`                                | GenerateShoppingListUseCase | 201 + ShoppingListDto ※1 | 400 / 404（MealPlan）/ 422（state）      |
 | POST     | `/api/shopping-lists/:id/items`                      | AddItemUseCase              | 201 + ShoppingItemDto    | 400 / 404（List）/ 422（completed・D-2） |
 | POST     | `/api/shopping-lists/:id/items/:itemId/bought`       | MarkAsBoughtUseCase         | 200 + ShoppingItemDto    | 400 / 404（List・Item）/ 422             |
@@ -584,11 +591,12 @@ AddItem / ReassignStore も同型（findById → 事前 status チェック → 
 
 ※1 冪等パス（既存リスト返却）でも 201 で統一する（CreateMealPlan の C-3 冪等が常に 201 を返す先例に倣う。
 契約フェーズで 200/201 の分岐を導入する場合は Hono RPC の型が分岐する点に注意）。
+**→ 2026-07-12 契約確定仕様（本書 §契約確定仕様）でコーディネーターが上書き確定: 新規生成 201 / 冪等既存返却 200 の分岐とする。**
 
 ### リクエストボディ概要（Zod は形式検証のみ。意味論は Domain の責務）
 
 | スキーマ                     | 主な検証項目                                                                                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `generateShoppingListSchema` | `mealPlanId: z.uuid()`                                                                                                                                  |
 | `addItemSchema`              | `displayName: 非空文字列`、`requiredAmount: { value: 0 以上の数, unit: Unit 17 値の enum }`、`productId?: uuid \| null`、`targetStoreId?: uuid \| null` |
 | `markAsBoughtSchema`         | `actualPrice: { amount: 0 以上の数, currency: 'JPY' リテラル（推奨。§未決事項）}`、`actualStoreId: z.uuid()`                                            |
@@ -598,7 +606,7 @@ AddItem / ReassignStore も同型（findById → 事前 status チェック → 
 ### エラー → HTTP ステータス対応表
 
 | エラー種別                            | 発生箇所                                                        | HTTP | 処理                          |
-| ------------------------------------- | --------------------------------------------------------------- | ---- | ----------------------------- |
+| -------------------------------------- | ------------------------------------------------------------------ | ---- | -------------------------------- |
 | MealPlanNotFoundError（既存）         | Generate                                                        | 404  | app.ts onError（既存分岐）    |
 | InvalidMealPlanStateError（既存）     | Generate（draft 以外・非冪等時）                                | 422  | app.ts onError（既存分岐）    |
 | ShoppingListNotFoundError（新規）     | AddItem / MarkAsBought / ReassignStore / Get                    | 404  | app.ts onError（追記）        |
@@ -660,10 +668,10 @@ export const shoppingItems = pgTable(
 ### DB 行 ⇔ ドメイン変換（Repository の責務）
 
 | ドメイン                                     | DB カラム                                        | 変換                                                                                                                  |
-| -------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `shoppingList.shoppingDate`                  | `shopping_date`（date）                          | 保存: ローカル日付整形（DrizzleMealPlanRepository の `toDateString` と同方式）。復元: `new Date(value + 'T00:00:00')` |
 | `item.requiredAmount: Quantity \| null`      | `required_amount_value` + `required_amount_unit` | 保存: `amount?.value` / `amount?.unit`。復元: 両方非 null なら `Quantity.of(Number(v), toUnit(u))`、それ以外 null     |
-| `item.actualPrice: Money \| null`            | `actual_price_amount`                            | 復元: `Money.of(Number(v), 'JPY')`。null はそのまま                                                                   |
+| `item.actualPrice: Money \| null`            | `actual_price_amount`                            | 復元: `Money.of(Number(v), 'JPY')`。null はそのまま                                                                  |
 | `item.productId / targetStore / actualStore` | 各 text \| null                                  | `ProductId.fromString` / `StoreId.fromString`（null はそのまま）                                                      |
 | `status` / `source`                          | text                                             | 復元時に網羅 switch で検証（`toMealPlanStatus` 先例。未知値は throw）                                                 |
 
@@ -692,7 +700,7 @@ export type ShoppingListStatus = 'active' | 'completed';
 #### ShoppingItem（集約内エンティティ）
 
 | フィールド     | 型                | 不変条件                                                                                                                                   |
-| -------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | id             | ShoppingItemId    | 不変                                                                                                                                       |
 | productId      | ProductId \| null | 不変。**`product/product-id.ts` の ProductId クラス**を使う（集約またぎ ID 参照。RecipeIngredient のローカル構造型とは別物である点に注意） |
 | displayName    | string            | 非空（`create` 入口で検証）                                                                                                                |
@@ -736,7 +744,7 @@ export interface CreateShoppingItemInput {
 #### ShoppingList（集約ルート）
 
 | フィールド   | 型                 | 説明                                             |
-| ------------ | ------------------ | ------------------------------------------------ |
+| ------------ | ------------------ | ------------------------------------------------- |
 | id           | ShoppingListId     | 不変                                             |
 | mealPlanId   | MealPlanId         | 不変。ID 参照のみ                                |
 | items        | ShoppingItem[]     | 集約内エンティティ                               |
@@ -1023,7 +1031,7 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
 ## リスク
 
 | #   | リスク                                                                                                                          | 対応                                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | R-1 | S-x 未確定のまま実装に着手すると手戻りが大きい（特に S-1 / S-5 は DB スキーマ・DTO の根幹）                                     | 実装計画フェーズ前に S-1〜S-11 のユーザー確定を必須とする                                   |
 | R-2 | S-3 案 A では Product 紐付けの運用が進むまで targetStore がほぼ null になり、roadmap の「価格比較インジケーター」の価値が出ない | 既知の MVP1 制約として受容。Unit B は「店舗未定」グルーピングを一級の表示として設計する     |
 | R-3 | Generate の 2 集約更新が非トランザクション（部分失敗の窓がある）                                                                | S-6 の修復分岐 + DB UNIQUE で収束させる。トランザクション導入は将来の横断課題として申し送り |
@@ -1051,6 +1059,8 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
 
 - **S-1〜S-11**（§設計判断リスト）。特に S-1（DB 方式）・S-5（DTO/スキーマの nullability）・
   S-6（冪等）・S-7（スコープ）は contract-designer / implementation-planner の前提になるため先行確定が必要
+  → **2026-07-12 時点で S-1〜S-11 全件ユーザー確定済み**（本書冒頭の確定記録参照）。下記の contract-designer
+  への申し送りは §契約確定仕様で確定に反映済み。
 
 ### contract-designer への申し送り
 
@@ -1065,6 +1075,8 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
   正式名として確定すること
 - エラーレスポンスは既存 `{ error: string }` / 400 は zValidator 既定形（meal-plan §19-7 踏襲）
 
+**→ 上記はすべて §契約確定仕様（contract-designer, 2026-07-12）で確定済み。**
+
 ### implementation-planner への申し送り
 
 - 実装順の推奨: Quantity.add（S-4）→ Domain 集約 → Repository IF → Drizzle スキーマ + マイグレーション +
@@ -1075,6 +1087,7 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
 ### test-designer への申し送り
 
 - §テスト方針の設計由来観点（特に Generate の冪等・修復分岐と集計キー境界）を試験計画に反映すること
+- §契約確定仕様の §15 契約テスト方針（観点のみ・未確定）も合わせて試験計画に反映すること
 
 ### 将来課題（本ユニットでは扱わない）
 
@@ -1085,3 +1098,546 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
 - AddItem の `amountNote` 付き手動追加の許容（S-5 注記）
 - meal-plan.mapper.ts の `toISOString().slice(0,10)` による JST 日付ずれの潜在問題（スコープ外の気づき。
   改善候補として Orchestrator へ報告）
+
+---
+
+## 契約確定仕様（contract-designer, 2026-07-12）
+
+本セクションは §未決事項「contract-designer への申し送り」を受けて contract-designer が確定した最終仕様。
+`packages/api-contract/src/shopping-list.schema.ts`（新規ファイル）へそのまま転記できる粒度で記述する。
+実際のファイル作成・変更は implementer が行う（本書は仕様のみ。プロダクションコードは変更していない）。
+S-1〜S-11 は 2026-07-12 にユーザー確定済み（本書冒頭「確定記録」参照）であり、本節はその確定を前提に
+API・Zod・DTO・エラー形式・冪等性を差分明示で確定する。
+
+対象は **UseCase 5 本・API 5 本**（S-7 で GET を Unit A に追加確定）:
+
+1. POST `/api/shopping-lists`（GenerateShoppingListUseCase）
+2. POST `/api/shopping-lists/:id/items`（AddItemUseCase）
+3. POST `/api/shopping-lists/:id/items/:itemId/bought`（MarkAsBoughtUseCase）
+4. POST `/api/shopping-lists/:id/items/:itemId/target-store`（ReassignStoreUseCase）
+5. GET `/api/shopping-lists/:id`（GetShoppingListUseCase）
+
+HTTP メソッドは設計ドラフトの POST 案を維持する（**PATCH 化しない**。§未決事項の申し送りにあった
+「PATCH 化する場合は Hono RPC の型と Unit B の呼び出しに影響」という論点は不採用とし、全アクション系を
+POST のまま確定する）。`GET /api/shopping-lists?mealPlanId=` 相当のクエリ検索は本契約に**含まない**
+（S-7 案 B 採用時の追加内容は `GET /:id` のみ。クエリ版は Unit B 設計での再訪事項）。
+
+### 0. zod バージョンと API 選択の根拠
+
+`packages/api-contract/package.json` は `"zod": "^4.4.3"`（Zod v4 classic API）。meal-plan 契約
+（`docs/designs/meal-plan-core.md` §19-0）と同一バージョン・同一世代であり、本契約も v4 のトップレベル
+API（`z.uuid()` / `z.iso.date()` / `z.iso.datetime()` / `z.enum()` / `z.literal()`）に統一する。
+既存 `product.schema.ts` が `unitSchema` を `recipe.schema.ts` からインポートして再利用しているのと
+同じパターンで、本契約も新規に Unit の列挙値を定義せず `import { unitSchema } from './recipe.schema'`
+で再利用する（詳細は §2）。
+
+### 1. `generateShoppingListSchema`（POST `/api/shopping-lists`, json）
+
+```typescript
+export const generateShoppingListSchema = z.object({
+  mealPlanId: z.uuid(),
+});
+
+export type GenerateShoppingListBody = z.infer<typeof generateShoppingListSchema>;
+```
+
+- `mealPlanId`: UUID 形式のみ検証。実在チェックは UseCase 層が担う（`MealPlanNotFoundError` → 404）。
+- Domain 側の意味論検証（`MealPlan.status === 'draft'` か、既存 ShoppingList の有無）は Zod の責務外
+  （Application 層。§11 冪等性参照）。
+
+### 2. `addItemSchema`（POST `/api/shopping-lists/:id/items`, json）
+
+```typescript
+import { unitSchema } from './recipe.schema';
+
+const nonBlankString = z.string().refine((value) => value.trim() !== '', {
+  message: 'required',
+});
+
+export const addItemSchema = z.object({
+  displayName: nonBlankString,
+  requiredAmount: z.object({
+    value: z.number().min(0),
+    unit: unitSchema,
+  }),
+  productId: z.uuid().nullable(),
+  targetStoreId: z.uuid().nullable(),
+});
+
+export type AddItemBody = z.infer<typeof addItemSchema>;
+```
+
+要点（設計 §S-5 との非対称に関する確定事項）:
+
+- **`requiredAmount` は必須（`.nullable()` にしない）**。S-5 で確定した「`requiredAmount: Quantity | null`
+  + `amountNote: string | null`」の排他構造は**自動生成（Generate）・レスポンス側にのみ**適用される。
+  Unit A の AddItem（手動追加）は `amountNote` 付きの追加を受け付けない設計（設計 §S-5 の不変条件注記・
+  §未決事項「将来課題」参照）のため、リクエスト契約では `requiredAmount` を非 null 必須とし、
+  `amountNote` フィールド自体をリクエストスキーマに含めない。**「レスポンスは requiredAmount /
+  amountNote いずれも null 許容の排他構造だが、AddItem リクエストは requiredAmount 必須」という非対称は
+  意図した確定仕様であり、契約の欠陥ではない**（`amountNote` 付き手動追加の許容は Unit B 以降の別検討）。
+- `requiredAmount.value`: `z.number().min(0)`（0 以上）。`Quantity.of()` の非負検証（`value < 0` で throw。
+  `packages/domain/src/shared/quantity.ts` で確認済み）と一致させる。`z.number().positive()` ではない点に
+  注意（`0` を許容する。要件書 §7-2 の境界条件確認事項「`requiredAmount.value = 0`」に対応）。
+  `product.schema.ts` の `recordPriceSchema.priceAmount: z.number().positive()`（0 を許容しない）とは
+  意図的に異なる制約であり、混同しないこと。
+- `requiredAmount.unit`: 新規に列挙し直さず、既存 `recipe.schema.ts` の `unitSchema`（17 値: `g` / `kg` /
+  `ml` / `l` / `大さじ` / `小さじ` / `cup` / `個` / `本` / `枚` / `玉` / `尾` / `切れ` / `束` / `袋` /
+  `缶` / `合`）を `import { unitSchema } from './recipe.schema'` で再利用する。`product.schema.ts` の
+  `defaultUnit: unitSchema`（`product.schema.ts` 2 行目 `import { unitSchema } from './recipe.schema';`
+  で確認済み）と同一の定義元を用いる。
+- `productId` / `targetStoreId`: **Application 層の `AddItemInputDto` では `productId?: string | null`
+  のように optional（`?:`）だが、Zod 契約では `z.uuid().nullable()`（optional にしない＝キー省略は
+  reject、`null` の明示のみ許容）とする**。理由: コーディング規約「値なしは `null` に統一する（`undefined`
+  と混在させない）」（`.claude/rules/coding-standards.md`）に従い、ワイヤー契約では「値なし」の表現を
+  `null` の 1 種類に固定する。既存 `recipe.schema.ts` の `recipeIngredientSchema.productRef:
+  z.string().nullable()`（`.optional()` を付けない）と同一パターン。Zod 推論型
+  `{ productId: string | null; targetStoreId: string | null; ... }` は TypeScript の構造的型付けにより
+  `AddItemInputDto` の `productId?: string | null` を満たすため、Hono ルートで
+  `usecase.execute({ shoppingListId: id, ...body })` に渡す際もコード変更は不要（互換）。
+
+### 3. `markAsBoughtSchema`（POST `/api/shopping-lists/:id/items/:itemId/bought`, json）
+
+```typescript
+export const markAsBoughtSchema = z.object({
+  actualPrice: z.object({
+    amount: z.number().min(0),
+    currency: z.literal('JPY'),
+  }),
+  actualStoreId: z.uuid(),
+});
+
+export type MarkAsBoughtBody = z.infer<typeof markAsBoughtSchema>;
+```
+
+- `actualPrice.amount`: `z.number().min(0)`（0 以上。`Money.of()` の非負検証と一致。無料でもらった等の
+  `0` を許容。要件書 §7-3 境界条件「`actualPrice.amount = 0`」に対応）。ここも `recordPriceSchema` の
+  `.positive()` とは異なり `0` を許容する点に注意。
+- `actualPrice.currency`: **`z.literal('JPY')` に固定**（コーディネーター確定。DB に通貨カラムを持たず、
+  Repository 復元時に常に `'JPY'` を与える D-6 の判断と整合。要件書段階の `currency: string` 自由文字列
+  案は不採用）。`'USD'` 等を送ると 400 で reject する。
+- `actualStoreId`: フィールド名は **`actualStoreId`**（`Id` サフィックス。§7 参照）。実在チェックはしない
+  （D-3）。
+
+### 4. `reassignStoreSchema`（POST `/api/shopping-lists/:id/items/:itemId/target-store`, json）
+
+```typescript
+export const reassignStoreSchema = z.object({
+  targetStoreId: z.uuid(),
+});
+
+export type ReassignStoreBody = z.infer<typeof reassignStoreSchema>;
+```
+
+- `targetStoreId`: UUID 形式のみ。実在チェックはしない（D-3）。
+
+### 5. param スキーマ
+
+```typescript
+export const shoppingListIdParamSchema = z.object({
+  id: z.uuid(),
+});
+
+export const shoppingItemIdParamSchema = z.object({
+  id: z.uuid(),
+  itemId: z.uuid(),
+});
+
+export type ShoppingListIdParam = z.infer<typeof shoppingListIdParamSchema>;
+export type ShoppingItemIdParam = z.infer<typeof shoppingItemIdParamSchema>;
+```
+
+- `shoppingListIdParamSchema`（`id` のみ）: `POST /api/shopping-lists/:id/items` と
+  `GET /api/shopping-lists/:id` で使用。
+- `shoppingItemIdParamSchema`（`id` + `itemId`）: `POST /api/shopping-lists/:id/items/:itemId/bought` と
+  `POST /api/shopping-lists/:id/items/:itemId/target-store` で使用。
+- meal-plan 契約の `mealPlanIdParamSchema`（単一 id）/ `plannedRecipeIdParamSchema`（id + 複合 id）の
+  命名・分割パターン（§19-3/19-4）をそのまま踏襲。フィールドが重複しても用途ごとに固定する（呼び出し側の
+  型を明確にする）方針も同様。
+- 本契約に **query スキーマは存在しない**（`GET /api/shopping-lists?mealPlanId=` 相当は S-7 の追加内容外。
+  設計 §S-7「案 B 採用時の追加内容」注記のとおり Unit B 設計で再訪）。
+
+### 6. レスポンススキーマ
+
+meal-plan 契約と同じ方針（§19-6 踏襲）: レスポンス構造は Zod で `api-contract` に定義するが、Hono
+ルートの `zValidator` には使わない。UseCase の戻り値型（`ShoppingListDto` / `ShoppingItemDto`）で型安全性
+を担保し、レスポンススキーマは Mapper 出力の構造検証専用の契約テストとして使う（presentation-layer.md
+「Hono ルートの型はフロントから `import type` で取り込み、型安全に呼び出す」を損なわない）。
+
+```typescript
+export const itemStatusSchema = z.enum(['pending', 'bought', 'skipped']);
+export const itemSourceSchema = z.enum(['from_meal_plan', 'manually_added']);
+export const shoppingListStatusSchema = z.enum(['active', 'completed']);
+
+export const shoppingItemResponseSchema = z
+  .object({
+    id: z.uuid(),
+    productId: z.uuid().nullable(),
+    displayName: z.string(),
+    requiredAmount: z.object({ value: z.number(), unit: unitSchema }).nullable(),
+    amountNote: z.string().nullable(),
+    targetStoreId: z.uuid().nullable(),
+    status: itemStatusSchema,
+    actualPrice: z.object({ amount: z.number(), currency: z.literal('JPY') }).nullable(),
+    actualStoreId: z.uuid().nullable(),
+    source: itemSourceSchema,
+  })
+  .superRefine((value, ctx) => {
+    const hasRequiredAmount = value.requiredAmount !== null;
+    const hasAmountNote = value.amountNote !== null;
+    if (hasRequiredAmount === hasAmountNote) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['requiredAmount'],
+        message: 'Exactly one of requiredAmount or amountNote must be set',
+      });
+    }
+  });
+
+export const shoppingListResponseSchema = z.object({
+  id: z.uuid(),
+  mealPlanId: z.uuid(),
+  shoppingDate: z.iso.date(),
+  status: shoppingListStatusSchema,
+  items: z.array(shoppingItemResponseSchema),
+  createdAt: z.iso.datetime(),
+});
+
+export type ItemStatusSchemaType = z.infer<typeof itemStatusSchema>;
+export type ItemSourceSchemaType = z.infer<typeof itemSourceSchema>;
+export type ShoppingListStatusSchemaType = z.infer<typeof shoppingListStatusSchema>;
+export type ShoppingItemResponse = z.infer<typeof shoppingItemResponseSchema>;
+export type ShoppingListResponse = z.infer<typeof shoppingListResponseSchema>;
+```
+
+**S-5 の排他 nullability（最重要）の表現**: `requiredAmount` と `amountNote` はスキーマの型としては両方
+`.nullable()` だが、`.superRefine()` で「ちょうど一方が非 null」を強制する。これは `recipe.schema.ts` の
+`recipeIngredientSchema`（`amountValue` xor `amountNote`。ソースの排他条件を写像したのが S-5 の設計その
+もの）と同型のパターンで、`ShoppingItem.create()` の Domain 不変条件（設計 §S-5）をレスポンス契約テスト
+でも二重に検証できるようにする（Mapper のバグで両方 null・両方非 null になった場合に契約テストが検知する）。
+
+nullability は DTO（設計 §Application 設計）と完全一致させる:
+
+| フィールド                                   | 型                              | `null` の意味                                                |
+| --------------------------------------------- | -------------------------------- | ---------------------------------------------------------------- |
+| `shoppingItemResponseSchema.productId`       | `string \| null`                | 名寄せ未確定（S-3 案 A・productRef 引き継ぎのみ）または手動追加で `productId` 未指定 |
+| `shoppingItemResponseSchema.requiredAmount`  | `{value, unit} \| null`         | `amountNote` のみの材料（「適量」「少々」等。S-5）           |
+| `shoppingItemResponseSchema.amountNote`      | `string \| null`                | 通常の数量材料（`requiredAmount` が非 null。S-5）            |
+| `shoppingItemResponseSchema.targetStoreId`   | `string \| null`                | 最安店舗が決定できない（D-1）                                 |
+| `shoppingItemResponseSchema.actualPrice`     | `{amount, currency} \| null`    | 未購入（`status !== 'bought'`）                               |
+| `shoppingItemResponseSchema.actualStoreId`   | `string \| null`                | 未購入（`status !== 'bought'`）                               |
+
+レスポンス側の `value` / `amount` フィールドには追加の値域検証（`.min(0)` 等）を付けない。meal-plan 契約
+の `plannedRecipeResponseSchema.scaleFactor: z.number()`（Domain 側で `.positive()` 保証済みだが
+レスポンススキーマは構造検証専用のため再検証しない）先例に倣う。
+
+### 7. DTO フィールド名の確定
+
+| フィールド                 | 正式名           | 備考                                                                                    |
+| ---------------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| 提案店舗（計画・最安店舗の推奨） | `targetStoreId` | `Id` サフィックス。レスポンス（`shoppingItemResponseSchema`）・リクエスト（`reassignStoreSchema`・`addItemSchema`）共通 |
+| 実購入店舗（実績）           | `actualStoreId`   | `Id` サフィックス。レスポンス・`markAsBoughtSchema` 共通                                 |
+
+設計 §未決事項の申し送りどおり、`targetStore` / `actualStore`（サフィックスなし）は不採用とし、
+DTO・Zod 双方で `Id` サフィックス付きの名前に統一する。
+
+### 8. エラーレスポンス形式
+
+既存 `{ error: string }` 形式（meal-plan 契約 §19-7）をそのまま踏襲する。**`shopping-list.schema.ts` に
+`errorResponseSchema` を再定義しない**（既に `meal-plan.schema.ts` がエクスポート済みで、
+`packages/api-contract/src/index.ts` は両ファイルを `export *` するため、同名の型を 2 箇所でエクスポート
+すると ESM の名前衝突になる）。エラーレスポンスの型が必要な場合は
+`import { errorResponseSchema } from './meal-plan.schema'` として再利用する。
+
+- **404 / 422 / 500**: `app.ts` の `onError` から返る `{ error: string }`。
+- **400**（Zod バリデーション失敗）: `@hono/zod-validator` の既定フックが返す `result`（`ZodError` 形。
+  `{ error: string }` とは異なる形）。本契約でも 400 の契約テストは「ステータスコードのみ検証」とする
+  （meal-plan §19-7 と同一方針）。
+
+`app.ts` の `onError` に追記が必要な新規エラー 3 種（本契約のスコープではないが、実装時の申し送りとして
+明記）:
+
+```typescript
+if (err instanceof ShoppingListNotFoundError) {
+  return c.json({ error: err.message }, 404);
+}
+if (err instanceof ShoppingItemNotFoundError) {
+  return c.json({ error: err.message }, 404);
+}
+if (err instanceof InvalidShoppingListStateError) {
+  return c.json({ error: err.message }, 422);
+}
+```
+
+既存の `MealPlanNotFoundError`（404）・`InvalidMealPlanStateError`（422）は import 済みのため追加 import
+不要。上記 3 種は `@cookpit/application` からの import 追加が必要（既存の import 文への追記のみ。分岐
+順序は既存 5 分岐に影響しない）。
+
+### 9. エラー種別 → HTTP ステータス対応表（onError 実装対応）
+
+| エラー種別                              | 発生箇所                                                          | HTTP | 処理                                                                                                      |
+| ------------------------------------------ | -------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------ |
+| `MealPlanNotFoundError`（既存）           | Generate                                                            | 404  | app.ts onError 既存分岐（変更不要）                                                                        |
+| `InvalidMealPlanStateError`（既存を流用） | Generate（既存リストなし && MealPlan.status ≠ draft）              | 422  | `new InvalidMealPlanStateError(mealPlan.status, 'generate a ShoppingList from')` の形で流用。onError 既存分岐（変更不要） |
+| `ShoppingListNotFoundError`（新規）       | AddItem / MarkAsBought / ReassignStore / Get                        | 404  | onError 追記                                                                                                |
+| `ShoppingItemNotFoundError`（新規）       | MarkAsBought / ReassignStore                                        | 404  | onError 追記                                                                                                |
+| `InvalidShoppingListStateError`（新規）   | AddItem / MarkAsBought / ReassignStore（completed ガード・D-2）    | 422  | onError 追記                                                                                                |
+| Zod バリデーション失敗                    | 全 json / param エンドポイント                                     | 400  | `@hono/zod-validator` 既定処理                                                                              |
+| DB エラー / 未知                          | —                                                                    | 500  | 既存 `console.error` + `{ error: 'Internal Server Error' }`                                               |
+
+### 10. エンドポイント別 HTTP ステータスマッピング表（201/200 分岐込み）
+
+| エンドポイント                                           | 正常                                                                                          | 異常                                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/shopping-lists`                                  | **新規生成: 201** + `ShoppingListResponse` ／ **冪等（既存 active リスト返却）: 200** + `ShoppingListResponse`（同一ボディ形状） | 400（`mealPlanId` 不正）／404（`MealPlanNotFoundError`）／422（`InvalidMealPlanStateError`。既存リストなし && status ≠ draft） |
+| `POST /api/shopping-lists/:id/items`                        | 201 + `ShoppingItemResponse`                                                                     | 400（`id` / `displayName` / `requiredAmount` / `productId` / `targetStoreId` 不正）／404（`ShoppingListNotFoundError`）／422（`InvalidShoppingListStateError`。completed ガード・D-2） |
+| `POST /api/shopping-lists/:id/items/:itemId/bought`         | 200 + `ShoppingItemResponse`                                                                     | 400（`id` / `itemId` / `actualPrice` / `actualStoreId` 不正）／404（`ShoppingListNotFoundError` または `ShoppingItemNotFoundError`）／422（`InvalidShoppingListStateError`） |
+| `POST /api/shopping-lists/:id/items/:itemId/target-store`   | 200 + `ShoppingItemResponse`                                                                     | 400（`id` / `itemId` / `targetStoreId` 不正）／404（`ShoppingListNotFoundError` または `ShoppingItemNotFoundError`）／422（`InvalidShoppingListStateError`） |
+| `GET /api/shopping-lists/:id`                                | 200 + `ShoppingListResponse`                                                                     | 400（`id` 不正）／404（`ShoppingListNotFoundError`）                                                                              |
+| 全エンドポイント共通                                          | —                                                                                                 | 500（未知エラー。`{ error: 'Internal Server Error' }`）                                                                          |
+
+**S-6 の 201/200 分岐（コーディネーター確定・設計ドラフトからの上書き）**:
+
+- 設計ドラフト §API 設計 ※1 は「冪等パス（既存リスト返却）でも 201 で統一する」を提案していたが、
+  **コーディネーター確定によりこれを上書きし、新規生成時は 201・冪等（既存 active リストが存在する）
+  パスは 200 とする**。CreateMealPlan（C-3）が常に 201 を返す先例とは異なる挙動になる点に注意
+  （CreateMealPlan は `week_start_date UNIQUE` 違反時に別分岐がなく常に新規作成に成功するため 201 固定で
+  問題ないが、ShoppingList の Generate は「既存を返す」分岐が意味的にも実装的にも読み取りに近いため、
+  200 の方がセマンティクスとして正確という判断）。
+- レスポンスボディの**形状はどちらも同一の `ShoppingListResponse`**（`ShoppingListDto`）。ステータス
+  コードのみが異なる。Hono ルート実装では `c.json(dto, 201)`（新規生成時）／`c.json(dto, 200)`（冪等時）
+  の 2 通りの呼び分けになる（実装は implementer が行う。本書は契約仕様のみ）。
+- **Hono RPC の型への影響**: 1 つのハンドラ内で `c.json(dto, 201)` と `c.json(dto, 200)` の両方を返すと、
+  `typeof routes` から推論される型は `TypedResponse<ShoppingListResponse, 201, 'json'> |
+  TypedResponse<ShoppingListResponse, 200, 'json'>` のユニオンになる。**ボディ形状は両ステータスで同一**
+  のため、Unit B（クライアント）側は基本的に `res.ok`（200-299 番台）で成功判定すれば十分で、
+  `res.status` が 200 か 201 かで処理を分岐させる必要はない。「新規生成か冪等既存返却か」を UI 上区別
+  したい場合（例: 生成完了アニメーションの有無）にのみ `res.status === 201` を見ればよい、という扱いを
+  Unit B 設計に申し送る。
+
+### 11. 冪等性キー
+
+| 操作                                       | 冪等性キー                                                     | セマンティクス                                                                                                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generate（`POST /api/shopping-lists`）      | `mealPlanId`（`shopping_lists.meal_plan_id` UNIQUE 制約）        | 1 回目: 新規 ShoppingList 作成・201。2 回目以降（同一 `mealPlanId`）: 既存 active リストをそのまま返却・200（設計 S-6 案 B2）。既存リストありで MealPlan が `draft` のままなら遷移を修復してから返す（部分失敗の自己修復。設計 §S-6-3） |
+| MarkAsBought（`POST .../bought`）           | なし（冪等キーは設けない）                                        | 同一 item への再適用は上書き許容（設計 S-11(a)）。エラーにはならないが、リクエストの重複送信を検出する仕組みはない（結果が同じ値で冪等的に振る舞うだけ）                                                          |
+| AddItem（`POST .../items`）                 | なし                                                                | 二重送信で 2 件の ShoppingItem が作成される（非冪等。設計 §エラー処理(c)で明記済み。既存 `AddRecipeToMealPlan` と同じ制約）                                                                          |
+| ReassignStore（`POST .../target-store`）    | なし                                                                | 同一値への再適用は無害（同じ `targetStoreId` を書き込むだけ）だが、形式的な冪等性キーは設けない                                                                                                       |
+
+Generate 以外は明示的な冪等性キー（一意制約に基づく重複排除）を持たない。これは設計書が既に確定した方針
+であり、本契約はそれをそのまま反映するのみで新たな判断は加えない。
+
+### 12. 契約差分（新規追加のみ）
+
+`packages/api-contract/src/shopping-list.schema.ts` は新規ファイルであるため、「変更前」は存在しない。
+以下は「何を新規に定義し、何を既存契約から再利用するか」の一覧（差分表）。
+
+| 種別                             | 対象                                                                                                                                        | 内容                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 新規追加                         | `generateShoppingListSchema` / `addItemSchema` / `markAsBoughtSchema` / `reassignStoreSchema`                                             | リクエスト用 Zod スキーマ 4 種                                            |
+| 新規追加                         | `shoppingListIdParamSchema` / `shoppingItemIdParamSchema`                                                                                  | param 用 Zod スキーマ 2 種                                                |
+| 新規追加                         | `itemStatusSchema` / `itemSourceSchema` / `shoppingListStatusSchema` / `shoppingItemResponseSchema` / `shoppingListResponseSchema`         | レスポンス用 Zod スキーマ 5 種                                            |
+| 既存を再利用（変更しない）       | `unitSchema`（`recipe.schema.ts`）                                                                                                          | `requiredAmount.unit` の列挙値としてそのまま import                       |
+| 既存を再利用（変更しない）       | `errorResponseSchema`（`meal-plan.schema.ts`）                                                                                              | 再定義せず import。§8 参照                                                |
+| 既存を再利用（変更しない）       | `{ error: string }` 形式・`onError` の instanceof 分岐パターン                                                                              | 新規エラー 3 種の分岐を追記するのみ（既存 5 分岐の順序・挙動は変更しない） |
+| 既存ファイルへの追記             | `packages/api-contract/src/index.ts`                                                                                                        | `export * from './shopping-list.schema'` の 1 行追加のみ                  |
+
+### 13. 後方互換性の判定
+
+新規ファイル `packages/api-contract/src/shopping-list.schema.ts` の追加、および
+`packages/api-contract/src/index.ts` への `export * from './shopping-list.schema'` 追加のみ。既存の
+`recipe.schema.ts` / `product.schema.ts` / `store.schema.ts` / `meal-plan.schema.ts` の型・エクスポートは
+一切変更しない（`unitSchema` は import して再利用するのみで再定義しない。`errorResponseSchema` も同様）。
+`apps/web/src/server/app.ts` への変更は既存 `onError` 分岐 5 件に新規分岐 3 件を追記するのみで、既存分岐
+の判定順序・挙動は変わらない。既存 API クライアント・既存データへの破壊的変更はなく、**後方互換を壊さ
+ない**（meal-plan 契約 §19-10 と同一の判定形式）。ユーザー確認は不要。
+
+### 14. リクエスト/レスポンスのサンプル
+
+**Generate（新規生成、201）**
+
+```
+POST /api/shopping-lists
+{ "mealPlanId": "b1a7c2e4-52b1-4b8e-9c3a-1234567890ab" }
+
+201 Created
+{
+  "id": "b2c8d3f5-63c2-4c9f-ad4b-234567890abc",
+  "mealPlanId": "b1a7c2e4-52b1-4b8e-9c3a-1234567890ab",
+  "shoppingDate": "2026-07-11",
+  "status": "active",
+  "items": [
+    {
+      "id": "c3d9e4a6-74d3-4dae-be5c-34567890abcd",
+      "productId": "d4eaf5b7-85e4-4ebf-cf6d-4567890abcde",
+      "displayName": "玉ねぎ",
+      "requiredAmount": { "value": 300, "unit": "g" },
+      "amountNote": null,
+      "targetStoreId": "e5fb06c8-96f5-4fc0-d07e-567890abcdef",
+      "status": "pending",
+      "actualPrice": null,
+      "actualStoreId": null,
+      "source": "from_meal_plan"
+    },
+    {
+      "id": "f6ac17d9-a706-4fd1-e18f-67890abcdef0",
+      "productId": null,
+      "displayName": "塩",
+      "requiredAmount": null,
+      "amountNote": "少々",
+      "targetStoreId": null,
+      "status": "pending",
+      "actualPrice": null,
+      "actualStoreId": null,
+      "source": "from_meal_plan"
+    }
+  ],
+  "createdAt": "2026-07-11T09:00:00.000Z"
+}
+```
+
+**Generate（冪等・2 回目呼び出し、200）**
+
+```
+POST /api/shopping-lists
+{ "mealPlanId": "b1a7c2e4-52b1-4b8e-9c3a-1234567890ab" }
+
+200 OK
+（ボディは上記 201 レスポンスと同一形状・同一内容。既存の ShoppingList をそのまま返す。
+  1 回目の呼び出し後にチェック済みの item があれば、その状態も保持されたまま返る）
+```
+
+**AddItem（201）**
+
+```
+POST /api/shopping-lists/b2c8d3f5-63c2-4c9f-ad4b-234567890abc/items
+{
+  "displayName": "醤油",
+  "requiredAmount": { "value": 1, "unit": "本" },
+  "productId": null,
+  "targetStoreId": null
+}
+
+201 Created
+{
+  "id": "07bd28ea-b817-4fe2-f290-7890abcdef01",
+  "productId": null,
+  "displayName": "醤油",
+  "requiredAmount": { "value": 1, "unit": "本" },
+  "amountNote": null,
+  "targetStoreId": null,
+  "status": "pending",
+  "actualPrice": null,
+  "actualStoreId": null,
+  "source": "manually_added"
+}
+```
+
+**MarkAsBought（200）**
+
+```
+POST /api/shopping-lists/b2c8d3f5-63c2-4c9f-ad4b-234567890abc/items/c3d9e4a6-74d3-4dae-be5c-34567890abcd/bought
+{
+  "actualPrice": { "amount": 198, "currency": "JPY" },
+  "actualStoreId": "e5fb06c8-96f5-4fc0-d07e-567890abcdef"
+}
+
+200 OK
+{
+  "id": "c3d9e4a6-74d3-4dae-be5c-34567890abcd",
+  "productId": "d4eaf5b7-85e4-4ebf-cf6d-4567890abcde",
+  "displayName": "玉ねぎ",
+  "requiredAmount": { "value": 300, "unit": "g" },
+  "amountNote": null,
+  "targetStoreId": "e5fb06c8-96f5-4fc0-d07e-567890abcdef",
+  "status": "bought",
+  "actualPrice": { "amount": 198, "currency": "JPY" },
+  "actualStoreId": "e5fb06c8-96f5-4fc0-d07e-567890abcdef",
+  "source": "from_meal_plan"
+}
+```
+
+**ReassignStore（200）**
+
+```
+POST /api/shopping-lists/b2c8d3f5-63c2-4c9f-ad4b-234567890abc/items/f6ac17d9-a706-4fd1-e18f-67890abcdef0/target-store
+{ "targetStoreId": "a1b2c3d4-1122-4d33-a4e5-f60718293a4b" }
+
+200 OK
+{
+  "id": "f6ac17d9-a706-4fd1-e18f-67890abcdef0",
+  "productId": null,
+  "displayName": "塩",
+  "requiredAmount": null,
+  "amountNote": "少々",
+  "targetStoreId": "a1b2c3d4-1122-4d33-a4e5-f60718293a4b",
+  "status": "pending",
+  "actualPrice": null,
+  "actualStoreId": null,
+  "source": "from_meal_plan"
+}
+```
+
+**GetShoppingList（200）**
+
+```
+GET /api/shopping-lists/b2c8d3f5-63c2-4c9f-ad4b-234567890abc
+
+200 OK
+（ボディは Generate 201 の例と同一形状）
+```
+
+**エラー例（404・422）**
+
+```
+POST /api/shopping-lists
+{ "mealPlanId": "存在しない mealPlanId（形式は正しい UUID）" }
+
+404 Not Found
+{ "error": "MealPlan not found: <mealPlanId>" }
+```
+
+```
+POST /api/shopping-lists/<completed の ShoppingList の id>/items
+{
+  "displayName": "追加材料",
+  "requiredAmount": { "value": 1, "unit": "個" },
+  "productId": null,
+  "targetStoreId": null
+}
+
+422 Unprocessable Entity
+{ "error": "Cannot addItem a ShoppingList with status 'completed'" }
+```
+
+（エラーメッセージの厳密な文言は Application 層のエラークラス実装に依存する。上記は設計 §Application
+設計のエラークラス定義（`InvalidShoppingListStateError(current, operation)` / `MealPlanNotFoundError`
+の既存メッセージ形式 `` `MealPlan not found: ${mealPlanId}` ``）から類推される形。実際の文言確定は
+implementer の実装範囲であり、本契約では `{ error: string }` という形状のみを確定する。）
+
+### 15. 契約テスト方針（test-designer への申し送り）
+
+確定はせず観点のみ引き継ぐ。要件 `docs/requirements/shopping-list-core.md` §7 の観点と対応させ、
+Vitest で `packages/api-contract/src/shopping-list.schema.test.ts`（新規）に実装する想定。
+
+| 観点                                                                          | 対象スキーマ                                                                 | 備考                                                                                          |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 正常な `mealPlanId` の `parse()` 通過・不正 UUID の reject                     | `generateShoppingListSchema`                                                    |                                                                                                     |
+| `displayName` 空文字・空白のみの reject                                        | `addItemSchema`                                                                 | `nonBlankString` の trim チェック                                                                  |
+| `requiredAmount.value` 境界（`0` accept・負数 reject）                         | `addItemSchema`                                                                 | `Quantity.of` の非負検証と整合することの確認                                                       |
+| `requiredAmount.unit` の 17 値 enum 外 reject                                   | `addItemSchema`                                                                 | `unitSchema` の再利用が正しく効くこと                                                              |
+| `productId` / `targetStoreId` の `null` accept・キー省略（`undefined`）reject | `addItemSchema`                                                                 | §2 の「optional にしない」確定仕様の検証                                                           |
+| `actualPrice.amount` 境界（`0` accept・負数 reject）                           | `markAsBoughtSchema`                                                            | `Money.of` の非負検証と整合                                                                        |
+| `actualPrice.currency` が `'JPY'` 以外（例: `'USD'`）で reject                 | `markAsBoughtSchema`                                                            | S-6 コーディネーター確定の反映確認                                                                  |
+| `actualStoreId` 不正 UUID の reject                                            | `markAsBoughtSchema`                                                            |                                                                                                     |
+| `targetStoreId` 不正 UUID の reject                                            | `reassignStoreSchema`                                                           |                                                                                                     |
+| param（`id` / `itemId`）不正 UUID の reject                                    | `shoppingListIdParamSchema` / `shoppingItemIdParamSchema`                      |                                                                                                     |
+| `requiredAmount` と `amountNote` が両方 `null` または両方非 `null` で reject   | `shoppingItemResponseSchema`（`superRefine`）                                   | S-5 排他 nullability の契約テスト（最重要観点）                                                    |
+| `requiredAmount` のみ非 `null`／`amountNote` のみ非 `null` で accept           | `shoppingItemResponseSchema`                                                    | 同上の正常系 2 パターン                                                                            |
+| レスポンス構造の型往復（Mapper 出力の契約適合）                                | `shoppingListResponseSchema` / `shoppingItemResponseSchema`                    | `toShoppingListDto` / `toShoppingItemDto`（設計 §Application 設計）の出力が `parse()` を通過すること。items 0 件（空配列）のケースも含める（D-7） |
+| nullable フィールドの全パターン網羅                                            | `shoppingItemResponseSchema`                                                    | `productId` / `targetStoreId` / `actualPrice` / `actualStoreId` それぞれの null・非 null 両方      |
+| 400 の契約は「ステータスのみ」検証（body 構造は固定契約にしない）              | 全 json / param スキーマ                                                       | meal-plan §19-7 と同一方針                                                                         |
+| 既存契約への非破壊確認                                                          | `recipe.schema.ts` / `product.schema.ts` / `store.schema.ts` / `meal-plan.schema.ts` | 本契約は新規ファイル追加のみのため、既存 `.test.ts` が green のまま保たれること                     |
+| 201/200 ステータスコードの分岐（Hono ルート統合テストの領域）                  | —                                                                                | Generate の新規生成 = 201・冪等パス = 200 の実動作は `apps/web/src/server/routes/shopping-lists.test.ts` 側の観点。契約テストとルートテストのどちらに置くかは test-designer が判断 |
+
+Vitest（全層導入済み）。実行は `pnpm lint` / `pnpm type-check` / `pnpm test`。
