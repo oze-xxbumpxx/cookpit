@@ -82,7 +82,7 @@ G-1〜G-3 と同じ性質（設計判断の変更ではなく機械的な整合�
 | 2   | Infrastructure     | DB スキーマ追記 / PGlite DDL 追記 / マイグレーション生成 / `DrizzleShoppingListRepository` 実装 + テスト                                          |
 | 3   | Application        | DTO / Mapper / エラー3種 / UseCase 5本（Generate/AddItem/MarkAsBought/ReassignStore/GetShoppingList）+ テスト                                     |
 | 4   | API Contract       | `shopping-list.schema.ts`（Zod）+ 契約テスト                                                                                                      |
-| 5   | Presentation (API) | Hono ルート6本 / `app.ts` 統合（マウント + onError 3分岐追記）                                                                                    |
+| 5   | Presentation (API) | Hono ルート5本 / `app.ts` 統合（マウント + onError 3分岐追記）                                                                                    |
 
 ---
 
@@ -1642,7 +1642,7 @@ pnpm --filter @cookpit/api-contract type-check  # 通過
 
 | 種別 | ファイル                                            | 内容                                           |
 | ---- | --------------------------------------------------- | ---------------------------------------------- |
-| 新規 | `apps/web/src/server/routes/shopping-lists.ts`      | `shoppingListsRoute`（Hono、6 エンドポイント） |
+| 新規 | `apps/web/src/server/routes/shopping-lists.ts`      | `shoppingListsRoute`（Hono、5 エンドポイント） |
 | 新規 | `apps/web/src/server/routes/shopping-lists.test.ts` | Hono テストクライアントによるルートテスト      |
 | 追記 | `apps/web/src/server/app.ts`                        | マウント + `onError` に新規エラー3種の分岐追加 |
 
@@ -1842,7 +1842,7 @@ pnpm --filter @cookpit/web test
 pnpm lint
 ```
 
-- 6 エンドポイント全てが§契約確定仕様 §10 の表どおりの HTTP メソッド・パス・ステータスで動作する
+- 5 エンドポイント全てが§契約確定仕様 §10 の表どおりの HTTP メソッド・パス・ステータスで動作する
 - `POST /api/shopping-lists` が新規生成時 201・冪等時 200 を正しく返し分ける
 - `app.ts` の既存6分岐（Recipe/Product/Store/MealPlan/PlannedRecipe/InvalidMealPlanState）が
   変更されていない
