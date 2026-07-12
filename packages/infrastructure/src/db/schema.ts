@@ -102,3 +102,41 @@ export const plannedRecipes = pgTable(
 
 export type PlannedRecipeRow = typeof plannedRecipes.$inferSelect;
 export type NewPlannedRecipeRow = typeof plannedRecipes.$inferInsert;
+
+export const shoppingLists = pgTable('shopping_lists', {
+  id: text('id').primaryKey(),
+  mealPlanId: text('meal_plan_id').notNull().unique(),
+  // ↑ 集約またぎの ID 参照。FK なし（D-6・C-4 先例）。
+  //   UNIQUE = 「1 MealPlan : 最大 1 ShoppingList」不変条件（S-6）＋ findByMealPlanId のインデックスを兼ねる
+  shoppingDate: date('shopping_date').notNull(),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type ShoppingListRow = typeof shoppingLists.$inferSelect;
+export type NewShoppingListRow = typeof shoppingLists.$inferInsert;
+
+export const shoppingItems = pgTable(
+  'shopping_items',
+  {
+    id: text('id').primaryKey(),
+    shoppingListId: text('shopping_list_id')
+      .notNull()
+      .references(() => shoppingLists.id, { onDelete: 'cascade' }),
+    productId: text('product_id'),
+    displayName: text('display_name').notNull(),
+    requiredAmountValue: numeric('required_amount_value', { precision: 10, scale: 3 }),
+    requiredAmountUnit: text('required_amount_unit'),
+    amountNote: text('amount_note'),
+    targetStoreId: text('target_store_id'),
+    status: text('status').notNull(),
+    actualPriceAmount: numeric('actual_price_amount', { precision: 10, scale: 1 }),
+    actualStoreId: text('actual_store_id'),
+    source: text('source').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('shopping_items_shopping_list_id_idx').on(table.shoppingListId)],
+);
+
+export type ShoppingItemRow = typeof shoppingItems.$inferSelect;
+export type NewShoppingItemRow = typeof shoppingItems.$inferInsert;
