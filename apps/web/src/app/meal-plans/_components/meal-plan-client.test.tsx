@@ -4,13 +4,16 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { postMealPlan, postRecipe, deleteRecipe, refresh, push } = vi.hoisted(() => ({
-  postMealPlan: vi.fn(),
-  postRecipe: vi.fn(),
-  deleteRecipe: vi.fn(),
-  refresh: vi.fn(),
-  push: vi.fn(),
-}));
+const { postMealPlan, postRecipe, deleteRecipe, postShoppingList, refresh, push } = vi.hoisted(
+  () => ({
+    postMealPlan: vi.fn(),
+    postRecipe: vi.fn(),
+    deleteRecipe: vi.fn(),
+    postShoppingList: vi.fn(),
+    refresh: vi.fn(),
+    push: vi.fn(),
+  }),
+);
 
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => (
@@ -35,6 +38,9 @@ vi.mock('@/lib/api-client', () => ({
             },
           },
         },
+      },
+      'shopping-lists': {
+        $post: (...args: unknown[]) => postShoppingList(...args),
       },
     },
   },
@@ -251,5 +257,65 @@ describe('MealPlanClient', () => {
     expect(screen.getByRole('link', { name: '履歴' }).getAttribute('href')).toBe(
       '/meal-plans/history',
     );
+  });
+
+  it('MC-02: mealPlan なしのとき買い物リスト CTA は表示されない', () => {
+    render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
+
+    expect(screen.queryByRole('button', { name: '買い物リストを作る' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '買い物リストを開く' })).toBeNull();
+  });
+
+  it('MC-01/MC-03: mealPlan が draft のとき「買い物リストを作る」CTA が表示される', () => {
+    const mealPlan = createMealPlanDto({ status: 'draft' });
+    render(
+      <MealPlanClient mealPlan={mealPlan} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
+    );
+
+    expect(screen.getByRole('button', { name: '買い物リストを作る' })).toBeDefined();
+  });
+
+  it('MC-04: mealPlan が draft 以外のとき「買い物リストを開く」CTA が表示される', () => {
+    const mealPlan = createMealPlanDto({ status: 'shopping' });
+    render(
+      <MealPlanClient mealPlan={mealPlan} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
+    );
+
+    expect(screen.getByRole('button', { name: '買い物リストを開く' })).toBeDefined();
+  });
+
+  it('MC-05: CTA 押下で POST が呼ばれ、成功で router.push される', async () => {
+    const user = userEvent.setup();
+    const mealPlan = createMealPlanDto({ status: 'draft' });
+    postShoppingList.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'shopping-list-1' }),
+    });
+    render(
+      <MealPlanClient mealPlan={mealPlan} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '買い物リストを作る' }));
+
+    await waitFor(() => {
+      expect(postShoppingList).toHaveBeenCalledWith({ json: { mealPlanId: mealPlan.id } });
+      expect(push).toHaveBeenCalledWith('/shopping-lists/shopping-list-1');
+    });
+  });
+
+  it('MC-06: CTA 押下が失敗すると errorMessage が表示される', async () => {
+    const user = userEvent.setup();
+    const mealPlan = createMealPlanDto({ status: 'draft' });
+    postShoppingList.mockResolvedValue({ ok: false });
+    render(
+      <MealPlanClient mealPlan={mealPlan} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '買い物リストを作る' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
+    expect(push).not.toHaveBeenCalled();
   });
 });

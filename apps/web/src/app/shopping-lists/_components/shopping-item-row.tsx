@@ -1,0 +1,127 @@
+'use client';
+
+import { cn } from '@/lib/utils';
+import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import { Check } from 'lucide-react';
+import { useId, useState } from 'react';
+import { PurchaseInputForm } from './purchase-input-form';
+
+interface Props {
+  item: ShoppingItemDto;
+  stores: StoreDto[];
+  expanded: boolean;
+  submitting: boolean;
+  onToggleExpand: (itemId: string) => void;
+  onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
+  onReassignStore: (itemId: string, targetStoreId: string) => void;
+}
+
+function resolveStoreName(storeId: string | null, stores: StoreDto[]): string {
+  if (storeId === null) {
+    return '店舗未定';
+  }
+  return stores.find((store) => store.id === storeId)?.name ?? '不明な店舗';
+}
+
+/** item 1 行（チェック・表示・展開トグル・店舗変更。D-4）。 */
+export function ShoppingItemRow({
+  item,
+  stores,
+  expanded,
+  submitting,
+  onToggleExpand,
+  onMarkAsBought,
+  onReassignStore,
+}: Props) {
+  const storeSelectId = useId();
+  const [storeEditing, setStoreEditing] = useState(false);
+
+  const bought = item.status === 'bought';
+  const storeOptions: SelectFieldOption[] = stores.map((store) => ({
+    value: store.id,
+    label: store.name,
+  }));
+
+  function handleReassign(nextStoreId: string): void {
+    setStoreEditing(false);
+    if (nextStoreId === '') {
+      return;
+    }
+    onReassignStore(item.id, nextStoreId);
+  }
+
+  return (
+    <li className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={bought}
+          aria-label={`${item.displayName}を購入済みにする`}
+          onClick={() => onToggleExpand(item.id)}
+          disabled={submitting}
+          className={cn(
+            'flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors',
+            bought
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-input bg-background',
+          )}
+        >
+          {bought && <Check className="size-4" aria-hidden="true" />}
+        </button>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="truncate text-sm font-medium text-foreground">{item.displayName}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.requiredAmount !== null
+              ? `${item.requiredAmount.value}${item.requiredAmount.unit}`
+              : item.amountNote}
+          </p>
+          {bought && item.actualPrice !== null && (
+            <p className="text-xs text-muted-foreground">
+              ✓ {resolveStoreName(item.actualStoreId, stores)} で ¥{item.actualPrice.amount} 購入
+            </p>
+          )}
+        </div>
+
+        {storeEditing ? (
+          <div className="w-28">
+            <label htmlFor={storeSelectId} className="sr-only">
+              推奨店舗を変更
+            </label>
+            <SelectField
+              id={storeSelectId}
+              value={item.targetStoreId ?? ''}
+              onValueChange={handleReassign}
+              options={storeOptions}
+              disabled={submitting}
+              className="h-9"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setStoreEditing(true)}
+            disabled={submitting}
+            className="shrink-0 rounded-full border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+          >
+            {resolveStoreName(item.targetStoreId, stores)}
+          </button>
+        )}
+      </div>
+
+      {expanded && (
+        <PurchaseInputForm
+          item={item}
+          stores={stores}
+          submitting={submitting}
+          onSubmit={(actualPrice, actualStoreId) =>
+            onMarkAsBought(item.id, actualPrice, actualStoreId)
+          }
+          onCancel={() => onToggleExpand(item.id)}
+        />
+      )}
+    </li>
+  );
+}
