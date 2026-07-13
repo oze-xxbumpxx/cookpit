@@ -3,13 +3,17 @@ import { healthRoute } from './routes/health';
 import { mealPlansRoute } from './routes/meal-plans';
 import { productsRoute } from './routes/products';
 import { recipesRoute } from './routes/recipes';
+import { shoppingListsRoute } from './routes/shopping-lists';
 import { storesRoute } from './routes/stores';
 import {
   InvalidMealPlanStateError,
+  InvalidShoppingListStateError,
   MealPlanNotFoundError,
   PlannedRecipeNotFoundError,
   ProductNotFoundError,
   RecipeNotFoundError,
+  ShoppingItemNotFoundError,
+  ShoppingListNotFoundError,
   StoreNotFoundError,
 } from '@cookpit/application';
 const app = new Hono().basePath('/api');
@@ -19,7 +23,8 @@ export const routes = app
   .route('/recipes', recipesRoute)
   .route('/products', productsRoute)
   .route('/stores', storesRoute)
-  .route('/meal-plans', mealPlansRoute);
+  .route('/meal-plans', mealPlansRoute)
+  .route('/shopping-lists', shoppingListsRoute);
 
 app.onError((err, c) => {
   if (err instanceof RecipeNotFoundError) {
@@ -38,6 +43,15 @@ app.onError((err, c) => {
     return c.json({ error: err.message }, 404);
   }
   if (err instanceof InvalidMealPlanStateError) {
+    return c.json({ error: err.message }, 422);
+  }
+  if (err instanceof ShoppingListNotFoundError) {
+    return c.json({ error: err.message }, 404);
+  }
+  if (err instanceof ShoppingItemNotFoundError) {
+    return c.json({ error: err.message }, 404);
+  }
+  if (err instanceof InvalidShoppingListStateError) {
     return c.json({ error: err.message }, 422);
   }
   console.error(err);
