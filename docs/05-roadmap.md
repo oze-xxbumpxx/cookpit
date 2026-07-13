@@ -293,10 +293,12 @@ Unit A で確定済みだった未決事項（対応済み）:
 2. **Drizzle スキーマ + Repository**
 
 3. **Use Case 実装**
-   - `GenerateShoppingListUseCase`（献立から自動生成、Pantry 在庫を引く、Product から最安店舗を決定）
+   - `GenerateShoppingListUseCase`（献立から自動生成、Product から最安店舗を決定。
+     Pantry 在庫引きは Sprint 5 へ — S-2）
    - `AddItemUseCase`（手動追加）
    - `MarkAsBoughtUseCase`
    - `ReassignStoreUseCase`
+   - `GetShoppingListUseCase`（S-7 で Unit A へスコープ追加）
 
 4. **API + 画面**
    - 買い物リスト画面（店舗ごとにグループ化）
@@ -311,9 +313,36 @@ Unit A で確定済みだった未決事項（対応済み）:
 
 ### 完了条件
 
-- [ ] 献立から買い物リストが自動生成される
+- [ ] 献立から買い物リストが自動生成される（API は Unit A で完了。画面操作は Unit B）
 - [ ] スーパーで実際に使って、ストレスなく操作できる
 - [ ] 2人で同じリストを見て、お互いの操作が反映される（最低限 refetch でOK）
+
+### 進め方（2026-07-11 ユニット分割確定）
+
+| ユニット                      | 内容                                                                                                                                 | レベル    | 実装ルート           | 状態                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------- | -------------------- | ----------------------- |
+| Unit A: shopping-list-core    | Domain（ShoppingList / ShoppingItem / Quantity.add()）+ Drizzle スキーマ（shopping_lists / shopping_items）+ UseCase 5 本 + API 5 本 | L3        | Codex 委譲（01〜05） | **完了**（PR #51〜#57） |
+| Unit B: shopping-list-screens | 買い物リスト画面（店舗グループ・チェック・価格入力・手動追加・価格比較）+ PWA オフライン強化                                         | L2 見込み | 着手時に確定         | 未着手                  |
+
+スコープ判断（ユーザー確定・2026-07-12。確定値 S-1〜S-11 / D-1〜D-8 の正典は
+`docs/designs/shopping-list-core.md`）:
+
+- Pantry 在庫の引き算は行わない（S-2。Pantry 集約は Sprint 5。タスク 3 の記述を上書き）
+- `GetShoppingListUseCase` + `GET /api/shopping-lists/:id` を Unit A へ追加（S-7。UseCase 5 本・API 5 本）
+- 生成は冪等（S-6。`shopping_lists.meal_plan_id` UNIQUE + 既存返却 200 / 新規 201。
+  MealPlan の draft→shopping 遷移も Generate が担う）
+- `markAsSkipped` / `complete()` は Domain のみ実装（API 非公開。S-8 / S-9）。一覧・削除 API はスコープ外
+
+### Unit A 完了記録（2026-07-13）
+
+- [x] 上流工程成果物（要件・設計 + 契約・実装計画・試験計画）+ Codex 指示書パック（PR #51）
+- [x] ShoppingList ドメインモデル + `Quantity.add()`（PR #52）
+- [x] Drizzle スキーマ + Repository（PR #53）
+- [x] UseCase 5 本（PR #54）
+- [x] 公開 API JSDoc 規約の採用 + Task 3 振り返り（PR #55）
+- [x] API Contract（Zod スキーマ + 契約テスト）（PR #56）
+- [x] Presentation API（Hono ルート 5 本 + app.ts 統合）（PR #57）
+- [x] `docs/04-domain-model.md` の ShoppingList / 生成ユースケースを実装に同期（S-2/S-5/S-8/S-10）
 
 ## Sprint 5：Pantry 在庫管理（1.5週間）
 
