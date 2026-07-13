@@ -412,7 +412,11 @@ export class PlannedRecipe {
 
 ### ShoppingList 集約
 
-買い物リスト。MealPlan + Pantry + Product から導出されるが、買い物中に独立して編集されるため独立集約とする。
+買い物リスト。MealPlan + Product から導出されるが、買い物中に独立して編集されるため独立集約とする。
+Pantry 在庫の引き算は行わない（S-2。Pantry 集約は Sprint 5 スコープ）。
+
+（2026-07-13 Sprint 4 Unit A 実装に同期。確定値 S-1〜S-11 / D-1〜D-8 は
+`docs/designs/shopping-list-core.md` を正典とする）
 
 ```typescript
 export class ShoppingList {
@@ -420,81 +424,64 @@ export class ShoppingList {
     private readonly _id: ShoppingListId,
     private readonly _mealPlanId: MealPlanId,
     private _items: ShoppingItem[],
-    private _shoppingDate: Date,
+    private readonly _shoppingDate: Date,
     private _status: ShoppingListStatus,
+    private readonly _createdAt: Date,
   ) {}
 
   static create(input: CreateShoppingListInput): ShoppingList {
-    return new ShoppingList(
-      ShoppingListId.generate(),
-      input.mealPlanId,
-      input.items,
-      input.shoppingDate,
-      'active',
-    );
+    /* status: 'active'・createdAt: 現在時刻で初期化 */
   }
 
   static reconstruct(props: ShoppingListProps): ShoppingList {
     /* ... */
   }
 
-  addItem(item: ShoppingItem): void {
-    this._items.push(item);
-  }
-
-  removeItem(itemId: ShoppingItemId): void {
-    /* ... */
-  }
-
-  markAsBought(itemId: ShoppingItemId, actualPrice: Money, actualStore: StoreId): void {
-    const item = this._items.find((i) => i.id.equals(itemId));
-    if (!item) throw new Error('Item not found');
-    item.markAsBought(actualPrice, actualStore);
-  }
-
-  reassignStore(itemId: ShoppingItemId, newStore: StoreId): void {
-    /* ... */
-  }
-
-  complete(): void {
-    if (this._status !== 'active') throw new Error('Already completed');
-    this._status = 'completed';
-  }
-
-  /** 完了済みアイテムを Pantry に追加するためのデータを返す */
-  getBoughtItemsForPantry(): BoughtItemForPantry[] {
-    return this._items.filter((i) => i.isBought()).map((i) => i.toPantryEntry());
-  }
+  // 更新系操作はすべて active のみ許可（completed なら throw。D-2 assertActive）
+  addItem(item: ShoppingItem): void {}
+  markAsBought(itemId: ShoppingItemId, price: Money, store: StoreId): void {}
+  reassignStore(itemId: ShoppingItemId, newStore: StoreId): void {}
+  markAsSkipped(itemId: ShoppingItemId): void {}
+  complete(): void {}
 }
 
 export class ShoppingItem {
   private constructor(
     private readonly _id: ShoppingItemId,
-    private readonly _productId: ProductId | null, // null 許容
-    private _displayName: string,
-    private readonly _requiredAmount: Quantity,
-    private _targetStore: StoreId | null,
+    private readonly _productId: ProductId | null, // null 許容（名寄せは productRef 引き継ぎのみ。S-3）
+    private readonly _displayName: string,
+    private _requiredAmount: Quantity | null, // amountNote と「ちょうど一方が非 null」の排他（S-5）
+    private _amountNote: string | null, // 「適量」などの自由記述
+    private _targetStore: StoreId | null, // 最安店舗が決定できない場合は null（D-1）
     private _status: ItemStatus,
     private _actualPrice: Money | null,
     private _actualStore: StoreId | null,
     private readonly _source: ItemSource,
   ) {}
 
-  isBought(): boolean {
-    return this._status === 'bought';
-  }
-
-  markAsBought(price: Money, store: StoreId): void {
-    this._status = 'bought';
-    this._actualPrice = price;
-    this._actualStore = store;
-  }
+  markAsBought(price: Money, store: StoreId): void {} // 現状態を問わず最新実績で上書き（S-11）
+  markAsSkipped(): void {} // pending のみ許可。bought / skipped からは throw（S-9）
+  reassignStore(newStore: StoreId): void {} // bought 後も可。actualPrice / actualStore には影響しない（S-11）
+  isBought(): boolean {}
 }
 
 export type ItemStatus = 'pending' | 'bought' | 'skipped';
 export type ItemSource = 'from_meal_plan' | 'manually_added';
 export type ShoppingListStatus = 'active' | 'completed';
 ```
+
+#### 設計ポイント
+
+- `requiredAmount: Quantity | null` + `amountNote: string | null` で「適量」を表現。**ちょうど一方が非 null**（S-5）
+- 更新系操作（addItem / markAsBought / reassignStore / markAsSkipped / complete）はすべて
+  `status === 'active'` ガード（D-2）
+- `markAsSkipped` / `complete()` は Domain 実装のみで API 非公開（S-8 / S-9）
+- `getBoughtItemsForPantry()` は実装しない。Pantry 連携（CompleteShoppingUseCase）とともに Sprint 5 で設計（S-8）
+- `removeItem` は未実装（削除 API とともに Sprint 4 スコープ外）
+- `shoppingDate = mealPlan.weekOf.startDate()`（週開始土曜固定）。DB は `date` 型・ローカル日付整形で
+  JST 前日ずれを回避（S-10）
+- `shopping_items` は別テーブル（JSONB 不採用）・`shopping_lists.meal_plan_id` に UNIQUE 制約
+  （S-1。生成冪等 S-6 の基盤）
 
 ### Pantry 集約
 
@@ -609,66 +596,38 @@ export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
 
 ### 献立から買い物リストを生成する
 
+（2026-07-13 実装に同期。`packages/application/src/shopping-list/generate-shopping-list.use-case.ts` が実体）
+
 ```typescript
 export class GenerateShoppingListUseCase {
   constructor(
     private mealPlanRepo: MealPlanRepository,
     private recipeRepo: RecipeRepository,
-    private pantryRepo: PantryRepository,
-    private productRepo: ProductRepository,
+    private productRepo: ProductRepository, // Pantry は注入しない（S-2。在庫引き算は Sprint 5）
     private shoppingListRepo: ShoppingListRepository,
   ) {}
 
-  async execute(mealPlanId: MealPlanId): Promise<ShoppingListId> {
-    // 1. MealPlan を取得
-    const mealPlan = await this.mealPlanRepo.findById(mealPlanId);
-    if (!mealPlan) throw new Error('MealPlan not found');
-
-    // 2. 含まれる Recipe をすべて取得
-    const recipes = await this.recipeRepo.findByIds(mealPlan.plannedRecipes.map((p) => p.recipeId));
-
-    // 3. 必要な食材を集計（倍量を反映）
-    const requiredIngredients = this.aggregateIngredients(mealPlan, recipes);
-
-    // 4. Pantry の在庫を引く
-    const pantry = await this.pantryRepo.find();
-    const toBuy = this.subtractStock(requiredIngredients, pantry);
-
-    // 5. 各食材の最安店舗を決定
-    const products = await this.productRepo.findByIds(
-      toBuy.map((i) => i.productId).filter(Boolean),
-    );
-    const itemsWithStore = toBuy.map((item) => {
-      const product = products.find((p) => p.id.equals(item.productId));
-      const cheapest = product?.cheapestStoreAt(new Date());
-      return { ...item, targetStore: cheapest };
-    });
-
-    // 6. ShoppingList を生成して保存
-    const shoppingList = ShoppingList.create({
-      mealPlanId: mealPlan.id,
-      items: itemsWithStore.map((i) => ShoppingItem.create(i)),
-      shoppingDate: new Date(),
-    });
-    await this.shoppingListRepo.save(shoppingList);
-
-    // 7. MealPlan のステータスを shopping に
-    mealPlan.transitionTo('shopping');
-    await this.mealPlanRepo.save(mealPlan);
-
-    return shoppingList.id;
-  }
-
-  private aggregateIngredients(mealPlan, recipes) {
-    /* ... */
-  }
-  private subtractStock(required, pantry) {
-    /* ... */
+  async execute(input: GenerateShoppingListInputDto): Promise<GenerateShoppingListResultDto> {
+    // 1. MealPlan を取得（なければ MealPlanNotFoundError）
+    // 2. 冪等ガード（S-6）: 既存リストがあれば新規生成せずそれを返す（created: false）。
+    //    その際 MealPlan が draft のままなら shopping へ遷移させ、部分失敗状態を自己修復する
+    // 3. 既存リストがなく MealPlan が draft 以外なら InvalidMealPlanStateError
+    // 4. PlannedRecipe の Recipe を findById ループで解決（D-4）。削除済み Recipe はスキップ（D-8）
+    // 5. 材料を集計（倍量反映）: 同一キー（productId ?? displayName.trim()）+ 同一単位のみ
+    //    Quantity.add() で合算（S-4）。Pantry 在庫の引き算はしない（S-2）
+    // 6. productId を持つ品目のみ Product.cheapestStoreAt() で最安店舗を決定。
+    //    決定できない場合は targetStore = null（D-1）
+    // 7. ShoppingList.create()（shoppingDate = mealPlan.weekOf.startDate()。S-10）→ 保存
+    // 8. MealPlan を shopping へ遷移 → 保存（保存順 = リスト → MealPlan。S-6）
+    // 9. { shoppingList, created: true } を返す（ルート層で新規 201・冪等時 200）
   }
 }
 ```
 
 ### 買い物完了時に Pantry を更新する
+
+（**Sprint 5 スコープ・未実装の構想**。`getBoughtItemsForPantry()` を含め、
+Pantry 集約の設計時に再設計して確定する — S-8）
 
 ```typescript
 export class CompleteShoppingUseCase {
@@ -724,6 +683,9 @@ export class CompleteShoppingUseCase {
 ### 3. ShoppingList 生成時の在庫引き算
 
 端数処理をどうするか。「玉ねぎ 2個必要、家に 0.5 個ある → 2 個買う」のような切り上げルールを Use Case 側で持つ。
+
+→ **Sprint 4 で確定（S-2）**: 生成時の在庫引き算は行わない（Pantry 集約自体が Sprint 5 スコープ）。
+切り上げルールは Sprint 5 の Pantry 連携設計で扱う。
 
 ### 4. 過去の MealPlan の保持期間
 
