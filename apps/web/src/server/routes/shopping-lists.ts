@@ -1,0 +1,96 @@
+import { getDb } from '@/db/client';
+import {
+  addItemSchema,
+  generateShoppingListSchema,
+  markAsBoughtSchema,
+  reassignStoreSchema,
+  shoppingItemIdParamSchema,
+  shoppingListIdParamSchema,
+} from '@cookpit/api-contract';
+import {
+  AddItemUseCase,
+  GenerateShoppingListUseCase,
+  GetShoppingListUseCase,
+  MarkAsBoughtUseCase,
+  ReassignStoreUseCase,
+} from '@cookpit/application';
+import {
+  DrizzleMealPlanRepository,
+  DrizzleProductRepository,
+  DrizzleRecipeRepository,
+  DrizzleShoppingListRepository,
+} from '@cookpit/infrastructure';
+import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
+
+function shoppingListRepository(): DrizzleShoppingListRepository {
+  return new DrizzleShoppingListRepository(getDb());
+}
+
+function mealPlanRepository(): DrizzleMealPlanRepository {
+  return new DrizzleMealPlanRepository(getDb());
+}
+
+function recipeRepository(): DrizzleRecipeRepository {
+  return new DrizzleRecipeRepository(getDb());
+}
+
+function productRepository(): DrizzleProductRepository {
+  return new DrizzleProductRepository(getDb());
+}
+
+/** Generate は新規作成時 201、冪等な既存返却時 200 を返す。 */
+export const shoppingListsRoute = new Hono()
+  .post('/', zValidator('json', generateShoppingListSchema), async (c) => {
+    const body = c.req.valid('json');
+    const usecase = new GenerateShoppingListUseCase(
+      mealPlanRepository(),
+      recipeRepository(),
+      productRepository(),
+      shoppingListRepository(),
+    );
+    const result = await usecase.execute(body);
+    return c.json(result.shoppingList, result.created ? 201 : 200);
+  })
+  .get('/:id', zValidator('param', shoppingListIdParamSchema), async (c) => {
+    const { id } = c.req.valid('param');
+    const usecase = new GetShoppingListUseCase(shoppingListRepository());
+    const dto = await usecase.execute({ shoppingListId: id });
+    return c.json(dto, 200);
+  })
+  .post(
+    '/:id/items',
+    zValidator('param', shoppingListIdParamSchema),
+    zValidator('json', addItemSchema),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new AddItemUseCase(shoppingListRepository());
+      const dto = await usecase.execute({ shoppingListId: id, ...body });
+      return c.json(dto, 201);
+    },
+  )
+  .post(
+    '/:id/items/:itemId/bought',
+    zValidator('param', shoppingItemIdParamSchema),
+    zValidator('json', markAsBoughtSchema),
+    async (c) => {
+      const { id, itemId } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new MarkAsBoughtUseCase(shoppingListRepository());
+      const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
+      return c.json(dto, 200);
+    },
+  )
+  .post(
+    '/:id/items/:itemId/target-store',
+    zValidator('param', shoppingItemIdParamSchema),
+    zValidator('json', reassignStoreSchema),
+    async (c) => {
+      const { id, itemId } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new ReassignStoreUseCase(shoppingListRepository());
+      const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
+      return c.json(dto, 200);
+    },
+  );
