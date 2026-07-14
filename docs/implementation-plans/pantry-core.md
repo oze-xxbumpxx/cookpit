@@ -674,3 +674,945 @@ pnpm lint
 （`pnpm --filter @cookpit/infrastructure test`）が全滅するため、この時点で確実に検知できる。
 
 ---
+
+### Task 3: Application 層 — Pantry UseCase 3本 → CompleteShoppingUseCase
+
+**依存**: Task 1（Domain の `Pantry`/`Stock`/`PantryRepository`）。実行時の DI 対象
+（`ProductRepository`/`MealPlanRepository`/`ShoppingListRepository`/`PantryRepository`）は
+既存インターフェースをそのまま使うため型検査は Task 1 のみで通るが、実際の Repository 実装
+配線は Task 5（Presentation）で行う。
+
+**対象ファイル**
+
+| #   | 種別 | ファイル                                                                    | 内容                                                                                   |
+| --- | ---- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1   | 新規 | `packages/application/src/pantry/pantry.dto.ts`                             | `StockDto`/`PantryDto`/`ConsumeStockInputDto`/`DiscardStockInputDto`/`StorageLocation` |
+| 2   | 新規 | `packages/application/src/pantry/pantry.mapper.ts`                          | `toStockDto`/`toPantryDto`                                                             |
+| 3   | 新規 | `packages/application/src/pantry/stock-not-found.error.ts`                  | `StockNotFoundError`                                                                   |
+| 4   | 新規 | `packages/application/src/pantry/invalid-stock-operation.error.ts`          | `InvalidStockOperationError`                                                           |
+| 5   | 新規 | `packages/application/src/pantry/consume-stock.use-case.ts`                 | `ConsumeStockUseCase`                                                                  |
+| 6   | 新規 | `packages/application/src/pantry/discard-stock.use-case.ts`                 | `DiscardStockUseCase`                                                                  |
+| 7   | 新規 | `packages/application/src/pantry/get-pantry.use-case.ts`                    | `GetPantryUseCase`                                                                     |
+| 8   | 新規 | `packages/application/src/pantry/index.ts`                                  | バレルエクスポート                                                                     |
+| 9   | 新規 | `packages/application/src/pantry/pantry-use-cases.test.ts`                  | Consume/Discard/Get の InMemory テスト                                                 |
+| 10  | 追記 | `packages/application/src/shopping-list/shopping-list.dto.ts`               | `CompleteShoppingInputDto` 追加（IMP-4）                                               |
+| 11  | 新規 | `packages/application/src/shopping-list/complete-shopping.use-case.ts`      | `CompleteShoppingUseCase`（D-1）                                                       |
+| 12  | 追記 | `packages/application/src/shopping-list/index.ts`                           | `export * from './complete-shopping.use-case'`                                         |
+| 13  | 新規 | `packages/application/src/shopping-list/complete-shopping.use-case.test.ts` | 独立テストファイル（IMP-5）                                                            |
+| —   | 追記 | `packages/application/src/index.ts`                                         | `export * from './pantry'` を追加                                                      |
+
+#### 3-1. Pantry DTO（`pantry.dto.ts`）
+
+```typescript
+import type { Unit } from '@cookpit/domain/src/shared/unit';
+
+export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
+
+export interface StockDto {
+  id: string;
+  productId: string | null;
+  displayName: string;
+  amount: { value: number; unit: Unit };
+  purchasedAt: string; // ISO 8601 datetime
+  expiresAt: string | null; // "2026-07-11" 形式のローカル日付
+  storedLocation: StorageLocation | null;
+}
+
+export interface PantryDto {
+  stocks: StockDto[]; // purchasedAt 昇順。D-7: pantry id は含めない
+}
+
+export interface ConsumeStockInputDto {
+  stockId: string;
+  amount: { value: number; unit: Unit };
+}
+
+export interface DiscardStockInputDto {
+  stockId: string;
+}
+```
+
+`sourceShoppingItemId` は内部の冪等キーであり **DTO に含めない**（UI に用途がない。設計書
+§Application 設計より）。
+
+#### 3-2. Mapper（`pantry.mapper.ts`）
+
+```typescript
+import type { Pantry, Stock } from '@cookpit/domain/src/pantry/pantry';
+import type { PantryDto, StockDto } from './pantry.dto';
+
+export function toStockDto(stock: Stock): StockDto {
+  return {
+    id: stock.id.value,
+    productId: stock.productId?.value ?? null,
+    displayName: stock.displayName,
+    amount: { value: stock.amount.value, unit: stock.amount.unit },
+    purchasedAt: stock.purchasedAt.toISOString(),
+    expiresAt: stock.expiresAt === null ? null : toLocalDateString(stock.expiresAt),
+    storedLocation: stock.storedLocation,
+  };
+}
+
+export function toPantryDto(pantry: Pantry): PantryDto {
+  return { stocks: pantry.stocks.map(toStockDto) };
+}
+
+// UTC 変換による日付ずれを避け、ローカル日付のまま境界外へ渡す（shopping-list.mapper と同方式）。
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+```
+
+#### 3-3. エラークラス2種（`meal-plan`/`shopping-list` 先例と同構造）
+
+```typescript
+// stock-not-found.error.ts
+export class StockNotFoundError extends Error {
+  constructor(stockId: string) {
+    super(`Stock not found: ${stockId}`);
+    this.name = 'StockNotFoundError';
+  }
+}
+```
+
+```typescript
+// invalid-stock-operation.error.ts
+export class InvalidStockOperationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidStockOperationError';
+  }
+}
+```
+
+#### 3-4. `ConsumeStockUseCase` / `DiscardStockUseCase` / `GetPantryUseCase`
+
+設計 §データフロー「在庫消費」の擬似コードのとおり、入口チェック（存在 → 404、単位 → 422）を
+UseCase 内で明示的に行い、Domain の汎用 `Error` には正常フローで到達させない。
+
+```typescript
+// consume-stock.use-case.ts
+import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { StockId } from '@cookpit/domain/src/pantry/stock-id';
+import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
+import { InvalidStockOperationError } from './invalid-stock-operation.error';
+import { StockNotFoundError } from './stock-not-found.error';
+import type { ConsumeStockInputDto, PantryDto } from './pantry.dto';
+import { toPantryDto } from './pantry.mapper';
+
+/**
+ * 在庫を消費する。消費量が現在量以上の場合は Stock 側で全量消費にクランプする（S-7）。
+ *
+ * @throws StockNotFoundError stockId の Stock が存在しない
+ * @throws InvalidStockOperationError amount.unit が対象 Stock の単位と一致しない
+ */
+export class ConsumeStockUseCase {
+  constructor(private readonly pantryRepository: PantryRepository) {}
+
+  async execute(input: ConsumeStockInputDto): Promise<PantryDto> {
+    const pantry = await this.pantryRepository.find();
+    const stockId = StockId.fromString(input.stockId);
+    const stock = pantry.stocks.find((candidate) => candidate.id.equals(stockId)) ?? null;
+    if (stock === null) {
+      throw new StockNotFoundError(input.stockId);
+    }
+    if (input.amount.unit !== stock.amount.unit) {
+      throw new InvalidStockOperationError(
+        `Unit mismatch: expected ${stock.amount.unit}, got ${input.amount.unit}`,
+      );
+    }
+
+    pantry.consumeStock(stockId, Quantity.of(input.amount.value, input.amount.unit));
+    await this.pantryRepository.save(pantry);
+    return toPantryDto(pantry);
+  }
+}
+```
+
+```typescript
+// discard-stock.use-case.ts
+import { StockId } from '@cookpit/domain/src/pantry/stock-id';
+import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
+import { StockNotFoundError } from './stock-not-found.error';
+import type { DiscardStockInputDto, PantryDto } from './pantry.dto';
+import { toPantryDto } from './pantry.mapper';
+
+/**
+ * 在庫を残量に関わらず全量廃棄する（部分廃棄はない。S-10: reason は受け取らない）。
+ *
+ * @throws StockNotFoundError stockId の Stock が存在しない
+ */
+export class DiscardStockUseCase {
+  constructor(private readonly pantryRepository: PantryRepository) {}
+
+  async execute(input: DiscardStockInputDto): Promise<PantryDto> {
+    const pantry = await this.pantryRepository.find();
+    const stockId = StockId.fromString(input.stockId);
+    const stock = pantry.stocks.find((candidate) => candidate.id.equals(stockId)) ?? null;
+    if (stock === null) {
+      throw new StockNotFoundError(input.stockId);
+    }
+
+    pantry.discardStock(stockId);
+    await this.pantryRepository.save(pantry);
+    return toPantryDto(pantry);
+  }
+}
+```
+
+```typescript
+// get-pantry.use-case.ts
+import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
+import type { PantryDto } from './pantry.dto';
+import { toPantryDto } from './pantry.mapper';
+
+/** 在庫 0 件でも常に成功する（S-1。「未作成」という状態が存在しない）。 */
+export class GetPantryUseCase {
+  constructor(private readonly pantryRepository: PantryRepository) {}
+
+  async execute(): Promise<PantryDto> {
+    const pantry = await this.pantryRepository.find();
+    return toPantryDto(pantry);
+  }
+}
+```
+
+#### 3-5. `pantry/index.ts`
+
+```typescript
+export * from './consume-stock.use-case';
+export * from './discard-stock.use-case';
+export * from './get-pantry.use-case';
+export * from './invalid-stock-operation.error';
+export * from './pantry.dto';
+export * from './pantry.mapper';
+export * from './stock-not-found.error';
+```
+
+#### 追加テスト（`pantry-use-cases.test.ts`。`InMemoryPantryRepository` を新設）
+
+- `ConsumeStockUseCase`: 単位一致で消費が反映される／未検出 stockId で `StockNotFoundError`／
+  単位不一致で `InvalidStockOperationError`（メッセージに expected/got 双方を含む）／全量消費で
+  対象 Stock が `PantryDto.stocks` から消える（D-3 の更新後 DTO 返却を確認）
+- `DiscardStockUseCase`: 対象が `PantryDto.stocks` から消える／未検出 stockId で
+  `StockNotFoundError`／残量があっても全量削除される
+- `GetPantryUseCase`: 空 Pantry で `{ stocks: [] }` を返す（例外を投げない）／複数 Stock がある
+  場合に全件返す
+
+#### 3-6. `CompleteShoppingInputDto`（`shopping-list.dto.ts` 追記。IMP-4）
+
+```typescript
+// packages/application/src/shopping-list/shopping-list.dto.ts に追記
+export interface CompleteShoppingInputDto {
+  shoppingListId: string;
+}
+```
+
+#### 3-7. `CompleteShoppingUseCase`（`complete-shopping.use-case.ts`。D-1・本ユニットの核）
+
+設計 §データフロー「買い物完了（中核フロー）」の擬似コード（ステップ 1〜8）をそのまま実装する。
+**模範コード**: `generate-shopping-list.use-case.ts`（複数 Repository を手動 DI するコンストラクタ
+形・private helper への分割スタイル）。
+
+```typescript
+import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
+import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
+import type { CreateStockInput, Pantry } from '@cookpit/domain/src/pantry/pantry';
+import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
+import { PriceRecord } from '@cookpit/domain/src/product/product';
+import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
+import { ProductId } from '@cookpit/domain/src/product/product-id';
+import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
+import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { UnitPriceCalculator } from '@cookpit/domain/src/product/unit-price-calculator';
+import type { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
+import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
+import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+import type { CompleteShoppingInputDto, ShoppingListDto } from './shopping-list.dto';
+import { toShoppingListDto } from './shopping-list.mapper';
+import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
+
+/**
+ * 買い物完了を確定し、Pantry への在庫追加・Product への価格記録・MealPlan の
+ * shopping→cooking 遷移までを一括して行う（4 集約またぎ・D-1）。
+ *
+ * 冪等: 既に completed の場合は Stock 追加・価格記録を再実行せず、MealPlan 遷移の
+ * 修復のみ行って現状の ShoppingListDto を返す（S-3 案 B2）。保存順序は
+ * Pantry → Product → ShoppingList → MealPlan（S-3 (2)）。ShoppingList の保存が
+ * 「これより前は再実行対象・これより後は修復のみ」の境界（冪等ガードのコミットポイント）。
+ * 価格記録のみ非冪等（重複記録があり得る。S-3 (4) 案 B・§リスク R-2）。
+ *
+ * @throws ShoppingListNotFoundError shoppingListId の ShoppingList が存在しない
+ */
+export class CompleteShoppingUseCase {
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly pantryRepository: PantryRepository,
+    private readonly productRepository: ProductRepository,
+    private readonly mealPlanRepository: MealPlanRepository,
+  ) {}
+
+  async execute(input: CompleteShoppingInputDto): Promise<ShoppingListDto> {
+    const shoppingListId = ShoppingListId.fromString(input.shoppingListId);
+    const shoppingList = await this.shoppingListRepository.findById(shoppingListId);
+    if (shoppingList === null) {
+      throw new ShoppingListNotFoundError(input.shoppingListId);
+    }
+
+    if (shoppingList.status === 'completed') {
+      await this.repairMealPlanTransition(shoppingList.mealPlanId);
+      return toShoppingListDto(shoppingList);
+    }
+
+    const boughtItems = shoppingList.items.filter((item) => item.isBought());
+    const now = new Date();
+
+    const pantry = await this.pantryRepository.find();
+    this.addStocks(pantry, boughtItems, now);
+    await this.pantryRepository.save(pantry);
+
+    await this.recordPrices(boughtItems, now);
+
+    shoppingList.complete();
+    await this.shoppingListRepository.save(shoppingList);
+
+    await this.repairMealPlanTransition(shoppingList.mealPlanId);
+
+    return toShoppingListDto(shoppingList);
+  }
+
+  // S-3: 再実行時、同一 ShoppingItem 由来の Stock が既にあればスキップする（二重追加防止の第一段）
+  private addStocks(pantry: Pantry, boughtItems: ShoppingItem[], now: Date): void {
+    for (const item of boughtItems) {
+      if (!pantry.hasStockFromShoppingItem(item.id)) {
+        pantry.addStock(this.toAddStockInput(item, now));
+      }
+    }
+  }
+
+  // S-4 案 B + S-5 + S-6: ShoppingItem → Pantry.addStock 入力への変換をここに閉じ込める
+  private toAddStockInput(item: ShoppingItem, now: Date): CreateStockInput {
+    return {
+      productId: item.productId,
+      displayName: item.displayName,
+      amount: item.requiredAmount ?? Quantity.of(1, '個'), // S-6
+      purchasedAt: now,
+      expiresAt: null, // S-4 案 α
+      storedLocation: null, // S-4 案 α
+      sourceShoppingItemId: item.id,
+    };
+  }
+
+  // D-5: unique productId でグルーピングし、Product 1 件につき findById 1 回・save 1 回
+  private async recordPrices(boughtItems: ShoppingItem[], now: Date): Promise<void> {
+    const groups = new Map<string, ShoppingItem[]>();
+    for (const item of boughtItems) {
+      if (item.productId === null) {
+        continue; // S-9 条件1: 記録先の Product がない
+      }
+      const key = item.productId.value;
+      const existing = groups.get(key) ?? [];
+      existing.push(item);
+      groups.set(key, existing);
+    }
+
+    for (const [productIdValue, items] of groups) {
+      const product = await this.productRepository.findById(ProductId.fromString(productIdValue));
+      if (product === null) {
+        continue; // S-9 条件5: 削除済み Product はスキップ（止めない）
+      }
+      for (const item of items) {
+        const record = this.buildPriceRecord(item, now);
+        if (record !== null) {
+          product.recordPrice(record);
+        }
+      }
+      await this.productRepository.save(product); // IMP-6: 常に 1 回 save
+    }
+  }
+
+  // S-8/S-9: スキップ条件2〜4。条件1・5は recordPrices 側で判定済み
+  private buildPriceRecord(item: ShoppingItem, now: Date): PriceRecord | null {
+    const actualPrice = item.actualPrice;
+    const actualStore = item.actualStore;
+    if (actualPrice === null || actualStore === null) {
+      return null; // bought 品目は本来非 null（markAsBought の不変条件）。型ガード
+    }
+    if (actualPrice.amount <= 0) {
+      return null; // S-9 条件2（S-8: 無料品はスキップ）
+    }
+    if (item.requiredAmount === null || item.requiredAmount.value <= 0) {
+      return null; // S-9 条件3: packageSize が導出できない
+    }
+
+    const packageSize = item.requiredAmount;
+    const unitPrice = UnitPriceCalculator.calculate(actualPrice, packageSize);
+    if (unitPrice.amount <= 0) {
+      return null; // S-9 条件4: 丸めで 0 になった場合の防御的ガード
+    }
+
+    return PriceRecord.create({
+      id: PriceRecordId.generate(),
+      storeId: actualStore,
+      price: actualPrice,
+      unitPrice,
+      packageSize,
+      observedAt: now,
+    });
+  }
+
+  // D-4: MealPlan 不存在ならスキップ・draft なら二段遷移で修復・shopping なら一段遷移
+  private async repairMealPlanTransition(mealPlanId: MealPlanId): Promise<void> {
+    const mealPlan = await this.mealPlanRepository.findById(mealPlanId);
+    if (mealPlan === null) {
+      return; // 参照先の不存在でシステムを止めない（C-4 の精神）
+    }
+    if (mealPlan.status === 'draft') {
+      mealPlan.transitionTo('shopping');
+      mealPlan.transitionTo('cooking');
+      await this.mealPlanRepository.save(mealPlan);
+      return;
+    }
+    if (mealPlan.status === 'shopping') {
+      mealPlan.transitionTo('cooking');
+      await this.mealPlanRepository.save(mealPlan);
+    }
+    // cooking 以降は何もしない（修復済み・再実行ケース）
+  }
+}
+```
+
+**実装要点（正確に従うこと）**:
+
+- `now`（`purchasedAt`/`observedAt` に使う単一のタイムスタンプ）は `execute()` の冒頭で 1 回だけ
+  生成し、`addStocks`/`recordPrices` の両方に引き回す（設計 §データフローの擬似コードが両ステップ
+  で同じ `now` を参照している点に対応）
+- 保存順序は **Pantry → Product → ShoppingList → MealPlan** を厳守する（S-3 (2)）。順序を
+  入れ替えると自己修復の前提が崩れる
+- 冪等ガード（`status === 'completed'` 分岐）は `shoppingList.complete()` を呼ぶ**前**に
+  行う。したがって `InvalidShoppingListStateError` へは（active 確認後にのみ `complete()` を
+  呼ぶため）到達しない（設計書の確定記録どおり。onError の既存 422 分岐は変更不要）
+- `recordPrices` は productId ごとに **findById 1 回・save 1 回**（IMP-6）。1 件も
+  `recordPrice` されなかった場合も `save` 自体は実行する（空更新で無害）
+
+#### 3-8. `shopping-list/index.ts` 追記
+
+```typescript
+export * from './complete-shopping.use-case';
+```
+
+#### 追加テスト（`complete-shopping.use-case.test.ts`。IMP-5。独立ファイル。
+
+`InMemoryShoppingListRepository`/`InMemoryPantryRepository`/`InMemoryProductRepository`/
+`InMemoryMealPlanRepository` をこのファイル内にローカル定義する）
+
+- **冪等再実行**: 既に `completed` の ShoppingList に対して再実行すると、Pantry への
+  `save` 呼び出し回数・Product への `save` 呼び出し回数が増えない（冪等パスで Stock 追加・
+  価格記録が再実行されないことをスパイで確認）／戻り値の `ShoppingListDto` が変化しない
+- **部分失敗の修復 (i)**: Stock だけ追加済み・ShoppingList はまだ `active` の状態から再実行
+  すると、`hasStockFromShoppingItem` によりその品目の Stock が二重追加されない／後続の
+  Product/ShoppingList/MealPlan 段は通常どおり実行される
+- **部分失敗の修復 (ii)**: ShoppingList は既に `completed`・MealPlan が `shopping` のまま
+  残っている状態から再実行すると、MealPlan が `cooking` へ遷移し `save` される
+- **部分失敗の修復 (iii)**: MealPlan が `draft` のまま残っている状態（Generate の部分失敗が
+  未修復のケース）から完了を実行すると、`draft → shopping → cooking` の二段遷移で修復される
+- bought 品目が 0 件の完了: Pantry/Product への副作用なし・`complete()` と MealPlan 遷移のみ
+  実行される
+- **価格記録スキップ条件 5 種（S-9）**: `productId === null`／`actualPrice.amount === 0`
+  （S-8）／`requiredAmount === null`／`requiredAmount.value === 0`／
+  `UnitPriceCalculator.calculate` の結果が 0 に丸められる超安価 × 大容量ケース。各ケースで
+  Stock 追加は行われるが `recordPrice` は呼ばれないことを確認
+- `requiredAmount === null` 品目の Stock 化（S-6）: `Quantity.of(1, '個')` として
+  `Pantry.addStock` に渡される
+- 同一 Product に紐づく複数 bought 品目（D-5）: `productRepository.findById`/`save` が
+  それぞれ 1 回だけ呼ばれる（呼び出し回数をスパイで確認）
+- MealPlan 不存在（D-4）: `mealPlanRepository.findById` が null を返しても完了処理全体は
+  例外を投げずに成功する
+- `ShoppingListNotFoundError`: 存在しない shoppingListId で throw
+
+**完了条件**
+
+```bash
+pnpm --filter @cookpit/application test        # 全 green
+pnpm --filter @cookpit/application type-check  # 通過
+pnpm lint
+```
+
+- Pantry 3 UseCase・`CompleteShoppingUseCase` が全て実装されている
+- S-3 の冪等・3 種の部分失敗修復・S-9 のスキップ条件 5 種・D-4 の MealPlan 遷移分岐・D-5 の
+  グルーピングがテストで担保されている
+- `packages/application/src/index.ts` に `export * from './pantry'` が追加されている
+
+**リスク**: 保存順序（Pantry→Product→ShoppingList→MealPlan）を誤ると自己修復の前提
+（「ShoppingList 保存 = 冪等ガードのコミットポイント」）が崩れ、再実行時に Stock が
+二重追加されうる（DB の UNIQUE 制約が最終防衛線として残るため致命的データ破損には
+至らないが、500 エラーとしてクライアントに露出する）。Task 3 のテストで保存順序に依存する
+3 つの部分失敗修復ケースを明示的にカバーすることで検知する。
+
+---
+
+### Task 4: API Contract 層 — Zod スキーマ
+
+**依存**: Task 1（`Unit` 型の参照）・Task 3（`PantryDto`/`StockDto`/`CompleteShoppingInputDto`
+の構造と整合させる）。契約書 `docs/designs/pantry-core-contract.md` §1〜§2 が確定形のため、
+本タスクはその転記が中心。
+
+**対象ファイル**
+
+| 種別 | ファイル                                          | 内容                                                                                                           |
+| ---- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 新規 | `packages/api-contract/src/pantry.schema.ts`      | `stockIdParamSchema`/`consumeStockSchema`/`storageLocationSchema`/`stockResponseSchema`/`pantryResponseSchema` |
+| 新規 | `packages/api-contract/src/pantry.schema.test.ts` | 契約テスト                                                                                                     |
+| 追記 | `packages/api-contract/src/index.ts`              | `export * from './pantry.schema'`                                                                              |
+
+#### 4-1. `pantry.schema.ts`（契約書 §1.1 の確定形をそのまま転記）
+
+```typescript
+import z from 'zod';
+import { unitSchema } from './recipe.schema';
+
+export const stockIdParamSchema = z.object({
+  stockId: z.uuid(),
+});
+
+export const consumeStockSchema = z.object({
+  amount: z.object({
+    value: z.number().positive(), // D-6: 0 を reject
+    unit: unitSchema,
+  }),
+});
+
+export const storageLocationSchema = z.enum(['fridge', 'freezer', 'pantry']); // D-2
+
+export const stockResponseSchema = z.object({
+  id: z.uuid(),
+  productId: z.uuid().nullable(),
+  displayName: z.string(),
+  amount: z.object({ value: z.number(), unit: unitSchema }),
+  purchasedAt: z.iso.datetime(),
+  expiresAt: z.iso.date().nullable(),
+  storedLocation: storageLocationSchema.nullable(),
+});
+
+export const pantryResponseSchema = z.object({
+  stocks: z.array(stockResponseSchema), // D-7: pantry id は含めない
+});
+
+export type StockIdParam = z.infer<typeof stockIdParamSchema>;
+export type ConsumeStockBody = z.infer<typeof consumeStockSchema>;
+export type StorageLocationSchemaType = z.infer<typeof storageLocationSchema>;
+export type StockResponse = z.infer<typeof stockResponseSchema>;
+export type PantryResponse = z.infer<typeof pantryResponseSchema>;
+```
+
+**discard API・完了 API に新規リクエストスキーマは存在しない**（契約書 §1.1・§1.3）。
+discard はボディなし POST（`zValidator('json', ...)` を付けない）。完了 API
+（`POST /api/shopping-lists/:id/complete`）は param に既存 `shoppingListIdParamSchema`、
+レスポンスに既存 `shoppingListResponseSchema` を再利用し、`shopping-list.schema.ts` 自体への
+変更は不要（契約書 §1.1・§9）。
+
+#### 4-2. `api-contract/src/index.ts` 追記
+
+```typescript
+export * from './pantry.schema';
+```
+
+#### 追加テスト（`pantry.schema.test.ts`。契約書 §7.1 の観点表をそのまま反映）
+
+| 対象スキーマ            | 観点                                                                                                                                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stockIdParamSchema`    | 正常 uuid を受け入れる／不正な `stockId` を reject する                                                                                                                                                                                                                                                 |
+| `consumeStockSchema`    | `amount.value = 0` を reject する（D-6。`addItemSchema.requiredAmount.value: z.number().min(0)` との**意図的な非対称**を明示テストする）／負数を reject する／正数を受け入れる／`amount.unit` が 17 値それぞれを受け入れる（`it.each` 先例）／未知の単位を reject する／`amount` キー省略を reject する |
+| `storageLocationSchema` | `'fridge'`/`'freezer'`/`'pantry'` を受け入れる／未知の文字列を reject する                                                                                                                                                                                                                              |
+| `stockResponseSchema`   | `productId`/`expiresAt`/`storedLocation` すべて null を parse できる（S-1 空 Pantry 相当のパターン）／すべて非 null を parse できる／`purchasedAt` が ISO datetime 形式でない場合 reject／`expiresAt` が ISO date 形式でない場合 reject（datetime 文字列を date として reject することを含む）          |
+| `pantryResponseSchema`  | `stocks: []` を parse できる（S-1）／複数 Stock を含む配列を parse できる                                                                                                                                                                                                                               |
+
+**完了条件**
+
+```bash
+pnpm --filter @cookpit/api-contract test        # 全 green
+pnpm --filter @cookpit/api-contract type-check  # 通過
+```
+
+- `pantry.schema.ts` の 5 スキーマが契約書 §1.1 と完全一致していること
+- `shopping-list.schema.ts` に変更がないこと（既存 4 契約ファイル無変更）
+- `consumeStockSchema.amount.value` の 0 reject（D-6）がテストされていること
+
+---
+
+### Task 5: Presentation 層 — Hono ルート + app.ts 統合
+
+**依存**: Task 3（UseCase 群）・Task 4（Zod スキーマ）・Task 2（`DrizzlePantryRepository`）
+
+**対象ファイル**
+
+| 種別 | ファイル                                            | 内容                                                                                       |
+| ---- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 新規 | `apps/web/src/server/routes/pantry.ts`              | `pantryRoute`（GET `/`・POST `/stocks/:stockId/consume`・POST `/stocks/:stockId/discard`） |
+| 新規 | `apps/web/src/server/routes/pantry.test.ts`         | ルートテスト                                                                               |
+| 追記 | `apps/web/src/server/routes/shopping-lists.ts`      | `POST /:id/complete` 追加                                                                  |
+| 追記 | `apps/web/src/server/routes/shopping-lists.test.ts` | complete エンドポイントのテスト追加                                                        |
+| 追記 | `apps/web/src/server/app.ts`                        | `.route('/pantry', pantryRoute)` + onError 2 分岐追記                                      |
+
+#### 5-1. `routes/pantry.ts`（新設。`shopping-lists.ts`/`products.ts` と同型パターン）
+
+```typescript
+import { getDb } from '@/db/client';
+import { consumeStockSchema, stockIdParamSchema } from '@cookpit/api-contract';
+import { ConsumeStockUseCase, DiscardStockUseCase, GetPantryUseCase } from '@cookpit/application';
+import { DrizzlePantryRepository } from '@cookpit/infrastructure';
+import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
+
+function pantryRepository(): DrizzlePantryRepository {
+  return new DrizzlePantryRepository(getDb());
+}
+
+export const pantryRoute = new Hono()
+  .get('/', async (c) => {
+    const usecase = new GetPantryUseCase(pantryRepository());
+    const dto = await usecase.execute();
+    return c.json(dto, 200);
+  })
+  .post(
+    '/stocks/:stockId/consume',
+    zValidator('param', stockIdParamSchema),
+    zValidator('json', consumeStockSchema),
+    async (c) => {
+      const { stockId } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new ConsumeStockUseCase(pantryRepository());
+      const dto = await usecase.execute({ stockId, ...body });
+      return c.json(dto, 200);
+    },
+  )
+  .post('/stocks/:stockId/discard', zValidator('param', stockIdParamSchema), async (c) => {
+    const { stockId } = c.req.valid('param');
+    const usecase = new DiscardStockUseCase(pantryRepository());
+    const dto = await usecase.execute({ stockId });
+    return c.json(dto, 200);
+  });
+```
+
+#### 5-2. `routes/shopping-lists.ts` 追記（complete エンドポイント）
+
+既存の `mealPlanRepository()`/`productRepository()`/`shoppingListRepository()` ファクトリ関数は
+再利用する。**新規追加が必要なのは `pantryRepository()` ファクトリと `CompleteShoppingUseCase`
+の import、`.post('/:id/complete', ...)` チェーンのみ**（新規 Zod スキーマの import は不要。
+既存 `shoppingListIdParamSchema` を再利用）。
+
+```typescript
+// import 追記
+import { CompleteShoppingUseCase, /* 既存の他 UseCase */ } from '@cookpit/application';
+import { DrizzlePantryRepository, /* 既存の他 Repository */ } from '@cookpit/infrastructure';
+
+// 既存ファクトリ関数群の末尾に追加
+function pantryRepository(): DrizzlePantryRepository {
+  return new DrizzlePantryRepository(getDb());
+}
+
+// .post(...) チェーンの末尾に追加（既存4エンドポイントの後）
+  .post('/:id/complete', zValidator('param', shoppingListIdParamSchema), async (c) => {
+    const { id } = c.req.valid('param');
+    const usecase = new CompleteShoppingUseCase(
+      shoppingListRepository(),
+      pantryRepository(),
+      productRepository(),
+      mealPlanRepository(),
+    );
+    const dto = await usecase.execute({ shoppingListId: id });
+    return c.json(dto, 200);
+  });
+```
+
+#### 5-3. `app.ts` 統合
+
+```typescript
+// import 追記
+import { pantryRoute } from './routes/pantry';
+import {
+  InvalidStockOperationError,
+  StockNotFoundError,
+  /* 既存の他エラークラス */
+} from '@cookpit/application';
+
+// .route() チェーンの末尾に追加
+  .route('/pantry', pantryRoute);
+
+// onError 内、ShoppingList 系分岐の直後に追加（契約書 §4.1 の推奨位置）
+if (err instanceof StockNotFoundError) {
+  return c.json({ error: err.message }, 404);
+}
+if (err instanceof InvalidStockOperationError) {
+  return c.json({ error: err.message }, 422);
+}
+```
+
+既存の分岐順序（Recipe → Product → Store → MealPlan → PlannedRecipe →
+InvalidMealPlanState → ShoppingList → ShoppingItem → InvalidShoppingListState →
+`console.error`/500）への挿入は `instanceof` の個別分岐で相互排他なためどこでも機能的に
+等価だが、可読性のため ShoppingList 系の直後に追記する。
+
+#### 追加テスト
+
+**`pantry.test.ts`（新規。`vi.mock('@cookpit/application', ...)` パターンは
+`shopping-lists.test.ts` を踏襲）**:
+
+- `GET /api/pantry`: 空でも 200 + `{ stocks: [] }` を返す（404 にならないことの確認。S-1）／
+  複数 Stock がある場合に全件返す
+- `POST /api/pantry/stocks/:stockId/consume`: 200 + `PantryDto` を返す／`amount.value: 0` で
+  400（D-6）／不正な `stockId`（uuid でない）で 400／`StockNotFoundError` を 404 に変換／
+  `InvalidStockOperationError` を 422 に変換
+- `POST /api/pantry/stocks/:stockId/discard`: 200 + `PantryDto` を返す／不正な `stockId` で
+  400／`StockNotFoundError` を 404 に変換
+
+**`shopping-lists.test.ts` 追記**:
+
+- `POST /api/shopping-lists/:id/complete`: 200 + `ShoppingListResponse` を返す／不正な `id`
+  で 400／`ShoppingListNotFoundError` を 404 に変換／2 回連続呼び出しても両方 200 で
+  レスポンス形が一致する（契約レベルの冪等確認。契約書 §7.4）
+
+**完了条件**
+
+```bash
+pnpm --filter @cookpit/web test        # 全 green
+pnpm --filter @cookpit/web type-check  # 通過
+pnpm lint
+```
+
+- `app.ts` の既存 onError 分岐（9 分岐）の順序・挙動に変更がないこと（末尾に 2 分岐追加のみ）
+- `pantryRoute` が `/api/pantry` にマウントされていること
+- `GET /api/pantry` が常に 200 を返すこと（404 分岐が存在しないこと）の確認テストがあること
+
+---
+
+## 変更対象ファイル一覧（サマリ）
+
+### 既存ファイルへの追記（13 ファイル）
+
+| #   | ファイルパス                                                  | 変更内容                                            | タスク |
+| --- | ------------------------------------------------------------- | --------------------------------------------------- | ------ |
+| 1   | `packages/domain/src/shared/quantity.ts`                      | `subtract()` 追加                                   | Task 1 |
+| 2   | `packages/domain/src/shared/quantity.test.ts`                 | `subtract()` テスト追加                             | Task 1 |
+| 3   | `packages/infrastructure/src/db/schema.ts`                    | `stocks` テーブル追記                               | Task 2 |
+| 4   | `packages/infrastructure/src/testing/create-test-db.ts`       | DDL 追記（IMP-2）                                   | Task 2 |
+| 5   | `apps/web/src/db/migrations/meta/_journal.json`               | 自動更新                                            | Task 2 |
+| 6   | `packages/infrastructure/src/index.ts`                        | `DrizzlePantryRepository` export 追記               | Task 2 |
+| 7   | `packages/application/src/shopping-list/shopping-list.dto.ts` | `CompleteShoppingInputDto` 追加（IMP-4）            | Task 3 |
+| 8   | `packages/application/src/shopping-list/index.ts`             | `export * from './complete-shopping.use-case'` 追記 | Task 3 |
+| 9   | `packages/application/src/index.ts`                           | `export * from './pantry'` 追記                     | Task 3 |
+| 10  | `packages/api-contract/src/index.ts`                          | `export * from './pantry.schema'` 追記              | Task 4 |
+| 11  | `apps/web/src/server/routes/shopping-lists.ts`                | `POST /:id/complete` 追加                           | Task 5 |
+| 12  | `apps/web/src/server/routes/shopping-lists.test.ts`           | complete テスト追加                                 | Task 5 |
+| 13  | `apps/web/src/server/app.ts`                                  | マウント + onError 2 分岐追記                       | Task 5 |
+
+### 新規作成ファイル
+
+#### Domain（Task 1・7 ファイル）
+
+`pantry-id.ts` / `stock-id.ts` / `pantry.ts` / `pantry.repository.ts` /
+`pantry-id.test.ts` / `stock-id.test.ts` / `pantry.test.ts`
+
+#### Infrastructure（Task 2・2 ファイル + マイグレーション自動生成）
+
+`drizzle-pantry.repository.ts` / `drizzle-pantry.repository.test.ts` /
+`apps/web/src/db/migrations/0007_xxxxx.sql` + `meta/0007_snapshot.json`（`drizzle-kit generate`
+自動生成）
+
+#### Application（Task 3・11 ファイル）
+
+`pantry/pantry.dto.ts` / `pantry/pantry.mapper.ts` / `pantry/stock-not-found.error.ts` /
+`pantry/invalid-stock-operation.error.ts` / `pantry/consume-stock.use-case.ts` /
+`pantry/discard-stock.use-case.ts` / `pantry/get-pantry.use-case.ts` / `pantry/index.ts` /
+`pantry/pantry-use-cases.test.ts` / `shopping-list/complete-shopping.use-case.ts` /
+`shopping-list/complete-shopping.use-case.test.ts`
+
+#### API Contract（Task 4・2 ファイル）
+
+`pantry.schema.ts` / `pantry.schema.test.ts`
+
+#### Presentation（Task 5・2 ファイル）
+
+`routes/pantry.ts` / `routes/pantry.test.ts`
+
+合計: 新規ファイル 24（うちテスト 8）+ マイグレーション自動生成分、既存ファイル追記 13。
+
+---
+
+## 依存関係と実装順
+
+```
+Task 1（Domain: Quantity.subtract + Pantry集約 + Repository IF）
+  └─→ Task 2（Infrastructure: schema/DDL/migration/Repository実装）※ Task 1 の型に依存
+        └─→ Task 3（Application: Pantry DTO/Mapper/Error/UseCase×3 → CompleteShoppingUseCase）
+              ※ 型検査は Task 1 のみで通るが、実配線確認は Task 2 完了後が望ましい。
+                Codex 実行順としては Task 2 → Task 3 を推奨
+              ├─→ Task 4（API Contract: 独立に進行可。Task 3 の DTO 構造と整合させる）
+              └─→ Task 5（Presentation）※ Task 3 の UseCase・Task 4 の Zod スキーマ・
+                    Task 2 の DrizzlePantryRepository すべてに依存
+```
+
+- `CompleteShoppingUseCase`（Task 3 後半）は既存の `ShoppingListRepository`/`ProductRepository`/
+  `MealPlanRepository`（Sprint 3/4 実装済み）と、Task 1〜2 で新設する `PantryRepository` の
+  双方に依存する。Task 3 は「Pantry 3 UseCase（Consume/Discard/Get）→ CompleteShoppingUseCase」
+  の順で実装する（設計書 §implementation-planner への申し送りどおり）
+- Task 4（API Contract）は Task 3 と並行着手できるが、レスポンススキーマ
+  （`stockResponseSchema`/`pantryResponseSchema`）は Task 3 の Mapper 出力構造と一致させる
+  必要があるため、型往復の契約テストは Task 3 完了後に実施する
+- shopping-list-core の先例どおり、**番号順に実行する**ことを Codex ブリーフに明記する
+
+---
+
+## 各タスクの完了条件（横断チェックリスト）
+
+| Task             | 品質ゲート                                                           | 追加チェック                                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Domain         | `pnpm --filter @cookpit/domain test/type-check`, `pnpm lint`         | S-5（productId null 許容）・S-7（subtract 厳格 + consume クランプ）・S-3（`hasStockFromShoppingItem`）がテストで担保、全 getter が防御的コピー |
+| 2 Infrastructure | `pnpm --filter @cookpit/infrastructure test/type-check`, `pnpm lint` | 既存 7 テーブル無変更、マイグレーションが `apps/web/src/db/migrations/` に生成、`save()` が不変フィールドを set 対象外にする                   |
+| 3 Application    | `pnpm --filter @cookpit/application test/type-check`, `pnpm lint`    | 冪等・3 種の部分失敗修復・S-9 スキップ条件 5 種・D-4 の MealPlan 遷移分岐・D-5 のグルーピングがテストで担保                                    |
+| 4 API Contract   | `pnpm --filter @cookpit/api-contract test/type-check`                | `shopping-list.schema.ts` 無変更、D-6 の 0 reject がテストされている                                                                           |
+| 5 Presentation   | `pnpm --filter @cookpit/web test/type-check`, `pnpm lint`            | 既存 onError 9 分岐無変更（末尾 2 分岐追加のみ）、`GET /api/pantry` の常時 200 確認テストあり                                                  |
+| 全体             | `pnpm lint` / `pnpm type-check` / `pnpm test`（ルート）              | 既存テスト（Recipe/Product/Store/MealPlan/ShoppingList/health）に regression なし                                                              |
+
+---
+
+## テスト計画への参照
+
+各タスクの「追加テスト」節は実装計画作成時点での最低限の観点であり、**詳細な試験ケース網羅
+（正常系・異常系・境界条件の完全な一覧、ケース番号採番）は test-designer が
+`docs/tests/pantry-core.md` として別途確定する**（並行作成中）。特に以下は設計 §テスト方針で
+明示された設計由来の観点であり、test-designer の試験計画に必ず反映されるべき事項として申し送る。
+
+- Domain（Pantry / Stock / Quantity）: `subtract` の単位不一致 throw・負値 throw・0 減算（S-7）、
+  `Stock.consume` の全量クランプ（消費量 > 在庫量 → 0）と「消費量 = 在庫量」で isEmpty（境界）、
+  consumeStock のゼロ到達 → 集約から削除、discardStock の残量無関係の全量削除、未検出 stockId
+  の throw、`Stock.create` の `amount.value <= 0` 拒否、`hasStockFromShoppingItem` の真偽、
+  `PantryId.singleton()` の同値性
+- Application（CompleteShopping。最重要）: 冪等再実行（completed → 200・Stock/価格が再実行
+  されない）、**部分失敗の修復**（(i) Stock 追加済み + active → 再実行で二重追加なし・後続段が
+  実行される、(ii) completed + MealPlan=shopping → 遷移修復、(iii) MealPlan=draft → 二段遷移
+  修復）、bought 0 件の完了、価格記録スキップ条件 5 種（S-9）、requiredAmount null 品目の
+  「1 個」Stock 化（S-6）、同一 Product 複数品目の save 1 回（D-5 グルーピング）、MealPlan
+  不存在スキップ（D-4）
+- Application（Consume / Discard / Get）: 単位不一致 → InvalidStockOperationError、未検出 →
+  StockNotFoundError、空 Pantry の GetPantry（`stocks: []` で 200 相当）
+- Infrastructure（PGlite）: 空テーブルからの find（空 Pantry 復元）、round-trip（productId null
+  / expiresAt null / storedLocation null / sourceShoppingItemId null の nullability 全パターン）、
+  `source_shopping_item_id` UNIQUE 違反、NOT IN DELETE、expires_at のローカル日付整形
+  （JST 前日ずれ）
+- API 契約: 契約書 §7 の観点表（`consume` の `value: 0` reject（D-6）を含む）
+- テストランナーは Vitest。完了条件は `pnpm lint` / `pnpm type-check` / `pnpm test`
+
+---
+
+## リスクと緩和
+
+設計 §リスク（R-1〜R-7）に加え、本実装計画で識別した実装レベルのリスクを併記する。
+
+| #       | リスク                                                                                                                          | 影響                                                                                                        | 緩和                                                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 設計R-1 | S-x 未確定のまま実装着手（対応済み）                                                                                            | 手戻り                                                                                                      | 2026-07-14 に S-1〜S-11 全件ユーザー確定済み。本計画はそれを前提に作成                                                                                                                    |
+| 設計R-2 | 価格記録の非冪等性（S-3 (4) 案 B）                                                                                              | 完了処理の再実行のたびに価格が重複記録され得る                                                              | 既知の MVP1 制約として受容（§リスク R-2 参照）。完全収束が必要なら S-3 案 A（`price_records` への UNIQUE 追加）が代替だが本ユニットでは非採用。手動削除以外の回復手段がないことを申し送る |
+| 設計R-3 | 4 集約更新が非トランザクション                                                                                                  | 部分失敗の窓自体は残る                                                                                      | S-3 の保存順序（Pantry→Product→ShoppingList→MealPlan）+ UNIQUE + 冪等再実行で収束。トランザクション導入は横断課題として申し送り継続（ADR-0006 R-3 と同一）                                |
+| 設計R-4 | Pantry 集約全体 save による同時更新の失われた更新                                                                               | A が消した Stock を、古い集約を持つ B の save が復活させ得る                                                | 既存 MealPlan/ShoppingList save と同一の既知制約。2 名利用の同時操作頻度では許容し、Unit B 実測後に部分 UPDATE 化を検討（対応不要）                                                       |
+| 設計R-5 | S-9 の packageSize 転用による unitPrice の精度の粗さ                                                                            | 価格履歴の統計精度が下がる                                                                                  | 既知の MVP1 制約として受容。正確な記録は既存の手動 RecordPrice が併存する                                                                                                                 |
+| 設計R-6 | `docs/04-domain-model.md` との乖離放置                                                                                          | 後続実装（Unit B/C）が古い擬似コードを参照する                                                              | 本計画の §ドキュメント更新対象で同期タスクを明記（下記）                                                                                                                                  |
+| 設計R-7 | S-11（`findByProduct` 等の先送り）により Unit C 着手時に Pantry へのメソッド追加が必要                                          | Unit C の着手コスト                                                                                         | 後方互換的な追加で済む構造（`stocks_product_id_idx` 先行配置・FIFO 順序仕様・subtract 意味論を申し送り済み）                                                                              |
+| IMP-R1  | IMP-2（PGlite DDL 追記）漏れ                                                                                                    | Infrastructure テストが DB エラーで全滅                                                                     | Task 2 の完了条件に明記。テスト実行で即座に検知できる                                                                                                                                     |
+| IMP-R2  | 保存順序（Pantry→Product→ShoppingList→MealPlan）の実装ミス                                                                      | 自己修復の前提が崩れ、再実行時に Stock が二重追加されうる（UNIQUE で最終防御はされるが 500 露出）           | Task 3 のコード例に順序を明記。3 種の部分失敗修復ケースをテストで明示的にカバー                                                                                                           |
+| IMP-R3  | `CompleteShoppingInputDto` の配置誤り（`pantry.dto.ts` に書いてしまう等）                                                       | Task 5 での import が破綻し type-check が失敗する                                                           | IMP-4 として配置先を明記。type-check（Task 3 完了条件）で即座に検知できる                                                                                                                 |
+| IMP-R4  | 価格記録スキップ条件の判定順序ミス（`requiredAmount<=0` チェックを `UnitPriceCalculator.calculate` 呼び出しより後にしてしまう） | `UnitPriceCalculator.calculate`/`PriceRecord.create` の正数チェックで例外が投げられ、完了処理全体が失敗する | Task 3 のコード例で判定順序（条件2→3→4）を明記。テストでスキップ条件 5 種を個別にカバー                                                                                                   |
+| IMP-R5  | `Stock.consume` のクランプと `Quantity.subtract` の厳格 throw の取り違え                                                        | 過剰消費（S-7 の正常系）で誤って例外が投げられる                                                            | Task 1 のコード例・テストで「消費量 = 在庫量」「消費量 > 在庫量」の境界を明示的にカバー                                                                                                   |
+
+---
+
+## ロールバック方針
+
+新規テーブル追加のみで既存テーブルへの変更はない（設計 §移行とリリース）。層ごとに独立して
+ロールバック可能だが、Infrastructure と Application はテーブル・型の整合が必要なため、原則
+Task の逆順（5→4→3→2→1）で戻す。
+
+1. **Presentation（Task 5）**: `routes/pantry.ts`（+テスト）を削除し、`routes/shopping-lists.ts`
+   から `POST /:id/complete` ハンドラと `pantryRepository()` ファクトリを削除、
+   `shopping-lists.test.ts` の complete テストを削除、`app.ts` の 3 箇所の変更（import・
+   `.route()`・onError 2 分岐）を元に戻す
+2. **API Contract（Task 4）**: `pantry.schema.ts`（+テスト）を削除し、`index.ts` の追記行を
+   削除する
+3. **Application（Task 3）**: `packages/application/src/pantry/` ディレクトリを削除し、
+   `packages/application/src/shopping-list/complete-shopping.use-case.ts`（+テスト）を削除、
+   `shopping-list.dto.ts` から `CompleteShoppingInputDto` を削除、`shopping-list/index.ts` の
+   追記行を削除、`application/src/index.ts` の `export * from './pantry'` を削除する
+4. **Infrastructure（Task 2）**:
+   - `schema.ts` から `stocks` 定義を削除する
+   - `create-test-db.ts` の DDL から該当 `CREATE TABLE`/`CREATE INDEX` を削除する
+   - 生成されたマイグレーションファイル（`apps/web/src/db/migrations/0007_xxxxx.sql` と対応する
+     `meta/0007_snapshot.json`）を削除し、`meta/_journal.json` から該当エントリを削除する
+   - 本番 DB に適用済みの場合は `DROP TABLE stocks;`（他テーブルからの被参照 FK がないため
+     単純に DROP できる。`shopping_items`→`shopping_lists` のような順序制約はない）
+   - `drizzle-pantry.repository.ts`（+テスト）を削除し、`infrastructure/src/index.ts` の
+     export 行を削除する
+5. **Domain（Task 1）**: `packages/domain/src/pantry/` ディレクトリを削除し、
+   `packages/domain/src/shared/quantity.ts` から `subtract()` を削除する（`quantity.test.ts`
+   の該当テストも削除）。他ファイルへの影響はない（`ProductId`/`ShoppingItemId` を型参照する
+   のみでそれらのファイル自体は変更していない）
+
+各層は疎結合（Domain 変更なしで Infrastructure だけロールバック可能、等）だが、既存の
+`Recipe`/`Product`/`Store`/`MealPlan`/`ShoppingList` 縦スライスは一切変更していないため、
+本ユニットの完全撤去は既存機能に影響しない。
+
+---
+
+## ドキュメント更新対象
+
+L2/L3 のドキュメント方針（`docs/claude-code/document-policy.md`）に基づき、実装完了後に必要な
+ドキュメント更新を明記する。**本計画では作成しない（実際の編集は実装完了後のフォローアップで
+メインエージェント/Orchestrator が行う）。**
+
+| #   | 対象ドキュメント                                                  | 更新内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 誰が・いつ                                                         |
+| --- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1   | `docs/04-domain-model.md` §Pantry 集約                            | 設計書 R-6 のとおり同期する: (a) Domain メソッド `getBoughtItemsForPantry()` を「作らない（S-4 案 B。Application 層で filter + 変換）」に修正、(b) `Stock.expiresAt`/`Stock.storedLocation` を null 許容（S-4 案 α）に修正、(c) `Stock.productId` を `ProductId \| null` + `displayName` 保持（S-5）に修正、(d) `requiredAmount = null` 品目は `Quantity.of(1, '個')`（S-6）と明記、(e) `Quantity.subtract` の厳格仕様 + `Stock.consume` のクランプ責務分離（S-7）を反映、(f) 消費/廃棄の `reason` を削除（S-10）、(g) `calculateRequiredAmount`/`findByProduct`/`findExpiringSoon` は本ユニット非実装（S-11）である旨の注記、(h) `CompleteShoppingUseCase` 擬似コードを実装同期形（4 段保存順序・冪等ガード）に更新 | 実装完了後、メインエージェント（reviewer 工程）が対応              |
+| 2   | `docs/decisions/ADR-0007-complete-shopping-idempotent.md`（新規） | 設計書 §ADR 候補 1 のとおり起票する。**内容**: 買い物完了の冪等性（B2・completed なら Stock/価格記録を再実行せず MealPlan 遷移のみ修復）、4 段保存順序（Pantry→Product→ShoppingList→MealPlan）による部分失敗の自己修復、`stocks.source_shopping_item_id` UNIQUE による Stock 二重追加防止の最終防衛線、価格記録のみ非冪等性を許容する判断（完了状態は収束するが価格履歴は成功 1 回分と一致しない可能性を受容。§リスク R-2）。ADR-0006（Generate の冪等）と対をなす恒久判断として、同 ADR と同一の章構成（Context/Decision/Alternatives/Consequences/Migration/Rollback）で作成する                                                                                                                                   | 実装完了後、メインエージェント（reviewer/Orchestrator 工程）が対応 |
+| 3   | `docs/05-roadmap.md`                                              | Sprint 5 タスク表の Unit A（pantry-core）行を「未着手」→「完了」に更新（実装完了・PR マージ後）。**Unit C（在庫引き算連携）の前提注記を追加**: `findByProduct`/`calculateRequiredAmount` は Unit C 側で `Pantry` に後方互換的に追加すること（S-11 の申し送り。`stocks_product_id_idx` は先行配置済み・`subtract` は負値 throw のため `calculateRequiredAmount` は引き算前に大小比較して 0 を返す実装にする旨も含める）                                                                                                                                                                                                                                                                                               | 実装完了後、メインエージェントが対応                               |
+| 4   | `docs/designs/shopping-list-core.md`（任意）                      | 将来課題の消込: `getBoughtItemsForPantry()`/`BoughtItemForPantry` は S-4（本ユニット確定）により「Domain メソッドとしては作らない」で決着した旨を追記する（対応は任意。必須ではない）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | 実装完了後、任意対応                                               |
+
+---
+
+## 品質ゲート
+
+全 Task 完了後、ルートで以下を実行しすべて green であること（`.claude/rules/coding-standards.md`
+「品質ゲート」節）。
+
+```bash
+pnpm lint
+pnpm type-check
+pnpm test
+```
+
+- 新規追加した Vitest ファイル（Domain 3・Infrastructure 1・Application 3・API Contract 1・
+  Presentation 1 = 計 9 ファイル）が全て green
+- 既存テスト（Recipe/Product/Store/MealPlan/ShoppingList/health 関連）に regression がないこと
+- スコープ外変更がないこと（既存 Recipe/Product/Store/MealPlan/ShoppingList の Domain・
+  Repository・ルートは、本計画で明記した追記箇所（複数 UseCase の import 追加・complete
+  エンドポイント追加）以外は一切変更しない）
+- `docs/06-ai-tools.md`「Codex 実装のレビューチェックリスト」の観点（識別子タイポ・
+  `import type` 漏れ・バリデーションエラーメッセージ分岐・無限ループ等。
+  `feedback_codex_review.md` Memory も参照）をセルフチェック済みであること
+- 設計書 S-3 の保存順序（Pantry→Product→ShoppingList→MealPlan）が `CompleteShoppingUseCase`
+  実装に厳密に反映されていること（IMP-R2 の重点確認）
+
+---
+
+## Orchestrator への確認事項
+
+- 設計判断（S-1〜S-11・D-1〜D-8・契約書 §1〜§9）からの逸脱は本計画には**ない**。実装計画作成
+  過程で洗い出した差異（IMP-1〜IMP-8）はいずれも機械的な整合・設計書が明示的に
+  implementation-planner へ委ねた判断（マイグレーション連番・DDL 同期・JSDoc 適用・DTO 配置・
+  テストファイル分割・save タイミング・ファイル構成）であり、設計判断の変更ではないと判断した
+- 軽微な観察事項（対応不要・参考情報）: `docs/designs/pantry-core-contract.md` 冒頭のステータス
+  表記が「draft（S-x がユーザー確定するまで本書も draft）」のままだが、S-x は 2026-07-14 に
+  全件確定済みであり、契約書 §1〜§9 の内容自体は確定後の推奨案とそのまま一致している（内容面の
+  矛盾はない）。ステータス表記の更新のみが取り残されているため、実装完了後のドキュメント更新
+  フォローアップ（§ドキュメント更新対象）と合わせて「confirmed」表記への更新を検討されたい

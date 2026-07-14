@@ -5,7 +5,8 @@
 > 実装できる詳細水準まで落とすものであり、本体設計書と矛盾する記述は無効（矛盾に気づいた
 > 場合は Orchestrator へ差し戻す）。
 
-- ステータス: **draft**（`docs/designs/pantry-core.md` の S-x がユーザー確定するまで本書も draft）
+- ステータス: **confirmed**（2026-07-14 に本体設計書の S-1〜S-11 が全件ユーザー確定したことに連動して確定。
+  本体 §ユーザー確定記録参照）
 - 対象: `packages/api-contract`（Zod）/ `packages/infrastructure/src/db/schema.ts`（Drizzle）/
   Hono RPC（`apps/web/src/server/routes/pantry.ts` 新設・`shopping-lists.ts` 追記・`app.ts` 追記）
 - 参照した既存契約: `shopping-list.schema.ts`（+ `.test.ts`）/ `meal-plan.schema.ts` /
@@ -77,16 +78,16 @@ export * from './pantry.schema';
 
 ### 1.3 スキーマ一覧まとめ
 
-| スキーマ名 | ファイル | 用途 | 新規/再利用 |
-| --- | --- | --- | --- |
-| `stockIdParamSchema` | `pantry.schema.ts` | Consume/Discard の param | 新規 |
-| `consumeStockSchema` | `pantry.schema.ts` | Consume の json body | 新規 |
-| `storageLocationSchema` | `pantry.schema.ts` | `StockDto.storedLocation` の enum | 新規 |
-| `stockResponseSchema` | `pantry.schema.ts` | `StockDto` の応答検証 | 新規 |
-| `pantryResponseSchema` | `pantry.schema.ts` | `PantryDto` の応答検証 | 新規 |
-| `unitSchema` | `recipe.schema.ts` | 数量単位（17 値） | 再利用（import） |
-| `shoppingListIdParamSchema` | `shopping-list.schema.ts` | 完了 API の param | 再利用 |
-| `shoppingListResponseSchema` | `shopping-list.schema.ts` | 完了 API の応答 | 再利用 |
+| スキーマ名                   | ファイル                  | 用途                              | 新規/再利用      |
+| ---------------------------- | ------------------------- | --------------------------------- | ---------------- |
+| `stockIdParamSchema`         | `pantry.schema.ts`        | Consume/Discard の param          | 新規             |
+| `consumeStockSchema`         | `pantry.schema.ts`        | Consume の json body              | 新規             |
+| `storageLocationSchema`      | `pantry.schema.ts`        | `StockDto.storedLocation` の enum | 新規             |
+| `stockResponseSchema`        | `pantry.schema.ts`        | `StockDto` の応答検証             | 新規             |
+| `pantryResponseSchema`       | `pantry.schema.ts`        | `PantryDto` の応答検証            | 新規             |
+| `unitSchema`                 | `recipe.schema.ts`        | 数量単位（17 値）                 | 再利用（import） |
+| `shoppingListIdParamSchema`  | `shopping-list.schema.ts` | 完了 API の param                 | 再利用           |
+| `shoppingListResponseSchema` | `shopping-list.schema.ts` | 完了 API の応答                   | 再利用           |
 
 `shopping-list.schema.ts` 自体への変更は不要（S-3 の申し送りどおり）。discard API 用の
 json スキーマは存在しない（ボディなし）。
@@ -100,23 +101,23 @@ json スキーマは存在しない（ボディなし）。
 
 ### 2.1 `stocks` テーブル
 
-| カラム | Drizzle 型 | 制約 | ドメイン対応 | 備考 |
-| --- | --- | --- | --- | --- |
-| `id` | `text('id')` | PRIMARY KEY | `Stock.id`（StockId） | UUID 文字列 |
-| `product_id` | `text('product_id')` | NULL 許容・FK なし | `Stock.productId`（ProductId \| null） | D-8: 集約またぎ ID 参照・FK なし |
-| `display_name` | `text('display_name')` | NOT NULL | `Stock.displayName` | S-5 |
-| `amount_value` | `numeric('amount_value', { precision: 10, scale: 3 })` | NOT NULL | `Stock.amount.value` | 既存 `required_amount_value` / `package_size_value` と同精度 |
-| `amount_unit` | `text('amount_unit')` | NOT NULL | `Stock.amount.unit` | 17 値 union（text 格納・D-2） |
-| `purchased_at` | `timestamp('purchased_at')` | NOT NULL | `Stock.purchasedAt` | FIFO 順序の基準 |
-| `expires_at` | `date('expires_at')` | NULL 許容 | `Stock.expiresAt` | S-4 案 α。ローカル日付整形（JST 注意） |
-| `stored_location` | `text('stored_location')` | NULL 許容 | `Stock.storedLocation` | `'fridge' \| 'freezer' \| 'pantry'`（S-4 案 α） |
-| `source_shopping_item_id` | `text('source_shopping_item_id')` | **UNIQUE**・NULL 許容・FK なし | `Stock.sourceShoppingItemId` | S-3 二重追加防止の最終防衛線。D-8。PostgreSQL の UNIQUE は NULL 同士を重複とみなさない |
-| `created_at` | `timestamp('created_at').notNull().defaultNow()` | NOT NULL | Domain にマッピングしない | `planned_recipes.created_at` と同じ扱い |
+| カラム                    | Drizzle 型                                             | 制約                           | ドメイン対応                           | 備考                                                                                   |
+| ------------------------- | ------------------------------------------------------ | ------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------------- |
+| `id`                      | `text('id')`                                           | PRIMARY KEY                    | `Stock.id`（StockId）                  | UUID 文字列                                                                            |
+| `product_id`              | `text('product_id')`                                   | NULL 許容・FK なし             | `Stock.productId`（ProductId \| null） | D-8: 集約またぎ ID 参照・FK なし                                                       |
+| `display_name`            | `text('display_name')`                                 | NOT NULL                       | `Stock.displayName`                    | S-5                                                                                    |
+| `amount_value`            | `numeric('amount_value', { precision: 10, scale: 3 })` | NOT NULL                       | `Stock.amount.value`                   | 既存 `required_amount_value` / `package_size_value` と同精度                           |
+| `amount_unit`             | `text('amount_unit')`                                  | NOT NULL                       | `Stock.amount.unit`                    | 17 値 union（text 格納・D-2）                                                          |
+| `purchased_at`            | `timestamp('purchased_at')`                            | NOT NULL                       | `Stock.purchasedAt`                    | FIFO 順序の基準                                                                        |
+| `expires_at`              | `date('expires_at')`                                   | NULL 許容                      | `Stock.expiresAt`                      | S-4 案 α。ローカル日付整形（JST 注意）                                                 |
+| `stored_location`         | `text('stored_location')`                              | NULL 許容                      | `Stock.storedLocation`                 | `'fridge' \| 'freezer' \| 'pantry'`（S-4 案 α）                                        |
+| `source_shopping_item_id` | `text('source_shopping_item_id')`                      | **UNIQUE**・NULL 許容・FK なし | `Stock.sourceShoppingItemId`           | S-3 二重追加防止の最終防衛線。D-8。PostgreSQL の UNIQUE は NULL 同士を重複とみなさない |
+| `created_at`              | `timestamp('created_at').notNull().defaultNow()`       | NOT NULL                       | Domain にマッピングしない              | `planned_recipes.created_at` と同じ扱い                                                |
 
 ### 2.2 Index
 
-| index 名 | 対象列 | 用途 |
-| --- | --- | --- |
+| index 名                | 対象列       | 用途                                                                             |
+| ----------------------- | ------------ | -------------------------------------------------------------------------------- |
 | `stocks_product_id_idx` | `product_id` | Unit C `findByProduct` 相当・一般参照経路の先行カバー（S-11 非実装と矛盾しない） |
 
 ### 2.3 Drizzle 定義（確定形・本体設計書 §S-2 と同一）
@@ -156,14 +157,15 @@ DB に永続化せず、復元時に常に `PantryId.singleton()` を与える�
 ## 3. Hono RPC 型・エンドポイント契約
 
 `docs/designs/pantry-core.md` §API 設計の表と一致。新規ファイル `apps/web/src/server/routes/pantry.ts`
-+ `shopping-lists.ts` への 1 エンドポイント追記。
 
-| メソッド | パス | zValidator | UseCase | 成功レスポンス |
-| --- | --- | --- | --- | --- |
-| POST | `/api/shopping-lists/:id/complete` | `param: shoppingListIdParamSchema`（json バリデーションなし・ボディを読まない） | `CompleteShoppingUseCase` | `200 + ShoppingListResponse` |
-| GET | `/api/pantry` | なし | `GetPantryUseCase` | `200 + PantryResponse`（空でも 200） |
-| POST | `/api/pantry/stocks/:stockId/consume` | `param: stockIdParamSchema` + `json: consumeStockSchema` | `ConsumeStockUseCase` | `200 + PantryResponse` |
-| POST | `/api/pantry/stocks/:stockId/discard` | `param: stockIdParamSchema`（json バリデーションなし） | `DiscardStockUseCase` | `200 + PantryResponse` |
+- `shopping-lists.ts` への 1 エンドポイント追記。
+
+| メソッド | パス                                  | zValidator                                                                      | UseCase                   | 成功レスポンス                       |
+| -------- | ------------------------------------- | ------------------------------------------------------------------------------- | ------------------------- | ------------------------------------ |
+| POST     | `/api/shopping-lists/:id/complete`    | `param: shoppingListIdParamSchema`（json バリデーションなし・ボディを読まない） | `CompleteShoppingUseCase` | `200 + ShoppingListResponse`         |
+| GET      | `/api/pantry`                         | なし                                                                            | `GetPantryUseCase`        | `200 + PantryResponse`（空でも 200） |
+| POST     | `/api/pantry/stocks/:stockId/consume` | `param: stockIdParamSchema` + `json: consumeStockSchema`                        | `ConsumeStockUseCase`     | `200 + PantryResponse`               |
+| POST     | `/api/pantry/stocks/:stockId/discard` | `param: stockIdParamSchema`（json バリデーションなし）                          | `DiscardStockUseCase`     | `200 + PantryResponse`               |
 
 `pantry.ts` は `shopping-lists.ts` と同型（手動 DI ファクトリ関数 + `zValidator` + `Hono()` チェーン）
 で実装する。フロントからの型取り込みは Hono RPC（`import type { AppType } from '.../app'`）。
@@ -179,14 +181,14 @@ onError 分岐 2 件のみ（§4 参照）。既存分岐の順序・挙動に�
 既存 `{ error: string }` 形（`err.message` をそのまま格納）を踏襲。新規エラークラス 2 種の
 コンストラクタ・onError 追記位置を確定する。
 
-| エラークラス | 発生 UseCase | HTTP | メッセージ方針 | 状態 |
-| --- | --- | --- | --- | --- |
-| `ShoppingListNotFoundError` | CompleteShopping | 404 | 既存 `shoppingListId` を含む message | 既存（変更なし） |
-| `InvalidShoppingListStateError` | （冪等案では到達しない。S-3） | 422 | 既存 | 既存（変更なし・分岐そのまま） |
-| `StockNotFoundError`（新規） | ConsumeStock / DiscardStock | 404 | `` `Stock not found: ${stockId}` `` 形（`ShoppingItemNotFoundError` 先例に倣う） | 新規 |
-| `InvalidStockOperationError`（新規） | ConsumeStock（単位不一致） | 422 | 呼び出し側で組み立てたメッセージをそのまま格納（`InvalidShoppingListStateError` 先例） | 新規 |
-| Zod バリデーション失敗 | Hono zValidator | 400 | Hono 既定の 400 JSON | 既存（変更なし） |
-| DB エラー・未知（UNIQUE 違反含む） | — | 500 | `console.error` + `{ error: 'Internal Server Error' }` | 既存（変更なし。UNIQUE 違反はクライアント再送で収束） |
+| エラークラス                         | 発生 UseCase                  | HTTP | メッセージ方針                                                                         | 状態                                                  |
+| ------------------------------------ | ----------------------------- | ---- | -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `ShoppingListNotFoundError`          | CompleteShopping              | 404  | 既存 `shoppingListId` を含む message                                                   | 既存（変更なし）                                      |
+| `InvalidShoppingListStateError`      | （冪等案では到達しない。S-3） | 422  | 既存                                                                                   | 既存（変更なし・分岐そのまま）                        |
+| `StockNotFoundError`（新規）         | ConsumeStock / DiscardStock   | 404  | `` `Stock not found: ${stockId}` `` 形（`ShoppingItemNotFoundError` 先例に倣う）       | 新規                                                  |
+| `InvalidStockOperationError`（新規） | ConsumeStock（単位不一致）    | 422  | 呼び出し側で組み立てたメッセージをそのまま格納（`InvalidShoppingListStateError` 先例） | 新規                                                  |
+| Zod バリデーション失敗               | Hono zValidator               | 400  | Hono 既定の 400 JSON                                                                   | 既存（変更なし）                                      |
+| DB エラー・未知（UNIQUE 違反含む）   | —                             | 500  | `console.error` + `{ error: 'Internal Server Error' }`                                 | 既存（変更なし。UNIQUE 違反はクライアント再送で収束） |
 
 ### 4.1 `app.ts` onError 追記（差分イメージ・実装はしない）
 
@@ -211,12 +213,12 @@ ShoppingList → ShoppingItem → InvalidShoppingListState → `console.error`/5
 
 `docs/designs/pantry-core.md` L724-731 と一致。
 
-| 操作 | エンドポイント | 冪等性 | キー |
-| --- | --- | --- | --- |
-| CompleteShopping | `POST /:id/complete` | **冪等** | `shoppingListId` の `completed` 状態判定 + Stock 単位では `stocks.source_shopping_item_id` UNIQUE |
-| ConsumeStock | `POST /stocks/:stockId/consume` | **非冪等** | なし（二重送信で二重減算。AddItem と同じ制約。Unit B の二重送信抑止は将来課題） |
-| DiscardStock | `POST /stocks/:stockId/discard` | 実質冪等寄り | なし（2 回目は対象消失で 404。副作用は増えない） |
-| GetPantry | `GET /pantry` | 読み取りのみ | — |
+| 操作             | エンドポイント                  | 冪等性       | キー                                                                                              |
+| ---------------- | ------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| CompleteShopping | `POST /:id/complete`            | **冪等**     | `shoppingListId` の `completed` 状態判定 + Stock 単位では `stocks.source_shopping_item_id` UNIQUE |
+| ConsumeStock     | `POST /stocks/:stockId/consume` | **非冪等**   | なし（二重送信で二重減算。AddItem と同じ制約。Unit B の二重送信抑止は将来課題）                   |
+| DiscardStock     | `POST /stocks/:stockId/discard` | 実質冪等寄り | なし（2 回目は対象消失で 404。副作用は増えない）                                                  |
+| GetPantry        | `GET /pantry`                   | 読み取りのみ | —                                                                                                 |
 
 契約テストでは「冪等キーの有無」自体は Zod / Drizzle レベルで検証できない（UseCase/Repository
 の振る舞いテストの領域）。契約テストの責務は UNIQUE 制約が確かに定義されていること
@@ -345,18 +347,18 @@ POST /api/pantry/stocks/77777777-7777-4777-8777-777777777777/discard
 
 ### 7.1 `packages/api-contract/src/pantry.schema.test.ts`（新規）
 
-| 対象スキーマ | 観点 |
-| --- | --- |
-| `stockIdParamSchema` | 正常 uuid を受け入れる／不正な `stockId`（`'not-a-uuid'`）を reject する |
-| `consumeStockSchema` | `amount.value = 0` を reject する（D-6。`addItemSchema` の `value: z.number().min(0)` との**意図的な非対称**をテストで明示）／`amount.value` 負数を reject する／`amount.value` 正数を受け入れる／`amount.unit` が 17 値それぞれを受け入れる（`it.each(VALID_UNITS)` 先例）／17 値に含まれない単位を reject する／`amount` キー省略を reject する |
-| `storageLocationSchema` | `'fridge'` / `'freezer'` / `'pantry'` を受け入れる／未知の文字列を reject する |
-| `stockResponseSchema` | `productId` / `expiresAt` / `storedLocation` すべて null の Stock を parse できる（nullability 全 null パターン）／すべて非 null の Stock を parse できる／`purchasedAt` が ISO datetime 形式でない場合 reject する／`expiresAt` が ISO date 形式でない場合 reject する（datetime 文字列を date として reject することを含む） |
-| `pantryResponseSchema` | `stocks: []` を parse できる（S-1 の空 Pantry 応答）／複数 Stock を含む配列を parse できる |
+| 対象スキーマ            | 観点                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stockIdParamSchema`    | 正常 uuid を受け入れる／不正な `stockId`（`'not-a-uuid'`）を reject する                                                                                                                                                                                                                                                                          |
+| `consumeStockSchema`    | `amount.value = 0` を reject する（D-6。`addItemSchema` の `value: z.number().min(0)` との**意図的な非対称**をテストで明示）／`amount.value` 負数を reject する／`amount.value` 正数を受け入れる／`amount.unit` が 17 値それぞれを受け入れる（`it.each(VALID_UNITS)` 先例）／17 値に含まれない単位を reject する／`amount` キー省略を reject する |
+| `storageLocationSchema` | `'fridge'` / `'freezer'` / `'pantry'` を受け入れる／未知の文字列を reject する                                                                                                                                                                                                                                                                    |
+| `stockResponseSchema`   | `productId` / `expiresAt` / `storedLocation` すべて null の Stock を parse できる（nullability 全 null パターン）／すべて非 null の Stock を parse できる／`purchasedAt` が ISO datetime 形式でない場合 reject する／`expiresAt` が ISO date 形式でない場合 reject する（datetime 文字列を date として reject することを含む）                    |
+| `pantryResponseSchema`  | `stocks: []` を parse できる（S-1 の空 Pantry 応答）／複数 Stock を含む配列を parse できる                                                                                                                                                                                                                                                        |
 
 ### 7.2 既存ファイルへの追記想定（新規ファイルは作らない）
 
-| ファイル | 追記内容 |
-| --- | --- |
+| ファイル                       | 追記内容                                                                                                                                                                                                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shopping-list.schema.test.ts` | 変更不要（完了 API は既存 `shoppingListIdParamSchema` / `shoppingListResponseSchema` を無変更で再利用するため、新規テストケース追加の必要なし。強いて言えば「completed ステータスの ShoppingListResponse を parse できる」を確認する 1 ケースの追加は任意） |
 
 ### 7.3 型の往復・後方互換の確認観点
@@ -386,16 +388,16 @@ POST /api/pantry/stocks/77777777-7777-4777-8777-777777777777/discard
 
 ## 8. 実装ファイル一覧（`packages/api-contract` / Drizzle 追加分。再掲・本体設計書と重複なく整合）
 
-| ファイル | 変更種別 | 内容 |
-| --- | --- | --- |
-| `packages/api-contract/src/pantry.schema.ts` | 新規 | §1.1 のスキーマ 5 本 |
-| `packages/api-contract/src/pantry.schema.test.ts` | 新規 | §7.1 のテスト（test-designer 確定後に implementer が実装） |
-| `packages/api-contract/src/index.ts` | 追記 | `export * from './pantry.schema';` の 1 行 |
-| `packages/infrastructure/src/db/schema.ts` | 追記 | §2.3 の `stocks` テーブル定義 |
-| `packages/infrastructure/src/index.ts` | 追記 | `DrizzlePantryRepository` の re-export（本体設計書 §既存ファイルへの追記・変更に既出） |
-| `apps/web/src/server/routes/pantry.ts` | 新規 | §3 のエンドポイント 3 本 |
-| `apps/web/src/server/routes/shopping-lists.ts` | 追記 | §3 の完了エンドポイント 1 本 |
-| `apps/web/src/server/app.ts` | 追記 | §4.1 の onError 2 分岐 + `.route('/pantry', pantryRoute)` |
+| ファイル                                          | 変更種別 | 内容                                                                                   |
+| ------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `packages/api-contract/src/pantry.schema.ts`      | 新規     | §1.1 のスキーマ 5 本                                                                   |
+| `packages/api-contract/src/pantry.schema.test.ts` | 新規     | §7.1 のテスト（test-designer 確定後に implementer が実装）                             |
+| `packages/api-contract/src/index.ts`              | 追記     | `export * from './pantry.schema';` の 1 行                                             |
+| `packages/infrastructure/src/db/schema.ts`        | 追記     | §2.3 の `stocks` テーブル定義                                                          |
+| `packages/infrastructure/src/index.ts`            | 追記     | `DrizzlePantryRepository` の re-export（本体設計書 §既存ファイルへの追記・変更に既出） |
+| `apps/web/src/server/routes/pantry.ts`            | 新規     | §3 のエンドポイント 3 本                                                               |
+| `apps/web/src/server/routes/shopping-lists.ts`    | 追記     | §3 の完了エンドポイント 1 本                                                           |
+| `apps/web/src/server/app.ts`                      | 追記     | §4.1 の onError 2 分岐 + `.route('/pantry', pantryRoute)`                              |
 
 `shopping-list.schema.ts` はスキーマ変更なし（インポート元として参照されるのみ）。
 
