@@ -39,7 +39,8 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
    `NN-<layer>.md`（各指示書）を下記テンプレートで作成する。
 4. 各指示書に**必ず**含める（過去の Codex ミス実績への先回り。出典: docs/06-ai-tools.md /
    shopping-list-core 事象 1・4 で初回 FAIL 0 を再現した必須パターン）:
-   - アーキテクチャ制約の抜粋（依存方向 / create・reconstruct / any 禁止 / default export 禁止 /
+   - アーキテクチャ制約の抜粋（依存方向 / create・reconstruct / any 禁止 /
+     default export 禁止※Next.js page/layout 等は例外・正典は coding-standards.md /
      import type / 値なしは null）
    - 期待するクラス・関数シグネチャ（タイポ照合の基準になる正確な識別子名）
    - **「命名・記法の注意（過去の Codex ミス実績への先回り）」節（必須・空欄不可）**:

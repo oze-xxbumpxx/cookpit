@@ -60,6 +60,8 @@ tools: Read, Grep, Glob, Edit, Write, Bash
   ドメインロジックは Entity / Value Object に閉じ込める。
 - 集約をまたぐ参照は ID 参照のみ。集約をまたぐ操作は UseCase に置く。
 - `any` 禁止（`unknown` を使う）。default export 禁止（名前付きのみ）。
+  **例外**: Next.js App Router が要求する `app/**/page.tsx` / `layout.tsx` / `loading.tsx` /
+  `error.tsx` / `not-found.tsx` / `template.tsx` / `default.tsx`（正典は coding-standards.md）。
   型のみは `import type`。`===` / `!==` を使う。「値なし」は `null` に統一。
 - コメントは Why が非自明な時のみ。What は書かない。
 

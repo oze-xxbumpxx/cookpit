@@ -23,6 +23,8 @@ const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 // Agent() ツールの保持を許可する Agent（指揮・改善統括、および検証目的の reviewer）
 const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager', 'reviewer']);
+// Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
+const BUILTIN_AGENTS = new Set(['Explore']);
 // 人間承認が必要な保護対象（improvement-cycle.md §承認境界）
 function isProtected(rel) {
   return (
@@ -213,6 +215,7 @@ function main() {
             );
           }
           for (const r of refs) {
+            if (BUILTIN_AGENTS.has(r)) continue;
             if (!existsSync(join(ROOT, `.claude/agents/${r}.md`))) {
               warns.push(`${rel}: 参照先 Agent が存在しません: ${r}`);
             }

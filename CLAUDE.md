@@ -75,7 +75,8 @@ L2/L3 の実装着手前に、確定した `docs/designs/<feature>.md` と
   Entity / Value Object に閉じ込める。
 - 集約をまたぐ参照は ID 参照のみ。集約をまたぐ操作は Application 層の UseCase に置く。
 - UseCase は 1 ユースケース = 1 クラス・`execute()`。DI は手動 DI（MVP1 の間）。
-- `any` 禁止・default export 禁止・型のみは `import type`・`===`/`!==`・「値なし」は `null`。
+- `any` 禁止・default export 禁止（Next.js App Router の `page.tsx` / `layout.tsx` 等は例外 —
+  正典は `.claude/rules/coding-standards.md`）・型のみは `import type`・`===`/`!==`・「値なし」は `null`。
 - コメントは Why が非自明な時のみ。エラー処理は UseCase の入口で行う。
 
 ## 継続的改善（Memory / 改善サイクル）— 半自動型

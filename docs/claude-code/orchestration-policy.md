@@ -288,7 +288,8 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 - 散らかったままの大量ファイルを、軽いモデルで整理する前に上位モデルへ流し込まない。
 
 > `Explore` は Claude Code の組み込み Agent のため `.claude/agents/` に定義ファイルが無い。
-> Agent 設定チェック Hook の「参照先 Agent が存在しません: Explore」警告は誤検知として扱う。
+> `validate-agent-config.mjs` は `BUILTIN_AGENTS`（現状 `Explore`）を存在チェックから除外する
+> （IMP-2026-021）。組み込みを増やす場合は同 Set に追加する。
 
 ### Agent 別早見表
 

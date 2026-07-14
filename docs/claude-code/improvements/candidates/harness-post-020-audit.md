@@ -217,14 +217,14 @@ L2/L3「新規画面」方針・モデル采配表と Agent frontmatter の一�
 ## まとめ
 
 - 改善候補として起票したもの（→ backlog に追記）:
-  - 事象 1（default export 衛星同期）
-  - 事象 2（実装ルート欄のテンプレ欠落）
-  - 事象 3（強制中断復旧の正典化・既存 shopping-list-screens と同一系統）
-  - 事象 4（Explore ホワイトリスト）
-  - 事象 5（metrics テンプレ鮮度）
-  - 事象 6（orchestrator background ポインタ）
-  - 事象 7（backlog 死パス）
-- Memory に留めたもの:
+  - 事象 1（default export 衛星同期）→ **IMP-2026-021 で対応済み**
+  - 事象 2（実装ルート欄のテンプレ欠落）→ **IMP-2026-021 で対応済み**
+  - 事象 3（強制中断復旧の正典化）→ **IMP-2026-021 で対応済み**
+  - 事象 4（Explore ホワイトリスト）→ **IMP-2026-021 で対応済み**
+  - 事象 5（metrics テンプレ鮮度）→ **IMP-2026-021 で対応済み**
+  - 事象 6（orchestrator background ポインタ）→ **IMP-2026-021 で対応済み**
+  - 事象 7（backlog 死パス）→ **候補起票時に訂正済み**
+- Memory に留めたもの（バッチ C・据え置き）:
   - 事象 8（肥大化分割）
   - 事象 9（phases / E2E / IMP-007）
   - 事象 10（document-reviewer フロー）
