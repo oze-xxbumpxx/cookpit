@@ -398,6 +398,27 @@ Unit A で確定済みだった未決事項（対応済み）:
 - [ ] 在庫の消費を記録できる
 - [ ] 次の献立作成時に在庫が考慮される
 
+### 進め方（2026-07-14 ユニット分割確定）
+
+ユニット分割は Sprint 3/4 の縦割りパターンを踏襲する（ユーザー確定・2026-07-14）。
+
+| ユニット               | 内容                                                                                                                                                                          | レベル | 実装ルート                       | 状態   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | -------------------------------- | ------ |
+| Unit A: pantry-core    | Domain（Pantry / Stock / StockId）+ Drizzle スキーマ + Repository + UseCase 4 本（CompleteShopping / ConsumeStock / DiscardStock / GetPantry）+ API（買い物完了 API の公開含む） | L3     | Codex 委譲                       | 未着手 |
+| Unit B: pantry-screens | 在庫一覧画面（保存場所別）+「使った」「捨てた」ボタン + 買い物リスト画面からの買い物完了導線                                                                                     | L2     | Orchestrator 経路（implementer） | 未着手 |
+| Unit C: 在庫引き算連携 | `GenerateShoppingListUseCase` への Pantry 注入 + 切り上げルール（S-2 で Sprint 5 へ送った分。完了条件 3 に対応）                                                                 | L2     | Orchestrator 経路（implementer） | 未着手 |
+
+スコープ注記（キックオフ時点の確認事項）:
+
+- `ShoppingList.complete()` / `markAsSkipped()` はドメイン実装済み・API 非公開（S-8 / S-9）。
+  買い物完了 API の公開は Unit A のスコープ。
+- `getBoughtItemsForPantry()` は S-8 申し送りどおり Pantry 集約の設計時に再設計して確定する
+  （`docs/04-domain-model.md` の CompleteShoppingUseCase は未実装の構想）。
+- 依存メソッドは実装済みを確認: `Product.recordPrice()` / `MealPlan.transitionTo('cooking')`
+  （shopping → cooking 遷移可）。
+- 在庫引き算の端数処理（切り上げルール）は `docs/04-domain-model.md` 設計上の論点 3 のとおり
+  Unit C の設計で確定する。
+
 ## Sprint 6：仕上げ・運用開始（1週間）
 
 ### ゴール
