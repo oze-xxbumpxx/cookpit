@@ -351,7 +351,14 @@ Unit A で確定済みだった未決事項（対応済み）:
 - [x] 実装（`/shopping-lists` エントリ画面・`/shopping-lists/[id]` 詳細画面・`meal-plans` への CTA 導線・
       PWA `runtimeCaching` 追記。`feature/shopping-list-screens` ブランチ）
 - [x] Vitest 全 green（`pnpm lint` / `pnpm type-check` / `pnpm test`）+ 本番ビルドでの Serwist 有効化確認
-- [ ] manual-browser-verify（実画面確認）・Orchestrator レビューは別途実施
+- [x] manual-browser-verify（実画面確認。2026-07-14）: MB-01〜09/13〜15 の 12 項目 live PASS
+      （PGlite 経路）。MB-10〜12（PWA オフライン）は BLOCKED — 本番ビルドは pglite 経路を
+      dead code 除去する設計（`apps/web/src/db/client.ts`）のためリモートでは live 確認不可。
+      sw.ts の 3 エントリ（GET 限定 matcher・NetworkFirst/SWR）はコード確認済み、
+      Neon 接続の本番相当環境で PASS 見込み
+- [x] reviewer レビュー（2026-07-14）: Must 0・Should 2・Nice 5 でマージ可判定。
+      Should 2 件（refetch 成功時のエラーバナー残留・silent refetch の更新ボタン disable）は
+      同日修正済み（回帰テスト LC-21/LC-22 追加）
 
 本ユニットは要求分析・設計書で挙げられた roadmap の価格比較例示「A店の方が◯円安い」（本節タスク4）を
 **満たさない**（S-6 確定 = 案A「推奨店舗バッジのみ」。金額差の定量表示は将来課題へ送った。設計書

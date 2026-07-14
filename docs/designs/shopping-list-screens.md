@@ -1,7 +1,8 @@
 # 設計書: shopping-list-screens
 
-- ステータス: **実装済み**（2026-07-13 S-1〜S-6 全件ユーザー確定・推奨案どおり実装完了。
-  manual-browser-verify・レビューは未実施。§未決事項の確定記録参照）
+- ステータス: **実装・レビュー・実画面確認済み**（2026-07-13 S-1〜S-6 全件ユーザー確定・推奨案どおり
+  実装完了。2026-07-14 reviewer レビュー（Must 0）と manual-browser-verify（MB-01〜09/13〜15 PASS・
+  MB-10〜12 は環境制約で BLOCKED/コード確認）を実施。§未決事項の確定記録参照）
 - レベル: L2
 - スプリント: Sprint 4 Unit B
 - 関連: `docs/requirements/shopping-list-screens.md`（要求分析・直前工程・入力）、

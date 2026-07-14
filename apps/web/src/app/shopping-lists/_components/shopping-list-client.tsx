@@ -39,7 +39,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [refreshing, setRefreshing] = useState(false);
 
   async function handleRefetch({ silent }: { silent: boolean }): Promise<void> {
-    setRefreshing(true);
+    if (!silent) {
+      setRefreshing(true);
+    }
     try {
       const response = await client.api['shopping-lists'][':id'].$get({
         param: { id: shoppingList.id },
@@ -52,12 +54,16 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
       }
       const dto = await response.json();
       setItems(dto.items);
+      // 再同期に成功したら過去の書き込み失敗のバナーは古い情報になるため消す
+      setErrorMessage(null);
     } catch {
       if (!silent) {
         setErrorMessage('通信エラーが発生しました。');
       }
     } finally {
-      setRefreshing(false);
+      if (!silent) {
+        setRefreshing(false);
+      }
     }
   }
 

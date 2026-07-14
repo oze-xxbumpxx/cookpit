@@ -611,4 +611,49 @@ describe('ShoppingListClient', () => {
 
     expect(screen.getByText('適量')).toBeDefined();
   });
+
+  it('LC-21: refetch 成功で既存のエラーバナーがクリアされる（レビュー S-1）', async () => {
+    const user = userEvent.setup();
+    postBought.mockResolvedValue({ ok: false });
+    getShoppingList.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingListDto({
+          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+        }),
+    });
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await fillPurchaseInputForm('醤油', '198');
+    await user.click(screen.getByRole('button', { name: '購入を記録' }));
+    await waitFor(() => {
+      expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
+
+    await user.click(screen.getByRole('button', { name: '更新' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('操作に失敗しました。')).toBeNull();
+    });
+  });
+
+  it('LC-22: silent な focus refetch では更新ボタンが disable されない（レビュー S-2）', async () => {
+    getShoppingList.mockReturnValue(new Promise(() => {}));
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(getShoppingList).toHaveBeenCalledTimes(1);
+    const refreshButton = screen.getByRole('button', { name: '更新' }) as HTMLButtonElement;
+    expect(refreshButton.disabled).toBe(false);
+  });
 });
