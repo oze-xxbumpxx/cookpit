@@ -3,7 +3,7 @@
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { MealPlanDto, RecipeDto } from '@cookpit/application';
+import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/application';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -22,6 +22,9 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // 既存の作成・追加・削除フロー（submitting/errorMessage）とは独立させる（S-1）。
+  const [shoppingListSubmitting, setShoppingListSubmitting] = useState(false);
+  const [shoppingListErrorMessage, setShoppingListErrorMessage] = useState<string | null>(null);
 
   const recipeNameMap = buildRecipeNameMap(recipes);
 
@@ -89,6 +92,29 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
     }
   }
 
+  async function handleShoppingList(): Promise<void> {
+    if (mealPlan === null) {
+      return;
+    }
+    setShoppingListSubmitting(true);
+    setShoppingListErrorMessage(null);
+    try {
+      const response = await client.api['shopping-lists'].$post({
+        json: { mealPlanId: mealPlan.id },
+      });
+      if (!response.ok) {
+        setShoppingListErrorMessage('操作に失敗しました。');
+        return;
+      }
+      const result: ShoppingListDto = await response.json();
+      router.push(`/shopping-lists/${result.id}`);
+    } catch {
+      setShoppingListErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setShoppingListSubmitting(false);
+    }
+  }
+
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
@@ -150,6 +176,21 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             <p className="text-sm font-medium text-foreground">
               {formatWeekRange(mealPlan.weekIdentifier)}
             </p>
+
+            <Button
+              type="button"
+              onClick={() => void handleShoppingList()}
+              disabled={shoppingListSubmitting}
+              className="h-11 w-full"
+            >
+              {mealPlan.status === 'draft' ? '買い物リストを作る' : '買い物リストを開く'}
+            </Button>
+
+            {shoppingListErrorMessage !== null && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {shoppingListErrorMessage}
+              </p>
+            )}
 
             <section aria-label="献立" className="flex flex-col gap-2">
               {mealPlan.plannedRecipes.length === 0 ? (

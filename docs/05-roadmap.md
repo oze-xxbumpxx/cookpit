@@ -319,10 +319,10 @@ Unit A で確定済みだった未決事項（対応済み）:
 
 ### 進め方（2026-07-11 ユニット分割確定）
 
-| ユニット                      | 内容                                                                                                                                 | レベル    | 実装ルート           | 状態                    |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------- | -------------------- | ----------------------- |
-| Unit A: shopping-list-core    | Domain（ShoppingList / ShoppingItem / Quantity.add()）+ Drizzle スキーマ（shopping_lists / shopping_items）+ UseCase 5 本 + API 5 本 | L3        | Codex 委譲（01〜05） | **完了**（PR #51〜#57） |
-| Unit B: shopping-list-screens | 買い物リスト画面（店舗グループ・チェック・価格入力・手動追加・価格比較）+ PWA オフライン強化                                         | L2 見込み | 着手時に確定         | 未着手                  |
+| ユニット                      | 内容                                                                                                                                 | レベル | 実装ルート                       | 状態                                                                               |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------ | -------------------------------- | ---------------------------------------------------------------------------------- |
+| Unit A: shopping-list-core    | Domain（ShoppingList / ShoppingItem / Quantity.add()）+ Drizzle スキーマ（shopping_lists / shopping_items）+ UseCase 5 本 + API 5 本 | L3     | Codex 委譲（01〜05）             | **完了**（PR #51〜#57）                                                            |
+| Unit B: shopping-list-screens | 買い物リスト画面（店舗グループ・チェック・価格入力・手動追加・推奨店舗バッジ）+ PWA オフライン強化                                   | L2     | Orchestrator 経路（implementer） | **実装完了**（2026-07-13。品質ゲート緑・manual-browser-verify とレビューは未実施） |
 
 スコープ判断（ユーザー確定・2026-07-12。確定値 S-1〜S-11 / D-1〜D-8 の正典は
 `docs/designs/shopping-list-core.md`）:
@@ -343,6 +343,26 @@ Unit A で確定済みだった未決事項（対応済み）:
 - [x] API Contract（Zod スキーマ + 契約テスト）（PR #56）
 - [x] Presentation API（Hono ルート 5 本 + app.ts 統合）（PR #57）
 - [x] `docs/04-domain-model.md` の ShoppingList / 生成ユースケースを実装に同期（S-2/S-5/S-8/S-10）
+
+### Unit B 完了記録（2026-07-13）
+
+- [x] 上流工程成果物（要件・設計・実装計画・試験計画。`docs/designs/shopping-list-screens.md` /
+      `docs/implementation-plans/shopping-list-screens.md` / `docs/tests/shopping-list-screens.md`）
+- [x] 実装（`/shopping-lists` エントリ画面・`/shopping-lists/[id]` 詳細画面・`meal-plans` への CTA 導線・
+      PWA `runtimeCaching` 追記。`feature/shopping-list-screens` ブランチ）
+- [x] Vitest 全 green（`pnpm lint` / `pnpm type-check` / `pnpm test`）+ 本番ビルドでの Serwist 有効化確認
+- [x] manual-browser-verify（実画面確認。2026-07-14）: MB-01〜09/13〜15 の 12 項目 live PASS
+      （PGlite 経路）。MB-10〜12（PWA オフライン）は BLOCKED — 本番ビルドは pglite 経路を
+      dead code 除去する設計（`apps/web/src/db/client.ts`）のためリモートでは live 確認不可。
+      sw.ts の 3 エントリ（GET 限定 matcher・NetworkFirst/SWR）はコード確認済み、
+      Neon 接続の本番相当環境で PASS 見込み
+- [x] reviewer レビュー（2026-07-14）: Must 0・Should 2・Nice 5 でマージ可判定。
+      Should 2 件（refetch 成功時のエラーバナー残留・silent refetch の更新ボタン disable）は
+      同日修正済み（回帰テスト LC-21/LC-22 追加）
+
+本ユニットは要求分析・設計書で挙げられた roadmap の価格比較例示「A店の方が◯円安い」（本節タスク4）を
+**満たさない**（S-6 確定 = 案A「推奨店舗バッジのみ」。金額差の定量表示は将来課題へ送った。設計書
+`docs/designs/shopping-list-screens.md` §S-6 / R-6 参照）。
 
 ## Sprint 5：Pantry 在庫管理（1.5週間）
 
