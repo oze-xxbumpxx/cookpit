@@ -11,7 +11,7 @@ agents:
   unnecessary_calls: unknown
 
 quality:
-  tests_added: unknown # MVP1 はテストランナー未導入のため通常 unknown
+  tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
   initial_test_failures: unknown
   reviewer_critical: 0
   reviewer_major: 0

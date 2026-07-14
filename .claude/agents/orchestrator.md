@@ -56,8 +56,10 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
      同期委譲では不要）、起動する Write 可能な Subagent へ「起動する Sub-agent 名 / 目的 /
      期待成果物パス」を `.claude/state/inflight-agents.json` へ追記するよう指示する（通知非依存の
      再開判定用）。単一 Sub-agent の委譲は原則同期待機とし、background は明示的に並列化する複数
-     Sub-agent に限定する。feature 完了時（reflection-agent 起動時または完了報告前）に同ファイルを
-     空にする（古いエントリの誤判定防止）。詳細は orchestration-policy.md を参照。
+     Sub-agent に限定する。ただし実行環境によっては単一委譲でも常に background 起動になり得る
+     （完了は notification ではなく期待成果物の存在で冪等判定する。正典:
+     orchestration-policy.md §既知の制約）。feature 完了時（reflection-agent 起動時または完了報告前）に
+     同ファイルを空にする（古いエントリの誤判定防止）。詳細は orchestration-policy.md を参照。
 4. 各 Subagent へ委譲する。委譲時は必ず以下を明示する。
    - 目的 / 対象範囲 / 対象外 / 参照すべきファイル / 期待する成果物 / 出力先 /
      完了条件 / 禁止事項

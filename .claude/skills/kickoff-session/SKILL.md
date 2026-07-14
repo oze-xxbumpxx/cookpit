@@ -24,20 +24,26 @@ description: >
 1. **ブリーフィング**: `bash .claude/scripts/session-briefing.sh` を実行し、結果を要約して提示する。
    - 前回ログの「次回やること」・未決定 IMP・git 状態が出る。スクリプトが失敗しても
      止まらず、`logs/` 最新ファイルと `improvement-backlog.md` を直接読んで代替する。
-2. **文脈読み込み**: CLAUDE.md 指定の 4 ドキュメント
+2. **強制中断からの再開か判定**: 前回ログが途中終了（usage リミット・障害・未完了のまま終了）
+   を示している、または「次回やること」が残工程リストになっている場合は、
+   [development-workflow.md §セッション跨ぎの復旧](../../../docs/claude-code/development-workflow.md)
+   のチェックリストを先に実行する（ログ → `git ls-remote` → 継続ブランチの明示選択 →
+   未完了工程のみ再開）。計画的な分割なら手順 3 へ。
+3. **文脈読み込み**: CLAUDE.md 指定の 4 ドキュメント
    （01-overview / 03-architecture / 04-domain-model / 07-dev-rules）を読む。
-3. **今日のタスク案を提示**: 前回の「次回やること」と未決定 IMP から 1〜4 件を候補として
+4. **今日のタスク案を提示**: 前回の「次回やること」と未決定 IMP から 1〜4 件を候補として
    優先度つきで提案し、ユーザーに確定してもらう。ユーザーの指示があればそちらを最優先。
-4. **当日ログの雛形を作成**: `logs/YYYY-MM-DD.md` が無ければ `logs/_template.md` から作成し、
+5. **当日ログの雛形を作成**: `logs/YYYY-MM-DD.md` が無ければ `logs/_template.md` から作成し、
    「今日のタスク」（テーマ・Sprint・作業ブランチ）だけ先に埋める。既にあれば
    「セッション2」等の見出しで追記準備をする（write-work-log Skill と同じ規則）。
-5. **変更レベルと実装ルートを宣言**: タスクごとに classify-change Skill で L0〜L3 を判定し、
+6. **変更レベルと実装ルートを宣言**: タスクごとに classify-change Skill で L0〜L3 を判定し、
    実装ルート（Codex 委譲 or Orchestrator/implementer — `docs/06-ai-tools.md` の使い分け表）を
    宣言する。Codex 委譲なら create-codex-brief Skill、L2/L3 の Orchestrator ルートなら
    orchestrator 起動へ進む。
 
 ## 完了条件
 
+- 強制中断からの再開なら、継続ブランチが明示され、未完了工程だけが今日のタスクになっている。
 - 今日のタスクが確定し、当日ログの「今日のタスク」節が埋まっている。
 - 各タスクに変更レベルと実装ルートが宣言されている。
 - ブリーフィングで見つかった持ち越し（未決定 IMP・前回の未完了）が、今日やる/やらないの

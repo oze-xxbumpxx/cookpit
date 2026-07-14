@@ -30,6 +30,10 @@ description: >
 
 - 前提となる設計書: docs/designs/<feature-name>.md
 - レベル: L2 | L3
+- 実装ルート: Orchestrator（implementer）| Codex 委譲
+- 判断理由: （既定どおりなら「既定」+ docs/06-ai-tools.md の観点 1 語。
+  特殊判断・切替があれば理由 1 行。出典: shopping-list-screens 事象 5 /
+  harness-post-020-audit 事象 2）
 
 ## 変更対象ファイル
 （path ごとに、なぜ変えるか）
@@ -61,6 +65,7 @@ description: >
 
 ## 完了条件
 
+- 冒頭に「実装ルート」と「判断理由」が埋まっている（空欄・結論のみは不可）。
 - すべてのステップに対象ファイル・変更内容・完了条件が揃っている。
 - 変更/新規ファイルのパスが実在のリポジトリ構成と整合している。
 - implementer がこの計画だけで実装に着手できる粒度になっている。
