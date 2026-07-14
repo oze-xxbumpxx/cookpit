@@ -54,6 +54,15 @@ description: >
    implementation-planner のスコープ判断と食い違って reviewer 指摘になった —
    `docs/claude-code/improvements/candidates/recipe-servings.md` 事象2）。E2E（Playwright UI）
    等の未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
+10. **新規テストのファイル名は、対象パッケージの vitest `include` と突き合わせる**（projects
+    分割があるパッケージでは必須）。apps/web の例:
+    `*.node.test.ts` / `src/server/**/*.test.ts`（node）と `*.dom.test.ts` / `*.test.tsx`（dom）。
+    素の `src/**/*.test.ts`（server 以外）は**どの project にも一致せず silent skip** になる
+    （出典: meal-plan-screens 事象 1）。試験計画に書くパスは include に合う名前にする。
+11. **仕様が集合・列挙・デフォルト値を規定する箇所**は、代表値 1〜2 点だけで終わらせない。
+    `toEqual` 等で想定集合の過不足なしを固定するか、境界を跨ぐデータ量で検証する
+    （出典: meal-plan-core / meal-plan-screens の「弱いアサーション」累計 2。適用は
+    「仕様上意味のある集合」に限定し、全配列の網羅は要求しない）。
 
 ## 観点の選択基準（過剰適用を防ぐ）
 
@@ -122,6 +131,10 @@ description: >
 - 実装計画のテスト計画セクションと矛盾しない。
 - 「観点の選択基準」表で**該当する**追加観点が含まれ、**該当しない**観点は対象外理由つきで
   除外されている（網羅不足も過剰適用もない）。
+- 仕様上の集合・列挙・デフォルト値がある場合、過不足なし固定または境界跨ぎ検証の観点がある
+  （または「代表値のみで足りる理由」が対象外として書かれている）。
+- 新規テストのファイルパスが対象パッケージの vitest `include` と整合している
+  （projects 分割パッケージでは必須）。
 
 ## 良い例（実タスクの成果物）
 
