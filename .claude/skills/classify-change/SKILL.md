@@ -24,12 +24,13 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
    単純な null チェック・小規模バグ修正）か？ → Level 1。
 3. **既存 API/画面/ロジック/Repository の変更**で、複数ファイルに及ぶが後方互換を壊さないか？
    → Level 2。
-4. **新規 API・DB スキーマ変更・データ移行・認証認可・新規画面・外部/AWS 連携・
+4. **新規 API・DB スキーマ変更・データ移行・認証認可・外部/AWS 連携・
    アーキテクチャ変更・大規模リファクタ・後方互換に影響**するか？ → Level 3。
-   - ただし「新規画面」は**新規 API / DB 変更を伴う場合のみ** L3。既存 API・既存契約だけを
-     使う画面追加は L2（出典: `.claude/evals/cases/frontend-screen-addition.md` の定義、および
-     recipe-edit-screen での実判定 —
+   - **新規画面だけでは L3 にしない。** 新規 API / DB 変更を伴う場合のみ L3。既存 API・既存契約
+     だけを使う画面追加は L2（出典: `.claude/evals/cases/frontend-screen-addition.md`、
+     recipe-edit-screen 実判定 —
      `docs/claude-code/improvements/candidates/recipe-edit-screen.md` 事象 3）。
+     「新規画面」を L3 トリガー一覧の見出しだけで読まないこと。
 5. 境界例（例：API 項目追加だが DB スキーマも変わる）は**上位レベル**として扱う。
 
 ### 判定例（実タスクの実績）

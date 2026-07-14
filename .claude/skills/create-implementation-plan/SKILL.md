@@ -17,6 +17,10 @@ description: >
    新規作成ファイルも具体パスで列挙する。
 3. 各ステップに「対象ファイル・変更内容・完了条件」を必ず付ける。
 4. テスト計画・リスク・ロールバック・ドキュメント更新対象を埋める。
+   - **テスト計画のファイル名**は、対象パッケージの vitest `include`（`vitest.config.*` /
+     projects）と突き合わせる。apps/web は `*.node.test.ts` / `*.dom.test.ts` /
+     `*.test.tsx` / `src/server/**/*.test.ts` のみ。素の `*.test.ts` は silent skip の原因
+     （出典: meal-plan-screens 事象 1 / IMP-2026-012 の残穴）。
 5. 既存計画があれば更新する（重複作成しない）。
 
 ## テンプレート

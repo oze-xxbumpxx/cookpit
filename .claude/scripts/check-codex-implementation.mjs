@@ -708,8 +708,12 @@ function buildBaseWordFrequency() {
 function checkIdentifiers(file, content, briefIdents, wordFreq) {
   const declared = extractDeclaredIdentifiers(content);
   for (const { name, index } of declared) {
+    // 指示書に存在する識別子はタイポ疑いの対象外（brief 由来の正当な新規語を誤検出しない）
+    // 出典: shopping-list-core 事象 3（scaled が指示書にあるのに identifier-typo WARN）
+    if (briefIdents.size > 0 && briefIdents.has(name)) continue;
+
     // (a) 指示書との突き合わせ: 指示書に無いが距離 1〜2 の識別子がある → タイポ疑い
-    if (briefIdents.size > 0 && name.length >= 5 && !briefIdents.has(name)) {
+    if (briefIdents.size > 0 && name.length >= 5) {
       let best = null;
       let bestDist = 3;
       for (const b of briefIdents) {
@@ -731,9 +735,20 @@ function checkIdentifiers(file, content, briefIdents, wordFreq) {
       }
     }
     // (b) サブトークンのスペルチェック: 既存コードに無い単語で、頻出語と距離 1
+    // brief 由来トークンは許可（指示書コードブロックから収穫した語を誤検出しない）
     if (wordFreq) {
       for (const w of splitIdentifier(name)) {
         if (w.length < 4 || (wordFreq.get(w) ?? 0) > 0) continue;
+        if (briefIdents.size > 0) {
+          let briefOk = false;
+          for (const b of briefIdents) {
+            if (b === w || splitIdentifier(b).includes(w)) {
+              briefOk = true;
+              break;
+            }
+          }
+          if (briefOk) continue;
+        }
         for (const [known, count] of wordFreq) {
           if (count >= 5 && known.length >= 4 && levenshtein(w, known) === 1) {
             report(

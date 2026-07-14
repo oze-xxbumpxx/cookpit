@@ -70,6 +70,10 @@ agent-improvement-manager を起動するのは次のいずれか。**毎タス�
   **Sub-agent 委譲より前**に設定されていること（SubagentStop Hook が記録時点の値を読むため）。
   ②リモートの自動命名ブランチ（feature 名を含まない）では
   `collect-task-metrics.mjs --branch <実ブランチ部分一致>` を明示すること。
+- **フェーズ比較**: 機械集計の既定はセッション全体。設計フェーズ限定の before/after など
+  スコープを揃える比較では、`metrics/<task-id>.yml` の `phases:` を手で埋めるか、
+  `machine.totals.agent_calls_by_type` から対象 Agent だけを抜き出す
+  （セッション全体と設計フェーズを混同しない。出典: IMP-2026-007 after 計測の申し送り）。
 
 ## 承認境界
 

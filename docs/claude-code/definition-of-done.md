@@ -62,6 +62,8 @@ Level 2 に加えて：
 - 性能確認（明らかな劣化が無いか）。
 - 異常系・部分失敗・冪等性を試験観点に含む。
 - `docs/reviews/<feature>.md` にレビュー記録。
+  - Codex 委譲ルートでも同じ。受け入れレビュー結果は PR 本文だけでは足りず、
+    `docs/reviews/<feature>.md` への記録が完了条件（正本。PR 要約は任意）。
 - `docs/claude-code/improvements/candidates/<task-id>.md` に振り返り（reflection-agent）。
 
 ## 判定の原則
