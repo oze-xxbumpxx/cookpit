@@ -48,6 +48,9 @@ fi
 echo "created: $OUT"
 
 # subagent-log から agents.calls を自動補完（feature が一致する行を数える）
+# AGENT_CALLS は set -u 環境での unbound variable を防ぐため必ず初期化する
+# （2026-07-11 に 65 行目付近で unbound variable 障害の報告あり・再現不能のため防御的修正）
+AGENT_CALLS="0"
 SUBAGENT_LOG="$ROOT/.claude/state/subagent-log.jsonl"
 if [ -f "$SUBAGENT_LOG" ]; then
   AGENT_CALLS="$(node -e "
@@ -56,13 +59,13 @@ const lines = fs.readFileSync('$SUBAGENT_LOG', 'utf8').trim().split('\n').filter
 const n = lines.filter(l => { try { return JSON.parse(l).feature === '$FEATURE'; } catch { return false; } }).length;
 process.stdout.write(String(n));
 " 2>/dev/null || echo '0')"
-  if [ "$AGENT_CALLS" -gt 0 ] 2>/dev/null; then
+  if [ "${AGENT_CALLS:-0}" -gt 0 ] 2>/dev/null; then
     node -e "
 const fs = require('fs');
 let t = fs.readFileSync('$OUT', 'utf8');
-t = t.replace(/^  calls: unknown/m, '  calls: $AGENT_CALLS  # subagent-log から自動集計');
+t = t.replace(/^  calls: unknown/m, '  calls: ${AGENT_CALLS:-0}  # subagent-log から自動集計');
 fs.writeFileSync('$OUT', t);
-" 2>/dev/null && echo "agents.calls を自動補完: $AGENT_CALLS（subagent-log の feature=$FEATURE 行数）"
+" 2>/dev/null && echo "agents.calls を自動補完: ${AGENT_CALLS:-0}（subagent-log の feature=$FEATURE 行数）"
   fi
 fi
 
