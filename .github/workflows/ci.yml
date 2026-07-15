@@ -79,13 +79,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+      # npm が legacy audit API (/-/npm/v1/security/audits{,/quick}) を 410 廃止したため、
+      # bulk advisory 対応の pnpm 11 で監査する（pnpm/pnpm#11265）。
+      # pnpm 11 は Node >= 22.13 が必要なので本ジョブだけ Node 22。
+      # プロジェクト本体の packageManager (pnpm 10) / .nvmrc (20) は据え置き。
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Audit production dependencies (blocking, high+)
         # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
         # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
         # package.json の pnpm.auditConfig.ignoreGhsas を使う
-        run: pnpm audit --prod --audit-level=high
+        run: >
+          pnpm dlx --config.minimumReleaseAge=0
+          pnpm@11.13.0
+          --config.manage-package-manager-versions=false
+          audit --prod --audit-level=high
       - name: Audit all dependencies (informational, critical+)
         if: always()
         continue-on-error: true
-        run: pnpm audit --audit-level=critical
+        run: >
+          pnpm dlx --config.minimumReleaseAge=0
+          pnpm@11.13.0
+          --config.manage-package-manager-versions=false
+          audit --audit-level=critical

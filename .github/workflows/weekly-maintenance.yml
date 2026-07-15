@@ -22,9 +22,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+      # ci.yml の audit ジョブと同理由（npm legacy audit API 410 廃止 → pnpm 11 で監査）
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: pnpm audit（high 以上で失敗）
-        run: pnpm audit --audit-level=high
+        run: >
+          pnpm dlx --config.minimumReleaseAge=0
+          pnpm@11.13.0
+          --config.manage-package-manager-versions=false
+          audit --audit-level=high
       - name: pnpm outdated（情報提供のみ）
         if: always()
         run: pnpm outdated --recursive || true
