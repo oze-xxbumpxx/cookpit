@@ -20,9 +20,35 @@ jobs:
   dependency-audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
+    # ci.yml の audit ジョブと同理由（npm legacy audit API 410 廃止 → pnpm 11 で監査）
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Switch to pnpm 11 for audit (runner only)
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.packageManager = 'pnpm@11.13.0';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          corepack enable
+          corepack prepare pnpm@11.13.0 --activate
+          VERSION="$(pnpm --version)"
+          echo "audit pnpm version: ${VERSION}"
+          case "${VERSION}" in
+            11.*) ;;
+            *)
+              echo "Expected pnpm 11.x for audit, got ${VERSION}" >&2
+              exit 1
+              ;;
+          esac
       - name: pnpm audit（high 以上で失敗）
         run: pnpm audit --audit-level=high
       - name: pnpm outdated（情報提供のみ）

@@ -48,6 +48,9 @@ fi
 echo "created: $OUT"
 
 # subagent-log から agents.calls を自動補完（feature が一致する行を数える）
+# AGENT_CALLS は set -u 環境での unbound variable を防ぐため必ず初期化する
+# （2026-07-11 に unbound variable 障害の報告あり・IMP-2026-024 の防御的修正）
+AGENT_CALLS="0"
 # node へは環境変数で渡し、シェル展開を node -e 文字列に埋め込まない（set -u / 特殊文字対策）
 SUBAGENT_LOG="$ROOT/.claude/state/subagent-log.jsonl"
 if [ -f "$SUBAGENT_LOG" ]; then

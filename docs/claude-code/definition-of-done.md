@@ -5,14 +5,14 @@
 
 ## このリポジトリで実在する品質コマンド（2026-07 時点）
 
-| ゲート | コマンド | 備考 |
-| --- | --- | --- |
-| Lint | `pnpm lint`（turbo lint） | 実在 |
-| Type check | `pnpm type-check`（turbo type-check） | 実在 |
-| Build | `pnpm build`（turbo build） | 実在。重いので L2/L3 で必要時 |
-| Format check | `pnpm exec prettier --check "**/*.{ts,tsx,md}"` | `pnpm format` は --write（修正）なので確認は --check |
-| Unit / Integration | `pnpm test`（turbo test / Vitest） | 実在。domain / application / infrastructure / apps/web に導入済み（2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`） |
-| E2E / Contract / Security | 個別整備中 | Playwright 設定は `apps/web` に存在（シナリオは feature 単位で整備）。依存脆弱性は `pnpm audit`（security-reviewer が実行）。擬似コマンドを入れない |
+| ゲート                    | コマンド                                        | 備考                                                                                                                                                |
+| ------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                      | `pnpm lint`（turbo lint）                       | 実在                                                                                                                                                |
+| Type check                | `pnpm type-check`（turbo type-check）           | 実在                                                                                                                                                |
+| Build                     | `pnpm build`（turbo build）                     | 実在。重いので L2/L3 で必要時                                                                                                                       |
+| Format check              | `pnpm exec prettier --check "**/*.{ts,tsx,md}"` | `pnpm format` は --write（修正）なので確認は --check                                                                                                |
+| Unit / Integration        | `pnpm test`（turbo test / Vitest）              | 実在。domain / application / infrastructure / apps/web に導入済み（2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）                      |
+| E2E / Contract / Security | 個別整備中                                      | Playwright 設定は `apps/web` に存在（シナリオは feature 単位で整備）。依存脆弱性は `pnpm audit`（security-reviewer が実行）。擬似コマンドを入れない |
 
 > ゲートは `bash .claude/scripts/run-quality-gates.sh` で実行。実在しないコマンドは
 > 実行せず `unavailable` と報告する（推測で通過扱いにしない）。

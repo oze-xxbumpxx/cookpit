@@ -56,12 +56,12 @@ meal-plan-screens / shopping-list-screens で再現した型。毎回ゼロか�
 
 ### 既知の UI 操作メモ（ライブラリ固有・簡潔に）
 
-| 対象 | 注意 |
-| --- | --- |
-| `type="search"` の input | role は `textbox` ではなく **`searchbox`** |
-| 同梱 Chromium | `executablePath` を明示しないと起動しない環境がある |
-| Base UI SelectField | ネイティブ `<select>` ではない。`getByLabel(...).click()` → `getByRole('option', { name })` |
-| 確認スクリプトの置き場 | `apps/web` 配下（パッケージの依存解決が通る場所） |
+| 対象                     | 注意                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `type="search"` の input | role は `textbox` ではなく **`searchbox`**                                                  |
+| 同梱 Chromium            | `executablePath` を明示しないと起動しない環境がある                                         |
+| Base UI SelectField      | ネイティブ `<select>` ではない。`getByLabel(...).click()` → `getByRole('option', { name })` |
+| 確認スクリプトの置き場   | `apps/web` 配下（パッケージの依存解決が通る場所）                                           |
 
 ## 完了条件
 
