@@ -79,11 +79,9 @@ jobs:
     runs-on: ubuntu-latest
     # npm が legacy audit API を 410 廃止したため、bulk advisory 対応の pnpm 11 で監査する
     # （pnpm/pnpm#11265）。pnpm 11 は Node >= 22.13 が必要。
-    # package.json の packageManager=pnpm@10 への Corepack 強制切替を避けるため
-    # COREPACK_ENABLE_STRICT=0 を付ける（付けないと dlx した pnpm 11 が 10 に戻り 410 になる）。
-    # プロジェクト本体の packageManager / .nvmrc は据え置き。
-    env:
-      COREPACK_ENABLE_STRICT: '0'
+    # package.json の packageManager=pnpm@10 だと dlx / Corepack 経由でも実行時に 10 へ戻り
+    # 旧 API で 410 になるため、監査中だけ packageManager を pnpm 11 に差し替える
+    # （ランナー上のみ。リポジトリ本体の packageManager / .nvmrc は据え置き）。
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -92,13 +90,18 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Audit production dependencies (blocking, high+)
-        # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
-        # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
-        # package.json の pnpm.auditConfig.ignoreGhsas を使う
+      - name: Switch to pnpm 11 for audit (runner only)
         run: |
           set -euo pipefail
-          VERSION="$(pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0 --config.manage-package-manager-versions=false --version)"
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.packageManager = 'pnpm@11.13.0';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          corepack enable
+          corepack prepare pnpm@11.13.0 --activate
+          VERSION="$(pnpm --version)"
           echo "audit pnpm version: ${VERSION}"
           case "${VERSION}" in
             11.*) ;;
@@ -107,8 +110,12 @@ jobs:
               exit 1
               ;;
           esac
-          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0 --config.manage-package-manager-versions=false audit --prod --audit-level=high
+      - name: Audit production dependencies (blocking, high+)
+        # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
+        # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
+        # package.json の pnpm.auditConfig.ignoreGhsas を使う
+        run: pnpm audit --prod --audit-level=high
       - name: Audit all dependencies (informational, critical+)
         if: always()
         continue-on-error: true
-        run: pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0 --config.manage-package-manager-versions=false audit --audit-level=critical
+        run: pnpm audit --audit-level=critical

@@ -20,10 +20,7 @@ jobs:
   dependency-audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
-    # ci.yml の audit ジョブと同理由（npm legacy audit API 410 廃止 → pnpm 11 で監査。
-    # COREPACK_ENABLE_STRICT=0 で packageManager=pnpm@10 への強制切替を無効化）
-    env:
-      COREPACK_ENABLE_STRICT: '0'
+    # ci.yml の audit ジョブと同理由（npm legacy audit API 410 廃止 → pnpm 11 で監査）
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -32,10 +29,18 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: pnpm audit（high 以上で失敗）
+      - name: Switch to pnpm 11 for audit (runner only)
         run: |
           set -euo pipefail
-          VERSION="$(pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0 --config.manage-package-manager-versions=false --version)"
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.packageManager = 'pnpm@11.13.0';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          corepack enable
+          corepack prepare pnpm@11.13.0 --activate
+          VERSION="$(pnpm --version)"
           echo "audit pnpm version: ${VERSION}"
           case "${VERSION}" in
             11.*) ;;
@@ -44,7 +49,8 @@ jobs:
               exit 1
               ;;
           esac
-          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0 --config.manage-package-manager-versions=false audit --audit-level=high
+      - name: pnpm audit（high 以上で失敗）
+        run: pnpm audit --audit-level=high
       - name: pnpm outdated（情報提供のみ）
         if: always()
         run: pnpm outdated --recursive || true
