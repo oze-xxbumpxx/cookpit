@@ -49,38 +49,57 @@ echo "created: $OUT"
 
 # subagent-log から agents.calls を自動補完（feature が一致する行を数える）
 # AGENT_CALLS は set -u 環境での unbound variable を防ぐため必ず初期化する
-# （2026-07-11 に 65 行目付近で unbound variable 障害の報告あり・再現不能のため防御的修正）
+# （2026-07-11 に unbound variable 障害の報告あり・IMP-2026-024 の防御的修正）
 AGENT_CALLS="0"
+# node へは環境変数で渡し、シェル展開を node -e 文字列に埋め込まない（set -u / 特殊文字対策）
 SUBAGENT_LOG="$ROOT/.claude/state/subagent-log.jsonl"
 if [ -f "$SUBAGENT_LOG" ]; then
-  AGENT_CALLS="$(node -e "
-const fs = require('fs');
-const lines = fs.readFileSync('$SUBAGENT_LOG', 'utf8').trim().split('\n').filter(Boolean);
-const n = lines.filter(l => { try { return JSON.parse(l).feature === '$FEATURE'; } catch { return false; } }).length;
-process.stdout.write(String(n));
-" 2>/dev/null || echo '0')"
-  if [ "${AGENT_CALLS:-0}" -gt 0 ] 2>/dev/null; then
+  AGENT_CALLS="$(
+    COOKPIT_METRICS_OUT="$OUT" \
+    COOKPIT_METRICS_FEATURE="$FEATURE" \
+    COOKPIT_METRICS_SUBAGENT_LOG="$SUBAGENT_LOG" \
     node -e "
 const fs = require('fs');
-let t = fs.readFileSync('$OUT', 'utf8');
-t = t.replace(/^  calls: unknown/m, '  calls: ${AGENT_CALLS:-0}  # subagent-log から自動集計');
-fs.writeFileSync('$OUT', t);
-" 2>/dev/null && echo "agents.calls を自動補完: ${AGENT_CALLS:-0}（subagent-log の feature=$FEATURE 行数）"
+const log = process.env.COOKPIT_METRICS_SUBAGENT_LOG;
+const feature = process.env.COOKPIT_METRICS_FEATURE;
+const lines = fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
+const n = lines.filter((l) => {
+  try { return JSON.parse(l).feature === feature; } catch { return false; }
+}).length;
+process.stdout.write(String(n));
+" 2>/dev/null || echo '0'
+  )"
+  AGENT_CALLS="${AGENT_CALLS:-0}"
+  if [ "$AGENT_CALLS" -gt 0 ] 2>/dev/null; then
+    COOKPIT_METRICS_OUT="$OUT" \
+    COOKPIT_METRICS_AGENT_CALLS="$AGENT_CALLS" \
+    node -e "
+const fs = require('fs');
+const out = process.env.COOKPIT_METRICS_OUT;
+const n = process.env.COOKPIT_METRICS_AGENT_CALLS;
+let t = fs.readFileSync(out, 'utf8');
+t = t.replace(/^  calls: unknown/m, '  calls: ' + n + '  # subagent-log から自動集計');
+fs.writeFileSync(out, t);
+" && echo "agents.calls を自動補完: ${AGENT_CALLS}（subagent-log の feature=${FEATURE} 行数）"
   fi
 fi
 
 # docs の有無から process.missing_documents を自動補完
 MISSING=0
-[ ! -f "$ROOT/docs/designs/${FEATURE}.md" ]              && MISSING=$((MISSING+1))
-[ ! -f "$ROOT/docs/implementation-plans/${FEATURE}.md" ] && MISSING=$((MISSING+1))
-[ ! -f "$ROOT/docs/tests/${FEATURE}.md" ]                && MISSING=$((MISSING+1))
+if [ ! -f "$ROOT/docs/designs/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
+if [ ! -f "$ROOT/docs/implementation-plans/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
+if [ ! -f "$ROOT/docs/tests/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
 if [ "$LEVEL" -ge 2 ] 2>/dev/null && [ "$MISSING" -gt 0 ]; then
+  COOKPIT_METRICS_OUT="$OUT" \
+  COOKPIT_METRICS_MISSING="$MISSING" \
   node -e "
 const fs = require('fs');
-let t = fs.readFileSync('$OUT', 'utf8');
-t = t.replace(/^  missing_documents: 0/m, '  missing_documents: $MISSING  # docs 存在チェックから自動補完');
-fs.writeFileSync('$OUT', t);
-" 2>/dev/null && echo "process.missing_documents を自動補完: $MISSING"
+const out = process.env.COOKPIT_METRICS_OUT;
+const n = process.env.COOKPIT_METRICS_MISSING;
+let t = fs.readFileSync(out, 'utf8');
+t = t.replace(/^  missing_documents: 0/m, '  missing_documents: ' + n + '  # docs 存在チェックから自動補完');
+fs.writeFileSync(out, t);
+" && echo "process.missing_documents を自動補完: ${MISSING}"
 fi
 
 # machine セクション（所要時間・トークン・Agent 呼び出し・ゲート実行）を transcript から自動集計

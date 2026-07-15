@@ -11,7 +11,7 @@ agents:
   unnecessary_calls: unknown
 
 quality:
-  tests_added: unknown # MVP1 はテストランナー未導入のため通常 unknown
+  tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
   initial_test_failures: unknown
   reviewer_critical: 0
   reviewer_major: 0
@@ -32,3 +32,16 @@ machine:
   # 合計値（agent_restarts / gate_rework_rate は手戻りプロキシ）。複数セッションのタスクは
   # 各セッション末に再実行すると session_id / ts 単位で累積される。
   # 実行: node .claude/scripts/collect-task-metrics.mjs --feature <feature> --task-id <task-id> --write
+  # フェーズ比較: machine.totals.agent_calls_by_type をフェーズの機械プロキシとする
+  # （requirements-analyst / architecture-designer / implementer / reviewer 等）。
+  # before/after を設計フェーズ限定で比較するときは、下の phases を手で埋めるか
+  # agent_calls_by_type から対象 Agent だけを抜き出す（セッション全体との混同を避ける）。
+
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+# 機械自動では埋めない。不明な欄は unknown のまま。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }

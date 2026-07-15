@@ -23,12 +23,12 @@ const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 // Agent() ツールの保持を許可する Agent（指揮・改善統括、および検証目的の reviewer）
 const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager', 'reviewer']);
+// Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
+const BUILTIN_AGENTS = new Set(['Explore']);
 // 人間承認が必要な保護対象（improvement-cycle.md §承認境界）
 function isProtected(rel) {
   return (
-    rel === 'CLAUDE.md' ||
-    rel.startsWith('.claude/agents/') ||
-    rel === '.claude/settings.json'
+    rel === 'CLAUDE.md' || rel.startsWith('.claude/agents/') || rel === '.claude/settings.json'
   );
 }
 
@@ -122,7 +122,7 @@ function blockExit(reasons) {
   process.stderr.write(
     '⛔ Agent 設定の検証エラー（構文・整合性）— 修正してください:\n' +
       reasons.map((r) => ` - ${r}`).join('\n') +
-      '\n参照: docs/claude-code/improvement-cycle.md §承認境界\n'
+      '\n参照: docs/claude-code/improvement-cycle.md §承認境界\n',
   );
   process.exit(2);
 }
@@ -137,7 +137,7 @@ function warnExit(warnings) {
           warnings.map((w) => ` - ${w}`).join('\n') +
           '\n保護ファイルの恒久変更は improvement-cycle.md §承認境界 に従い人間承認が必要です。',
       },
-    })
+    }),
   );
   process.exit(0);
 }
@@ -209,10 +209,11 @@ function main() {
           const refs = referencedAgents(fm.tools);
           if (refs.length > 0 && fm.name && !AGENT_TOOL_ALLOWED.has(fm.name)) {
             warns.push(
-              `${rel}: Agent() ツールは ${[...AGENT_TOOL_ALLOWED].join(' / ')} のみ想定（過剰権限の疑い）`
+              `${rel}: Agent() ツールは ${[...AGENT_TOOL_ALLOWED].join(' / ')} のみ想定（過剰権限の疑い）`,
             );
           }
           for (const r of refs) {
+            if (BUILTIN_AGENTS.has(r)) continue;
             if (!existsSync(join(ROOT, `.claude/agents/${r}.md`))) {
               warns.push(`${rel}: 参照先 Agent が存在しません: ${r}`);
             }

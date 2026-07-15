@@ -94,6 +94,9 @@ scope（任意）: recipe | product | meal-plan | shopping-list | pantry | infra
 ### インポート・エクスポート
 
 - **デフォルトエクスポートは禁止**。名前付きエクスポートのみ使用する。
+  - **例外**: Next.js App Router が要求する `app/**/page.tsx` / `layout.tsx` /
+    `loading.tsx` / `error.tsx` / `not-found.tsx` / `template.tsx` / `default.tsx`。
+    フレームワーク規約のため許可する。
 - 型のみのインポートは `import type` を使う。
 - 相対インポート（`./`）を優先する。
 

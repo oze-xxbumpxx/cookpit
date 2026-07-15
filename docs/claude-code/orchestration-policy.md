@@ -90,11 +90,16 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
 
 1. **作業ブランチ必須**。main への直コミットは禁止（lefthook pre-commit の branch-guard がブロック）。
 2. **受け入れレビュー必須**。`review-codex-implementation` Skill を PR 作成前に実行し、
-   結果（機械チェック・品質ゲート・チェックリスト判定）を PR 本文または `docs/reviews/` に記録する。
+   結果（機械チェック・品質ゲート・チェックリスト判定）を
+   `docs/reviews/<feature>.md` に追記する（**必須**。複数 Task の feature では Task 単位で追記）。
+   PR 本文への要約転記は任意（正本は常に `docs/reviews/`）。
    受け入れレビューが Orchestrator 経路の reviewer 工程に相当する（省略ではなく代替）。
 3. **reflection-agent は Codex ルートでも実施**する（feature 完了時）。
 4. 実装途中でルートを切り替えた場合（Orchestrator ⇔ Codex）、実装計画の「実装ルート」欄を
    更新し、切替理由を日次ログに残す。
+5. **PR 作成・マージの主体**: 受け入れレビュー合格後、作業ブランチからの draft/open PR 作成は
+   Orchestrator（またはレビュー実施セッション）が行い、**main へのマージ判断は人間**が行う。
+   （出典: shopping-list-core 事象 7 — 合格後の受け渡しが暗黙だった問題の明文化）
 
 ## 並列実行の指針
 
@@ -123,16 +128,28 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
   `{ agent, purpose, expected_outputs[] }` を追記する。単一 Sub-agent の同期委譲では追記しない。
 - resume 直後（未処理エントリがある場合のみ）は notification を待たず expected_outputs の
   存在で完了を冪等判定する。stop していない通常フローでは発動しない。
-- 単一 Sub-agent への委譲は同期待機を既定とし、background は複数 Sub-agent の明示的並列化に
-  限定する（stop を跨ぐ揮発状態を最小化）。
+- 単一 Sub-agent への委譲は**同期待機を意図**する（stop を跨ぐ揮発状態を最小化）。ただし
+  実行環境によっては `run_in_background: false` を指定しても Agent ツールが常に background
+  起動になることがある（後述の既知の制約）。その場合も完了判定は notification に依存せず、
+  期待成果物の存在確認（本節・IMP-2026-009）で行う。
+- background の**意図的な利用**は、複数 Sub-agent の明示的並列化に限定する。
 - **クリアタイミング**: `reflection-agent` 起動時、または feature 完了報告前に空にする。
 - **追記責務**: 委譲指示の禁止事項に「`inflight-agents.json` の追記を成果物確定前に行わない」を
   明記し、部分書き込みによる完了誤判定を防ぐ。
-- **L1/L2 の同期委譲への拡張**（2026-07-03 ドライラン検証で発見）: `inflight-agents.json` は
-  L3 background 限定だが、L1/L2 の単一 Sub-agent 同期委譲でも resume 直後に「直前の委譲が完了したか
+- **L1/L2 の単一 Sub-agent 委譲への拡張**（2026-07-03 ドライラン検証で発見）: `inflight-agents.json` は
+  L3 background 限定だが、L1/L2 の単一 Sub-agent 委譲でも resume 直後に「直前の委譲が完了したか
   分からない」状況は起こりうる（実測: L2 タスクで architecture-designer が resume 後に二重起動）。
   エントリの有無に関わらず、resume 直後で直前の一手が Sub-agent 委譲だった場合は期待成果物の存在・
   更新時刻を確認してから次を決める（`.claude/agents/orchestrator.md` §進め方 4 参照）。
+
+### 既知の制約: 単一 Sub-agent 委譲でも background 起動になり得る
+
+2026-07-09 meal-plan-screens で観測。orchestration-policy は単一委譲を同期待機意図としているが、
+一部環境では Agent ツールが `run_in_background: false` 指定でも常に background 起動になる。
+Cookpit の Agent 定義だけでは起動方式を強制できない場合がある。
+
+- **運用**: 完了は notification 待ちではなく、期待成果物の存在・更新で冪等判定する（IMP-2026-009）。
+- **計測**: SubagentStop Hook / `current-feature` 事前設定（IMP-2026-019）と組み合わせる。
 
 ### 既知の制約: Orchestrator を Agent ツールで子エージェントとして起動した場合
 
@@ -271,7 +288,8 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 - 散らかったままの大量ファイルを、軽いモデルで整理する前に上位モデルへ流し込まない。
 
 > `Explore` は Claude Code の組み込み Agent のため `.claude/agents/` に定義ファイルが無い。
-> Agent 設定チェック Hook の「参照先 Agent が存在しません: Explore」警告は誤検知として扱う。
+> `validate-agent-config.mjs` は `BUILTIN_AGENTS`（現状 `Explore`）を存在チェックから除外する
+> （IMP-2026-021）。組み込みを増やす場合は同 Set に追加する。
 
 ### Agent 別早見表
 

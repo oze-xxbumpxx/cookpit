@@ -10,7 +10,8 @@ description: >
 
 `apps/web` の画面を実際に起動して確認する。テスト green でも実画面でしか分からない
 問題（Tailwind クラスタイポ・結線漏れ・レイアウト崩れ）を検出する。
-（出典: `logs/2026-06-24.md`・`logs/2026-06-26.md` タスク3 の実績を手順化）
+（出典: `logs/2026-06-24.md`・`logs/2026-06-26.md` タスク3 の実績を手順化。
+自動化成功パターン: meal-plan-screens / shopping-list-screens）
 
 ## 発動条件
 
@@ -32,12 +33,35 @@ description: >
    スクリーンショットを撮って報告に添える。
 4. **環境制約の扱い**: リモート環境は `dev:pglite` で DB 経路も live 確認できる。
    BLOCKED は PGlite でも動かない項目（Neon 固有機能・PWA/Service Worker 等）に限定する。
-   - 動かない項目は **BLOCKED（理由: DB 未接続）** とし、擬似的に PASS 扱いしない。
+   - 動かない項目は **BLOCKED（理由: …）** とし、擬似的に PASS 扱いしない。
    - BLOCKED 項目は該当コードのコードリーディングで実装の正しさを確認し、
-     「コード確認済み・DB 接続があれば PASS 見込み」と補足する
-     （実例: `logs/2026-06-26.md` — 404 とキャンセルは live 確認、初期値/保存はコード確認で補完）。
+     「コード確認済み・完全確認に必要な条件」と補足する。
+   - **PWA / Service Worker（MB 系）**: 本番ビルドは `db/client.ts` の pglite 分岐を
+     dead code 除去するため、リモートでは「本番ビルド + DB」が原理的に成立しない。
+     PWA 項目はローカル（Neon 等の実 DB）確認事項として BLOCKED 理由にその旨を書く
+     （出典: shopping-list-screens 事象 4）。
 5. FAIL を見つけたら、該当箇所（path:line）と再現手順を添えて報告する（修正は依頼元の
    フローに従う。勝手にスコープ外修正をしない）。
+
+## 自動化の型（リモートで推奨）
+
+meal-plan-screens / shopping-list-screens で再現した型。毎回ゼロから探らない。
+
+1. `pnpm --filter @cookpit/web dev:pglite` で起動を待つ
+2. 必要なら API レスポンス形を事前確認（空状態・シード有無）
+3. Playwright スクリプトは**対象パッケージ配下**（例: `apps/web/scripts/`）に置く
+   （リポジトリ直下だと import 解決に失敗しやすい）
+4. セレクタは **role / label / placeholder ベース**（CSS クラス依存を避ける）
+5. 項目ごとに PASS / BLOCKED(理由) / FAIL を機械的に出力する
+
+### 既知の UI 操作メモ（ライブラリ固有・簡潔に）
+
+| 対象                     | 注意                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `type="search"` の input | role は `textbox` ではなく **`searchbox`**                                                  |
+| 同梱 Chromium            | `executablePath` を明示しないと起動しない環境がある                                         |
+| Base UI SelectField      | ネイティブ `<select>` ではない。`getByLabel(...).click()` → `getByRole('option', { name })` |
+| 確認スクリプトの置き場   | `apps/web` 配下（パッケージの依存解決が通る場所）                                           |
 
 ## 完了条件
 
@@ -51,3 +75,5 @@ description: >
 
 - `logs/2026-06-26.md` タスク3 — レシピ編集画面の 4 項目を「live 確認 2 / コード確認補完 2
   （BLOCKED 理由つき）」に分けて報告。環境制約下でも確認の抜けと過大報告の両方を防いだ。
+- meal-plan-screens — `dev:pglite` + Playwright で MB-01〜08 全 PASS（リモート自動化の初成功）。
+- shopping-list-screens — 同型で MB 12 項目 live PASS。PWA 3 項目は本番ビルド制約で BLOCKED。

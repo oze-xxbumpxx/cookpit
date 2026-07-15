@@ -37,17 +37,26 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
    実例: `docs/tasks/codex/01〜05`）。1 ファイル = 1 タスク = Codex の 1 セッションが目安。
 3. `docs/tasks/codex/<feature>/` に `README.md`（タスク一覧・確定値表・完了条件）と
    `NN-<layer>.md`（各指示書）を下記テンプレートで作成する。
-4. 各指示書に**必ず**含める（過去の Codex ミス実績への先回り。出典: docs/06-ai-tools.md）:
-   - アーキテクチャ制約の抜粋（依存方向 / create・reconstruct / any 禁止 / default export 禁止 /
+4. 各指示書に**必ず**含める（過去の Codex ミス実績への先回り。出典: docs/06-ai-tools.md /
+   shopping-list-core 事象 1・4 で初回 FAIL 0 を再現した必須パターン）:
+   - アーキテクチャ制約の抜粋（依存方向 / create・reconstruct / any 禁止 /
+     default export 禁止※Next.js page/layout 等は例外・正典は coding-standards.md /
      import type / 値なしは null）
    - 期待するクラス・関数シグネチャ（タイポ照合の基準になる正確な識別子名）
-   - 命名の明示（DB テーブルは複数形、など傾向ずれが既知のもの）
+   - **「命名・記法の注意（過去の Codex ミス実績への先回り）」節（必須・空欄不可）**:
+     直近の `docs/claude-code/improvements/candidates/` と docs/06-ai-tools.md チェックリストから、
+     **この Task で起きうる既知ミス型**を具体的に列挙する（汎用コピペ禁止。feature/層ごとに抽出）。
+     例: ルート変数の単複、`'use client'` 要否、三項演算子の向き、`param`+`json` 2 バリデータ、
+     名前衝突（同名型の二重定義）など。
    - `'use client'` の要否（UI タスクの場合、ファイルごとに明記）
    - 完了条件（`pnpm lint` / `pnpm type-check` / `pnpm test` 全 green + 機能条件）
-5. 生成後、指示書を docs/06-ai-tools.md「Codex 実装のレビューチェックリスト」の観点で
+5. 指示書にサンプルコードを置く場合は、**サンプル自体を敵対的に一度読む**（catch の捕捉範囲・
+   エラーパスの前提・Zod 境界がサンプルどおりか）。指示書由来のバグは Codex が忠実にコピーする
+   （出典: shopping-list-core 事象 2）。疑わしければサンプルを短くするか、境界を厳守事項に書く。
+6. 生成後、指示書を docs/06-ai-tools.md「Codex 実装のレビューチェックリスト」の観点で
    セルフチェックする（指示書側の曖昧さがミスの温床になるため）。
-6. ユーザーへ「Codex への貼り付け手順」（playbook のコピペプロンプト）と、実装完了後の
-   レビュー手順（チェックリスト + 実画面確認）を提示して引き渡す。
+7. ユーザーへ「Codex への貼り付け手順」（playbook のコピペプロンプト）と、実装完了後の
+   レビュー手順（`review-codex-implementation` + `docs/reviews/<feature>.md` 追記）を提示して引き渡す。
 
 ## 指示書テンプレート（NN-<layer>.md）
 
@@ -66,13 +75,17 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
 
 <ファイルパスごとに、期待するシグネチャをコードブロックで明示>
 
-## 命名・記法の注意
+## 命名・記法の注意（過去の Codex ミス実績への先回り）【必須】
 
-<テーブル複数形・識別子の正確な綴りなど、既知の傾向ずれ>
+- <この Task 固有の既知ミス型 1（具体的な正しい綴り・向き・要否）>
+- <この Task 固有の既知ミス型 2>
+- （該当が無い場合でも「本 Task で注意すべき既知ミス型: なし（理由）」と明記。節自体は削除しない）
 
 ## テスト
 
-<co-located の \*.test.ts。試験計画から該当ケースを転記>
+<co-located のテストファイル名。対象パッケージの vitest `include` に合う拡張子にする
+（apps/web 例: `*.node.test.ts` / `*.dom.test.ts` / `*.test.tsx`。素の `*.test.ts` は
+server 配下以外では silent skip になる）>
 
 ## 完了条件
 
@@ -84,4 +97,5 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
 
 - `docs/tasks/codex/<feature>/README.md` と全指示書が存在し、未決事項が確定値表になっている。
 - 各指示書が自己完結している（プロジェクト文脈なしで実装可能か、の観点で読み直した）。
-- レビュー計画（チェックリスト適用 + 実画面確認の要否）をユーザーに提示済み。
+- 各指示書に「命名・記法の注意（過去の Codex ミス実績への先回り）」節がある（空欄・削除なし）。
+- レビュー計画（チェックリスト適用 + `docs/reviews/` 追記 + 実画面確認の要否）をユーザーに提示済み。
