@@ -140,3 +140,23 @@ export const shoppingItems = pgTable(
 
 export type ShoppingItemRow = typeof shoppingItems.$inferSelect;
 export type NewShoppingItemRow = typeof shoppingItems.$inferInsert;
+
+export const stocks = pgTable(
+  'stocks',
+  {
+    id: text('id').primaryKey(),
+    productId: text('product_id'),
+    displayName: text('display_name').notNull(),
+    amountValue: numeric('amount_value', { precision: 10, scale: 3 }).notNull(),
+    amountUnit: text('amount_unit').notNull(),
+    purchasedAt: timestamp('purchased_at').notNull(),
+    expiresAt: date('expires_at'),
+    storedLocation: text('stored_location'),
+    sourceShoppingItemId: text('source_shopping_item_id').unique(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('stocks_product_id_idx').on(table.productId)],
+);
+
+export type StockRow = typeof stocks.$inferSelect;
+export type NewStockRow = typeof stocks.$inferInsert;
