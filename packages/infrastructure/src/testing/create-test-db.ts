@@ -96,6 +96,21 @@ CREATE TABLE IF NOT EXISTS shopping_items (
 );
 
 CREATE INDEX IF NOT EXISTS shopping_items_shopping_list_id_idx ON shopping_items (shopping_list_id);
+
+CREATE TABLE IF NOT EXISTS stocks (
+  id text PRIMARY KEY,
+  product_id text,
+  display_name text NOT NULL,
+  amount_value numeric(10, 3) NOT NULL,
+  amount_unit text NOT NULL,
+  purchased_at timestamp NOT NULL,
+  expires_at date,
+  stored_location text,
+  source_shopping_item_id text UNIQUE,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS stocks_product_id_idx ON stocks (product_id);
 `;
 
 export async function createTestDb(): Promise<DrizzleClient> {
