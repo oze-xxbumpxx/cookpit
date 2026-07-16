@@ -14,6 +14,7 @@ Orchestrator は作業開始時にレベルを判定し、判定理由を簡潔�
 コード調査 / 原因分析 / 設計相談 / 実装案比較 / ドキュメントの説明。
 
 成果物：
+
 - 調査結果（必要なら提案書）。**プロダクションコードは変更しない。**
 - 設計書・実装計画・ADR は作らない。`.claude/state/current-feature` も設定しない。
 
@@ -23,6 +24,7 @@ Orchestrator は作業開始時にレベルを判定し、判定理由を簡潔�
 明らかな小規模バグ修正。
 
 成果物：
+
 - 設計書・実装計画は原則不要
 - 最終報告に「変更理由」と「確認した内容」を記載
 
@@ -32,6 +34,7 @@ Orchestrator は作業開始時にレベルを判定し、判定理由を簡潔�
 既存処理の変更。
 
 成果物：
+
 ```
 docs/designs/<feature-name>.md
 docs/implementation-plans/<feature-name>.md
@@ -45,6 +48,7 @@ docs/tests/<feature-name>.md
 外部サービス連携 / アーキテクチャ変更 / 既存データの移行。
 
 成果物：
+
 ```
 docs/requirements/<feature-name>.md
 docs/designs/<feature-name>.md
@@ -67,6 +71,7 @@ docs/reviews/<feature-name>.md
 - 対象外の項目は削除せず「対象外」または「変更なし」と明記する（設計書テンプレート参照）
 
 成果物の作成手順とテンプレートは各 Skill に定義している。
+
 - 設計書 … `create-design-document`
 - 実装計画 … `create-implementation-plan`
 - 試験計画 … `create-test-plan`
@@ -91,3 +96,15 @@ Hook で機械的に判定できない整合性（要件と実装の意味的な
 `docs/04-domain-model.md` など）は引き続き正典。feature 単位の成果物（`docs/designs/` 等）は
 それらを参照し、重要な意思決定が恒久ドキュメントに昇格すべき場合は ADR
 （`docs/decisions/`・採番は ADR-0005 から — `.claude/skills/create-adr/SKILL.md`）として残す。
+
+## notes/（未整形メモ）
+
+`notes/` はユーザーが Obsidian で書き溜める未整形メモ（アイディア・改善の種）の置き場で、
+**変更レベル成果物（L1〜L3）の置き場ではない**（本ポリシーの成果物パス規約の対象外）。
+Claude が読むのは、ユーザーが明示的に指したとき、またはタスクに直接関連するメモの存在を
+伝えられたときのみ。セッション開始時の必読には含めない。
+
+住み分け: notes/ は「人間側の inbox」、Auto Memory は「Agent 側の inbox」。
+昇格ルール（docs/ の型への落とし方）は [notes/README.md](../../notes/README.md) を正とし、
+[memory-policy.md](./memory-policy.md) / [improvement-cycle.md](./improvement-cycle.md) の
+段階原則と競合させない。
