@@ -1,0 +1,5 @@
+{
+  "folder": "logs",
+  "format": "YYYY-MM-DD",
+  "template": "logs/_template"
+}

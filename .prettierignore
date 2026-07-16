@@ -3,3 +3,4 @@ node_modules
 dist
 .turbo
 pnpm-lock.yaml
+.obsidian

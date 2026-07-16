@@ -52,3 +52,10 @@ docs/designs/wireframes/*.pdf
 
 # PGlite dev DB（リモート実画面確認用。scripts/setup-pglite-dev.mjs が生成）
 apps/web/.pglite-dev/
+
+# Obsidian（リポジトリルートを Vault として開く。共有設定のみコミット）
+.obsidian/*
+!.obsidian/app.json
+!.obsidian/appearance.json
+!.obsidian/core-plugins.json
+!.obsidian/daily-notes.json
