@@ -8,6 +8,7 @@
   "tag-pane": true,
   "page-preview": true,
   "daily-notes": true,
+  "bases": true,
   "templates": false,
   "command-palette": true,
   "bookmarks": true,

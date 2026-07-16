@@ -11,6 +11,8 @@ Obsidian でリポジトリルートを Vault として開いたとき、新規�
 
 - **構成**: フォルダは掘らず、notes/ 直下にフラットに置く。`notes/attachments/` は
   Obsidian の画像貼り付け先（手動では触らない）。
+- **一覧**: `_dashboard.base`（Obsidian 1.9+ の Bases）で未昇格メモを status / created の
+  テーブルで見られる。frontmatter を付けたメモだけが状態列に値を持つ。
 - **命名**: `<topic>.md`（kebab-case。docs の feature-name 規約と揃える）。
 - **frontmatter（任意・notes/ 限定）**: 使う場合は次の 2 キーのみ。既存 docs/ への遡及付与はしない。
 
