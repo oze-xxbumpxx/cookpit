@@ -24,6 +24,14 @@ export class Quantity {
     return Quantity.of(this.quantityValue + other.quantityValue, this.quantityUnit);
   }
 
+  /** @throws Error 単位が一致しない、または結果が負値になる場合（`Quantity.of` の検証に委ねる） */
+  subtract(other: Quantity): Quantity {
+    if (this.quantityUnit !== other.quantityUnit) {
+      throw new Error('Cannot subtract different units');
+    }
+    return Quantity.of(this.quantityValue - other.quantityValue, this.quantityUnit);
+  }
+
   get value(): number {
     return this.quantityValue;
   }

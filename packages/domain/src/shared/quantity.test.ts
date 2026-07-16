@@ -49,4 +49,37 @@ describe('Quantity', () => {
     expect(result.value).toBe(200);
     expect(result.unit).toBe('g');
   });
+
+  it('subtract で同じ単位の値を減算する', () => {
+    const result = Quantity.of(300, 'g').subtract(Quantity.of(100, 'g'));
+
+    expect(result.value).toBe(200);
+    expect(result.unit).toBe('g');
+  });
+
+  it('subtract で異なる単位は拒否する', () => {
+    expect(() => Quantity.of(300, 'g').subtract(Quantity.of(100, 'ml'))).toThrow(
+      'Cannot subtract different units',
+    );
+  });
+
+  it('subtract の結果が負値になる場合は拒否する', () => {
+    expect(() => Quantity.of(100, 'g').subtract(Quantity.of(300, 'g'))).toThrow(
+      'Quantity must be non-negative',
+    );
+  });
+
+  it('subtract で 0 を引くと元の値になる', () => {
+    const result = Quantity.of(300, 'g').subtract(Quantity.of(0, 'g'));
+
+    expect(result.value).toBe(300);
+    expect(result.unit).toBe('g');
+  });
+
+  it('subtract で同じ値を引くと 0 になる', () => {
+    const result = Quantity.of(300, 'g').subtract(Quantity.of(300, 'g'));
+
+    expect(result.value).toBe(0);
+    expect(result.unit).toBe('g');
+  });
 });
