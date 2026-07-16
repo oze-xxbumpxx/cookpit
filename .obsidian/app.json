@@ -6,5 +6,9 @@
   "newFileLocation": "folder",
   "newFileFolderPath": "notes",
   "trashOption": "system",
-  "userIgnoreFilters": ["apps/", "packages/", "node_modules/"]
+  "userIgnoreFilters": [
+    "apps/",
+    "packages/",
+    "node_modules/"
+  ]
 }
