@@ -560,6 +560,18 @@ describe('MarkAsBoughtUseCase', () => {
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
   });
 
+  it('不正な価格は Domain のバリデーションエラーを伝搬し、ShoppingItemNotFoundError に握り潰さない', async () => {
+    shoppingListRepository.seed(seededShoppingList());
+
+    const promise = new MarkAsBoughtUseCase(shoppingListRepository).execute({
+      ...input,
+      actualPrice: { amount: -1, currency: 'JPY' },
+    });
+
+    await expect(promise).rejects.toThrow('Money amount must be non-negative');
+    await expect(promise).rejects.not.toBeInstanceOf(ShoppingItemNotFoundError);
+  });
+
   it('bought への再適用は最新の購入実績で上書きする', async () => {
     shoppingListRepository.seed(
       seededShoppingList('active', [
