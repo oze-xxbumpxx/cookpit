@@ -31,11 +31,12 @@ export class ReassignStoreUseCase {
     }
 
     const itemId = ShoppingItemId.fromString(input.itemId);
-    try {
-      shoppingList.reassignStore(itemId, StoreId.fromString(input.targetStoreId));
-    } catch {
+    const itemExists = shoppingList.items.some((item) => item.id.equals(itemId));
+    if (!itemExists) {
       throw new ShoppingItemNotFoundError(input.itemId);
     }
+
+    shoppingList.reassignStore(itemId, StoreId.fromString(input.targetStoreId));
 
     await this.shoppingListRepository.save(shoppingList);
     const updated = shoppingList.items.find((item) => item.id.equals(itemId));

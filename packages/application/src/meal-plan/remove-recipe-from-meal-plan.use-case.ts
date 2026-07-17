@@ -23,11 +23,11 @@ export class RemoveRecipeFromMealPlanUseCase {
       throw new PlannedRecipeNotFoundError(input.plannedRecipeId);
     }
 
-    try {
-      mealPlan.removeRecipe(plannedRecipeId);
-    } catch {
+    if (mealPlan.status !== 'draft' && mealPlan.status !== 'shopping') {
       throw new InvalidMealPlanStateError(mealPlan.status, 'removeRecipe');
     }
+
+    mealPlan.removeRecipe(plannedRecipeId);
 
     await this.mealPlanRepository.save(mealPlan);
   }

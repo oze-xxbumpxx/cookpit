@@ -32,15 +32,16 @@ export class MarkAsBoughtUseCase {
     }
 
     const itemId = ShoppingItemId.fromString(input.itemId);
-    try {
-      shoppingList.markAsBought(
-        itemId,
-        Money.of(input.actualPrice.amount, input.actualPrice.currency),
-        StoreId.fromString(input.actualStoreId),
-      );
-    } catch {
+    const itemExists = shoppingList.items.some((item) => item.id.equals(itemId));
+    if (!itemExists) {
       throw new ShoppingItemNotFoundError(input.itemId);
     }
+
+    shoppingList.markAsBought(
+      itemId,
+      Money.of(input.actualPrice.amount, input.actualPrice.currency),
+      StoreId.fromString(input.actualStoreId),
+    );
 
     await this.shoppingListRepository.save(shoppingList);
     const updated = shoppingList.items.find((item) => item.id.equals(itemId));
