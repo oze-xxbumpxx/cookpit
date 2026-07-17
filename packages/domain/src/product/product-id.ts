@@ -1,6 +1,6 @@
 import { Identifier, generateId } from '../shared/identifier';
 
-export class ProductId extends Identifier {
+export class ProductId extends Identifier<'ProductId'> {
   static generate(): ProductId {
     return new ProductId(generateId());
   }
