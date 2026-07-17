@@ -63,3 +63,7 @@ export interface ReassignStoreInputDto {
 export interface GetShoppingListInputDto {
   shoppingListId: string;
 }
+
+export interface CompleteShoppingInputDto {
+  shoppingListId: string;
+}
