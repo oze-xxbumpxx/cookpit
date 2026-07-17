@@ -1,21 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { Identifier, generateId } from '../shared/identifier';
 
-export class ShoppingItemId {
-  private constructor(private readonly shoppingItemIdValue: string) {}
-
+export class ShoppingItemId extends Identifier<'ShoppingItemId'> {
   static generate(): ShoppingItemId {
-    return new ShoppingItemId(randomUUID());
+    return new ShoppingItemId(generateId());
   }
 
   static fromString(value: string): ShoppingItemId {
     return new ShoppingItemId(value);
-  }
-
-  equals(other: ShoppingItemId): boolean {
-    return this.shoppingItemIdValue === other.shoppingItemIdValue;
-  }
-
-  get value(): string {
-    return this.shoppingItemIdValue;
   }
 }

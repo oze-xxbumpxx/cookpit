@@ -1,4 +1,3 @@
-import { getDb } from '@/db/client';
 import {
   addItemSchema,
   generateShoppingListSchema,
@@ -14,30 +13,14 @@ import {
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
 } from '@cookpit/application';
-import {
-  DrizzleMealPlanRepository,
-  DrizzleProductRepository,
-  DrizzleRecipeRepository,
-  DrizzleShoppingListRepository,
-} from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-
-function shoppingListRepository(): DrizzleShoppingListRepository {
-  return new DrizzleShoppingListRepository(getDb());
-}
-
-function mealPlanRepository(): DrizzleMealPlanRepository {
-  return new DrizzleMealPlanRepository(getDb());
-}
-
-function recipeRepository(): DrizzleRecipeRepository {
-  return new DrizzleRecipeRepository(getDb());
-}
-
-function productRepository(): DrizzleProductRepository {
-  return new DrizzleProductRepository(getDb());
-}
+import {
+  mealPlanRepository,
+  productRepository,
+  recipeRepository,
+  shoppingListRepository,
+} from '../repositories';
 
 /** Generate は新規作成時 201、冪等な既存返却時 200 を返す。 */
 export const shoppingListsRoute = new Hono()

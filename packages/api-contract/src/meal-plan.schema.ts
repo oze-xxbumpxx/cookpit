@@ -1,4 +1,5 @@
 import z from 'zod';
+import { idParamSchema } from './shared.schema';
 
 export const createMealPlanSchema = z.object({
   weekIdentifier: z.iso.date(),
@@ -9,12 +10,9 @@ export const addRecipeToMealPlanSchema = z.object({
   scaleFactor: z.number().positive(),
 });
 
-export const mealPlanIdParamSchema = z.object({
-  id: z.uuid(),
-});
+export const mealPlanIdParamSchema = idParamSchema;
 
-export const plannedRecipeIdParamSchema = z.object({
-  id: z.uuid(),
+export const plannedRecipeIdParamSchema = idParamSchema.extend({
   plannedRecipeId: z.uuid(),
 });
 

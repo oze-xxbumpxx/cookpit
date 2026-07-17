@@ -1,5 +1,6 @@
 import z from 'zod';
 import { unitSchema } from './recipe.schema';
+import { idParamSchema } from './shared.schema';
 
 const nonBlankString = z.string().refine((value) => value.trim() !== '', {
   message: 'required',
@@ -31,12 +32,9 @@ export const reassignStoreSchema = z.object({
   targetStoreId: z.uuid(),
 });
 
-export const shoppingListIdParamSchema = z.object({
-  id: z.uuid(),
-});
+export const shoppingListIdParamSchema = idParamSchema;
 
-export const shoppingItemIdParamSchema = z.object({
-  id: z.uuid(),
+export const shoppingItemIdParamSchema = idParamSchema.extend({
   itemId: z.uuid(),
 });
 

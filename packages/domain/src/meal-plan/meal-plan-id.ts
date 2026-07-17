@@ -1,21 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { Identifier, generateId } from '../shared/identifier';
 
-export class MealPlanId {
-  private constructor(private readonly mealPlanIdValue: string) {}
-
+export class MealPlanId extends Identifier<'MealPlanId'> {
   static generate(): MealPlanId {
-    return new MealPlanId(randomUUID());
+    return new MealPlanId(generateId());
   }
 
   static fromString(value: string): MealPlanId {
     return new MealPlanId(value);
-  }
-
-  equals(other: MealPlanId): boolean {
-    return this.mealPlanIdValue === other.mealPlanIdValue;
-  }
-
-  get value(): string {
-    return this.mealPlanIdValue;
   }
 }

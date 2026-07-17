@@ -1,4 +1,3 @@
-import { getDb } from '@/db/client';
 import {
   addRecipeToMealPlanSchema,
   createMealPlanSchema,
@@ -13,13 +12,9 @@ import {
   GetMealPlanHistoryUseCase,
   RemoveRecipeFromMealPlanUseCase,
 } from '@cookpit/application';
-import { DrizzleMealPlanRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-
-function mealPlanRepository(): DrizzleMealPlanRepository {
-  return new DrizzleMealPlanRepository(getDb());
-}
+import { mealPlanRepository } from '../repositories';
 
 export const mealPlansRoute = new Hono()
   .post('/', zValidator('json', createMealPlanSchema), async (c) => {

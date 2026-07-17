@@ -1,5 +1,9 @@
-import { getDb } from '@/db/client';
-import { createProductSchema, recordPriceSchema, updateProductSchema } from '@cookpit/api-contract';
+import {
+  createProductSchema,
+  idParamSchema,
+  recordPriceSchema,
+  updateProductSchema,
+} from '@cookpit/api-contract';
 import {
   CreateProductUseCase,
   DeleteProductUseCase,
@@ -9,20 +13,9 @@ import {
   RecordPriceUseCase,
   UpdateProductUseCase,
 } from '@cookpit/application';
-import { DrizzleProductRepository, DrizzleStoreRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { z } from 'zod';
-
-function productRepository(): DrizzleProductRepository {
-  return new DrizzleProductRepository(getDb());
-}
-
-function storeRepository(): DrizzleStoreRepository {
-  return new DrizzleStoreRepository(getDb());
-}
-
-const idParamSchema = z.object({ id: z.uuid() });
+import { productRepository, storeRepository } from '../repositories';
 
 export const productsRoute = new Hono()
   .get('/', async (c) => {

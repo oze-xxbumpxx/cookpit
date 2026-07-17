@@ -1,6 +1,7 @@
-export class StockNotFoundError extends Error {
+import { NotFoundError } from '../shared/errors';
+
+export class StockNotFoundError extends NotFoundError {
   constructor(stockId: string) {
-    super(`Stock not found: ${stockId}`);
-    this.name = 'StockNotFoundError';
+    super('Stock', stockId);
   }
 }

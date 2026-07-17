@@ -1,13 +1,8 @@
-import { getDb } from '@/db/client';
 import { createStoreSchema } from '@cookpit/api-contract';
 import { CreateStoreUseCase, GetStoresUseCase } from '@cookpit/application';
-import { DrizzleStoreRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-
-function storeRepository(): DrizzleStoreRepository {
-  return new DrizzleStoreRepository(getDb());
-}
+import { storeRepository } from '../repositories';
 
 export const storesRoute = new Hono()
   .get('/', async (c) => {
