@@ -1,5 +1,4 @@
-import { getDb } from '@/db/client';
-import { createRecipeSchema, updateRecipeSchema } from '@cookpit/api-contract';
+import { createRecipeSchema, idParamSchema, updateRecipeSchema } from '@cookpit/api-contract';
 import {
   CreateRecipeUseCase,
   DeleteRecipeUseCase,
@@ -7,16 +6,9 @@ import {
   GetRecipesUseCase,
   UpdateRecipeUseCase,
 } from '@cookpit/application';
-import { DrizzleRecipeRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { z } from 'zod';
-
-function recipeRepository(): DrizzleRecipeRepository {
-  return new DrizzleRecipeRepository(getDb());
-}
-
-const idParamSchema = z.object({ id: z.uuid() });
+import { recipeRepository } from '../repositories';
 
 export const recipesRoute = new Hono()
   .get('/', async (c) => {

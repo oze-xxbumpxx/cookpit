@@ -1,21 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { Identifier, generateId } from '../shared/identifier';
 
-export class StockId {
-  private constructor(private readonly stockIdValue: string) {}
-
+export class StockId extends Identifier {
   static generate(): StockId {
-    return new StockId(randomUUID());
+    return new StockId(generateId());
   }
 
   static fromString(value: string): StockId {
     return new StockId(value);
-  }
-
-  equals(other: StockId): boolean {
-    return this.stockIdValue === other.stockIdValue;
-  }
-
-  get value(): string {
-    return this.stockIdValue;
   }
 }

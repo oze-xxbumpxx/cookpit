@@ -1,6 +1,7 @@
-export class RecipeNotFoundError extends Error {
+import { NotFoundError } from '../shared/errors';
+
+export class RecipeNotFoundError extends NotFoundError {
   constructor(recipeId: string) {
-    super(`Recipe not found: ${recipeId}`);
-    this.name = 'RecipeNotFoundError';
+    super('Recipe', recipeId);
   }
 }

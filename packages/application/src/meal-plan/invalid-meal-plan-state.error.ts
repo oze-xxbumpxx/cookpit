@@ -1,8 +1,8 @@
+import { InvalidStateError } from '../shared/errors';
 import type { MealPlanStatus } from './meal-plan.dto';
 
-export class InvalidMealPlanStateError extends Error {
+export class InvalidMealPlanStateError extends InvalidStateError {
   constructor(current: MealPlanStatus, operation: string) {
-    super(`Cannot ${operation} a MealPlan with status '${current}'`);
-    this.name = 'InvalidMealPlanStateError';
+    super('MealPlan', current, operation);
   }
 }

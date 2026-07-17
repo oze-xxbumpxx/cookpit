@@ -1,6 +1,7 @@
-export class MealPlanNotFoundError extends Error {
+import { NotFoundError } from '../shared/errors';
+
+export class MealPlanNotFoundError extends NotFoundError {
   constructor(mealPlanId: string) {
-    super(`MealPlan not found: ${mealPlanId}`);
-    this.name = 'MealPlanNotFoundError';
+    super('MealPlan', mealPlanId);
   }
 }

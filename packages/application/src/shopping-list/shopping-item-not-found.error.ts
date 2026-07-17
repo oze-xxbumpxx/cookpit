@@ -1,6 +1,7 @@
-export class ShoppingItemNotFoundError extends Error {
+import { NotFoundError } from '../shared/errors';
+
+export class ShoppingItemNotFoundError extends NotFoundError {
   constructor(itemId: string) {
-    super(`ShoppingItem not found: ${itemId}`);
-    this.name = 'ShoppingItemNotFoundError';
+    super('ShoppingItem', itemId);
   }
 }

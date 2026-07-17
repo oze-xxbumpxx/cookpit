@@ -1,8 +1,8 @@
+import { InvalidStateError } from '../shared/errors';
 import type { ShoppingListStatus } from './shopping-list.dto';
 
-export class InvalidShoppingListStateError extends Error {
+export class InvalidShoppingListStateError extends InvalidStateError {
   constructor(current: ShoppingListStatus, operation: string) {
-    super(`Cannot ${operation} a ShoppingList with status '${current}'`);
-    this.name = 'InvalidShoppingListStateError';
+    super('ShoppingList', current, operation);
   }
 }
