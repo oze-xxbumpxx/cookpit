@@ -4,3 +4,4 @@ export * from './store';
 export * from './product';
 export * from './meal-plan';
 export * from './shopping-list';
+export * from './pantry';

@@ -8,3 +8,4 @@ export * from './shopping-list.mapper';
 export * from './shopping-list-not-found.error';
 export * from './shopping-item-not-found.error';
 export * from './invalid-shopping-list-state.error';
+export * from './complete-shopping.use-case';
