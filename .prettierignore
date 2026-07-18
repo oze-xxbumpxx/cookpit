@@ -4,3 +4,9 @@ dist
 .turbo
 pnpm-lock.yaml
 .obsidian
+# 日次ログは自動追記が多く、整形漏れで CI を落とさないため除外
+logs
+# 構成ファイル（CLAUDE.md / .claude 配下）は改善サイクルの承認境界の対象のため
+# 一括整形・CI format チェックの対象外とする
+.claude
+CLAUDE.md
