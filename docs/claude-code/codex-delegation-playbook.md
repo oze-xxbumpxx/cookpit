@@ -14,7 +14,8 @@ Codex への実装委譲を「指示書生成 → 実行 → レビュー → �
   └─ 実装ルート宣言: 「指示書に書き切れるなら Codex」（06-ai-tools）
        │
        ├─ Codex 委譲ルート
-       │    1. Claude Code: 設計・実装計画を確定（L2/L3 は docs/designs + implementation-plans）
+       │    1. Claude Code: 設計・実装計画を確定（L2/L3 は docs/designs + implementation-plans。
+       │       実装計画は Codex 軽量モード＝分解・依存・完了条件のみ。完成コードはブリーフが正本）
        │    2. Claude Code: create-codex-brief Skill で docs/tasks/codex/<feature>/ を生成
        │    3. 人間: Codex に指示書を渡して実行（下記コピペプロンプト）
        │    4. Claude Code: レビュー（06-ai-tools チェックリスト + 実画面確認）
