@@ -63,3 +63,7 @@ description: >
 - 「次回やること」が、次セッションの kickoff-session がそのまま拾える具体性を持つ。
 - 未プッシュのコミットが残っていない（エフェメラル環境では成果消失に直結するため必須）。
 - L2/L3 タスクでメトリクス・振り返りを飛ばしていない（飛ばした場合は理由を報告に明記）。
+- 複数 Task の Codex 委譲 feature では、main マージ済み Task 分の
+  docs/reviews/<feature>.md 記録が揃っているか
+  `node .claude/scripts/check-review-coverage.mjs <feature>` で確認する
+  （空配列 = 網羅済み。出典: pantry-core 事象 2 / IMP-2026-020 適用後の再発）。

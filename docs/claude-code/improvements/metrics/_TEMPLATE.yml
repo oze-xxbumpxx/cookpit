@@ -10,6 +10,13 @@ agents:
   retries: unknown # 再依頼回数
   unnecessary_calls: unknown
 
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+# IMP-2026-025 の効果実測をモデル条件込みで比較するための記録（2026-07-18 追加）。
+codex:
+  model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
+  reasoning_effort: unknown # 例: low | medium | high（Task/層で変えた場合は notes に内訳）
+  notes: ''
+
 quality:
   tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
   initial_test_failures: unknown
