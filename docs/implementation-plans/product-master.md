@@ -492,6 +492,7 @@ export * from './repositories/drizzle-store.repository';
 1. S2-1 のスキーマ追記が完了した状態で `pnpm --filter @cookpit/web db:generate` を実行
 2. `drizzle/migrations/` 配下に新しいマイグレーションファイルが生成されることを確認
 3. Store シード SQL を別途準備する（マイグレーションファイル内またはシードスクリプトとして）:
+
    ```sql
    INSERT INTO stores (id, name, created_at)
    VALUES
@@ -502,6 +503,7 @@ export * from './repositories/drizzle-store.repository';
 
    - UUID の具体値は implementer が `randomUUID()` 等で生成して固定値として記録する
    - シード方式の選択: マイグレーションファイルに `sql` 直書き（Drizzle の `execute sql` 機能）か、別途 `seed.ts` スクリプト（`pnpm db:seed`）のどちらかを選択する。既存パターンがなければシードスクリプトを新規作成する方針とする
+
 4. `pnpm --filter @cookpit/web db:migrate` を実行して適用確認（開発 DB 対象）
 
 **注意**: `ON CONFLICT DO NOTHING` により同一 UUID の再投入はエラーにならない（冪等性確保）
