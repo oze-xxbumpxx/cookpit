@@ -47,13 +47,13 @@
 
 ## 4. RecipeFormClient（new・dom）RFC-xx
 
-| ID     | 観点                                                                                                         | 分類   |
-| ------ | ------------------------------------------------------------------------------------------------------------ | ------ |
-| RFC-01 | レシピ名未入力では保存ボタンが disabled                                                                      | 異常系 |
-| RFC-02 | 必須入力後の送信で `POST /api/recipes` に現行と同一形の JSON（baseServings 含む）が渡り、/recipes へ遷移する | 正常系 |
-| RFC-03 | 基準人数に 0 を入れて送信 → baseServings エラー表示・POST されない                                           | 境界値 |
-| RFC-04 | API が !ok → 「保存に失敗しました。入力内容を確認してください。」                                            | 異常系 |
-| RFC-05 | 通信例外 → 「通信エラーが発生しました。」                                                                    | 異常系 |
+| ID     | 観点                                                                                                            | 分類   |
+| ------ | --------------------------------------------------------------------------------------------------------------- | ------ |
+| RFC-01 | レシピ名未入力では保存ボタンが disabled                                                                         | 異常系 |
+| RFC-02 | 必須入力後の送信で `POST /api/recipes` に現行と同一形の JSON（baseServings 含む）が渡り、/recipes へ遷移する    | 正常系 |
+| RFC-03 | 基準人数 0 では送信されない（`min="1"` の native 制約が送信をブロック。カスタムエラーは UI から到達不能と判明） | 境界値 |
+| RFC-04 | API が !ok → 「保存に失敗しました。入力内容を確認してください。」                                               | 異常系 |
+| RFC-05 | 通信例外 → 「通信エラーが発生しました。」                                                                       | 異常系 |
 
 ## 5. RecipeEditFormClient（edit・dom）REF-xx
 
@@ -82,14 +82,15 @@
 
 ## 7. products 側（dom）PFF-xx / PRF-xx
 
-| ID     | 観点                                                                     | 分類   |
-| ------ | ------------------------------------------------------------------------ | ------ |
-| PFF-01 | buildProductFormBody: name trim / aliases のカンマ分割・空要素除去       | 正常系 |
-| PFF-02 | buildProductFormBody: name 空 → エラーで input null                      | 異常系 |
-| PFF-03 | toProductCategory / toProductUnit: 不明値のフォールバック（その他 / 個） | 異常系 |
-| PFF-04 | ProductFormFields: 入力変更が onChange に反映・name エラー表示           | 正常系 |
-| PRF-01 | PriceRecordForm: 必須入力で送信 payload の形が固定される                 | 正常系 |
-| PRF-02 | PriceRecordForm: 不正値（負の価格等）でエラー表示・送信されない          | 異常系 |
+| ID     | 観点                                                                                                                                                                   | 分類   |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| PFF-01 | buildProductFormBody: name trim / aliases のカンマ分割・空要素除去                                                                                                     | 正常系 |
+| PFF-02 | buildProductFormBody: name 空 → エラーで input null                                                                                                                    | 異常系 |
+| PFF-03 | toProductCategory / toProductUnit: 不明値のフォールバック（その他 / 個）                                                                                               | 異常系 |
+| PFF-04 | ProductFormFields: 入力変更が onChange に反映・name エラー表示                                                                                                         | 正常系 |
+| PRF-01 | PriceRecordForm: 必須入力で送信 payload の形が固定される（happy-dom の step="0.1" 浮動小数点判定バグでクリック送信がブロックされるため submit イベント直接発火で検証） | 正常系 |
+| PRF-02 | PriceRecordForm: 価格 0 は native min 制約で送信ブロック・POST されない                                                                                                | 異常系 |
+| PRF-03 | PriceRecordForm: 店舗取得失敗でエラーメッセージ表示                                                                                                                    | 異常系 |
 
 ## 対象外・完了条件
 
