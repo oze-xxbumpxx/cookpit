@@ -18,8 +18,6 @@ describe('ProductId', () => {
   });
 
   it('異なる値どうしは equals が false (PID4)', () => {
-    expect(ProductId.fromString('product-1').equals(ProductId.fromString('product-2'))).toBe(
-      false,
-    );
+    expect(ProductId.fromString('product-1').equals(ProductId.fromString('product-2'))).toBe(false);
   });
 });

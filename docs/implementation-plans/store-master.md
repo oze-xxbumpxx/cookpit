@@ -19,29 +19,29 @@ Domain → Infrastructure → Application → API Contract → Presentation の�
 
 ### 既存ファイル変更（6 ファイル）
 
-| # | ファイルパス | 変更種別 |
-|---|---|---|
-| E-1 | `packages/domain/src/shared/store.repository.ts` | `save()` メソッド追加 |
-| E-2 | `packages/infrastructure/src/db/schema.ts` | `stores` テーブル定義追記 |
-| E-3 | `packages/infrastructure/src/index.ts` | `DrizzleStoreRepository` エクスポート追加 |
-| E-4 | `packages/application/src/index.ts` | `store` モジュールエクスポート追加 |
-| E-5 | `packages/api-contract/src/index.ts` | `store.schema` エクスポート追加 |
-| E-6 | `apps/web/src/server/app.ts` | `storesRoute` マウント、`StoreNotFoundError` ハンドリング追加 |
+| #   | ファイルパス                                     | 変更種別                                                      |
+| --- | ------------------------------------------------ | ------------------------------------------------------------- |
+| E-1 | `packages/domain/src/shared/store.repository.ts` | `save()` メソッド追加                                         |
+| E-2 | `packages/infrastructure/src/db/schema.ts`       | `stores` テーブル定義追記                                     |
+| E-3 | `packages/infrastructure/src/index.ts`           | `DrizzleStoreRepository` エクスポート追加                     |
+| E-4 | `packages/application/src/index.ts`              | `store` モジュールエクスポート追加                            |
+| E-5 | `packages/api-contract/src/index.ts`             | `store.schema` エクスポート追加                               |
+| E-6 | `apps/web/src/server/app.ts`                     | `storesRoute` マウント、`StoreNotFoundError` ハンドリング追加 |
 
 ### 新規作成ファイル（9 ファイル + マイグレーション）
 
-| # | ファイルパス | 内容 |
-|---|---|---|
-| N-1 | `packages/infrastructure/src/repositories/drizzle-store.repository.ts` | `DrizzleStoreRepository` |
-| N-2 | `packages/application/src/store/store.dto.ts` | `StoreDto`、`CreateStoreInputDto` |
-| N-3 | `packages/application/src/store/store.mapper.ts` | `toStoreDto()` |
-| N-4 | `packages/application/src/store/store-not-found.error.ts` | `StoreNotFoundError` |
-| N-5 | `packages/application/src/store/get-stores.use-case.ts` | `GetStoresUseCase` |
-| N-6 | `packages/application/src/store/create-store.use-case.ts` | `CreateStoreUseCase` |
-| N-7 | `packages/application/src/store/index.ts` | バレルエクスポート |
-| N-8 | `packages/api-contract/src/store.schema.ts` | `createStoreSchema`、`storeResponseSchema` |
-| N-9 | `apps/web/src/server/routes/stores.ts` | `storesRoute`（Hono） |
-| N-10 | `apps/web/src/db/migrations/` 以下 | `pnpm --filter @cookpit/web db:generate` で自動生成 |
+| #    | ファイルパス                                                           | 内容                                                |
+| ---- | ---------------------------------------------------------------------- | --------------------------------------------------- |
+| N-1  | `packages/infrastructure/src/repositories/drizzle-store.repository.ts` | `DrizzleStoreRepository`                            |
+| N-2  | `packages/application/src/store/store.dto.ts`                          | `StoreDto`、`CreateStoreInputDto`                   |
+| N-3  | `packages/application/src/store/store.mapper.ts`                       | `toStoreDto()`                                      |
+| N-4  | `packages/application/src/store/store-not-found.error.ts`              | `StoreNotFoundError`                                |
+| N-5  | `packages/application/src/store/get-stores.use-case.ts`                | `GetStoresUseCase`                                  |
+| N-6  | `packages/application/src/store/create-store.use-case.ts`              | `CreateStoreUseCase`                                |
+| N-7  | `packages/application/src/store/index.ts`                              | バレルエクスポート                                  |
+| N-8  | `packages/api-contract/src/store.schema.ts`                            | `createStoreSchema`、`storeResponseSchema`          |
+| N-9  | `apps/web/src/server/routes/stores.ts`                                 | `storesRoute`（Hono）                               |
+| N-10 | `apps/web/src/db/migrations/` 以下                                     | `pnpm --filter @cookpit/web db:generate` で自動生成 |
 
 ---
 
@@ -52,6 +52,7 @@ Domain → Infrastructure → Application → API Contract → Presentation の�
 **対象ファイル**: `packages/domain/src/shared/store.repository.ts`
 
 **現在の内容**:
+
 ```typescript
 import type { Store, StoreId } from './store';
 
@@ -64,6 +65,7 @@ export interface StoreRepository {
 **変更内容**: `save(store: Store): Promise<void>` をインターフェースに追加する。
 
 **変更後の全内容**:
+
 ```typescript
 import type { Store, StoreId } from './store';
 
@@ -75,6 +77,7 @@ export interface StoreRepository {
 ```
 
 **完了条件**:
+
 - `save()` メソッドシグネチャがインターフェースに追加されている
 - `packages/domain` 内に他の変更がない（`store.ts` は変更しない）
 - `pnpm type-check` がこのステップ単体でエラーなし（`DrizzleStoreRepository` はまだ存在しないが、Domain 層自体はコンパイルできる）
@@ -90,6 +93,7 @@ export interface StoreRepository {
 **変更内容**: `stores` テーブル定義と型エクスポートを末尾に追記する。
 
 **追記する内容**:
+
 ```typescript
 export const stores = pgTable('stores', {
   id: text('id').primaryKey(),
@@ -102,11 +106,13 @@ export type NewStoreRow = typeof stores.$inferInsert;
 ```
 
 注意点:
+
 - `timestamp` は既に `drizzle-orm/pg-core` から import されているため追加 import 不要
 - `pgTable`、`text` も既存 import に含まれているため追加不要
 - `integer`、`jsonb` は Store テーブルでは使用しないが既存 import から削除しない
 
 **完了条件**:
+
 - `stores` テーブル定義が追記されている
 - `StoreRow`、`NewStoreRow` 型がエクスポートされている
 - `recipes` テーブルの既存定義が変わっていない
@@ -116,6 +122,7 @@ export type NewStoreRow = typeof stores.$inferInsert;
 ### Step 3: マイグレーション生成
 
 **実行コマンド**:
+
 ```bash
 pnpm --filter @cookpit/web db:generate
 ```
@@ -123,6 +130,7 @@ pnpm --filter @cookpit/web db:generate
 **生成先**: `apps/web/src/db/migrations/` 以下に新しい `.sql` ファイルと `meta/` 更新が出力される。
 
 **生成されるマイグレーションの想定内容**:
+
 ```sql
 CREATE TABLE "stores" (
   "id" text PRIMARY KEY NOT NULL,
@@ -132,6 +140,7 @@ CREATE TABLE "stores" (
 ```
 
 **完了条件**:
+
 - `apps/web/src/db/migrations/` 以下に新しい `.sql` ファイルが生成されている
 - `.sql` の内容に `CREATE TABLE "stores"` が含まれる
 - `meta/_journal.json` が更新されている
@@ -145,6 +154,7 @@ CREATE TABLE "stores" (
 **対象ファイル（新規）**: `packages/infrastructure/src/repositories/drizzle-store.repository.ts`
 
 **実装内容**:
+
 ```typescript
 import { eq } from 'drizzle-orm';
 import { Store } from '@cookpit/domain/src/shared/store';
@@ -200,6 +210,7 @@ export class DrizzleStoreRepository implements StoreRepository {
 ```
 
 注意点:
+
 - `onConflictDoUpdate` の `set` に `createdAt` を含めない（不変フィールドのため）
 - `DrizzleRecipeRepository` と同様に `eq` を `drizzle-orm` からインポートする
 - `Store` と `StoreId` は同一ファイル (`store.ts`) からインポートする
@@ -214,6 +225,7 @@ export * from './repositories/drizzle-store.repository';
 ```
 
 **完了条件**:
+
 - `DrizzleStoreRepository` が `StoreRepository` インターフェースを完全に実装している（`findById`、`findAll`、`save` の3メソッドすべて）
 - `findAll()` は `ORDER BY created_at ASC` で取得する
 - `save()` は upsert（ON CONFLICT DO UPDATE）で `name` のみ更新する
@@ -231,6 +243,7 @@ export * from './repositories/drizzle-store.repository';
 **対象ファイル（新規）**: `packages/application/src/store/store.dto.ts`
 
 **実装内容**:
+
 ```typescript
 export interface StoreDto {
   id: string;
@@ -244,6 +257,7 @@ export interface CreateStoreInputDto {
 ```
 
 **完了条件**:
+
 - `StoreDto` が `{ id: string; name: string; createdAt: string }` の構造を持つ
 - `CreateStoreInputDto` が `{ name: string }` の構造を持つ
 
@@ -252,6 +266,7 @@ export interface CreateStoreInputDto {
 **対象ファイル（新規）**: `packages/application/src/store/store.mapper.ts`
 
 **実装内容**:
+
 ```typescript
 import type { Store } from '@cookpit/domain/src/shared/store';
 import type { StoreDto } from './store.dto';
@@ -266,10 +281,12 @@ export function toStoreDto(store: Store): StoreDto {
 ```
 
 注意点:
+
 - `store.createdAt` は `Store` エンティティの getter が防御的コピー（`new Date(this.createdDate)`）を返すため、Mapper 側での追加コピーは不要
 - `Store` は `import type` で参照する（値としては使用しないため）
 
 **完了条件**:
+
 - `toStoreDto()` が `Store` を受け取り `StoreDto` を返す
 - `createdAt` が `store.createdAt.toISOString()` で ISO 8601 文字列（UTC、`Z` サフィックス）に変換される
 
@@ -278,6 +295,7 @@ export function toStoreDto(store: Store): StoreDto {
 **対象ファイル（新規）**: `packages/application/src/store/store-not-found.error.ts`
 
 **実装内容**:
+
 ```typescript
 export class StoreNotFoundError extends Error {
   constructor(storeId: string) {
@@ -288,10 +306,12 @@ export class StoreNotFoundError extends Error {
 ```
 
 注意点:
+
 - `RecipeNotFoundError` と同パターン
 - 現時点でこのエラーを throw する UseCase は存在しないが、将来用プレースホルダとして定義する（設計書 D-6）
 
 **完了条件**:
+
 - `StoreNotFoundError extends Error` が定義されている
 - コンストラクタで `storeId: string` を受け取り `Store not found: ${storeId}` メッセージを設定する
 - `this.name` が `'StoreNotFoundError'` に設定されている
@@ -301,6 +321,7 @@ export class StoreNotFoundError extends Error {
 **対象ファイル（新規）**: `packages/application/src/store/get-stores.use-case.ts`
 
 **実装内容**:
+
 ```typescript
 import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
 import type { StoreDto } from './store.dto';
@@ -317,6 +338,7 @@ export class GetStoresUseCase {
 ```
 
 **完了条件**:
+
 - `execute()` が引数なしで `StoreDto[]` を返す
 - `StoreRepository` をコンストラクタで受け取る（手動 DI）
 - `GetRecipesUseCase` と同パターン
@@ -326,6 +348,7 @@ export class GetStoresUseCase {
 **対象ファイル（新規）**: `packages/application/src/store/create-store.use-case.ts`
 
 **実装内容**:
+
 ```typescript
 import { Store } from '@cookpit/domain/src/shared/store';
 import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
@@ -344,11 +367,13 @@ export class CreateStoreUseCase {
 ```
 
 注意点:
+
 - `Store` は値として使用する（`Store.create()` を呼ぶ）ため `import type` ではなく通常 import にする
 - `StoreRepository`、`CreateStoreInputDto`、`StoreDto` は `import type` で参照する
 - `Store.create()` がドメインバリデーション（name 空チェック）を行う。UseCase は組み立て役に徹する
 
 **完了条件**:
+
 - `execute(input: CreateStoreInputDto): Promise<StoreDto>` が実装されている
 - `Store.create()` → `repository.save()` → `toStoreDto()` の順で処理する
 - `StoreRepository` をコンストラクタで受け取る（手動 DI）
@@ -358,6 +383,7 @@ export class CreateStoreUseCase {
 **対象ファイル（新規）**: `packages/application/src/store/index.ts`
 
 **実装内容**:
+
 ```typescript
 export * from './create-store.use-case';
 export * from './get-stores.use-case';
@@ -366,9 +392,11 @@ export * from './store-not-found.error';
 ```
 
 注意点:
+
 - `store.mapper.ts` はここに含めない（UseCase 経由でのみ使用されるため、`recipe/index.ts` と同パターン）
 
 **完了条件**:
+
 - 上記4ファイルが re-export されている
 - `store.mapper.ts` は含まれていない
 
@@ -377,12 +405,14 @@ export * from './store-not-found.error';
 **対象ファイル（既存変更）**: `packages/application/src/index.ts`
 
 **現在の内容**:
+
 ```typescript
 // application package
 export * from './recipe';
 ```
 
 **変更後の内容**:
+
 ```typescript
 // application package
 export * from './recipe';
@@ -390,6 +420,7 @@ export * from './store';
 ```
 
 **完了条件**:
+
 - `export * from './store'` が追記されている
 - `export * from './recipe'` が引き続き存在する
 - `pnpm type-check` がエラーなし
@@ -403,6 +434,7 @@ export * from './store';
 **対象ファイル（新規）**: `packages/api-contract/src/store.schema.ts`
 
 **実装内容**:
+
 ```typescript
 import z from 'zod';
 
@@ -425,10 +457,12 @@ export type StoreResponse = z.infer<typeof storeResponseSchema>;
 ```
 
 注意点:
+
 - Zod のインポートは `import z from 'zod'`（デフォルトインポート）を使う。`recipe.schema.ts` と同形式（`import { z } from 'zod'` は使わない）
 - `nonBlankString` は `recipe.schema.ts` と同一パターンをローカル定義する（共通化はスコープ外）
 
 **完了条件**:
+
 - `createStoreSchema`、`storeResponseSchema` が定義・エクスポートされている
 - `CreateStoreBody`、`StoreResponse` 型がエクスポートされている
 - `storeResponseSchema` の構造が `StoreDto`（`{ id: string; name: string; createdAt: string }`）と一致する
@@ -438,12 +472,14 @@ export type StoreResponse = z.infer<typeof storeResponseSchema>;
 **対象ファイル（既存変更）**: `packages/api-contract/src/index.ts`
 
 **現在の内容**:
+
 ```typescript
 // api-contract package
 export * from './recipe.schema';
 ```
 
 **変更後の内容**:
+
 ```typescript
 // api-contract package
 export * from './recipe.schema';
@@ -451,6 +487,7 @@ export * from './store.schema';
 ```
 
 **完了条件**:
+
 - `export * from './store.schema'` が追記されている
 - `export * from './recipe.schema'` が引き続き存在する
 
@@ -463,6 +500,7 @@ export * from './store.schema';
 **対象ファイル（新規）**: `apps/web/src/server/routes/stores.ts`
 
 **実装内容**:
+
 ```typescript
 import { getDb } from '@/db/client';
 import { createStoreSchema } from '@cookpit/api-contract';
@@ -490,12 +528,14 @@ export const storesRoute = new Hono()
 ```
 
 注意点:
+
 - `recipes.ts` と同パターンで手動 DI を実施する（`storeRepository()` ファクトリ関数）
 - `GET /` は `storeResponseSchema` を明示的に使用しない（UseCase の戻り値型 `StoreDto[]` で型安全を担保）
 - `POST /` は `201` を返す（`recipes.ts` と同じ）
 - `GET /:id` は定義しない（スコープ外、設計書 D-5）
 
 **完了条件**:
+
 - `GET /`（`GetStoresUseCase`）と `POST /`（`CreateStoreUseCase`）の2エンドポイントが定義されている
 - `zValidator('json', createStoreSchema)` が `POST /` に適用されている
 - `POST /` のレスポンスが `201` である
@@ -506,6 +546,7 @@ export const storesRoute = new Hono()
 **対象ファイル（既存変更）**: `apps/web/src/server/app.ts`
 
 **現在の内容**:
+
 ```typescript
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
@@ -527,6 +568,7 @@ export default app;
 ```
 
 **変更後の内容**:
+
 ```typescript
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
@@ -556,12 +598,14 @@ export default app;
 ```
 
 注意点:
+
 - 既存の `RecipeNotFoundError` 分岐を壊さない
 - `StoreNotFoundError` の分岐は `RecipeNotFoundError` の後に追加する
 - `const routes = ...` を複数行に展開するが、既存の `.route('/health', healthRoute).route('/recipes', recipesRoute)` の結果は変わらない
 - `AppType` は `routes` から型推論されるため、`storesRoute` 追加により自動的に更新される
 
 **完了条件**:
+
 - `storesRoute` が `/stores` にマウントされている（`basePath('/api')` により `/api/stores` になる）
 - `StoreNotFoundError` の `onError` 分岐が追加されている
 - 既存の `RecipeNotFoundError` 分岐が変わっていない
@@ -614,15 +658,16 @@ class InMemoryStoreRepository implements StoreRepository {
 
 **テストケース（設計書 §17-2 に対応）**:
 
-| テスト ID | describe | ケース | 検証内容 |
-|---|---|---|---|
-| N-01 | `CreateStoreUseCase` | `execute({ name: "西友" })` | `StoreDto` が返り、`saveCount === 1` |
-| E-01 | `CreateStoreUseCase` | `execute({ name: "" })` | `Error('Store name is required')` が throw、`saveCount === 0` |
-| E-02 | `CreateStoreUseCase` | `execute({ name: "  " })` | 同上（空白のみ） |
-| N-03 | `GetStoresUseCase` | 0件の場合 | 空配列を返す |
-| N-04 | `GetStoresUseCase` | 複数件の場合 | 全件を `StoreDto[]` で返す |
+| テスト ID | describe             | ケース                      | 検証内容                                                      |
+| --------- | -------------------- | --------------------------- | ------------------------------------------------------------- |
+| N-01      | `CreateStoreUseCase` | `execute({ name: "西友" })` | `StoreDto` が返り、`saveCount === 1`                          |
+| E-01      | `CreateStoreUseCase` | `execute({ name: "" })`     | `Error('Store name is required')` が throw、`saveCount === 0` |
+| E-02      | `CreateStoreUseCase` | `execute({ name: "  " })`   | 同上（空白のみ）                                              |
+| N-03      | `GetStoresUseCase`   | 0件の場合                   | 空配列を返す                                                  |
+| N-04      | `GetStoresUseCase`   | 複数件の場合                | 全件を `StoreDto[]` で返す                                    |
 
 **完了条件**:
+
 - 上記5ケースがすべて `vitest` で通る
 - `packages/domain/src/shared/store.test.ts`（既存）が引き続き通る
 
@@ -636,6 +681,7 @@ N-05 の Mapper テスト: toStoreDto() の全フィールド変換を検証
 ```
 
 **完了条件**:
+
 - `toStoreDto()` のテストが通る
 - `createdAt` が `.toISOString()` の形式（例: `'2026-01-01T00:00:00.000Z'`）であることを検証する
 
@@ -650,6 +696,7 @@ pnpm test
 ```
 
 **完了条件**:
+
 - `pnpm lint` がエラーなし
 - `pnpm type-check` がエラーなし
 - `pnpm test` が全テスト通過（新規 Store テストを含む、既存 Recipe テストへの影響なし）
@@ -702,12 +749,12 @@ Step 5 内のファイルは dto → mapper → error → use-cases → index �
 
 ## リスク
 
-| # | リスク | 影響 | 対策 |
-|---|---|---|---|
-| R-1 | `pnpm --filter @cookpit/web db:generate` が既存マイグレーションと競合する | マイグレーション破損 | 生成後に SQL 内容を確認し、`recipes` テーブルへの変更が含まれていないことを検証する |
-| R-2 | `DrizzleStoreRepository.save()` の `onConflictDoUpdate` に `createdAt` を誤って含める | 作成日時が上書きされる | `set` に `name` のみを指定していることを確認する |
-| R-3 | `app.ts` の既存 `RecipeNotFoundError` 分岐を誤って削除・変更する | Recipe 404 が機能しなくなる | 変更前後で `RecipeNotFoundError` 分岐の存在をファイル diff で確認する |
-| R-4 | `StoreRepository` インターフェースへの `save()` 追加により、テスト用インメモリ実装が型エラーになる | テスト実装時に型エラー | Step 8 で `InMemoryStoreRepository` に `save()` を実装する |
+| #   | リスク                                                                                             | 影響                        | 対策                                                                                |
+| --- | -------------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------- |
+| R-1 | `pnpm --filter @cookpit/web db:generate` が既存マイグレーションと競合する                          | マイグレーション破損        | 生成後に SQL 内容を確認し、`recipes` テーブルへの変更が含まれていないことを検証する |
+| R-2 | `DrizzleStoreRepository.save()` の `onConflictDoUpdate` に `createdAt` を誤って含める              | 作成日時が上書きされる      | `set` に `name` のみを指定していることを確認する                                    |
+| R-3 | `app.ts` の既存 `RecipeNotFoundError` 分岐を誤って削除・変更する                                   | Recipe 404 が機能しなくなる | 変更前後で `RecipeNotFoundError` 分岐の存在をファイル diff で確認する               |
+| R-4 | `StoreRepository` インターフェースへの `save()` 追加により、テスト用インメモリ実装が型エラーになる | テスト実装時に型エラー      | Step 8 で `InMemoryStoreRepository` に `save()` を実装する                          |
 
 ---
 
@@ -738,11 +785,11 @@ Step 5 内のファイルは dto → mapper → error → use-cases → index �
 
 設計書 §17-3 に定義された API 層の手動テスト観点。
 
-| # | ケース | 手順 | 期待結果 |
-|---|---|---|---|
-| N-06 | `POST /api/stores` 正常系 | `curl -X POST http://localhost:3000/api/stores -H 'Content-Type: application/json' -d '{"name":"西友"}'` | 201 + `{ id: "...", name: "西友", createdAt: "..." }` |
-| N-07 | `GET /api/stores` 正常系 | `curl http://localhost:3000/api/stores` | 200 + `[{ id: "...", name: "西友", createdAt: "..." }]` |
-| E-03 | `POST /api/stores` name 空文字 | `curl -X POST ... -d '{"name":""}'` | 400 |
-| E-04 | `POST /api/stores` name キーなし | `curl -X POST ... -d '{}'` | 400 |
-| B-01 | `POST /api/stores` name 1文字 | `curl -X POST ... -d '{"name":"西"}'` | 201 + `StoreDto` |
-| B-03 | 同名 Store の重複登録 | 同じ `name` で2回 POST | 2件とも 201 + 異なる `id` の `StoreDto`（ユニーク制約なし） |
+| #    | ケース                           | 手順                                                                                                     | 期待結果                                                    |
+| ---- | -------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| N-06 | `POST /api/stores` 正常系        | `curl -X POST http://localhost:3000/api/stores -H 'Content-Type: application/json' -d '{"name":"西友"}'` | 201 + `{ id: "...", name: "西友", createdAt: "..." }`       |
+| N-07 | `GET /api/stores` 正常系         | `curl http://localhost:3000/api/stores`                                                                  | 200 + `[{ id: "...", name: "西友", createdAt: "..." }]`     |
+| E-03 | `POST /api/stores` name 空文字   | `curl -X POST ... -d '{"name":""}'`                                                                      | 400                                                         |
+| E-04 | `POST /api/stores` name キーなし | `curl -X POST ... -d '{}'`                                                                               | 400                                                         |
+| B-01 | `POST /api/stores` name 1文字    | `curl -X POST ... -d '{"name":"西"}'`                                                                    | 201 + `StoreDto`                                            |
+| B-03 | 同名 Store の重複登録            | 同じ `name` で2回 POST                                                                                   | 2件とも 201 + 異なる `id` の `StoreDto`（ユニーク制約なし） |

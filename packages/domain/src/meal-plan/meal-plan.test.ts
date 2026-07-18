@@ -108,9 +108,7 @@ describe('PlannedRecipe', () => {
   });
 
   it('create は scaleFactor が 0 以下なら拒否する', () => {
-    expect(() => PlannedRecipe.create(createRecipeId(), 0)).toThrow(
-      'scaleFactor must be positive',
-    );
+    expect(() => PlannedRecipe.create(createRecipeId(), 0)).toThrow('scaleFactor must be positive');
     expect(() => PlannedRecipe.create(createRecipeId(), -1)).toThrow(
       'scaleFactor must be positive',
     );

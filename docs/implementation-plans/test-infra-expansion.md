@@ -10,30 +10,30 @@
 
 ## 前提・確定事項
 
-| 項目 | 決定内容 |
-| --- | --- |
-| テスト DB 戦略 | PGlite（`@electric-sql/pglite`）。ユーザー承認済み |
-| スキーマ適用方式 | 案 b: `schema.ts` から DDL 生成して PGlite に直接適用（migrations フォルダ不在のため） |
-| プロダクションコード変更 | 原則 0。DrizzleClient 型互換はテスト専用ファクトリ（提案 A）で吸収する |
-| テスト専用コード置き場 | `packages/infrastructure/src/testing/` |
-| apps/web の環境分離 | workspace 設定（vitest.config.ts + vitest.node.config.ts + vitest.dom.config.ts） |
+| 項目                          | 決定内容                                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| テスト DB 戦略                | PGlite（`@electric-sql/pglite`）。ユーザー承認済み                                        |
+| スキーマ適用方式              | 案 b: `schema.ts` から DDL 生成して PGlite に直接適用（migrations フォルダ不在のため）    |
+| プロダクションコード変更      | 原則 0。DrizzleClient 型互換はテスト専用ファクトリ（提案 A）で吸収する                    |
+| テスト専用コード置き場        | `packages/infrastructure/src/testing/`                                                    |
+| apps/web の環境分離           | workspace 設定（vitest.config.ts + vitest.node.config.ts + vitest.dom.config.ts）         |
 | Hono ルートテストのモック境界 | UseCase を `vi.mock('@cookpit/application', ...)` でモック化し、getDb も vi.mock でモック |
 
 ---
 
 ## 新規作成ファイル一覧（9 ファイル）
 
-| # | ファイルパス | 種別 |
-| --- | --- | --- |
-| N-1 | `packages/infrastructure/vitest.config.ts` | vitest 設定 |
-| N-2 | `packages/infrastructure/src/testing/create-test-db.ts` | PGlite ユーティリティ |
-| N-3 | `packages/infrastructure/src/repositories/drizzle-product.repository.test.ts` | Repository テスト |
-| N-4 | `packages/infrastructure/src/repositories/drizzle-store.repository.test.ts` | Repository テスト |
-| N-5 | `apps/web/vitest.config.ts` | workspace ルート設定 |
-| N-6 | `apps/web/vitest.node.config.ts` | Hono ルート用（node 環境） |
-| N-7 | `apps/web/vitest.dom.config.ts` | コンポーネント用（happy-dom 環境） |
-| N-8 | `apps/web/src/server/routes/products.test.ts` | Hono ルートテスト |
-| N-9 | `apps/web/src/app/products/_components/product-list-client.test.tsx` | コンポーネントテスト |
+| #   | ファイルパス                                                                  | 種別                               |
+| --- | ----------------------------------------------------------------------------- | ---------------------------------- |
+| N-1 | `packages/infrastructure/vitest.config.ts`                                    | vitest 設定                        |
+| N-2 | `packages/infrastructure/src/testing/create-test-db.ts`                       | PGlite ユーティリティ              |
+| N-3 | `packages/infrastructure/src/repositories/drizzle-product.repository.test.ts` | Repository テスト                  |
+| N-4 | `packages/infrastructure/src/repositories/drizzle-store.repository.test.ts`   | Repository テスト                  |
+| N-5 | `apps/web/vitest.config.ts`                                                   | workspace ルート設定               |
+| N-6 | `apps/web/vitest.node.config.ts`                                              | Hono ルート用（node 環境）         |
+| N-7 | `apps/web/vitest.dom.config.ts`                                               | コンポーネント用（happy-dom 環境） |
+| N-8 | `apps/web/src/server/routes/products.test.ts`                                 | Hono ルートテスト                  |
+| N-9 | `apps/web/src/app/products/_components/product-list-client.test.tsx`          | コンポーネントテスト               |
 
 設計書 §9 に記載された 9 ファイルと一致。
 
@@ -41,10 +41,10 @@
 
 ## 変更ファイル一覧（2 ファイル）
 
-| # | ファイルパス | 変更内容 |
-| --- | --- | --- |
-| M-1 | `packages/infrastructure/package.json` | `"test": "vitest run"` スクリプト追加、`@electric-sql/pglite` / `vitest` を devDependencies 追加 |
-| M-2 | `apps/web/package.json` | `"test": "vitest run"` / `"test:ui": "vitest --ui"` スクリプト追加、`vitest` / `@testing-library/react` / `@testing-library/user-event` / `happy-dom` を devDependencies 追加 |
+| #   | ファイルパス                           | 変更内容                                                                                                                                                                      |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M-1 | `packages/infrastructure/package.json` | `"test": "vitest run"` スクリプト追加、`@electric-sql/pglite` / `vitest` を devDependencies 追加                                                                              |
+| M-2 | `apps/web/package.json`                | `"test": "vitest run"` / `"test:ui": "vitest --ui"` スクリプト追加、`vitest` / `@testing-library/react` / `@testing-library/user-event` / `happy-dom` を devDependencies 追加 |
 
 設計書 §10 に記載された 2 ファイルと一致。
 
@@ -52,16 +52,17 @@
 
 ## 追加依存パッケージ
 
-| パッケージ | バージョン | 配置先 | 用途 |
-| --- | --- | --- | --- |
-| `@electric-sql/pglite` | `^0.2.x` | `packages/infrastructure` devDependencies | PGlite インメモリ PG |
-| `vitest` | `^3.2.0` | `packages/infrastructure` devDependencies | テストランナー |
-| `vitest` | `^3.2.0` | `apps/web` devDependencies | テストランナー |
-| `@testing-library/react` | `^16.x` | `apps/web` devDependencies | RTL コンポーネントテスト |
-| `@testing-library/user-event` | `^14.x` | `apps/web` devDependencies | ユーザー操作シミュレーション |
-| `happy-dom` | `^17.x` | `apps/web` devDependencies | DOM 環境（コンポーネントテスト） |
+| パッケージ                    | バージョン | 配置先                                    | 用途                             |
+| ----------------------------- | ---------- | ----------------------------------------- | -------------------------------- |
+| `@electric-sql/pglite`        | `^0.2.x`   | `packages/infrastructure` devDependencies | PGlite インメモリ PG             |
+| `vitest`                      | `^3.2.0`   | `packages/infrastructure` devDependencies | テストランナー                   |
+| `vitest`                      | `^3.2.0`   | `apps/web` devDependencies                | テストランナー                   |
+| `@testing-library/react`      | `^16.x`    | `apps/web` devDependencies                | RTL コンポーネントテスト         |
+| `@testing-library/user-event` | `^14.x`    | `apps/web` devDependencies                | ユーザー操作シミュレーション     |
+| `happy-dom`                   | `^17.x`    | `apps/web` devDependencies                | DOM 環境（コンポーネントテスト） |
 
 備考:
+
 - `drizzle-orm/pglite` ドライバは `drizzle-orm` 本体に同梱済みのため追加インストール不要。
 - `@testing-library/jest-dom` は任意。`@testing-library/react` 付属の expect 拡張または各テストでの import で代替できる。必要と判断した場合のみ追加する。
 - `vite-tsconfig-paths` プラグインは apps/web の vitest.config に `resolve.alias` を手動設定することで代替し、追加インストールを回避する（理由: 依存を増やさない方針）。
@@ -87,6 +88,7 @@
 3. `pnpm install` を実行してロックファイルを更新する。
 
 完成形の scripts セクション:
+
 ```json
 "scripts": {
   "type-check": "tsc --noEmit",
@@ -95,6 +97,7 @@
 ```
 
 完成形の devDependencies セクション（既存に追加）:
+
 ```json
 "devDependencies": {
   "@cookpit/config": "workspace:*",
@@ -233,19 +236,20 @@ describe('DrizzleXxxRepository', () => {
 
 設計書 §5.5 の IR-P-01 〜 IR-P-07 をすべて実装する。
 
-| テスト ID | 内容 | 備考 |
-| --- | --- | --- |
-| IR-P-01 | `save()` で product 行が挿入される | products テーブルを直接 SELECT して確認 |
-| IR-P-02 | `findById()` で DB 行がドメイン Entity に復元される（id / name / aliases / category / defaultUnit を検証） | |
-| IR-P-03 | `save()` + `findAll()` ラウンドトリップで priceHistory の変換が正しい（priceAmount の numeric→number 変換を含む） | storeId に対応する store 行の事前挿入が必要 |
-| IR-P-04 | `findById()` で存在しない ID は null を返す | |
-| IR-P-05 | `delete()` で product および関連 priceRecords が CASCADE で削除される | priceRecords テーブルを直接 SELECT して確認 |
-| IR-P-06 | `save()` の upsert（onConflictDoUpdate）が既存行を上書きする | 同一 ID で 2 回 save し name の変化を確認 |
-| IR-P-07 | priceRecords の INSERT + `findById()` で LEFT JOIN 結果が正しくグルーピングされる（複数 priceRecord が 1 Product にまとまること） | |
+| テスト ID | 内容                                                                                                                              | 備考                                        |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| IR-P-01   | `save()` で product 行が挿入される                                                                                                | products テーブルを直接 SELECT して確認     |
+| IR-P-02   | `findById()` で DB 行がドメイン Entity に復元される（id / name / aliases / category / defaultUnit を検証）                        |                                             |
+| IR-P-03   | `save()` + `findAll()` ラウンドトリップで priceHistory の変換が正しい（priceAmount の numeric→number 変換を含む）                 | storeId に対応する store 行の事前挿入が必要 |
+| IR-P-04   | `findById()` で存在しない ID は null を返す                                                                                       |                                             |
+| IR-P-05   | `delete()` で product および関連 priceRecords が CASCADE で削除される                                                             | priceRecords テーブルを直接 SELECT して確認 |
+| IR-P-06   | `save()` の upsert（onConflictDoUpdate）が既存行を上書きする                                                                      | 同一 ID で 2 回 save し name の変化を確認   |
+| IR-P-07   | priceRecords の INSERT + `findById()` で LEFT JOIN 結果が正しくグルーピングされる（複数 priceRecord が 1 Product にまとまること） |                                             |
 
 テストデータ生成は `Product.create()` / `Store.create()` 等のドメインファクトリを利用する（ID 採番ロジックを再利用するため）。UUIDv4 固定値でも可。
 
 要件書 §試験観点 の異常系（INFRA-E-01 / INFRA-E-02 / INFRA-E-03）・境界値（INFRA-B-03 / INFRA-B-04 / INFRA-B-05）も追加する。特に:
+
 - INFRA-E-03: storeId が stores テーブルに存在しない状態での priceRecord INSERT が FK 制約エラーになることを `expect(() => ...).rejects.toThrow()` で検証する。
 - INFRA-B-04: priceHistory 0 件の Product で `findById()` が空配列を返すことを検証する。
 - INFRA-B-05: numeric の小数値（例: 98.5）が `Number()` で正しく往復することを検証する。
@@ -254,11 +258,11 @@ describe('DrizzleXxxRepository', () => {
 
 設計書 §5.5 の IR-S-01 〜 IR-S-03 をすべて実装する。
 
-| テスト ID | 内容 |
-| --- | --- |
-| IR-S-01 | `save()` + `findById()` ラウンドトリップ（id / name / createdAt を検証） |
-| IR-S-02 | `findAll()` で `createdAt` 順に返る（2 件挿入して順序を確認） |
-| IR-S-03 | `findById()` で存在しない ID は null を返す |
+| テスト ID | 内容                                                                     |
+| --------- | ------------------------------------------------------------------------ |
+| IR-S-01   | `save()` + `findById()` ラウンドトリップ（id / name / createdAt を検証） |
+| IR-S-02   | `findAll()` で `createdAt` 順に返る（2 件挿入して順序を確認）            |
+| IR-S-03   | `findById()` で存在しない ID は null を返す                              |
 
 要件書の INFRA-R-11 も含める。
 
@@ -326,16 +330,15 @@ happy-dom のバージョンは Vitest 3.x と互換する最新安定版を `pn
 設計書 §6.3「案 1（推奨）」の workspace 設定を実装する。
 
 **apps/web/vitest.config.ts**（workspace ルート）:
+
 ```typescript
 import { defineWorkspace } from 'vitest/config';
 
-export default defineWorkspace([
-  './vitest.node.config.ts',
-  './vitest.dom.config.ts',
-]);
+export default defineWorkspace(['./vitest.node.config.ts', './vitest.dom.config.ts']);
 ```
 
 **apps/web/vitest.node.config.ts**（Hono ルートテスト用）:
+
 ```typescript
 import { baseConfig } from '@cookpit/config/vitest/base';
 import { mergeConfig, defineConfig } from 'vitest/config';
@@ -358,6 +361,7 @@ export default mergeConfig(
 ```
 
 **apps/web/vitest.dom.config.ts**（コンポーネントテスト用）:
+
 ```typescript
 import { baseConfig } from '@cookpit/config/vitest/base';
 import { mergeConfig, defineConfig } from 'vitest/config';
@@ -459,13 +463,13 @@ it('GET /api/products returns 200', async () => {
 
 テストケース一覧:
 
-| テスト ID | エンドポイント | 検証内容 |
-| --- | --- | --- |
-| WH-P-01 | GET /api/products | 200 + UseCase 返却値の JSON レスポンス |
-| WH-P-02 | POST /api/products | 201 + バリデーション通過時の UseCase 呼び出し確認 |
-| WH-P-03 | POST /api/products（不正ボディ） | 400 + Zod バリデーションエラー |
-| WH-P-04 | GET /api/products/:id（ProductNotFoundError） | 404 + `{ error: "..." }` |
-| WH-P-05 | DELETE /api/products/:id | 204 レスポンス |
+| テスト ID | エンドポイント                                | 検証内容                                          |
+| --------- | --------------------------------------------- | ------------------------------------------------- |
+| WH-P-01   | GET /api/products                             | 200 + UseCase 返却値の JSON レスポンス            |
+| WH-P-02   | POST /api/products                            | 201 + バリデーション通過時の UseCase 呼び出し確認 |
+| WH-P-03   | POST /api/products（不正ボディ）              | 400 + Zod バリデーションエラー                    |
+| WH-P-04   | GET /api/products/:id（ProductNotFoundError） | 404 + `{ error: "..." }`                          |
+| WH-P-05   | DELETE /api/products/:id                      | 204 レスポンス                                    |
 
 WH-P-04 では `GetProductUseCase.prototype.execute` が `ProductNotFoundError` をスローするよう設定し、`app.onError` の 404 ハンドリングを検証する。
 
@@ -498,12 +502,12 @@ WH-P-04 では `GetProductUseCase.prototype.execute` が `ProductNotFoundError` 
 
 テストケース一覧:
 
-| テスト ID | 検証内容 |
-| --- | --- |
-| WC-P-01 | `initialProducts=[]` で「まだ商品がありません」テキストが表示される |
-| WC-P-02 | `initialProducts` に 1 件のとき ProductCard が 1 件レンダリングされる |
-| WC-P-03 | 検索ボックスに入力すると商品名でフィルタリングされる（`userEvent.type` で入力、2 件→1 件に絞り込まれることを確認） |
-| WC-P-04 | カテゴリボタンクリックでカテゴリフィルタリングされる（`userEvent.click`、2 件→1 件に絞り込まれることを確認） |
+| テスト ID | 検証内容                                                                                                           |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| WC-P-01   | `initialProducts=[]` で「まだ商品がありません」テキストが表示される                                                |
+| WC-P-02   | `initialProducts` に 1 件のとき ProductCard が 1 件レンダリングされる                                              |
+| WC-P-03   | 検索ボックスに入力すると商品名でフィルタリングされる（`userEvent.type` で入力、2 件→1 件に絞り込まれることを確認） |
+| WC-P-04   | カテゴリボタンクリックでカテゴリフィルタリングされる（`userEvent.click`、2 件→1 件に絞り込まれることを確認）       |
 
 ```typescript
 import { render, screen } from '@testing-library/react';
@@ -539,12 +543,12 @@ pnpm test          # Turborepo 経由で 4 パッケージのテストがすべ�
 
 テスト本数の確認:
 
-| パッケージ | 実装前 | 実装後（目標） |
-| --- | --- | --- |
-| packages/domain | 17 本 | 17 本（変更なし） |
-| packages/application | 6 本 | 6 本（変更なし） |
-| packages/infrastructure | 0 本 | IR-P-01〜07 + 異常系・境界値（11本前後） + IR-S-01〜03（3本） = 14 本以上 |
-| apps/web | 0 本 | WH-P-01〜05（5本）+ WC-P-01〜04（4本）= 9 本 |
+| パッケージ              | 実装前 | 実装後（目標）                                                            |
+| ----------------------- | ------ | ------------------------------------------------------------------------- |
+| packages/domain         | 17 本  | 17 本（変更なし）                                                         |
+| packages/application    | 6 本   | 6 本（変更なし）                                                          |
+| packages/infrastructure | 0 本   | IR-P-01〜07 + 異常系・境界値（11本前後） + IR-S-01〜03（3本） = 14 本以上 |
+| apps/web                | 0 本   | WH-P-01〜05（5本）+ WC-P-01〜04（4本）= 9 本                              |
 
 **プロダクションコード変更 0 の確認**
 
@@ -579,16 +583,16 @@ pnpm test          # Turborepo 経由で 4 パッケージのテストがすべ�
 
 テストの最大目的は「DB スキーマ形 ⇔ ドメインモデル形の変換責務の検証」（設計書 §3）。
 
-| 観点 | 具体的なテスト ID | 補足 |
-| --- | --- | --- |
-| 正常系: save/findById ラウンドトリップ | IR-P-02, IR-S-01 | 全フィールドの対応確認 |
-| 正常系: LEFT JOIN グルーピング | IR-P-03, IR-P-07 | priceRecords の集約が 1 Product にまとまること |
-| 正常系: upsert | IR-P-06 | onConflictDoUpdate の上書き動作 |
-| 異常系: 存在しない ID | IR-P-04, IR-S-03 | null 返却 |
-| 異常系: FK 制約違反 | INFRA-E-03 | stores に存在しない storeId への INSERT |
-| 境界値: 空配列 | INFRA-B-03, INFRA-B-04 | aliases=[] / priceHistory=[] |
-| 境界値: numeric 小数精度 | INFRA-B-05 | `Number(row.priceAmount)` の精度 |
-| 境界値: CASCADE 削除 | IR-P-05 | product 削除後に priceRecords が消えること |
+| 観点                                   | 具体的なテスト ID      | 補足                                           |
+| -------------------------------------- | ---------------------- | ---------------------------------------------- |
+| 正常系: save/findById ラウンドトリップ | IR-P-02, IR-S-01       | 全フィールドの対応確認                         |
+| 正常系: LEFT JOIN グルーピング         | IR-P-03, IR-P-07       | priceRecords の集約が 1 Product にまとまること |
+| 正常系: upsert                         | IR-P-06                | onConflictDoUpdate の上書き動作                |
+| 異常系: 存在しない ID                  | IR-P-04, IR-S-03       | null 返却                                      |
+| 異常系: FK 制約違反                    | INFRA-E-03             | stores に存在しない storeId への INSERT        |
+| 境界値: 空配列                         | INFRA-B-03, INFRA-B-04 | aliases=[] / priceHistory=[]                   |
+| 境界値: numeric 小数精度               | INFRA-B-05             | `Number(row.priceAmount)` の精度               |
+| 境界値: CASCADE 削除                   | IR-P-05                | product 削除後に priceRecords が消えること     |
 
 Playwright との棲み分け: Repository テストはマッピングロジックの検証に特化し、ビジネスシナリオ（CRUD ハッピーパス）は Playwright に委ねる。
 
@@ -596,22 +600,22 @@ Playwright との棲み分け: Repository テストはマッピングロジッ�
 
 テストの目的は「リクエスト→UseCase 呼び出し→レスポンス」の HTTP レイヤー検証。UseCase / Repository は vi.mock でモック化し DB 接続不要。
 
-| 観点 | 具体的なテスト ID |
-| --- | --- |
-| 正常系: 200/201/204 レスポンス | WH-P-01, WH-P-02, WH-P-05 |
-| 異常系: Zod バリデーションエラー（400） | WH-P-03 |
-| 異常系: ドメインエラー（404） | WH-P-04 |
+| 観点                                    | 具体的なテスト ID         |
+| --------------------------------------- | ------------------------- |
+| 正常系: 200/201/204 レスポンス          | WH-P-01, WH-P-02, WH-P-05 |
+| 異常系: Zod バリデーションエラー（400） | WH-P-03                   |
+| 異常系: ドメインエラー（404）           | WH-P-04                   |
 
 ### apps/web / コンポーネントテスト（UI ロジック検証）
 
 テストの目的は「フィルタリングロジック・レンダリング分岐の検証」。
 
-| 観点 | 具体的なテスト ID |
-| --- | --- |
-| 正常系: 空リスト表示 | WC-P-01 |
-| 正常系: 1件レンダリング | WC-P-02 |
-| 正常系: テキスト検索フィルタ | WC-P-03 |
-| 正常系: カテゴリフィルタ | WC-P-04 |
+| 観点                         | 具体的なテスト ID |
+| ---------------------------- | ----------------- |
+| 正常系: 空リスト表示         | WC-P-01           |
+| 正常系: 1件レンダリング      | WC-P-02           |
+| 正常系: テキスト検索フィルタ | WC-P-03           |
+| 正常系: カテゴリフィルタ     | WC-P-04           |
 
 ---
 
@@ -699,11 +703,11 @@ Playwright との棲み分け: Repository テストはマッピングロジッ�
 
 本機能追加に伴うドキュメント更新は最小限にとどめる。
 
-| ドキュメント | 更新内容 | 必要性 |
-| --- | --- | --- |
-| `docs/05-roadmap.md` | test-infra-expansion 完了として記録 | 任意（次スプリント開始時に更新） |
-| `CLAUDE.md` | 変更なし（テスト基盤追加はアーキテクチャ原則に影響しない） | 不要 |
-| `docs/07-dev-rules.md` | infrastructure・web のテスト実行コマンドを追記 | 任意 |
+| ドキュメント           | 更新内容                                                   | 必要性                           |
+| ---------------------- | ---------------------------------------------------------- | -------------------------------- |
+| `docs/05-roadmap.md`   | test-infra-expansion 完了として記録                        | 任意（次スプリント開始時に更新） |
+| `CLAUDE.md`            | 変更なし（テスト基盤追加はアーキテクチャ原則に影響しない） | 不要                             |
+| `docs/07-dev-rules.md` | infrastructure・web のテスト実行コマンドを追記             | 任意                             |
 
 ---
 

@@ -15,13 +15,13 @@
 
 ## 変更対象ファイル
 
-| パス | 変更理由 |
-| --- | --- |
-| `apps/web/src/app/recipes/new/_components/ingredient-row.tsx` | `_components/` へ移動するため削除（新規パスに再作成） |
-| `apps/web/src/app/recipes/new/_components/step-row.tsx` | `_components/` へ移動するため削除（新規パスに再作成） |
-| `apps/web/src/app/recipes/new/_components/recipe-form-client.tsx` | `buildIngredientInput` ユーティリティ呼び出しへのリファクタリングと IngredientRow/StepRow の import パス更新 |
-| `apps/web/src/app/recipes/new/page.tsx` | IngredientRow/StepRow 移動後の import パス更新は不要（直接 import していない）。実態変更なし — import は `recipe-form-client.tsx` 経由のため変更不要 |
-| `apps/web/src/app/recipes/[id]/_components/recipe-detail-client.tsx` | 「編集」ボタン追加（`<span aria-hidden="true" className="w-9" />` を `<Button>` に置き換え） |
+| パス                                                                 | 変更理由                                                                                                                                             |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/app/recipes/new/_components/ingredient-row.tsx`        | `_components/` へ移動するため削除（新規パスに再作成）                                                                                                |
+| `apps/web/src/app/recipes/new/_components/step-row.tsx`              | `_components/` へ移動するため削除（新規パスに再作成）                                                                                                |
+| `apps/web/src/app/recipes/new/_components/recipe-form-client.tsx`    | `buildIngredientInput` ユーティリティ呼び出しへのリファクタリングと IngredientRow/StepRow の import パス更新                                         |
+| `apps/web/src/app/recipes/new/page.tsx`                              | IngredientRow/StepRow 移動後の import パス更新は不要（直接 import していない）。実態変更なし — import は `recipe-form-client.tsx` 経由のため変更不要 |
+| `apps/web/src/app/recipes/[id]/_components/recipe-detail-client.tsx` | 「編集」ボタン追加（`<span aria-hidden="true" className="w-9" />` を `<Button>` に置き換え）                                                         |
 
 > `apps/web/src/app/recipes/new/page.tsx` は IngredientRow/StepRow を直接 import していないため変更不要。`recipe-form-client.tsx` の import パス更新のみで対応完結する。
 
@@ -29,12 +29,12 @@
 
 ## 新規作成ファイル
 
-| パス | 役割 |
-| --- | --- |
-| `apps/web/src/app/recipes/_components/ingredient-row.tsx` | `IngredientRow` コンポーネントと `IngredientRowValue`/`IngredientUnit` 型の共有定義（`new/_components/` から移動） |
-| `apps/web/src/app/recipes/_components/step-row.tsx` | `StepRow` コンポーネントと `StepRowValue` 型の共有定義（`new/_components/` から移動） |
-| `apps/web/src/app/recipes/_utils/build-ingredient-input.ts` | `buildIngredientInput` ユーティリティ関数（`IngredientRowValue[]` → `{ ingredients: RecipeIngredientBody[]; errors: Record<string, string> }` を返す） |
-| `apps/web/src/app/recipes/[id]/edit/page.tsx` | 編集画面 Server Component。`GetRecipeUseCase` を手動 DI、`RecipeNotFoundError` を catch して `notFound()` 呼出し、`RecipeEditFormClient` に `recipe` を渡す |
+| パス                                                                         | 役割                                                                                                                                                            |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/app/recipes/_components/ingredient-row.tsx`                    | `IngredientRow` コンポーネントと `IngredientRowValue`/`IngredientUnit` 型の共有定義（`new/_components/` から移動）                                              |
+| `apps/web/src/app/recipes/_components/step-row.tsx`                          | `StepRow` コンポーネントと `StepRowValue` 型の共有定義（`new/_components/` から移動）                                                                           |
+| `apps/web/src/app/recipes/_utils/build-ingredient-input.ts`                  | `buildIngredientInput` ユーティリティ関数（`IngredientRowValue[]` → `{ ingredients: RecipeIngredientBody[]; errors: Record<string, string> }` を返す）          |
+| `apps/web/src/app/recipes/[id]/edit/page.tsx`                                | 編集画面 Server Component。`GetRecipeUseCase` を手動 DI、`RecipeNotFoundError` を catch して `notFound()` 呼出し、`RecipeEditFormClient` に `recipe` を渡す     |
 | `apps/web/src/app/recipes/[id]/edit/_components/recipe-edit-form-client.tsx` | 編集フォーム Client Component。`RecipeDto` を props として初期値プリフィル、`buildIngredientInput` と `buildUpdateInput` を使用し `PUT /api/recipes/:id` へ送信 |
 
 ---
@@ -71,9 +71,10 @@
 
   type RecipeIngredientBody = CreateRecipeBody['ingredients'][number];
 
-  export function buildIngredientInput(
-    rows: IngredientRowValue[],
-  ): { ingredients: RecipeIngredientBody[]; errors: Record<string, string> }
+  export function buildIngredientInput(rows: IngredientRowValue[]): {
+    ingredients: RecipeIngredientBody[];
+    errors: Record<string, string>;
+  };
   ```
 
   - 空行スキップ（`isEmptyRow`）のロジックを含む。
@@ -162,12 +163,14 @@
   **定数**: `baseServings` は `recipe.baseServings` を参照する変数（State 不要）。
 
   **`FieldErrors` 型**:
+
   ```typescript
   interface FieldErrors {
     cookingTime: string | null;
     ingredients: Record<string, string>;
   }
   ```
+
   （`baseServings` は編集不可のためフィールドエラーなし）
 
   **`buildUpdateInput()`**:
@@ -214,12 +217,14 @@
 ### ステップ 1: IngredientRow / StepRow を共有ディレクトリへ移動
 
 **対象ファイル**:
+
 - 新規: `apps/web/src/app/recipes/_components/ingredient-row.tsx`
 - 新規: `apps/web/src/app/recipes/_components/step-row.tsx`
 - 削除予定: `apps/web/src/app/recipes/new/_components/ingredient-row.tsx`（ステップ 2 完了後に削除）
 - 削除予定: `apps/web/src/app/recipes/new/_components/step-row.tsx`（ステップ 2 完了後に削除）
 
 **変更内容**:
+
 1. `apps/web/src/app/recipes/_components/ingredient-row.tsx` を新規作成し、既存 `new/_components/ingredient-row.tsx` の内容をコピーする。ファイル内容の変更なし。
 2. `apps/web/src/app/recipes/_components/step-row.tsx` を新規作成し、既存 `new/_components/step-row.tsx` の内容をコピーする。ファイル内容の変更なし。
 3. 旧ファイル（`new/_components/` 内）はこの時点ではまだ残す（ステップ 2 で参照先を切り替えた後に削除）。
@@ -231,10 +236,12 @@
 ### ステップ 2: buildIngredientInput ユーティリティを切り出し、作成フォームのリファクタリング
 
 **対象ファイル**:
+
 - 新規: `apps/web/src/app/recipes/_utils/build-ingredient-input.ts`
 - 変更: `apps/web/src/app/recipes/new/_components/recipe-form-client.tsx`
 
 **変更内容**:
+
 1. `_utils/build-ingredient-input.ts` を新規作成する。`recipe-form-client.tsx` の `buildCreateInput` 内にある材料行ループ全体（空行スキップ・バリデーション・`parsedIngredients.push` までの処理）を抽出して実装する。import は `@/app/recipes/_components/ingredient-row`（ステップ 1 で作成した新パス）から `IngredientRowValue` を使う。
 2. `recipe-form-client.tsx` を変更する:
    - `IngredientRow` / `StepRow` の import を `./ingredient-row` / `./step-row` から `@/app/recipes/_components/ingredient-row` / `@/app/recipes/_components/step-row` へ変更する。
@@ -243,6 +250,7 @@
 3. 旧 `new/_components/ingredient-row.tsx` と `new/_components/step-row.tsx` を削除する（この時点で参照がなくなるため）。
 
 **完了条件**:
+
 - `pnpm type-check` / `pnpm lint` が通る。
 - 旧ファイル（`new/_components/ingredient-row.tsx` / `new/_components/step-row.tsx`）が存在しない。
 
@@ -253,6 +261,7 @@
 **対象ファイル**: （コード変更なし。手動テストのみ）
 
 **確認内容**:
+
 - レシピ作成フォーム（`/recipes/new`）を開く。
 - 材料を複数行追加し、数値量・テキスト量（amountNote 相当）それぞれで入力できること。
 - バリデーションエラー（食材名なし・量なし・単位なし・不正数値）が正しく表示されること。
@@ -267,10 +276,12 @@
 **対象ファイル**: `apps/web/src/app/recipes/[id]/_components/recipe-detail-client.tsx`
 
 **変更内容**:
+
 - `Pencil` を `lucide-react` から追加 import する。
 - header 内 `<span aria-hidden="true" className="w-9" />` を `<Button>` に置き換える（詳細は「ファイルごとの変更内容」参照）。
 
 **完了条件**:
+
 - 詳細画面に「編集」ボタン（鉛筆アイコン）が表示される。
 - クリックで `/recipes/{id}/edit` へ遷移する（この時点では編集ページ未実装のため 404 になるが、リンク先 URL が正しいことを確認する）。
 - `pnpm type-check` / `pnpm lint` が通る。
@@ -282,12 +293,14 @@
 **対象ファイル**: `apps/web/src/app/recipes/[id]/edit/page.tsx`（新規作成。ディレクトリも新規）
 
 **変更内容**:
+
 - `apps/web/src/app/recipes/[id]/page.tsx` と同一の手動 DI パターンで `GetRecipeUseCase` を実行する。
 - `RecipeNotFoundError` catch → `notFound()` パターンを適用する。
 - `<RecipeEditFormClient recipe={recipe} />` を return する（Client Component は次ステップで作成するが、import 先パスは先に決定しておく）。
 - `export const dynamic = 'force-dynamic'` を付与する。
 
 **完了条件**:
+
 - ファイルが正しい構造で作成されている。
 - `pnpm type-check` が通る（Client Component が未実装の場合は型エラーになる可能性があるため、ステップ 5 と 6 は連続して実施し、完了条件はステップ 6 完了後にまとめて確認してもよい）。
 
@@ -298,6 +311,7 @@
 **対象ファイル**: `apps/web/src/app/recipes/[id]/edit/_components/recipe-edit-form-client.tsx`（新規作成。ディレクトリも新規）
 
 **変更内容**:
+
 - 「ファイルごとの変更内容」節の仕様に従い実装する。
 - `IngredientRow` / `StepRow` は `@/app/recipes/_components/ingredient-row` / `@/app/recipes/_components/step-row` から import する。
 - `buildIngredientInput` は `@/app/recipes/_utils/build-ingredient-input` から import する。
@@ -305,6 +319,7 @@
 - `nextIngredientId` / `nextStepId` は初期値を「既存行数 + 1」にする（`useRef(recipe.ingredients.length + 1)` 等）。
 
 **完了条件**:
+
 - 既存レシピを開いたとき、全フィールドの現在値がフォームに表示される。
 - `baseServings` が静的テキストとして表示され、入力フィールドが存在しない。
 - フィールドを変更して保存すると詳細画面へ遷移し、DB の値が更新されている。
@@ -318,6 +333,7 @@
 **対象ファイル**: （コード変更なし）
 
 **実行内容**:
+
 ```
 pnpm lint
 pnpm type-check
@@ -359,29 +375,29 @@ Presentation 層の自動テストは coding-standards.md に従い後続フェ�
 
 **手動テスト観点（完了条件として各ステップに対応）**:
 
-| 観点 | 確認ステップ |
-| --- | --- |
-| 作成フォームの回帰（材料入力・バリデーション・保存） | ステップ 3 |
-| 詳細画面に編集ボタンが表示される | ステップ 4 |
-| 編集ボタンで `/recipes/[id]/edit` へ遷移 | ステップ 4 |
-| 編集フォームに既存値が全フィールド初期表示される | ステップ 6 |
-| `baseServings` が静的テキスト表示（入力不可） | ステップ 6 |
-| 各フィールドを変更して保存→詳細画面へ遷移・変更反映 | ステップ 6 |
-| 保存失敗時にエラーメッセージ表示・フォーム維持 | ステップ 6 |
+| 観点                                                     | 確認ステップ |
+| -------------------------------------------------------- | ------------ |
+| 作成フォームの回帰（材料入力・バリデーション・保存）     | ステップ 3   |
+| 詳細画面に編集ボタンが表示される                         | ステップ 4   |
+| 編集ボタンで `/recipes/[id]/edit` へ遷移                 | ステップ 4   |
+| 編集フォームに既存値が全フィールド初期表示される         | ステップ 6   |
+| `baseServings` が静的テキスト表示（入力不可）            | ステップ 6   |
+| 各フィールドを変更して保存→詳細画面へ遷移・変更反映      | ステップ 6   |
+| 保存失敗時にエラーメッセージ表示・フォーム維持           | ステップ 6   |
 | 存在しない ID（`/recipes/unknown-uuid/edit`）で 404 表示 | ステップ 5/6 |
-| キャンセルボタンで詳細画面へ戻る | ステップ 6 |
+| キャンセルボタンで詳細画面へ戻る                         | ステップ 6   |
 
 ---
 
 ## リスク
 
-| リスク | 影響 | 対策 |
-| --- | --- | --- |
-| ファイル移動（IngredientRow/StepRow）後に import 漏れが残る | `pnpm type-check` で型エラー発生 | ステップ 2 で旧ファイルを削除することにより残存 import が型エラーとして検出される。ステップ 7 の `pnpm type-check` で必ず確認する |
-| `buildIngredientInput` の抽出ミスによる作成フォームの回帰 | 作成機能の破損 | ステップ 2 後すぐにステップ 3（手動回帰テスト）を実施する。`buildCreateInput` の材料ループを 1:1 で置き換えるため、ロジック変更なしに抽出することを徹底する |
-| `RecipeDto.ingredients` → `IngredientRowValue[]` 変換の実装誤り | 編集フォームの初期値が欠損 | `amountValue !== null` と `amountNote !== null` の判定が `recipeIngredientSchema.superRefine` の制約（両方 null にはなれない）と対応していることを確認する。両方 null の行は DB 制約で存在し得ないが、防御的に `amountText: ''` にフォールバックする実装を推奨する |
-| 編集後の `nextIngredientId` / `nextStepId` の初期値が既存行と衝突 | 行 key の重複による React rendering 不具合 | `useRef` の初期値を `recipe.ingredients.length + 1` とし、既存行の id を `ingredient-0`, `ingredient-1`, ... 形式とすることで衝突を回避する |
-| `size="icon-lg"` が `Button` コンポーネントに存在しない variant/size である可能性 | 型エラー | 既存の `recipe-detail-client.tsx` が `size="icon-lg"` を使用しているため、サポート済みであることが確認済み。`pnpm type-check` で検証 |
+| リスク                                                                            | 影響                                       | 対策                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ファイル移動（IngredientRow/StepRow）後に import 漏れが残る                       | `pnpm type-check` で型エラー発生           | ステップ 2 で旧ファイルを削除することにより残存 import が型エラーとして検出される。ステップ 7 の `pnpm type-check` で必ず確認する                                                                                                                                  |
+| `buildIngredientInput` の抽出ミスによる作成フォームの回帰                         | 作成機能の破損                             | ステップ 2 後すぐにステップ 3（手動回帰テスト）を実施する。`buildCreateInput` の材料ループを 1:1 で置き換えるため、ロジック変更なしに抽出することを徹底する                                                                                                        |
+| `RecipeDto.ingredients` → `IngredientRowValue[]` 変換の実装誤り                   | 編集フォームの初期値が欠損                 | `amountValue !== null` と `amountNote !== null` の判定が `recipeIngredientSchema.superRefine` の制約（両方 null にはなれない）と対応していることを確認する。両方 null の行は DB 制約で存在し得ないが、防御的に `amountText: ''` にフォールバックする実装を推奨する |
+| 編集後の `nextIngredientId` / `nextStepId` の初期値が既存行と衝突                 | 行 key の重複による React rendering 不具合 | `useRef` の初期値を `recipe.ingredients.length + 1` とし、既存行の id を `ingredient-0`, `ingredient-1`, ... 形式とすることで衝突を回避する                                                                                                                        |
+| `size="icon-lg"` が `Button` コンポーネントに存在しない variant/size である可能性 | 型エラー                                   | 既存の `recipe-detail-client.tsx` が `size="icon-lg"` を使用しているため、サポート済みであることが確認済み。`pnpm type-check` で検証                                                                                                                               |
 
 ---
 
@@ -398,12 +414,12 @@ Presentation 層の自動テストは coding-standards.md に従い後続フェ�
 
 ## ドキュメント更新対象
 
-| ドキュメント | 更新要否 | 内容 |
-| --- | --- | --- |
-| `docs/designs/recipe-edit-screen.md` | 不要（設計書はそのまま保持） | — |
-| `docs/03-architecture.md` | 不要 | Presentation 層の増分のみで、アーキテクチャ変更なし |
-| `docs/04-domain-model.md` | 不要 | Domain 層変更なし |
-| `docs/tests/recipe-edit-screen.md` | test-designer が作成 | 詳細テスト計画は test-designer に委ねる |
+| ドキュメント                         | 更新要否                     | 内容                                                |
+| ------------------------------------ | ---------------------------- | --------------------------------------------------- |
+| `docs/designs/recipe-edit-screen.md` | 不要（設計書はそのまま保持） | —                                                   |
+| `docs/03-architecture.md`            | 不要                         | Presentation 層の増分のみで、アーキテクチャ変更なし |
+| `docs/04-domain-model.md`            | 不要                         | Domain 層変更なし                                   |
+| `docs/tests/recipe-edit-screen.md`   | test-designer が作成         | 詳細テスト計画は test-designer に委ねる             |
 
 ---
 

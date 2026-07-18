@@ -12,14 +12,14 @@
 以下の項目は **DB スキーマ確定に直結する**ため、実装着手前にユーザー承認が必要。
 設計書の推奨案をデフォルトとして記載するが、確定待ち扱いとする。
 
-| 優先度 | ID | 未決事項 | 設計推奨案 | 確定が必要な理由 |
-|---|---|---|---|---|
-| 高 | **U1** | unitPrice の丸め桁数・丸め方式 | 小数点以下1桁 + `Math.round` + `numeric(10, 1)` カラム | DB スキーマ `price_records.priceAmount` / `unitPriceAmount` のカラム型に直結。後から変更困難 |
-| 高 | **U7** | price_records テーブル設計 | 独立テーブル（案B）。Repository が JOIN 復元 | スキーマ設計の根幹。jsonb への切り替えはマイグレーションコストが高い |
-| 中 | **U3** | DeleteProductUseCase の存在チェック | `ProductNotFoundError` を throw（冪等成功ではなく NotFound） | API 契約・UX に影響 |
-| 中 | **U5** | 価格記録の重複可否 | 重複許可（最新 = 最大 `observedAt`）。UUID PK | PK 設計・DB 制約に影響 |
-| 中 | **C1** | RecordPrice 成功ステータス | 200 空ボディ | Hono ルート実装に影響 |
-| 中 | **C2** | cheapest-store の null 表現 | `{ "data": null }` / 非null も `{ "data": {...} }` で統一 | フロントの型安全な取り回しに影響 |
+| 優先度 | ID     | 未決事項                            | 設計推奨案                                                   | 確定が必要な理由                                                                             |
+| ------ | ------ | ----------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 高     | **U1** | unitPrice の丸め桁数・丸め方式      | 小数点以下1桁 + `Math.round` + `numeric(10, 1)` カラム       | DB スキーマ `price_records.priceAmount` / `unitPriceAmount` のカラム型に直結。後から変更困難 |
+| 高     | **U7** | price_records テーブル設計          | 独立テーブル（案B）。Repository が JOIN 復元                 | スキーマ設計の根幹。jsonb への切り替えはマイグレーションコストが高い                         |
+| 中     | **U3** | DeleteProductUseCase の存在チェック | `ProductNotFoundError` を throw（冪等成功ではなく NotFound） | API 契約・UX に影響                                                                          |
+| 中     | **U5** | 価格記録の重複可否                  | 重複許可（最新 = 最大 `observedAt`）。UUID PK                | PK 設計・DB 制約に影響                                                                       |
+| 中     | **C1** | RecordPrice 成功ステータス          | 200 空ボディ                                                 | Hono ルート実装に影響                                                                        |
+| 中     | **C2** | cheapest-store の null 表現         | `{ "data": null }` / 非null も `{ "data": {...} }` で統一    | フロントの型安全な取り回しに影響                                                             |
 
 本計画は上記すべての**設計推奨案が承認された前提**で記述する。
 承認前に変更が生じた場合、影響を受けるステップは再確認すること。
@@ -120,6 +120,7 @@ Phase 4: Presentation
 **対象ファイル**: `packages/domain/src/shared/money.ts`
 
 **実装内容**:
+
 - `Money` 値オブジェクトクラス。`private constructor(amount: number, currency: string)`
 - `static of(amount: number, currency: string): Money` — `amount < 0` のとき `Error('Money amount must be non-negative')` を throw
 - `add(other: Money): Money` — 同一通貨チェック（異通貨で throw）、合算
@@ -135,6 +136,7 @@ Phase 4: Presentation
 **依存**: なし（Domain 層完結）
 
 **完了条件**:
+
 - `pnpm --filter @cookpit/domain test` が green
 - `pnpm --filter @cookpit/domain type-check` が通る
 
@@ -145,6 +147,7 @@ Phase 4: Presentation
 **対象ファイル**: `packages/domain/src/shared/store.ts`
 
 **実装内容**:
+
 - `StoreId` 値オブジェクト — `RecipeId` と同パターン（`randomUUID` 使用）
   - `static generate(): StoreId`
   - `static fromString(value: string): StoreId`
@@ -162,6 +165,7 @@ Phase 4: Presentation
 **依存**: S1-1（なし。Store は Money を持たない）
 
 **完了条件**:
+
 - `pnpm --filter @cookpit/domain test` が green
 - `pnpm --filter @cookpit/domain type-check` が通る
 
@@ -172,6 +176,7 @@ Phase 4: Presentation
 **対象ファイル**: `packages/domain/src/product/product-id.ts`
 
 **実装内容**:
+
 - `ProductId` クラス — `RecipeId` と完全に同パターン（`randomUUID` 使用）
   - `static generate(): ProductId`
   - `static fromString(value: string): ProductId`
@@ -194,6 +199,7 @@ Phase 4: Presentation
 **対象ファイル**: `packages/domain/src/product/price-record-id.ts`
 
 **実装内容**:
+
 - `PriceRecordId` クラス — `ProductId` と同パターン
   - `static generate(): PriceRecordId`
   - `static fromString(value: string): PriceRecordId`
@@ -213,17 +219,20 @@ Phase 4: Presentation
 **実装内容**:
 
 `ProductCategory` 型:
+
 ```
 export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' | '冷凍' | 'その他';
 ```
 
 `PriceRecord` 値オブジェクト（イミュータブル）:
+
 - フィールド: `id: PriceRecordId`, `storeId: StoreId`, `price: Money`, `unitPrice: Money`, `packageSize: Quantity`, `observedAt: Date`
 - `static create(props: {...}): PriceRecord` — バリデーションなし（UseCase 入口で保証済み）
 - `static reconstruct(props: {...}): PriceRecord` — DB 復元用
 - ゲッター全フィールド
 
 `Product` 集約:
+
 - `private constructor(...)` — 全フィールドを受け取る
 - フィールド: `id: ProductId`, `name: string`, `aliases: string[]`, `category: ProductCategory`, `defaultUnit: Unit`, `priceHistory: PriceRecord[]`, `createdAt: Date`, `updatedAt: Date`
 - `static create(input: CreateProductInput): Product`
@@ -240,6 +249,7 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 - ゲッター全フィールド（`priceHistory` はスプレッドコピーで返す）
 
 テストファイル: `packages/domain/src/product/product.test.ts`（co-located）
+
 - `Product.create()`: name 空白エラー、正常作成
 - `Product.recordPrice()`: 記録追加後 `priceHistory` に含まれること
 - `Product.latestPriceAt()`: 単一レコード、複数レコード（最新が返る）、存在しない storeId → null
@@ -249,6 +259,7 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 **依存**: S1-1 (Money), S1-2 (StoreId), S1-3 (ProductId), S1-4 (PriceRecordId), `packages/domain/src/shared/quantity.ts`, `packages/domain/src/shared/unit.ts`
 
 **完了条件**:
+
 - `pnpm --filter @cookpit/domain test` が green（product.test.ts を含む）
 
 ---
@@ -258,10 +269,12 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 **対象ファイル**: `packages/domain/src/product/unit-price-calculator.ts`
 
 **実装内容**:
+
 - ドメインサービスクラス `UnitPriceCalculator`（または名前付き export の純粋関数でも可）
 - `static calculate(priceAmount: number, packageSize: Quantity): Money`
 
 計算ロジック（設計書 §5 の通り）:
+
 ```
 const WEIGHT_UNITS = new Set(['g', 'kg']);
 const VOLUME_UNITS = new Set(['ml', 'l']);
@@ -277,6 +290,7 @@ const VOLUME_UNITS = new Set(['ml', 'l']);
 ```
 
 テストファイル: `packages/domain/src/product/unit-price-calculator.test.ts`（co-located）
+
 - 重量系 g: `137 / 300 * 100` → `45.7`
 - 重量系 kg: `300 / 1 * 100 / 1000` = `300/1000*100 = 30` 相当（1kg袋300円）
 - 容量系 ml: 正常
@@ -296,6 +310,7 @@ const VOLUME_UNITS = new Set(['ml', 'l']);
 **対象ファイル**: `packages/domain/src/product/product.repository.ts`
 
 **実装内容**:
+
 ```typescript
 export interface ProductRepository {
   findById(id: ProductId): Promise<Product | null>;
@@ -316,6 +331,7 @@ export interface ProductRepository {
 **対象ファイル**: `packages/domain/src/shared/store.repository.ts`
 
 実装内容:
+
 ```typescript
 export interface StoreRepository {
   findById(id: StoreId): Promise<Store | null>;
@@ -390,10 +406,12 @@ price_records テーブル（pgTable）
 **対象ファイル**: `packages/infrastructure/src/repositories/drizzle-product.repository.ts`
 
 **実装内容**:
+
 - `DrizzleProductRepository implements ProductRepository`
 - `constructor(private readonly db: DrizzleClient) {}`
 
 `findById(id: ProductId): Promise<Product | null>`:
+
 - `products LEFT JOIN price_records ON products.id = price_records.product_id WHERE products.id = $id`
 - Drizzle の `leftJoin` + `where(eq(products.id, id.value))` を使用
 - 複数行になる（PriceRecord 数 × 1 products 行）を groupBy 等で集約するか、`findAll` と共通の `toEntity` でグルーピング処理を行う
@@ -401,18 +419,22 @@ price_records テーブル（pgTable）
 - 結果が空 → `null` を返す
 
 `findAll(): Promise<Product[]>`:
+
 - `products LEFT JOIN price_records` の全件。JS 側で `productId` によりグルーピング → `map(toEntity)`
 - `orderBy(products.createdAt)` で安定したソート順
 
 `save(product: Product): Promise<void>`:
+
 - products テーブルへの upsert: `INSERT ... ON CONFLICT DO UPDATE`（`drizzle-recipe.repository.ts` の `onConflictDoUpdate` パターン踏襲）
 - `product.priceHistory` の各 PriceRecord を `price_records` テーブルへ upsert（`id` を PK として `ON CONFLICT(id) DO UPDATE SET ...`）
 - 注意: `save` は add-only（既存 PriceRecord の削除は行わない）。DELETE は `delete()` メソッドのみ
 
 `delete(id: ProductId): Promise<void>`:
+
 - `DELETE FROM products WHERE id = $id`（`ON DELETE CASCADE` により `price_records` も自動削除）
 
 `private toEntity(productRow, priceRecordRows): Product`:
+
 - `drizzle-recipe.repository.ts` の `toUnit`・`toRecipeTag` と同パターンで `toUnit()`・`toProductCategory()` ヘルパー関数を定義する
 - `Product.reconstruct({ id: ProductId.fromString(row.id), ..., priceHistory: [...] })`
 - 各 PriceRecord は `PriceRecord.reconstruct(...)` で復元
@@ -430,6 +452,7 @@ price_records テーブル（pgTable）
 **対象ファイル**: `packages/infrastructure/src/repositories/drizzle-store.repository.ts`
 
 **実装内容**:
+
 - `DrizzleStoreRepository implements StoreRepository`
 - `constructor(private readonly db: DrizzleClient) {}`
 - `findById(id: StoreId): Promise<Store | null>`
@@ -448,6 +471,7 @@ price_records テーブル（pgTable）
 **対象ファイル**: `packages/infrastructure/src/index.ts`
 
 **追記内容**（既存行に変更なし）:
+
 ```typescript
 export * from './repositories/drizzle-product.repository';
 export * from './repositories/drizzle-store.repository';
@@ -464,6 +488,7 @@ export * from './repositories/drizzle-store.repository';
 **対象**: `apps/web/` で `pnpm db:generate` を実行
 
 **手順**:
+
 1. S2-1 のスキーマ追記が完了した状態で `pnpm --filter @cookpit/web db:generate` を実行
 2. `drizzle/migrations/` 配下に新しいマイグレーションファイルが生成されることを確認
 3. Store シード SQL を別途準備する（マイグレーションファイル内またはシードスクリプトとして）:
@@ -474,6 +499,7 @@ export * from './repositories/drizzle-store.repository';
      ('<固定UUID-B>', 'ライフ', NOW())
    ON CONFLICT (id) DO NOTHING;
    ```
+
    - UUID の具体値は implementer が `randomUUID()` 等で生成して固定値として記録する
    - シード方式の選択: マイグレーションファイルに `sql` 直書き（Drizzle の `execute sql` 機能）か、別途 `seed.ts` スクリプト（`pnpm db:seed`）のどちらかを選択する。既存パターンがなければシードスクリプトを新規作成する方針とする
 4. `pnpm --filter @cookpit/web db:migrate` を実行して適用確認（開発 DB 対象）
@@ -481,6 +507,7 @@ export * from './repositories/drizzle-store.repository';
 **注意**: `ON CONFLICT DO NOTHING` により同一 UUID の再投入はエラーにならない（冪等性確保）
 
 **完了条件**:
+
 - マイグレーションファイルが生成されている
 - 開発 DB に `stores` / `products` / `price_records` テーブルが作成されている
 - Store シードデータ2件が `stores` テーブルに存在する
@@ -504,6 +531,7 @@ export * from './repositories/drizzle-store.repository';
 **実装内容**: 設計書 `contract.md §4` の DTO 定義案に準拠。`interface` 形式（`recipe.dto.ts` 踏襲）。
 
 エクスポートする型:
+
 - `PriceRecordDto` — storeId, storeName, priceAmount, unitPriceAmount, packageSizeValue, packageSizeUnit, observedAt（ISO 文字列）
 - `ProductDto` — id, name, aliases, category, defaultUnit, priceHistory, createdAt, updatedAt
 - `StoreDto` — id, name
@@ -525,6 +553,7 @@ export * from './repositories/drizzle-store.repository';
 **対象ファイル**: `packages/application/src/product/product-not-found.error.ts`
 
 **実装内容**: `recipe-not-found.error.ts` と完全に同パターン
+
 ```typescript
 export class ProductNotFoundError extends Error {
   constructor(productId: string) {
@@ -545,6 +574,7 @@ export class ProductNotFoundError extends Error {
 **対象ファイル**: `packages/application/src/product/store-not-found.error.ts`
 
 **実装内容**:
+
 ```typescript
 export class StoreNotFoundError extends Error {
   constructor(storeId: string) {
@@ -565,6 +595,7 @@ export class StoreNotFoundError extends Error {
 **対象ファイル**: `packages/application/src/product/product.mapper.ts`
 
 **実装内容**: `recipe.mapper.ts` パターン踏襲
+
 - `toProductDto(product: Product, storeMap: Map<string, string>): ProductDto`
   - `storeMap` は `storeId.value → storeName` のマップ（UseCase が StoreRepository から構築して渡す）
   - `priceHistory` の各 PriceRecord を `toPriceRecordDto(record, storeMap)` で変換
@@ -584,6 +615,7 @@ export class StoreNotFoundError extends Error {
 パターン: `constructor` でリポジトリを受け取り、`async execute(input): Promise<output>` のみ公開。
 
 #### `create-product.use-case.ts`
+
 - `constructor(private readonly productRepository: ProductRepository, private readonly storeRepository: StoreRepository)`
   - ※ `GetStores`/`Create` は storeRepository 不要。`constructor(private readonly productRepository: ProductRepository)`
 - `execute(input: CreateProductInputDto): Promise<ProductDto>`
@@ -593,17 +625,20 @@ export class StoreNotFoundError extends Error {
   - `storeMap` は空 Map（作成時は priceHistory なし）→ `toProductDto(product, new Map())`
 
 #### `get-products.use-case.ts`
+
 - `constructor(private readonly productRepository: ProductRepository, private readonly storeRepository: StoreRepository)`
 - `execute(): Promise<ProductDto[]>`
   - `productRepository.findAll()` → 全 Store を一括取得して storeMap を構築 → `products.map(p => toProductDto(p, storeMap))`
   - Store 一括取得: `storeRepository.findAll()` → `Map<string, string>` 構築（`store.id.value → store.name`）
 
 #### `get-product.use-case.ts`
+
 - `execute(id: string): Promise<ProductDto>`
   - `ProductId.fromString(id)` → `productRepository.findById()` → `null` なら `ProductNotFoundError` を throw
   - storeMap を `storeRepository.findAll()` から構築 → `toProductDto`
 
 #### `update-product.use-case.ts`
+
 - `execute(input: UpdateProductInputDto): Promise<ProductDto>`
   - `findById` → null なら `ProductNotFoundError`
   - `aliases` トリム・空文字除去
@@ -611,11 +646,13 @@ export class StoreNotFoundError extends Error {
   - `productRepository.save(product)` → `toProductDto`
 
 #### `delete-product.use-case.ts`
+
 - `execute(id: string): Promise<void>`
   - U3 推奨案: `findById` → null なら `ProductNotFoundError` を throw
   - `productRepository.delete(ProductId.fromString(id))`
 
 #### `record-price.use-case.ts`
+
 - `constructor(private readonly productRepository: ProductRepository, private readonly storeRepository: StoreRepository)`
 - `execute(input: RecordPriceInputDto): Promise<void>`
   - `priceAmount <= 0` → throw（Zod で弾くが UseCase でも防衛）
@@ -627,6 +664,7 @@ export class StoreNotFoundError extends Error {
   - `product.recordPrice(record)` → `productRepository.save(product)`
 
 #### `get-cheapest-store.use-case.ts`
+
 - `execute(productId: string): Promise<CheapestStoreResultDto | null>`
   - `findById` → null なら `ProductNotFoundError`
   - `product.cheapestStoreAt(new Date())` → `cheapestStoreId: StoreId | null`
@@ -636,12 +674,14 @@ export class StoreNotFoundError extends Error {
   - `CheapestStoreResultDto` を組み立てて返す
 
 #### `get-stores.use-case.ts`
+
 - `execute(): Promise<StoreDto[]>`
   - `storeRepository.findAll()` → `stores.map(toStoreDto)`
 
 **依存**: S3-1〜S3-4, S1-5, S1-6, S1-7, S1-8
 
 **完了条件**:
+
 - `pnpm --filter @cookpit/application type-check` 通過
 - UseCase の単体テスト（インメモリ Repository 使用）を実装する。テスト詳細は `docs/tests/product-master.md` 参照。Domain テストとは別に `packages/application/src/product/product-use-cases.test.ts` として実装する（`recipe-use-cases.test.ts` パターン踏襲）。
   - テスト対象: 設計書 §4 および要件書 §7 の N1〜N18, E1〜E13, B1〜B8 の UseCase に関するもの
@@ -651,12 +691,14 @@ export class StoreNotFoundError extends Error {
 ### S3-6. `packages/application/src/product/index.ts` + `packages/application/src/index.ts` 追記
 
 **対象ファイル**:
+
 - `packages/application/src/product/index.ts` （新規）
 - `packages/application/src/index.ts` （追記）
 
 **実装内容**:
 
 `product/index.ts`:
+
 ```typescript
 export * from './create-product.use-case';
 export * from './get-products.use-case';
@@ -672,6 +714,7 @@ export * from './store-not-found.error';
 ```
 
 `application/index.ts` 追記:
+
 ```typescript
 export * from './product';
 ```
@@ -679,6 +722,7 @@ export * from './product';
 **依存**: S3-5
 
 **完了条件**:
+
 - `pnpm --filter @cookpit/application type-check` 通過
 - `pnpm --filter @cookpit/application test` が green（UseCase テスト含む）
 
@@ -697,12 +741,14 @@ export * from './product';
 ### S4-1. `packages/api-contract/src/product.schema.ts` + `store.schema.ts` （新規）
 
 **対象ファイル**:
+
 - `packages/api-contract/src/product.schema.ts`
 - `packages/api-contract/src/store.schema.ts`
 
 **実装内容**: 設計書 `contract.md §2` の Zod スキーマ定義案に準拠。
 
 `product.schema.ts`:
+
 - `nonBlankString`: モジュールローカル（export しない）。`recipe.schema.ts` と同名で再定義（クロス依存回避）
 - `productCategorySchema`: `z.enum([...7値...])`
 - `createProductSchema`: `{ name, aliases, category, defaultUnit }`
@@ -712,6 +758,7 @@ export * from './product';
 - 型エクスポート: `ProductCategory`, `CreateProductBody`, `UpdateProductBody`, `RecordPriceBody`
 
 `store.schema.ts`:
+
 - `storeSchema`: `z.object({ id: z.string().uuid(), name: z.string() })`
 - 型エクスポート: `StoreSchemaType`
 
@@ -728,6 +775,7 @@ export * from './product';
 **対象ファイル**: `packages/api-contract/src/index.ts`
 
 **追記内容**（既存行に変更なし）:
+
 ```typescript
 export * from './product.schema';
 export * from './store.schema';
@@ -775,9 +823,14 @@ export const productsRoute = new Hono()
 ```
 
 DI 組み立て: Hono ルート内で手動 DI。例:
+
 ```typescript
-function productRepository() { return new DrizzleProductRepository(getDb()); }
-function storeRepository() { return new DrizzleStoreRepository(getDb()); }
+function productRepository() {
+  return new DrizzleProductRepository(getDb());
+}
+function storeRepository() {
+  return new DrizzleStoreRepository(getDb());
+}
 ```
 
 **依存**: S4-1, S4-2, S3-6, S2-4
@@ -791,6 +844,7 @@ function storeRepository() { return new DrizzleStoreRepository(getDb()); }
 **対象ファイル**: `apps/web/src/server/routes/stores.ts`
 
 **実装内容**:
+
 ```
 export const storesRoute = new Hono()
   .get('/')  → GetStoresUseCase → c.json(stores)
@@ -809,6 +863,7 @@ export const storesRoute = new Hono()
 **追記内容**（既存行に変更なし）:
 
 import 追加:
+
 ```typescript
 import { productsRoute } from './routes/products';
 import { storesRoute } from './routes/stores';
@@ -816,15 +871,17 @@ import { ProductNotFoundError, StoreNotFoundError } from '@cookpit/application';
 ```
 
 routes 登録追加:
+
 ```typescript
 const routes = app
   .route('/health', healthRoute)
   .route('/recipes', recipesRoute)
-  .route('/products', productsRoute)    // 追加
-  .route('/stores', storesRoute);       // 追加
+  .route('/products', productsRoute) // 追加
+  .route('/stores', storesRoute); // 追加
 ```
 
 `onError` 拡張（既存の `RecipeNotFoundError` 分岐の後に追加）:
+
 ```typescript
 if (err instanceof ProductNotFoundError) {
   return c.json({ error: err.message }, 404);
@@ -847,16 +904,19 @@ if (err instanceof StoreNotFoundError) {
 **調査結果**: 現時点で `apps/web/package.json` に `recharts` が含まれておらず、`apps/web/src/components/ui/chart.tsx` も存在しない。**未導入が確定。**
 
 **必要な手順**:
+
 1. `recharts` パッケージの追加: `pnpm --filter @cookpit/web add recharts`
 2. shadcn CLI で chart コンポーネントを生成: `pnpm dlx shadcn@latest add chart`（`apps/web/` 内で実行）
    - `apps/web/src/components/ui/chart.tsx` が生成されることを確認
 3. 生成後の型チェック: `pnpm --filter @cookpit/web type-check`
 
 **注意**:
+
 - shadcn CLI は `shadcn.json`（または `components.json`）の設定を参照する。設定ファイルが存在しない場合は先に `pnpm dlx shadcn@latest init` が必要。既存 components（`button.tsx`, `input.tsx` 等）があることから、既に初期化済みと考えられるが、`shadcn.json` の存在を確認してから実行すること。
 - `recharts` のバージョンは shadcn が推奨するバージョンを使用する（`package.json` に自動追記される）。
 
 **完了条件**:
+
 - `apps/web/src/components/ui/chart.tsx` が存在する
 - `recharts` が `apps/web/package.json` の dependencies に追加されている
 - `pnpm --filter @cookpit/web type-check` 通過
@@ -866,6 +926,7 @@ if (err instanceof StoreNotFoundError) {
 ### S4-7. 商品一覧画面
 
 **対象ファイル**（新規）:
+
 - `apps/web/src/app/products/page.tsx`
 - `apps/web/src/app/products/_components/product-list-client.tsx`
 - `apps/web/src/app/products/_components/product-card.tsx`
@@ -873,12 +934,14 @@ if (err instanceof StoreNotFoundError) {
 **実装内容**:
 
 `page.tsx` (Server Component):
+
 - `dynamic = 'force-dynamic'`（`recipes/page.tsx` 踏襲）
 - `DrizzleProductRepository` + `DrizzleStoreRepository` + `GetProductsUseCase` を手動 DI
 - `products = await useCase.execute()`
 - `<ProductListClient initialProducts={products} />`
 
 `product-list-client.tsx` (Client Component):
+
 - `'use client'`
 - `initialProducts: ProductDto[]` を props として受け取る
 - `useState` でフィルタ状態（検索ワード・カテゴリ）管理
@@ -887,6 +950,7 @@ if (err instanceof StoreNotFoundError) {
 - 「追加」ボタン → `/products/new` へリンク
 
 `product-card.tsx`:
+
 - `product: ProductDto` を props
 - 商品名・カテゴリ・defaultUnit・最終価格（`priceHistory` の最新1件の `priceAmount`）を表示
 - `/products/[id]` へのリンク
@@ -900,16 +964,19 @@ if (err instanceof StoreNotFoundError) {
 ### S4-8. 商品作成画面
 
 **対象ファイル**（新規）:
+
 - `apps/web/src/app/products/new/page.tsx`
 - `apps/web/src/app/products/new/_components/product-form-client.tsx`
 
 **実装内容**:
 
 `new/page.tsx` (Server Component):
+
 - 初期データ取得なし（`recipes/new/page.tsx` 踏襲）
 - `<ProductFormClient />`
 
 `product-form-client.tsx` (Client Component):
+
 - `'use client'`
 - フォーム項目: name（テキスト）、aliases（カンマ区切りテキスト → `split(',').map(trim).filter(Boolean)`）、category（セレクト: `productCategorySchema.options`）、defaultUnit（セレクト: `unitSchema.options`）
 - 送信: `client.api.products.$post({ json: body })` → 成功後 `router.push('/products')`
@@ -924,6 +991,7 @@ if (err instanceof StoreNotFoundError) {
 ### S4-9. 商品詳細画面
 
 **対象ファイル**（新規）:
+
 - `apps/web/src/app/products/[id]/page.tsx`
 - `apps/web/src/app/products/[id]/_components/product-detail-client.tsx`
 - `apps/web/src/app/products/[id]/_components/price-history-chart.tsx`
@@ -931,6 +999,7 @@ if (err instanceof StoreNotFoundError) {
 **実装内容**:
 
 `[id]/page.tsx` (Server Component):
+
 - `dynamic = 'force-dynamic'`
 - `params: Promise<{ id: string }>` を受け取る（`recipes/[id]/page.tsx` 踏襲）
 - `GetProductUseCase` + `GetCheapestStoreUseCase` を手動 DI（両方とも `DrizzleProductRepository` + `DrizzleStoreRepository` を使用）
@@ -938,6 +1007,7 @@ if (err instanceof StoreNotFoundError) {
 - `product: ProductDto` と `cheapestStore: CheapestStoreResultDto | null` を `ProductDetailClient` に渡す
 
 `product-detail-client.tsx` (Client Component):
+
 - `'use client'`
 - props: `product: ProductDto`, `cheapestStore: CheapestStoreResultDto | null`
 - 商品情報表示（name, category, aliases, defaultUnit）
@@ -949,6 +1019,7 @@ if (err instanceof StoreNotFoundError) {
 - 「編集」ボタン → `/products/[id]/edit` へリンク
 
 `price-history-chart.tsx`:
+
 - `'use client'`
 - props: `priceHistory: PriceRecordDto[]`
 - shadcn/ui chart（`LineChart` from recharts）を使用
@@ -967,17 +1038,20 @@ if (err instanceof StoreNotFoundError) {
 ### S4-10. 商品編集画面
 
 **対象ファイル**（新規）:
+
 - `apps/web/src/app/products/[id]/edit/page.tsx`
 - `apps/web/src/app/products/[id]/edit/_components/product-edit-form-client.tsx`
 
 **実装内容**:
 
 `edit/page.tsx` (Server Component):
+
 - `dynamic = 'force-dynamic'`
 - `GetProductUseCase` で商品取得。`ProductNotFoundError` → `notFound()`
 - `<ProductEditFormClient product={product} />`
 
 `product-edit-form-client.tsx` (Client Component):
+
 - `'use client'`
 - props: `product: ProductDto`（初期値プリフィル）
 - フォーム項目: `product-form-client.tsx` と同形。初期値は `product` から設定
@@ -1004,14 +1078,14 @@ if (err instanceof StoreNotFoundError) {
 
 **implementer が実装する前提のテスト**:
 
-| 対象 | ファイルパス | テスト種別 |
-|---|---|---|
-| `Money` 値オブジェクト | `packages/domain/src/shared/money.test.ts` | Domain 単体テスト（Vitest co-located） |
-| `StoreId` 値オブジェクト | `packages/domain/src/shared/store.test.ts` | Domain 単体テスト |
-| `ProductId` 値オブジェクト | `packages/domain/src/product/product-id.test.ts` | Domain 単体テスト |
-| `Product` 集約 + `PriceRecord` | `packages/domain/src/product/product.test.ts` | Domain 単体テスト |
-| `UnitPriceCalculator` | `packages/domain/src/product/unit-price-calculator.test.ts` | Domain 単体テスト |
-| UseCase 8本（インメモリ Repository） | `packages/application/src/product/product-use-cases.test.ts` | Application 単体テスト |
+| 対象                                 | ファイルパス                                                 | テスト種別                             |
+| ------------------------------------ | ------------------------------------------------------------ | -------------------------------------- |
+| `Money` 値オブジェクト               | `packages/domain/src/shared/money.test.ts`                   | Domain 単体テスト（Vitest co-located） |
+| `StoreId` 値オブジェクト             | `packages/domain/src/shared/store.test.ts`                   | Domain 単体テスト                      |
+| `ProductId` 値オブジェクト           | `packages/domain/src/product/product-id.test.ts`             | Domain 単体テスト                      |
+| `Product` 集約 + `PriceRecord`       | `packages/domain/src/product/product.test.ts`                | Domain 単体テスト                      |
+| `UnitPriceCalculator`                | `packages/domain/src/product/unit-price-calculator.test.ts`  | Domain 単体テスト                      |
+| UseCase 8本（インメモリ Repository） | `packages/application/src/product/product-use-cases.test.ts` | Application 単体テスト                 |
 
 **Application / Infrastructure 層の自動テスト整備は後続フェーズ**（`coding-standards.md` 準拠）。
 
@@ -1054,12 +1128,12 @@ if (err instanceof StoreNotFoundError) {
 
 実装完了後に更新・確認が必要なドキュメント:
 
-| ドキュメント | 更新内容 |
-|---|---|
-| `docs/designs/product-master.md` | ステータスを `draft` → `approved` に更新（architecture-designer の責務） |
-| `docs/designs/product-master.contract.md` | 同上 |
-| `docs/04-domain-model.md` | Product / PriceRecord / Store / Money が実装済みとなったことを記録（任意） |
-| `docs/05-roadmap.md` | Sprint 2 完了マーク |
+| ドキュメント                              | 更新内容                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `docs/designs/product-master.md`          | ステータスを `draft` → `approved` に更新（architecture-designer の責務）   |
+| `docs/designs/product-master.contract.md` | 同上                                                                       |
+| `docs/04-domain-model.md`                 | Product / PriceRecord / Store / Money が実装済みとなったことを記録（任意） |
+| `docs/05-roadmap.md`                      | Sprint 2 完了マーク                                                        |
 
 ---
 

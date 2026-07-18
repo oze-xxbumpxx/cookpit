@@ -59,14 +59,14 @@ Recipe ドメイン層の実装では、`packages/domain` に適用される共�
 
 `packages/config/eslint/base.mjs` の共通設定により、Domain 層では以下を守る。
 
-| ルール | 扱い | 実装時の方針 |
-| --- | --- | --- |
-| `@typescript-eslint/no-explicit-any` | error | `any` は使わず、必要なら `unknown` を使う |
-| `@typescript-eslint/consistent-type-imports` | error | 型だけの import は必ず `import type` にする |
-| `@typescript-eslint/no-unused-vars` | error | 未使用の変数・引数・型を残さない |
-| `eqeqeq` | error | `==` / `!=` は使わず、`===` / `!==` を使う |
-| `@typescript-eslint/no-non-null-assertion` | warn | `!` は原則使わず、分岐やバリデーションで絞り込む |
-| `no-console` | warn | Domain 層に `console.log` を残さない |
+| ルール                                       | 扱い  | 実装時の方針                                     |
+| -------------------------------------------- | ----- | ------------------------------------------------ |
+| `@typescript-eslint/no-explicit-any`         | error | `any` は使わず、必要なら `unknown` を使う        |
+| `@typescript-eslint/consistent-type-imports` | error | 型だけの import は必ず `import type` にする      |
+| `@typescript-eslint/no-unused-vars`          | error | 未使用の変数・引数・型を残さない                 |
+| `eqeqeq`                                     | error | `==` / `!=` は使わず、`===` / `!==` を使う       |
+| `@typescript-eslint/no-non-null-assertion`   | warn  | `!` は原則使わず、分岐やバリデーションで絞り込む |
+| `no-console`                                 | warn  | Domain 層に `console.log` を残さない             |
 
 未使用引数は `_` プレフィックスで除外されるが、Domain 層では原則として不要な引数を定義しない。
 
@@ -303,18 +303,18 @@ export interface RecipeProps {
 
 実装するフィールド:
 
-| フィールド      | 型                   | readonly |
-| --------------- | -------------------- | -------- |
-| `recipeId`      | `RecipeId`           | yes      |
-| `recipeName`    | `string`             | no       |
+| フィールド       | 型                   | readonly |
+| ---------------- | -------------------- | -------- |
+| `recipeId`       | `RecipeId`           | yes      |
+| `recipeName`     | `string`             | no       |
 | `ingredientList` | `RecipeIngredient[]` | no       |
-| `cookingSteps`  | `CookingStep[]`      | no       |
-| `servings`      | `number`             | no       |
-| `recipeTags`    | `RecipeTag[]`        | no       |
+| `cookingSteps`   | `CookingStep[]`      | no       |
+| `servings`       | `number`             | no       |
+| `recipeTags`     | `RecipeTag[]`        | no       |
 | `cookingMinutes` | `number \| null`     | no       |
-| `recipeNotes`   | `string`             | no       |
-| `createdDate`   | `Date`               | yes      |
-| `updatedDate`   | `Date`               | no       |
+| `recipeNotes`    | `string`             | no       |
+| `createdDate`    | `Date`               | yes      |
+| `updatedDate`    | `Date`               | no       |
 
 実装するメソッド:
 
@@ -342,11 +342,7 @@ export class Recipe {
       throw new Error('Recipe base servings must be positive');
     }
 
-    if (
-      input.cookingTime !== null &&
-      input.cookingTime !== undefined &&
-      input.cookingTime < 0
-    ) {
+    if (input.cookingTime !== null && input.cookingTime !== undefined && input.cookingTime < 0) {
       throw new Error('Recipe cooking time must be non-negative');
     }
 

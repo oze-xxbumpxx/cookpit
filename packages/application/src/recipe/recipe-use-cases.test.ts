@@ -44,7 +44,12 @@ class InMemoryRecipeRepository implements RecipeRepository {
   }
 }
 
-function seededRecipe(id: string, name = 'カレー', baseServings = 4, servings: number | null = null): Recipe {
+function seededRecipe(
+  id: string,
+  name = 'カレー',
+  baseServings = 4,
+  servings: number | null = null,
+): Recipe {
   return Recipe.reconstruct({
     id: RecipeId.fromString(id),
     name,
@@ -70,8 +75,20 @@ describe('CreateRecipeUseCase', () => {
   const baseInput: CreateRecipeInputDto = {
     name: '肉じゃが',
     ingredients: [
-      { productRef: 'prod-1', displayName: '玉ねぎ', amountValue: 2, amountUnit: '個', amountNote: null },
-      { productRef: null, displayName: '塩', amountValue: null, amountUnit: null, amountNote: '少々' },
+      {
+        productRef: 'prod-1',
+        displayName: '玉ねぎ',
+        amountValue: 2,
+        amountUnit: '個',
+        amountNote: null,
+      },
+      {
+        productRef: null,
+        displayName: '塩',
+        amountValue: null,
+        amountUnit: null,
+        amountNote: '少々',
+      },
     ],
     steps: [{ description: '切る' }, { description: '炒める' }],
     baseServings: 3,

@@ -101,7 +101,9 @@ export function RecipeDetailClient({ recipe }: Props) {
                 key={`${tag}-${index}`}
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
-                  index === 0 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
+                  index === 0
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-secondary text-muted-foreground',
                 )}
               >
                 {tag}
@@ -161,7 +163,9 @@ export function RecipeDetailClient({ recipe }: Props) {
                 <span className="text-right font-medium text-foreground">
                   {formatIngredientAmount(ingredient.amountValue, ingredient.amountNote, scale)}
                 </span>
-                <span className="w-10 text-right text-muted-foreground">{ingredient.amountUnit ?? ''}</span>
+                <span className="w-10 text-right text-muted-foreground">
+                  {ingredient.amountUnit ?? ''}
+                </span>
               </div>
             ))}
           </div>

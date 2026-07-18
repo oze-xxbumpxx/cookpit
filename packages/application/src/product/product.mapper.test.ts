@@ -100,7 +100,10 @@ describe('toProductDto', () => {
   });
 
   it('storeMap に該当 store が無い場合は storeName を空文字へ縮退する', () => {
-    const dto = toProductDto(buildProduct([buildPriceRecord(StoreId.fromString('store-unknown'))]), new Map());
+    const dto = toProductDto(
+      buildProduct([buildPriceRecord(StoreId.fromString('store-unknown'))]),
+      new Map(),
+    );
 
     expect(dto.priceHistory[0]?.storeId).toBe('store-unknown');
     expect(dto.priceHistory[0]?.storeName).toBe('');

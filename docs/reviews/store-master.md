@@ -9,13 +9,13 @@
 
 ## 確認観点と結果サマリ
 
-| # | 観点 | 結果 |
-|---|---|---|
-| 1 | 入力検証・インジェクション（OWASP A03） | 指摘あり（Should 1件） |
-| 2 | 認証・認可（OWASP A01/A07） | 設計上の意図的 no-auth（問題なし、留意点あり） |
-| 3 | 秘密情報の漏洩（OWASP A02/A09） | 指摘あり（Should 1件） |
-| 4 | 依存パッケージの脆弱性 | 指摘あり（Must 1件） |
-| 5 | セキュリティヘッダー・Cookie | 対象外（`apps/web/src/server/` の API 層のみ変更、Cookie 非使用） |
+| #   | 観点                                    | 結果                                                              |
+| --- | --------------------------------------- | ----------------------------------------------------------------- |
+| 1   | 入力検証・インジェクション（OWASP A03） | 指摘あり（Should 1件）                                            |
+| 2   | 認証・認可（OWASP A01/A07）             | 設計上の意図的 no-auth（問題なし、留意点あり）                    |
+| 3   | 秘密情報の漏洩（OWASP A02/A09）         | 指摘あり（Should 1件）                                            |
+| 4   | 依存パッケージの脆弱性                  | 指摘あり（Must 1件）                                              |
+| 5   | セキュリティヘッダー・Cookie            | 対象外（`apps/web/src/server/` の API 層のみ変更、Cookie 非使用） |
 
 ---
 
@@ -73,13 +73,16 @@ MVP1・2名利用の想定では即時の悪用リスクは低いが、外部公
 を定義し、Zod スキーマに `.max()` を追加することが望ましい。
 
 **修正案**:
+
 ```typescript
 // 業務要件に応じた上限値（例: 255文字）を設定する
-const nonBlankString = z.string().min(1).max(255).refine(
-  (value) => value.trim() !== '',
-  { message: 'required' },
-);
+const nonBlankString = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine((value) => value.trim() !== '', { message: 'required' });
 ```
+
 なお `recipe.schema.ts` の `nonBlankString` も同様のパターンであるが、
 そちらはスコープ外のため本指摘の対象としない。
 
@@ -107,10 +110,12 @@ ORM が生成した内部クエリ文字列（パラメータ値を含む場合�
 だが、ログ側の制御が不十分である。
 
 **修正案**:
+
 ```typescript
 // スタックトレースのみに限定するか、構造化ログで出力フィールドを制御する
 console.error('[Internal Error]', err instanceof Error ? err.stack : String(err));
 ```
+
 あるいは将来的に構造化ログライブラリを導入する際に改めて対処する、
 という判断でも許容できる（MVP1 の2名利用・開発環境のみの前提であれば）。
 既存の Recipe 実装から引き継いだパターンであり、本指摘は Store 新規実装
@@ -151,7 +156,6 @@ Phase 2 で認証を導入する際の差し込み箇所として、`storesRoute
 `StoreNotFoundError` を throw する UseCase が存在しないため実害はない。
 将来 単件取得・更新 UseCase 実装時には、ID の漏洩が許容できるか改めて判断すること。
 
-
 ---
 
 # 品質レビュー: store-master
@@ -168,10 +172,10 @@ Phase 2 で認証を導入する際の差し込み箇所として、`storesRoute
 ## サマリ
 
 | 重大度 | 件数 |
-|---|---|
-| Must | 0 |
-| Should | 3 |
-| Nice | 2 |
+| ------ | ---- |
+| Must   | 0    |
+| Should | 3    |
+| Nice   | 2    |
 
 品質ゲート: `pnpm lint`（warning 2件、既存由来を含む）/ `pnpm type-check` / `pnpm test` いずれもエラーなし・全テスト通過。
 
@@ -190,9 +194,11 @@ Phase 2 で認証を導入する際の差し込み箇所として、`storesRoute
 lint の `@typescript-eslint/no-unused-vars` 警告（`routes` 変数: 9行目）も既存から継続している。
 
 **修正案**:
+
 ```typescript
 import { RecipeNotFoundError, StoreNotFoundError } from '@cookpit/application';
 ```
+
 なお `routes` の lint 警告（`'routes' is assigned a value but only used as a type`）は
 今回の変更前から存在する既存の問題であり、本実装で新たに導入したものではない。
 
@@ -216,6 +222,7 @@ N-02 はユースケース間の連携（create → getAll）を確認する重�
 確認することを推奨する。
 
 **修正案（テストコード例）**:
+
 ```typescript
 it('CreateStoreUseCase で作成した Store が GetStoresUseCase で取得できる（N-02）', async () => {
   const createUsecase = new CreateStoreUseCase(repository);
@@ -269,6 +276,7 @@ import { Store, StoreId } from '@cookpit/domain/src/shared/store';
 誤解する可能性がある。コメントを付与することを提案する。
 
 **修正案**:
+
 ```typescript
 // StoreNotFoundError は現時点で throw する UseCase はないが、
 // 将来の単件取得・更新 UseCase（設計書 D-6）に備えてハンドリングを登録している。
@@ -287,12 +295,12 @@ if (err instanceof StoreNotFoundError) {
 `docs/04-domain-model.md` に記述されている `Store` エンティティのスニペットは、
 実装済みの `packages/domain/src/shared/store.ts` と以下の点で乖離している。
 
-| 観点 | ドキュメント | 実装 |
-|---|---|---|
-| `create()` シグネチャ | `static create(name: string): Store` | `static create(input: StoreCreateInput): Store`（オブジェクト受け取り） |
-| `reconstruct()` シグネチャ | `static reconstruct(id: StoreId, name: string): Store` | `static reconstruct(props: StoreProps): Store`（オブジェクト受け取り） |
-| `createdAt` フィールド | 記載なし | 実装済み（`private readonly createdDate: Date`） |
-| ドメインバリデーション | 記載なし | `name.trim() === ''` チェック実装済み |
+| 観点                       | ドキュメント                                           | 実装                                                                    |
+| -------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `create()` シグネチャ      | `static create(name: string): Store`                   | `static create(input: StoreCreateInput): Store`（オブジェクト受け取り） |
+| `reconstruct()` シグネチャ | `static reconstruct(id: StoreId, name: string): Store` | `static reconstruct(props: StoreProps): Store`（オブジェクト受け取り）  |
+| `createdAt` フィールド     | 記載なし                                               | 実装済み（`private readonly createdDate: Date`）                        |
+| ドメインバリデーション     | 記載なし                                               | `name.trim() === ''` チェック実装済み                                   |
 
 また、同ドキュメント line 145 に「MVP1 では Store はシード（初期データ）として 2 件を DB に
 登録する想定。動的な追加は Phase 2 以降」と記述されているが、今回の実装では `POST /api/stores`
@@ -341,23 +349,23 @@ if (err instanceof StoreNotFoundError) {
 ### テストの通過
 
 `pnpm test` 実行結果:
+
 - `packages/domain`: 129 tests passed
 - `packages/application`: 44 tests passed（新規 store テスト 10 件含む）
 
 ### 試験計画 vs 実装の対応（設計書 §17-2 の観点）
 
-| 設計書観点 | テストファイル | 実装状況 |
-|---|---|---|
-| N-01: `CreateStoreUseCase` 正常系 | `store-use-cases.test.ts` | 実装済み |
-| E-01: 空 name でバリデーション失敗 | `store-use-cases.test.ts` | 実装済み |
-| E-02: 空白のみ name でバリデーション失敗 | `store-use-cases.test.ts` | 実装済み |
-| N-03: `GetStoresUseCase` 0件 | `store-use-cases.test.ts` | 実装済み |
-| N-04: `GetStoresUseCase` 複数件 | `store-use-cases.test.ts` | 実装済み |
-| N-05: `toStoreDto` Mapper 全フィールド | `store.mapper.test.ts` | 実装済み |
-| N-02: create → getAll 連携 | なし | 未実装（Should-2 参照） |
+| 設計書観点                               | テストファイル            | 実装状況                |
+| ---------------------------------------- | ------------------------- | ----------------------- |
+| N-01: `CreateStoreUseCase` 正常系        | `store-use-cases.test.ts` | 実装済み                |
+| E-01: 空 name でバリデーション失敗       | `store-use-cases.test.ts` | 実装済み                |
+| E-02: 空白のみ name でバリデーション失敗 | `store-use-cases.test.ts` | 実装済み                |
+| N-03: `GetStoresUseCase` 0件             | `store-use-cases.test.ts` | 実装済み                |
+| N-04: `GetStoresUseCase` 複数件          | `store-use-cases.test.ts` | 実装済み                |
+| N-05: `toStoreDto` Mapper 全フィールド   | `store.mapper.test.ts`    | 実装済み                |
+| N-02: create → getAll 連携               | なし                      | 未実装（Should-2 参照） |
 
 ### Mapper の public API 網羅
 
 `toStoreDto()` は唯一の public 関数であり、`store.mapper.test.ts` でテストされている。
 全フィールド（id / name / createdAt の ISO 8601 変換）の正しさを検証済み。
-

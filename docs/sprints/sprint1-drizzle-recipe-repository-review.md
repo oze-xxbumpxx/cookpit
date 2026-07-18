@@ -2,22 +2,22 @@
 
 ## レビュー概要
 
-| 項目 | 内容 |
-|------|------|
-| 対象ブランチ | main |
-| レビュー対象 | `sprint1-drizzle-recipe-repository` タスクの実装成果物 |
-| レビュー日 | 2026-05-23 |
-| 型チェック | `pnpm --filter @cookpit/infrastructure type-check` エラーなし ✅ |
+| 項目         | 内容                                                             |
+| ------------ | ---------------------------------------------------------------- |
+| 対象ブランチ | main                                                             |
+| レビュー対象 | `sprint1-drizzle-recipe-repository` タスクの実装成果物           |
+| レビュー日   | 2026-05-23                                                       |
+| 型チェック   | `pnpm --filter @cookpit/infrastructure type-check` エラーなし ✅ |
 
 ---
 
 ## 対象ファイル
 
-| ファイル | 種別 |
-|----------|------|
-| `packages/infrastructure/src/db/client.ts` | 新規作成 |
+| ファイル                                                                | 種別     |
+| ----------------------------------------------------------------------- | -------- |
+| `packages/infrastructure/src/db/client.ts`                              | 新規作成 |
 | `packages/infrastructure/src/repositories/drizzle-recipe.repository.ts` | 新規作成 |
-| `packages/infrastructure/src/index.ts` | 更新 |
+| `packages/infrastructure/src/index.ts`                                  | 更新     |
 
 ---
 
@@ -28,11 +28,13 @@
 **場所**：`drizzle-recipe.repository.ts` 24行目
 
 **現状**：
+
 ```typescript
 constructor(readonly db: DrizzleClient) {}
 ```
 
 **修正後**：
+
 ```typescript
 constructor(private readonly db: DrizzleClient) {}
 ```
@@ -48,12 +50,14 @@ constructor(private readonly db: DrizzleClient) {}
 **場所**：`drizzle-recipe.repository.ts` 64行目
 
 **現状**：
+
 ```typescript
 const ingredients = (row.ingredients as IngredientRow[]).map((ingredients) => {
   const amountUnit = ingredients.amountUnit !== null ? toUnit(ingredients.amountUnit) : null;
 ```
 
 **修正後**：
+
 ```typescript
 const ingredients = (row.ingredients as IngredientRow[]).map((ing) => {
   const amountUnit = ing.amountUnit !== null ? toUnit(ing.amountUnit) : null;
@@ -70,11 +74,13 @@ const ingredients = (row.ingredients as IngredientRow[]).map((ing) => {
 **場所**：`drizzle-recipe.repository.ts` 101行目
 
 **現状**：
+
 ```typescript
 amountNote: ingredient.amountNote ?? null,
 ```
 
 **修正後**：
+
 ```typescript
 amountNote: ingredient.amountNote,
 ```
@@ -85,17 +91,17 @@ amountNote: ingredient.amountNote,
 
 ## 問題なし（確認済み）
 
-| 観点 | 評価 | 理由 |
-|------|------|------|
-| アーキテクチャ依存方向 | ✅ | Domain 層に Drizzle の型が混入していない |
-| `Recipe.reconstruct()` の使用 | ✅ | DB 復元は全て `reconstruct()` を経由している |
-| upsert の `set` 句から `createdAt` を除外 | ✅ | 更新時に作成日時を変えない設計として正しい |
-| `toUnit` / `toRecipeTag` の網羅性チェック | ✅ | switch の default で `throw` し、DB 値が Unit/RecipeTag 定義外になった場合に即座に検知できる |
-| `amount` / `amountNote` の排他制約 | ✅ | `RecipeIngredient.create()` のバリデーションに委ねる方針と合致（実装計画の注意点に明記）|
-| `createDb` のファクトリ関数 | ✅ | シングルトンにせず DI 可能な形。テスト時の差し替えが可能 |
-| インポートパス（`/src/` 含む） | ✅ | `domain/src/index.ts` が空のため、個別ファイルへの直接インポートは現状の設計上許容 |
-| `IngredientRow` / `StepRow` をファイル内ローカルに定義 | ✅ | JSONB 変換に閉じた型。export 不要 |
-| `NewRecipeRow` / `RecipeRow` の使い分け | ✅ | `toRow` の戻り型が `NewRecipeRow`、`toEntity` の引数が `RecipeRow` で正しく使い分けられている |
+| 観点                                                   | 評価 | 理由                                                                                          |
+| ------------------------------------------------------ | ---- | --------------------------------------------------------------------------------------------- |
+| アーキテクチャ依存方向                                 | ✅   | Domain 層に Drizzle の型が混入していない                                                      |
+| `Recipe.reconstruct()` の使用                          | ✅   | DB 復元は全て `reconstruct()` を経由している                                                  |
+| upsert の `set` 句から `createdAt` を除外              | ✅   | 更新時に作成日時を変えない設計として正しい                                                    |
+| `toUnit` / `toRecipeTag` の網羅性チェック              | ✅   | switch の default で `throw` し、DB 値が Unit/RecipeTag 定義外になった場合に即座に検知できる  |
+| `amount` / `amountNote` の排他制約                     | ✅   | `RecipeIngredient.create()` のバリデーションに委ねる方針と合致（実装計画の注意点に明記）      |
+| `createDb` のファクトリ関数                            | ✅   | シングルトンにせず DI 可能な形。テスト時の差し替えが可能                                      |
+| インポートパス（`/src/` 含む）                         | ✅   | `domain/src/index.ts` が空のため、個別ファイルへの直接インポートは現状の設計上許容            |
+| `IngredientRow` / `StepRow` をファイル内ローカルに定義 | ✅   | JSONB 変換に閉じた型。export 不要                                                             |
+| `NewRecipeRow` / `RecipeRow` の使い分け                | ✅   | `toRow` の戻り型が `NewRecipeRow`、`toEntity` の引数が `RecipeRow` で正しく使い分けられている |
 
 ---
 

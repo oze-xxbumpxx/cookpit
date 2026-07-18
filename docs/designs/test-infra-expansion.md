@@ -11,12 +11,12 @@
 
 ### 現状
 
-| パッケージ / アプリ | テスト基盤 | テスト本数 |
-| --- | --- | --- |
-| packages/domain | vitest.config.ts 導入済み・co-located *.test.ts | 17 本 |
-| packages/application | vitest.config.ts 導入済み・co-located *.test.ts | 6 本 |
-| packages/infrastructure | 未導入（test スクリプト無し・vitest 無し） | 0 本 |
-| apps/web | 未導入（test スクリプト無し・vitest 無し） | 0 本 |
+| パッケージ / アプリ     | テスト基盤                                       | テスト本数 |
+| ----------------------- | ------------------------------------------------ | ---------- |
+| packages/domain         | vitest.config.ts 導入済み・co-located \*.test.ts | 17 本      |
+| packages/application    | vitest.config.ts 導入済み・co-located \*.test.ts | 6 本       |
+| packages/infrastructure | 未導入（test スクリプト無し・vitest 無し）       | 0 本       |
+| apps/web                | 未導入（test スクリプト無し・vitest 無し）       | 0 本       |
 
 ### 目的
 
@@ -79,16 +79,16 @@ Repository テストは「DB スキーマ形 ⇔ ドメインモデル形」の�
 
 ### 4.2 テスト DB 戦略の比較
 
-| 観点 | A: PGlite (in-process PG) | B: testcontainers (実 Postgres in Docker) | C: pg-mem (in-memory PG 模倣) | D: Repository モック化のみ |
-| --- | --- | --- | --- | --- |
-| **変換忠実度** | 高（実 PG プロトコル・型変換を含む） | 最高（本番 DB と同一バイナリ） | 中（PG 互換だが完全ではない） | 低（変換ロジックをスキップ） |
-| **Drizzle 実クエリ実行** | 可（drizzle-orm/pglite ドライバあり） | 可（drizzle-orm/node-postgres） | 限定的（未サポートの構文あり） | 不可 |
-| **マイグレーション適用** | 可（Drizzle migrate をそのまま利用可） | 可 | 不可（マイグレーションファイルは解析不可） | 不可 |
-| **CI 依存** | Docker 不要。GitHub Actions 標準で動作 | Docker 必須。`services: postgres` または testcontainers SDK が必要 | Docker 不要 | Docker 不要 |
-| **実行速度** | 高速（プロセス内・ファイルレス） | 低速（コンテナ起動 10〜30 秒） | 高速 | 最速（IO なし） |
-| **導入コスト** | 低（`@electric-sql/pglite` + Drizzle ドライバ） | 高（Docker 前提・testcontainers SDK） | 低 | 最低 |
-| **保守性** | 高（Drizzle スキーマが単一の正典） | 高（本番と同一だが CI 設定が増える） | 中（PG 非互換が増えると壊れる） | 低（変換ロジックを別途手動検証する必要がある） |
-| **注意点** | neon-http ドライバは PGlite 非対応。テスト用に `drizzle-orm/pglite` ドライバを切り替える設計が必要 | ローカル開発に Docker が必要になる | numeric/jsonb の挙動が実 PG と乖離する懸念がある | Repository を全網羅するほど UseCase テストと重複 |
+| 観点                     | A: PGlite (in-process PG)                                                                          | B: testcontainers (実 Postgres in Docker)                          | C: pg-mem (in-memory PG 模倣)                    | D: Repository モック化のみ                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------ |
+| **変換忠実度**           | 高（実 PG プロトコル・型変換を含む）                                                               | 最高（本番 DB と同一バイナリ）                                     | 中（PG 互換だが完全ではない）                    | 低（変換ロジックをスキップ）                     |
+| **Drizzle 実クエリ実行** | 可（drizzle-orm/pglite ドライバあり）                                                              | 可（drizzle-orm/node-postgres）                                    | 限定的（未サポートの構文あり）                   | 不可                                             |
+| **マイグレーション適用** | 可（Drizzle migrate をそのまま利用可）                                                             | 可                                                                 | 不可（マイグレーションファイルは解析不可）       | 不可                                             |
+| **CI 依存**              | Docker 不要。GitHub Actions 標準で動作                                                             | Docker 必須。`services: postgres` または testcontainers SDK が必要 | Docker 不要                                      | Docker 不要                                      |
+| **実行速度**             | 高速（プロセス内・ファイルレス）                                                                   | 低速（コンテナ起動 10〜30 秒）                                     | 高速                                             | 最速（IO なし）                                  |
+| **導入コスト**           | 低（`@electric-sql/pglite` + Drizzle ドライバ）                                                    | 高（Docker 前提・testcontainers SDK）                              | 低                                               | 最低                                             |
+| **保守性**               | 高（Drizzle スキーマが単一の正典）                                                                 | 高（本番と同一だが CI 設定が増える）                               | 中（PG 非互換が増えると壊れる）                  | 低（変換ロジックを別途手動検証する必要がある）   |
+| **注意点**               | neon-http ドライバは PGlite 非対応。テスト用に `drizzle-orm/pglite` ドライバを切り替える設計が必要 | ローカル開発に Docker が必要になる                                 | numeric/jsonb の挙動が実 PG と乖離する懸念がある | Repository を全網羅するほど UseCase テストと重複 |
 
 ### 4.3 推奨: A（PGlite）
 
@@ -210,25 +210,25 @@ packages/infrastructure/src/testing/
 Product は外部キーを持つ関連テーブル（priceRecords）との LEFT JOIN を含み、
 変換の複雑度が最も高いため代表テストに最適。
 
-| テスト ID | 検証内容 |
-| --- | --- |
-| IR-P-01 | save() で product 行が挿入される |
-| IR-P-02 | findById() で DB 行がドメイン Entity に復元される（id・name・aliases・category・defaultUnit の検証） |
-| IR-P-03 | save() + findAll() のラウンドトリップで priceHistory の変換が正しい（priceAmount の numeric→number 変換を含む） |
-| IR-P-04 | findById() で存在しない ID は null を返す |
-| IR-P-05 | delete() で product および関連 priceRecords が CASCADE で削除される |
-| IR-P-06 | save() の upsert（onConflictDoUpdate）が既存行を上書きする |
-| IR-P-07 | priceRecords の INSERT + findById() で LEFT JOIN 結果が正しくグルーピングされる |
+| テスト ID | 検証内容                                                                                                        |
+| --------- | --------------------------------------------------------------------------------------------------------------- |
+| IR-P-01   | save() で product 行が挿入される                                                                                |
+| IR-P-02   | findById() で DB 行がドメイン Entity に復元される（id・name・aliases・category・defaultUnit の検証）            |
+| IR-P-03   | save() + findAll() のラウンドトリップで priceHistory の変換が正しい（priceAmount の numeric→number 変換を含む） |
+| IR-P-04   | findById() で存在しない ID は null を返す                                                                       |
+| IR-P-05   | delete() で product および関連 priceRecords が CASCADE で削除される                                             |
+| IR-P-06   | save() の upsert（onConflictDoUpdate）が既存行を上書きする                                                      |
+| IR-P-07   | priceRecords の INSERT + findById() で LEFT JOIN 結果が正しくグルーピングされる                                 |
 
 **DrizzleStoreRepository（補完）**
 
 JOIN なしのシンプルな Repository。PGlite 設定の動作確認としても機能する。
 
-| テスト ID | 検証内容 |
-| --- | --- |
-| IR-S-01 | save() + findById() のラウンドトリップ |
-| IR-S-02 | findAll() で createdAt 順に返る |
-| IR-S-03 | findById() で存在しない ID は null を返す |
+| テスト ID | 検証内容                                  |
+| --------- | ----------------------------------------- |
+| IR-S-01   | save() + findById() のラウンドトリップ    |
+| IR-S-02   | findAll() で createdAt 順に返る           |
+| IR-S-03   | findById() で存在しない ID は null を返す |
 
 **DrizzleRecipeRepository は後続フェーズに委ねる理由:**
 jsonb 型（ingredients・steps）の変換検証は必要だが、今回は「基盤確立」を優先する。
@@ -242,10 +242,10 @@ jsonb 型（ingredients・steps）の変換検証は必要だが、今回は「�
 
 apps/web では 2 種類のテストを対象とする。
 
-| 対象 | テスト手法 | 今回の範囲 |
-| --- | --- | --- |
-| Hono RPC ルート | Hono テストクライアント（`app.request()`） | 代表 1〜2 エンドポイント |
-| React コンポーネント | React Testing Library（RTL）+ happy-dom | 代表 1 コンポーネント |
+| 対象                 | テスト手法                                 | 今回の範囲               |
+| -------------------- | ------------------------------------------ | ------------------------ |
+| Hono RPC ルート      | Hono テストクライアント（`app.request()`） | 代表 1〜2 エンドポイント |
+| React コンポーネント | React Testing Library（RTL）+ happy-dom    | 代表 1 コンポーネント    |
 
 **重要な方針**: Hono ルートテストでは UseCase / Repository は全てモック化する。
 Repository の変換責務は packages/infrastructure のテストで検証済みとし、
@@ -254,11 +254,13 @@ Hono ルートテストではリクエスト→UseCase 呼び出し→レスポ�
 ### 6.2 テスト環境の選定
 
 **Hono ルートのテスト**: `environment: 'node'`
+
 - Hono の `app.request()` は Node.js 環境で動作する
 - UseCase・Repository は `vi.mock()` でモック化する
 - `@hono/zod-validator` のバリデーション動作（400 レスポンス）も検証可能
 
 **コンポーネントテスト**: `environment: 'happy-dom'`
+
 - `jsdom` より軽量で Next.js App Router との親和性が高い
 - Server Component のテストは行わない（後述）
 - `'use client'` の Client Component を対象とする
@@ -280,16 +282,15 @@ apps/web/vitest.dom.config.ts    # コンポーネント用（environment: 'happ
 ```
 
 `vitest.config.ts`:
+
 ```typescript
 import { defineWorkspace } from 'vitest/config';
 
-export default defineWorkspace([
-  './vitest.node.config.ts',
-  './vitest.dom.config.ts',
-]);
+export default defineWorkspace(['./vitest.node.config.ts', './vitest.dom.config.ts']);
 ```
 
 `vitest.node.config.ts`:
+
 ```typescript
 import { baseConfig } from '@cookpit/config/vitest/base';
 import { mergeConfig, defineConfig } from 'vitest/config';
@@ -307,6 +308,7 @@ export default mergeConfig(
 ```
 
 `vitest.dom.config.ts`:
+
 ```typescript
 import { baseConfig } from '@cookpit/config/vitest/base';
 import { mergeConfig, defineConfig } from 'vitest/config';
@@ -378,13 +380,13 @@ test: {
 最も多いエンドポイントを持ち、かつ UseCase への引数マッピング・Zod バリデーション・404 エラー処理を
 全て含む代表例。
 
-| テスト ID | エンドポイント | 検証内容 |
-| --- | --- | --- |
-| WH-P-01 | GET /api/products | 200 + UseCase 返却値の JSON レスポンス |
-| WH-P-02 | POST /api/products | 201 + バリデーション通過時の UseCase 呼び出し |
-| WH-P-03 | POST /api/products | 400 + Zod バリデーションエラー時のレスポンス |
-| WH-P-04 | GET /api/products/:id | 404 + ProductNotFoundError 時のエラーレスポンス |
-| WH-P-05 | DELETE /api/products/:id | 204 レスポンス |
+| テスト ID | エンドポイント           | 検証内容                                        |
+| --------- | ------------------------ | ----------------------------------------------- |
+| WH-P-01   | GET /api/products        | 200 + UseCase 返却値の JSON レスポンス          |
+| WH-P-02   | POST /api/products       | 201 + バリデーション通過時の UseCase 呼び出し   |
+| WH-P-03   | POST /api/products       | 400 + Zod バリデーションエラー時のレスポンス    |
+| WH-P-04   | GET /api/products/:id    | 404 + ProductNotFoundError 時のエラーレスポンス |
+| WH-P-05   | DELETE /api/products/:id | 204 レスポンス                                  |
 
 UseCase は `vi.mock('@cookpit/application', ...)` でモック化する。
 DB 接続は不要。`getDb()` も `vi.mock('@/db/client', ...)` でモック化する。
@@ -394,12 +396,12 @@ DB 接続は不要。`getDb()` も `vi.mock('@/db/client', ...)` でモック化
 選定理由: Props として `ProductDto[]` を受け取る純粋な Client Component であり、
 useState / useMemo・検索フィルタロジックを持つ。RTL で検証しやすい最適な候補。
 
-| テスト ID | 検証内容 |
-| --- | --- |
-| WC-P-01 | 商品が 0 件のとき「まだ商品がありません」テキストが表示される |
-| WC-P-02 | 商品が 1 件のとき ProductCard が 1 件レンダリングされる |
-| WC-P-03 | 検索ボックスに入力すると商品名でフィルタリングされる |
-| WC-P-04 | カテゴリボタンでフィルタリングされる |
+| テスト ID | 検証内容                                                      |
+| --------- | ------------------------------------------------------------- |
+| WC-P-01   | 商品が 0 件のとき「まだ商品がありません」テキストが表示される |
+| WC-P-02   | 商品が 1 件のとき ProductCard が 1 件レンダリングされる       |
+| WC-P-03   | 検索ボックスに入力すると商品名でフィルタリングされる          |
+| WC-P-04   | カテゴリボタンでフィルタリングされる                          |
 
 Server Component（products/page.tsx 等）は対象外。
 
@@ -416,12 +418,12 @@ base.cjs の定義
   test.include = 'src/**/*.test.ts'
 ```
 
-| パッケージ | 踏襲方針 |
-| --- | --- |
-| packages/domain | 変更なし（`export default baseConfig` のまま） |
-| packages/application | 変更なし（`export default baseConfig` のまま） |
-| packages/infrastructure | `baseConfig` を base に、必要に応じて mergeConfig で拡張 |
-| apps/web | workspace 設定を追加。node / dom 各設定で `baseConfig.test` を base にする |
+| パッケージ              | 踏襲方針                                                                   |
+| ----------------------- | -------------------------------------------------------------------------- |
+| packages/domain         | 変更なし（`export default baseConfig` のまま）                             |
+| packages/application    | 変更なし（`export default baseConfig` のまま）                             |
+| packages/infrastructure | `baseConfig` を base に、必要に応じて mergeConfig で拡張                   |
+| apps/web                | workspace 設定を追加。node / dom 各設定で `baseConfig.test` を base にする |
 
 base.cjs への変更は今回不要。将来的にグローバル setup（PGlite 用など）が必要になれば
 `packages/config/vitest/` に `infrastructure.cjs` を追加する案を検討するが、今回は対象外。
@@ -444,12 +446,12 @@ test:
 `pnpm test` は Turborepo 経由で各パッケージの test スクリプトを実行する。
 今回の変更後は以下のパッケージが test スクリプトを持つ。
 
-| パッケージ | test スクリプト | Docker 要否 |
-| --- | --- | --- |
-| packages/domain | vitest run | 不要 |
-| packages/application | vitest run | 不要 |
-| packages/infrastructure | vitest run（PGlite） | 不要 |
-| apps/web | vitest run | 不要 |
+| パッケージ              | test スクリプト      | Docker 要否 |
+| ----------------------- | -------------------- | ----------- |
+| packages/domain         | vitest run           | 不要        |
+| packages/application    | vitest run           | 不要        |
+| packages/infrastructure | vitest run（PGlite） | 不要        |
+| apps/web                | vitest run           | 不要        |
 
 **PGlite を採用した場合、ci.yml への変更は不要**（Docker サービスや環境変数の追加が不要）。
 
@@ -460,17 +462,17 @@ Docker-in-Docker の設定が必要になるため、その場合は ci.yml の�
 
 ## 9. 新規作成ファイル一覧
 
-| ファイルパス | 種別 | 内容 |
-| --- | --- | --- |
-| `packages/infrastructure/vitest.config.ts` | 設定 | baseConfig を踏襲した Vitest 設定 |
-| `packages/infrastructure/src/testing/create-test-db.ts` | ユーティリティ | PGlite インスタンス生成・スキーマ適用・Drizzle クライアント返却 |
-| `packages/infrastructure/src/repositories/drizzle-product.repository.test.ts` | テスト | DrizzleProductRepository の代表テスト（IR-P-01 〜 IR-P-07） |
-| `packages/infrastructure/src/repositories/drizzle-store.repository.test.ts` | テスト | DrizzleStoreRepository の代表テスト（IR-S-01 〜 IR-S-03） |
-| `apps/web/vitest.config.ts` | 設定 | workspace ルート設定 |
-| `apps/web/vitest.node.config.ts` | 設定 | Hono ルート用（environment: 'node'） |
-| `apps/web/vitest.dom.config.ts` | 設定 | コンポーネント用（environment: 'happy-dom'） |
-| `apps/web/src/server/routes/products.test.ts` | テスト | productsRoute の代表テスト（WH-P-01 〜 WH-P-05） |
-| `apps/web/src/app/products/_components/product-list-client.test.tsx` | テスト | ProductListClient の代表テスト（WC-P-01 〜 WC-P-04） |
+| ファイルパス                                                                  | 種別           | 内容                                                            |
+| ----------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `packages/infrastructure/vitest.config.ts`                                    | 設定           | baseConfig を踏襲した Vitest 設定                               |
+| `packages/infrastructure/src/testing/create-test-db.ts`                       | ユーティリティ | PGlite インスタンス生成・スキーマ適用・Drizzle クライアント返却 |
+| `packages/infrastructure/src/repositories/drizzle-product.repository.test.ts` | テスト         | DrizzleProductRepository の代表テスト（IR-P-01 〜 IR-P-07）     |
+| `packages/infrastructure/src/repositories/drizzle-store.repository.test.ts`   | テスト         | DrizzleStoreRepository の代表テスト（IR-S-01 〜 IR-S-03）       |
+| `apps/web/vitest.config.ts`                                                   | 設定           | workspace ルート設定                                            |
+| `apps/web/vitest.node.config.ts`                                              | 設定           | Hono ルート用（environment: 'node'）                            |
+| `apps/web/vitest.dom.config.ts`                                               | 設定           | コンポーネント用（environment: 'happy-dom'）                    |
+| `apps/web/src/server/routes/products.test.ts`                                 | テスト         | productsRoute の代表テスト（WH-P-01 〜 WH-P-05）                |
+| `apps/web/src/app/products/_components/product-list-client.test.tsx`          | テスト         | ProductListClient の代表テスト（WC-P-01 〜 WC-P-04）            |
 
 合計: **新規 9 ファイル**
 
@@ -478,10 +480,10 @@ Docker-in-Docker の設定が必要になるため、その場合は ci.yml の�
 
 ## 10. 変更ファイル一覧
 
-| ファイルパス | 変更内容 |
-| --- | --- |
-| `packages/infrastructure/package.json` | test スクリプト追加・vitest / @electric-sql/pglite を devDependencies に追加 |
-| `apps/web/package.json` | test スクリプト追加・vitest / @testing-library/react / @testing-library/user-event / happy-dom を devDependencies に追加 |
+| ファイルパス                           | 変更内容                                                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `packages/infrastructure/package.json` | test スクリプト追加・vitest / @electric-sql/pglite を devDependencies に追加                                             |
+| `apps/web/package.json`                | test スクリプト追加・vitest / @testing-library/react / @testing-library/user-event / happy-dom を devDependencies に追加 |
 
 合計: **変更 2 ファイル**
 
@@ -586,14 +588,14 @@ Drizzle ORM は `pglite` ドライバでも同一の `DrizzleInstance` 型が推
 
 ## 18. テスト方針まとめ
 
-| 層 | テスト手法 | 検証対象 | モック化範囲 |
-| --- | --- | --- | --- |
-| Domain | Vitest（既存） | Entity / VO のビジネスロジック | なし（純粋関数） |
-| Application | Vitest + InMemory Repository（既存） | UseCase のフロー | Repository をインメモリ実装で代替 |
-| Infrastructure | Vitest + PGlite（今回追加） | DB スキーマ⇔ドメインモデル変換 | なし（実 PG プロトコルで検証） |
-| Presentation (Hono) | Vitest + app.request()（今回追加） | HTTP レイヤー（ルーティング・バリデーション・エラー） | UseCase / Repository を vi.mock |
-| Presentation (Component) | Vitest + RTL + happy-dom（今回追加） | UI レンダリング・フィルタロジック | Next.js Router 等の外部依存を最小モック |
-| E2E | Playwright（既存スクリプト・将来整備） | 画面遷移・統合動作 | なし |
+| 層                       | テスト手法                             | 検証対象                                              | モック化範囲                            |
+| ------------------------ | -------------------------------------- | ----------------------------------------------------- | --------------------------------------- |
+| Domain                   | Vitest（既存）                         | Entity / VO のビジネスロジック                        | なし（純粋関数）                        |
+| Application              | Vitest + InMemory Repository（既存）   | UseCase のフロー                                      | Repository をインメモリ実装で代替       |
+| Infrastructure           | Vitest + PGlite（今回追加）            | DB スキーマ⇔ドメインモデル変換                        | なし（実 PG プロトコルで検証）          |
+| Presentation (Hono)      | Vitest + app.request()（今回追加）     | HTTP レイヤー（ルーティング・バリデーション・エラー） | UseCase / Repository を vi.mock         |
+| Presentation (Component) | Vitest + RTL + happy-dom（今回追加）   | UI レンダリング・フィルタロジック                     | Next.js Router 等の外部依存を最小モック |
+| E2E                      | Playwright（既存スクリプト・将来整備） | 画面遷移・統合動作                                    | なし                                    |
 
 ---
 

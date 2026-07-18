@@ -18,15 +18,15 @@ CLAUDE.md / Hook）を**半自動型**で段階的に改善するための記録
 
 ## ディレクトリ
 
-| パス | 内容 | 主担当 |
-| --- | --- | --- |
-| `improvement-backlog.md` | 全候補・提案の一覧（ID・ステータス） | reflection-agent / manager |
-| `candidates/` | タスクごとの改善候補（`<task-id>.md`） | reflection-agent |
-| `proposals/` | 横断分析後の改善提案書（`<proposal-id>.md`） | agent-improvement-manager |
-| `evaluations/` | 提案の回帰評価レポート（`<proposal-id>.md`） | agent-evaluator |
-| `accepted/` | 承認・適用済み提案 | （承認後に移動） |
-| `rejected/` | 却下・不採用提案（理由付き） | manager / 人間 |
-| `incidents/` | 重大インシデント記録（改善トリガー） | 検知者 |
+| パス                     | 内容                                         | 主担当                     |
+| ------------------------ | -------------------------------------------- | -------------------------- |
+| `improvement-backlog.md` | 全候補・提案の一覧（ID・ステータス）         | reflection-agent / manager |
+| `candidates/`            | タスクごとの改善候補（`<task-id>.md`）       | reflection-agent           |
+| `proposals/`             | 横断分析後の改善提案書（`<proposal-id>.md`） | agent-improvement-manager  |
+| `evaluations/`           | 提案の回帰評価レポート（`<proposal-id>.md`） | agent-evaluator            |
+| `accepted/`              | 承認・適用済み提案                           | （承認後に移動）           |
+| `rejected/`              | 却下・不採用提案（理由付き）                 | manager / 人間             |
+| `incidents/`             | 重大インシデント記録（改善トリガー）         | 検知者                     |
 
 各サブディレクトリの `_TEMPLATE.md` を雛形に使う。
 
@@ -37,13 +37,13 @@ candidate → proposal → (evaluation) → accepted / rejected
                                     ↘ incident（重大時は最優先で proposal 化）
 ```
 
-| ステータス | 意味 |
-| --- | --- |
+| ステータス  | 意味                                                    |
+| ----------- | ------------------------------------------------------- |
 | `candidate` | reflection-agent が起票。昇格条件は未確定 or 単一タスク |
-| `proposal` | manager が横断分析し変更案を作成。評価待ち |
-| `evaluated` | agent-evaluator が回帰評価済み（推奨／非推奨つき） |
-| `accepted` | 承認され本適用済み（軽微は manager、重要は人間承認） |
-| `rejected` | 却下。理由とロールバック判断を記録 |
+| `proposal`  | manager が横断分析し変更案を作成。評価待ち              |
+| `evaluated` | agent-evaluator が回帰評価済み（推奨／非推奨つき）      |
+| `accepted`  | 承認され本適用済み（軽微は manager、重要は人間承認）    |
+| `rejected`  | 却下。理由とロールバック判断を記録                      |
 
 ## ID 採番規約
 

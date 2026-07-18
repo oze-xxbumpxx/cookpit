@@ -15,17 +15,13 @@ describe('PriceRecordId', () => {
 
   it('同じ値どうしは equals が true (PRID3)', () => {
     expect(
-      PriceRecordId.fromString('price-record-1').equals(
-        PriceRecordId.fromString('price-record-1'),
-      ),
+      PriceRecordId.fromString('price-record-1').equals(PriceRecordId.fromString('price-record-1')),
     ).toBe(true);
   });
 
   it('異なる値どうしは equals が false (PRID4)', () => {
     expect(
-      PriceRecordId.fromString('price-record-1').equals(
-        PriceRecordId.fromString('price-record-2'),
-      ),
+      PriceRecordId.fromString('price-record-1').equals(PriceRecordId.fromString('price-record-2')),
     ).toBe(false);
   });
 });

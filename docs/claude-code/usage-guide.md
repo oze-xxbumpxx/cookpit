@@ -41,23 +41,23 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 ### Agent（15）
 
-| Agent                     | Model    | 役割                                 | 起動条件                                           |
-| ------------------------- | -------- | ------------------------------------ | -------------------------------------------------- |
-| orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                               |
-| requirements-analyst      | sonnet-5 | 要求整理・既存調査                   | L3（必要な L2）                                    |
-| architecture-designer     | sonnet-5 | 技術設計                             | L2/L3                                              |
-| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                                 |
-| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                              |
-| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                              |
-| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                             |
-| reviewer                  | opus-4-8 | 独立レビュー                         | L2/L3                                              |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり）      |
-| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                       |
-| performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                       |
-| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）                   |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                       |
-| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                                   |
-| agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                     |
+| Agent                     | Model    | 役割                                 | 起動条件                                      |
+| ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
+| orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
+| requirements-analyst      | sonnet-5 | 要求整理・既存調査                   | L3（必要な L2）                               |
+| architecture-designer     | sonnet-5 | 技術設計                             | L2/L3                                         |
+| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
+| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
+| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
+| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                        |
+| reviewer                  | opus-4-8 | 独立レビュー                         | L2/L3                                         |
+| security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
+| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                  |
+| performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                  |
+| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）              |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                  |
+| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
+| agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                |
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。

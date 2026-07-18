@@ -11,13 +11,13 @@
 Sprint 2 Unit A として Store マスタの全層縦スライスを実装する。既存の Recipe 縦スライスを
 踏襲対象とし、以下の層を追加する。
 
-| 層 | 実装対象 |
-|---|---|
-| Domain | `StoreRepository` インターフェースに `save()` を追加（最小変更） |
-| Infrastructure | `stores` テーブル（Drizzle スキーマ + マイグレーション）、`DrizzleStoreRepository` |
-| Application | `GetStoresUseCase`、`CreateStoreUseCase`、`StoreDto`、`StoreMapper`、`StoreNotFoundError` |
-| API Contract | `createStoreSchema`、`storeResponseSchema` |
-| Presentation (API) | `GET /api/stores`、`POST /api/stores`、`app.ts` へのマウント |
+| 層                 | 実装対象                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| Domain             | `StoreRepository` インターフェースに `save()` を追加（最小変更）                          |
+| Infrastructure     | `stores` テーブル（Drizzle スキーマ + マイグレーション）、`DrizzleStoreRepository`        |
+| Application        | `GetStoresUseCase`、`CreateStoreUseCase`、`StoreDto`、`StoreMapper`、`StoreNotFoundError` |
+| API Contract       | `createStoreSchema`、`storeResponseSchema`                                                |
+| Presentation (API) | `GET /api/stores`、`POST /api/stores`、`app.ts` へのマウント                              |
 
 画面（一覧・作成 UI）はスコープ外。`GetStoreUseCase`（単件）、update/delete UseCase もスコープ外。
 
@@ -27,14 +27,14 @@ Sprint 2 Unit A として Store マスタの全層縦スライスを実装する
 
 Orchestrator により以下の判断が確定している。設計書はこの判断に従って記述する。
 
-| # | 判断項目 | 確定内容 |
-|---|---|---|
-| D-1 | `storeResponseSchema` の配置 | `packages/api-contract/src/store.schema.ts` に `createStoreSchema` と `storeResponseSchema` の両方を定義する |
-| D-2 | `StoreDto` の構造 | `{ id: string; name: string; createdAt: string }` を保ち、`storeResponseSchema` の `z.infer` 型と構造一致させる（値の整合は Mapper が担保） |
-| D-3 | `stores.name` のユニーク制約 | 付けない（`id text PK` のみ。スコープ外） |
-| D-4 | `DrizzleStoreRepository.save()` | `INSERT ... ON CONFLICT (id) DO UPDATE SET name = ...` の upsert（Recipe 先例に合わせる） |
-| D-5 | `GetStoreUseCase`（単件） | 今回スコープに含めない（`/api/stores/:id` ルートなし） |
-| D-6 | `StoreNotFoundError` | `packages/application/src/store/store-not-found.error.ts` に定義し index からエクスポートする（現使用箇所はないが将来の単件取得・更新で使う前提のプレースホルダ） |
+| #   | 判断項目                        | 確定内容                                                                                                                                                          |
+| --- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1 | `storeResponseSchema` の配置    | `packages/api-contract/src/store.schema.ts` に `createStoreSchema` と `storeResponseSchema` の両方を定義する                                                      |
+| D-2 | `StoreDto` の構造               | `{ id: string; name: string; createdAt: string }` を保ち、`storeResponseSchema` の `z.infer` 型と構造一致させる（値の整合は Mapper が担保）                       |
+| D-3 | `stores.name` のユニーク制約    | 付けない（`id text PK` のみ。スコープ外）                                                                                                                         |
+| D-4 | `DrizzleStoreRepository.save()` | `INSERT ... ON CONFLICT (id) DO UPDATE SET name = ...` の upsert（Recipe 先例に合わせる）                                                                         |
+| D-5 | `GetStoreUseCase`（単件）       | 今回スコープに含めない（`/api/stores/:id` ルートなし）                                                                                                            |
+| D-6 | `StoreNotFoundError`            | `packages/application/src/store/store-not-found.error.ts` に定義し index からエクスポートする（現使用箇所はないが将来の単件取得・更新で使う前提のプレースホルダ） |
 
 ---
 
@@ -42,29 +42,29 @@ Orchestrator により以下の判断が確定している。設計書はこの�
 
 ### 3-1. 変更ファイル（既存ファイルへの追記）
 
-| ファイル | 変更内容 |
-|---|---|
-| `packages/domain/src/shared/store.repository.ts` | `save(store: Store): Promise<void>` を追加 |
-| `packages/infrastructure/src/db/schema.ts` | `stores` テーブル定義を追記 |
-| `packages/infrastructure/src/index.ts` | `DrizzleStoreRepository` のエクスポートを追加 |
-| `packages/application/src/index.ts` | `export * from './store'` を追加 |
-| `packages/api-contract/src/index.ts` | `export * from './store.schema'` を追加 |
-| `apps/web/src/server/app.ts` | `storesRoute` のマウント、`StoreNotFoundError` の `onError` ハンドリング追加 |
+| ファイル                                         | 変更内容                                                                     |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `packages/domain/src/shared/store.repository.ts` | `save(store: Store): Promise<void>` を追加                                   |
+| `packages/infrastructure/src/db/schema.ts`       | `stores` テーブル定義を追記                                                  |
+| `packages/infrastructure/src/index.ts`           | `DrizzleStoreRepository` のエクスポートを追加                                |
+| `packages/application/src/index.ts`              | `export * from './store'` を追加                                             |
+| `packages/api-contract/src/index.ts`             | `export * from './store.schema'` を追加                                      |
+| `apps/web/src/server/app.ts`                     | `storesRoute` のマウント、`StoreNotFoundError` の `onError` ハンドリング追加 |
 
 ### 3-2. 新規作成ファイル
 
-| ファイル | 内容 |
-|---|---|
-| `packages/application/src/store/store.dto.ts` | `StoreDto`、`CreateStoreInputDto` |
-| `packages/application/src/store/store.mapper.ts` | `toStoreDto(store: Store): StoreDto` |
-| `packages/application/src/store/store-not-found.error.ts` | `StoreNotFoundError extends Error` |
-| `packages/application/src/store/get-stores.use-case.ts` | `GetStoresUseCase` |
-| `packages/application/src/store/create-store.use-case.ts` | `CreateStoreUseCase` |
-| `packages/application/src/store/index.ts` | バレルエクスポート |
-| `packages/infrastructure/src/repositories/drizzle-store.repository.ts` | `DrizzleStoreRepository implements StoreRepository` |
-| `packages/api-contract/src/store.schema.ts` | `createStoreSchema`、`storeResponseSchema` |
-| `apps/web/src/server/routes/stores.ts` | `storesRoute`（Hono） |
-| `apps/web/src/db/migrations/` 以下 | Drizzle 生成マイグレーションファイル（コマンドで自動生成） |
+| ファイル                                                               | 内容                                                       |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `packages/application/src/store/store.dto.ts`                          | `StoreDto`、`CreateStoreInputDto`                          |
+| `packages/application/src/store/store.mapper.ts`                       | `toStoreDto(store: Store): StoreDto`                       |
+| `packages/application/src/store/store-not-found.error.ts`              | `StoreNotFoundError extends Error`                         |
+| `packages/application/src/store/get-stores.use-case.ts`                | `GetStoresUseCase`                                         |
+| `packages/application/src/store/create-store.use-case.ts`              | `CreateStoreUseCase`                                       |
+| `packages/application/src/store/index.ts`                              | バレルエクスポート                                         |
+| `packages/infrastructure/src/repositories/drizzle-store.repository.ts` | `DrizzleStoreRepository implements StoreRepository`        |
+| `packages/api-contract/src/store.schema.ts`                            | `createStoreSchema`、`storeResponseSchema`                 |
+| `apps/web/src/server/routes/stores.ts`                                 | `storesRoute`（Hono）                                      |
+| `apps/web/src/db/migrations/` 以下                                     | Drizzle 生成マイグレーションファイル（コマンドで自動生成） |
 
 ### 3-3. 変更なし・スコープ外
 
@@ -108,7 +108,7 @@ import type { Store, StoreId } from './store';
 export interface StoreRepository {
   findById(id: StoreId): Promise<Store | null>;
   findAll(): Promise<Store[]>;
-  save(store: Store): Promise<void>;   // 追加
+  save(store: Store): Promise<void>; // 追加
 }
 ```
 
@@ -119,13 +119,13 @@ export interface StoreRepository {
 
 `packages/domain/src/shared/store.ts` に実装済みのエンティティをそのまま使用する。
 
-| メソッド/プロパティ | 型 | 説明 |
-|---|---|---|
-| `Store.create(input: StoreCreateInput)` | `Store` | 新規生成（UUID 採番 + name 空チェック）。`name.trim() === ''` で `Error('Store name is required')` を throw |
-| `Store.reconstruct(props: StoreProps)` | `Store` | DB 復元（初期化ロジックを通さない） |
-| `store.id` | `StoreId` | getter |
-| `store.name` | `string` | getter |
-| `store.createdAt` | `Date` | getter（防御的コピー `new Date(this.createdDate)` 済み） |
+| メソッド/プロパティ                     | 型        | 説明                                                                                                        |
+| --------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| `Store.create(input: StoreCreateInput)` | `Store`   | 新規生成（UUID 採番 + name 空チェック）。`name.trim() === ''` で `Error('Store name is required')` を throw |
+| `Store.reconstruct(props: StoreProps)`  | `Store`   | DB 復元（初期化ロジックを通さない）                                                                         |
+| `store.id`                              | `StoreId` | getter                                                                                                      |
+| `store.name`                            | `string`  | getter                                                                                                      |
+| `store.createdAt`                       | `Date`    | getter（防御的コピー `new Date(this.createdDate)` 済み）                                                    |
 
 ---
 
@@ -147,6 +147,7 @@ export type NewStoreRow = typeof stores.$inferInsert;
 ```
 
 **設計根拠**:
+
 - `id`: `StoreId.value`（UUID 文字列）を `text` 型として格納する（Recipe の `id: text PK` と同パターン）
 - `name`: `NOT NULL`。ユニーク制約は付けない（D-3）
 - `created_at`: `timestamp NOT NULL DEFAULT now()`。Store は今回スコープでは更新操作がないため `updated_at` は不要
@@ -184,6 +185,7 @@ DrizzleStoreRepository implements StoreRepository
 ```
 
 **設計根拠（D-4）**:
+
 - `save()` は `INSERT ... ON CONFLICT (id) DO UPDATE SET name = ...` の upsert
 - `DrizzleRecipeRepository.save()` パターンを踏襲し、対象カラムを明示的に指定する
 - DB スキーマ形 ⇔ ドメインモデル形の変換責任は Repository が持つ（`toEntity` / `toRow` の private メソッド）
@@ -195,7 +197,7 @@ DrizzleStoreRepository implements StoreRepository
 export * from './db/schema';
 export * from './db/client';
 export * from './repositories/drizzle-recipe.repository';
-export * from './repositories/drizzle-store.repository';  // 追加
+export * from './repositories/drizzle-store.repository'; // 追加
 ```
 
 ---
@@ -210,7 +212,7 @@ export * from './repositories/drizzle-store.repository';  // 追加
 export interface StoreDto {
   id: string;
   name: string;
-  createdAt: string;  // ISO 8601 文字列
+  createdAt: string; // ISO 8601 文字列
 }
 
 export interface CreateStoreInputDto {
@@ -241,11 +243,11 @@ export function toStoreDto(store: Store): StoreDto {
 
 **変換規則**:
 
-| Domain フィールド | 型 | DTO フィールド | 型 | 変換ルール |
-|---|---|---|---|---|
-| `store.id.value` | `string` | `id` | `string` | そのまま |
-| `store.name` | `string` | `name` | `string` | そのまま |
-| `store.createdAt` | `Date` | `createdAt` | `string` | `.toISOString()` で ISO 8601 文字列（UTC、`Z` サフィックス）に変換 |
+| Domain フィールド | 型       | DTO フィールド | 型       | 変換ルール                                                         |
+| ----------------- | -------- | -------------- | -------- | ------------------------------------------------------------------ |
+| `store.id.value`  | `string` | `id`           | `string` | そのまま                                                           |
+| `store.name`      | `string` | `name`         | `string` | そのまま                                                           |
+| `store.createdAt` | `Date`   | `createdAt`    | `string` | `.toISOString()` で ISO 8601 文字列（UTC、`Z` サフィックス）に変換 |
 
 **設計根拠**: `Date` を ISO 8601 文字列に変換するパターンは `toRecipeDto`（`recipe.createdAt.toISOString()`）と同じ。
 `Store.createdAt` getter は防御的コピー（`new Date(this.createdDate)`）を返すため、Mapper 側での追加コピーは不要。
@@ -293,6 +295,7 @@ export class CreateStoreUseCase {
 ```
 
 **設計根拠**:
+
 - `Store.create()` がドメインバリデーション（name 空チェック）を担う。UseCase は組み立て役に徹する
 - `CreateRecipeUseCase` と同パターン（`Recipe.create()` → `save()` → `toRecipeDto()`）
 - `StoreNotFoundError` はこの UseCase では使用しない（`save` のみのため存在チェック不要）
@@ -331,7 +334,7 @@ UseCase・外部から直接使用されない想定のため index からの再
 
 ```typescript
 export * from './recipe';
-export * from './store';  // 追加
+export * from './store'; // 追加
 ```
 
 ---
@@ -364,6 +367,7 @@ export type StoreResponse = z.infer<typeof storeResponseSchema>;
 ```
 
 **設計根拠（D-1・D-2 の実現）**:
+
 - `createStoreSchema`: `POST /api/stores` のリクエストボディバリデーションに使用する
 - `storeResponseSchema`（D-1）: レスポンス型を Zod スキーマとして `api-contract` に定義する。
   `StoreResponse`（`z.infer<typeof storeResponseSchema>`）は `StoreDto`（Application 層）と
@@ -378,7 +382,7 @@ export type StoreResponse = z.infer<typeof storeResponseSchema>;
 
 ```typescript
 export * from './recipe.schema';
-export * from './store.schema';  // 追加
+export * from './store.schema'; // 追加
 ```
 
 ---
@@ -417,12 +421,13 @@ export const storesRoute = new Hono()
 
 **エンドポイント仕様**:
 
-| メソッド | パス | UseCase | 成功レスポンス | バリデーション |
-|---|---|---|---|---|
-| `GET` | `/api/stores` | `GetStoresUseCase` | 200 + `StoreDto[]` | なし |
-| `POST` | `/api/stores` | `CreateStoreUseCase` | 201 + `StoreDto` | `createStoreSchema`（Zod） |
+| メソッド | パス          | UseCase              | 成功レスポンス     | バリデーション             |
+| -------- | ------------- | -------------------- | ------------------ | -------------------------- |
+| `GET`    | `/api/stores` | `GetStoresUseCase`   | 200 + `StoreDto[]` | なし                       |
+| `POST`   | `/api/stores` | `CreateStoreUseCase` | 201 + `StoreDto`   | `createStoreSchema`（Zod） |
 
 **設計根拠**:
+
 - `recipes.ts` と同パターンで手動 DI を実施する（`storeRepository()` ファクトリ関数）
 - `GET /api/stores/:id` はスコープ外のため、`id` パラメータルートは定義しない（D-5）
 - `POST /` のレスポンスは `201`（Created）とする（`recipes.ts` の `POST /` と同じ）
@@ -446,22 +451,23 @@ export const storesRoute = new Hono()
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
 import { recipesRoute } from './routes/recipes';
-import { storesRoute } from './routes/stores';              // 追加
+import { storesRoute } from './routes/stores'; // 追加
 import { RecipeNotFoundError } from '@cookpit/application';
-import { StoreNotFoundError } from '@cookpit/application';  // 追加
+import { StoreNotFoundError } from '@cookpit/application'; // 追加
 
 const app = new Hono().basePath('/api');
 
 const routes = app
   .route('/health', healthRoute)
   .route('/recipes', recipesRoute)
-  .route('/stores', storesRoute);  // 追加
+  .route('/stores', storesRoute); // 追加
 
 app.onError((err, c) => {
   if (err instanceof RecipeNotFoundError) {
     return c.json({ error: err.message }, 404);
   }
-  if (err instanceof StoreNotFoundError) {       // 追加
+  if (err instanceof StoreNotFoundError) {
+    // 追加
     return c.json({ error: err.message }, 404);
   }
   console.error(err);
@@ -473,6 +479,7 @@ export default app;
 ```
 
 **設計根拠**:
+
 - 既存の `RecipeNotFoundError` 分岐を壊さない。`StoreNotFoundError` の分岐を後続に追加するだけ
 - `AppType` は `routes` から型推論されるため、`storesRoute` の追加により自動的に更新される
 - `storesRoute` は `/api/stores` にマウントされる（`basePath('/api')` + `.route('/stores', storesRoute)`）
@@ -519,13 +526,13 @@ HTTP POST /api/stores  body: { name: string }
 
 ## 10. エラー処理
 
-| エラー種別 | 発生箇所 | HTTP ステータス | 処理方法 |
-|---|---|---|---|
-| Zod バリデーションエラー（`name` 未指定・空文字・空白のみ） | `storesRoute` の `zValidator` | 400 | `@hono/zod-validator` が自動で 400 を返す |
-| ドメインバリデーション違反（`name` 空文字・空白のみ） | `Store.create()` → UseCase | 500 | `app.ts` の `onError` がキャッチして 500。Zod が先に弾くため通常は到達しない |
-| `StoreNotFoundError` | 将来の UseCase（現時点では未使用） | 404 | `app.ts` の `onError` で `StoreNotFoundError` → `{ error: message }` 404 |
-| DB 接続エラー | `DrizzleStoreRepository` | 500 | `app.ts` の `onError` が `console.error` + 500 |
-| `RecipeNotFoundError`（既存） | 既存 UseCase | 404 | 変更なし。既存分岐を壊さない |
+| エラー種別                                                  | 発生箇所                           | HTTP ステータス | 処理方法                                                                     |
+| ----------------------------------------------------------- | ---------------------------------- | --------------- | ---------------------------------------------------------------------------- |
+| Zod バリデーションエラー（`name` 未指定・空文字・空白のみ） | `storesRoute` の `zValidator`      | 400             | `@hono/zod-validator` が自動で 400 を返す                                    |
+| ドメインバリデーション違反（`name` 空文字・空白のみ）       | `Store.create()` → UseCase         | 500             | `app.ts` の `onError` がキャッチして 500。Zod が先に弾くため通常は到達しない |
+| `StoreNotFoundError`                                        | 将来の UseCase（現時点では未使用） | 404             | `app.ts` の `onError` で `StoreNotFoundError` → `{ error: message }` 404     |
+| DB 接続エラー                                               | `DrizzleStoreRepository`           | 500             | `app.ts` の `onError` が `console.error` + 500                               |
+| `RecipeNotFoundError`（既存）                               | 既存 UseCase                       | 404             | 変更なし。既存分岐を壊さない                                                 |
 
 **エラーハンドリングの原則**: UseCase の入口（ドメイン境界）でハンドリングする。内部では
 例外をそのまま投げ、`app.ts` の `onError` で HTTP レスポンスに変換する（既存パターン踏襲）。
@@ -640,40 +647,40 @@ Domain 層のユニットテスト追加は不要。
 Application / Infrastructure 層の自動テストは後続フェーズで整備する方針（coding-standards.md 準拠）。
 以下が優先テスト対象となる。実装時に Vitest で追加する。
 
-| 対象 | ケース | 観点 |
-|---|---|---|
-| `CreateStoreUseCase` | `execute({ name: "西友" })` | `StoreDto` が返り、`repository.save()` が1回呼ばれる（N-01） |
-| `CreateStoreUseCase` | `execute({ name: "" })` | `Error('Store name is required')` が throw され `saveCount === 0`（E-01/E-06） |
-| `CreateStoreUseCase` | `execute({ name: "  " })` | 同上（E-02） |
-| `GetStoresUseCase` | 0件の場合 | 空配列を返す（N-03） |
-| `GetStoresUseCase` | 複数件の場合 | 全件を `StoreDto[]` で返す（N-04） |
-| `toStoreDto` Mapper | 全フィールド変換 | `createdAt` が ISO 8601 文字列（`Z` サフィックス）（N-05） |
+| 対象                 | ケース                      | 観点                                                                           |
+| -------------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `CreateStoreUseCase` | `execute({ name: "西友" })` | `StoreDto` が返り、`repository.save()` が1回呼ばれる（N-01）                   |
+| `CreateStoreUseCase` | `execute({ name: "" })`     | `Error('Store name is required')` が throw され `saveCount === 0`（E-01/E-06） |
+| `CreateStoreUseCase` | `execute({ name: "  " })`   | 同上（E-02）                                                                   |
+| `GetStoresUseCase`   | 0件の場合                   | 空配列を返す（N-03）                                                           |
+| `GetStoresUseCase`   | 複数件の場合                | 全件を `StoreDto[]` で返す（N-04）                                             |
+| `toStoreDto` Mapper  | 全フィールド変換            | `createdAt` が ISO 8601 文字列（`Z` サフィックス）（N-05）                     |
 
 ### 17-3. API 層（手動テスト観点）
 
-| # | ケース | 期待結果 |
-|---|---|---|
-| N-06 | `POST /api/stores` — 正常なリクエストボディ `{ "name": "西友" }` | 201 + `StoreDto` |
-| N-07 | `GET /api/stores` — 正常 | 200 + `StoreDto[]` |
-| E-03 | `POST /api/stores` に `name` が空文字 `""` | 400 |
-| E-04 | `POST /api/stores` に `name` キーなし `{}` | 400 |
-| B-01 | `name` が1文字 | 201 + `StoreDto` |
-| B-03 | 同名 Store の重複登録 | ユニーク制約なしのため別 ID で2件作成される |
+| #    | ケース                                                           | 期待結果                                    |
+| ---- | ---------------------------------------------------------------- | ------------------------------------------- |
+| N-06 | `POST /api/stores` — 正常なリクエストボディ `{ "name": "西友" }` | 201 + `StoreDto`                            |
+| N-07 | `GET /api/stores` — 正常                                         | 200 + `StoreDto[]`                          |
+| E-03 | `POST /api/stores` に `name` が空文字 `""`                       | 400                                         |
+| E-04 | `POST /api/stores` に `name` キーなし `{}`                       | 400                                         |
+| B-01 | `name` が1文字                                                   | 201 + `StoreDto`                            |
+| B-03 | 同名 Store の重複登録                                            | ユニーク制約なしのため別 ID で2件作成される |
 
 ---
 
 ## 18. Recipe 先例との構造的差分
 
-| 観点 | Recipe | Store（今回） |
-|---|---|---|
-| エンティティの複雑さ | 複数の値オブジェクト（RecipeIngredient, CookingStep 等） | シンプル（id, name, createdAt のみ） |
-| Repository メソッド数 | 4（findById, findAll, save, delete） | 3（findById, findAll, save）※ delete なし |
-| UseCase 数 | 5（CRUD） | 2（GetAll, Create）※ スコープ限定 |
-| `save()` の ON CONFLICT 更新対象 | name, baseServings, cookingTime, tags, notes, ingredients, steps, updatedAt | name のみ |
-| Mapper の複雑さ | ネスト構造（ingredients/steps）のマッピングが複雑 | フラット（id, name, createdAt → string 変換のみ） |
-| DB カラム型 | jsonb（ingredients/steps） | text のみ |
-| `updatedAt` カラム | あり（update UseCase が存在する） | なし（Store は今回 create のみ） |
-| api-contract のスキーマ | createRecipeSchema + updateRecipeSchema（レスポンスは application 層のみ） | createStoreSchema + storeResponseSchema（両方を api-contract に定義。D-1） |
+| 観点                             | Recipe                                                                      | Store（今回）                                                              |
+| -------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| エンティティの複雑さ             | 複数の値オブジェクト（RecipeIngredient, CookingStep 等）                    | シンプル（id, name, createdAt のみ）                                       |
+| Repository メソッド数            | 4（findById, findAll, save, delete）                                        | 3（findById, findAll, save）※ delete なし                                  |
+| UseCase 数                       | 5（CRUD）                                                                   | 2（GetAll, Create）※ スコープ限定                                          |
+| `save()` の ON CONFLICT 更新対象 | name, baseServings, cookingTime, tags, notes, ingredients, steps, updatedAt | name のみ                                                                  |
+| Mapper の複雑さ                  | ネスト構造（ingredients/steps）のマッピングが複雑                           | フラット（id, name, createdAt → string 変換のみ）                          |
+| DB カラム型                      | jsonb（ingredients/steps）                                                  | text のみ                                                                  |
+| `updatedAt` カラム               | あり（update UseCase が存在する）                                           | なし（Store は今回 create のみ）                                           |
+| api-contract のスキーマ          | createRecipeSchema + updateRecipeSchema（レスポンスは application 層のみ）  | createStoreSchema + storeResponseSchema（両方を api-contract に定義。D-1） |
 
 ---
 
@@ -684,27 +691,27 @@ Application / Infrastructure 層の自動テストは後続フェーズで整備
 
 ### 19-1. `createStoreSchema` の Zod バリデーションテスト
 
-| # | 入力 | 期待結果 |
-|---|---|---|
-| Z-01 | `{ name: "西友" }` | `parse()` が成功し `CreateStoreBody` 型の値を返す |
-| Z-02 | `{ name: "" }` | `ZodError`（`refine` 失敗、`message: "required"`） |
-| Z-03 | `{ name: "  " }` | `ZodError`（`refine` 失敗、`message: "required"`） |
-| Z-04 | `{}` | `ZodError`（`name` フィールド欠損） |
-| Z-05 | `{ name: "a" }` | 成功（1文字は有効） |
+| #    | 入力               | 期待結果                                           |
+| ---- | ------------------ | -------------------------------------------------- |
+| Z-01 | `{ name: "西友" }` | `parse()` が成功し `CreateStoreBody` 型の値を返す  |
+| Z-02 | `{ name: "" }`     | `ZodError`（`refine` 失敗、`message: "required"`） |
+| Z-03 | `{ name: "  " }`   | `ZodError`（`refine` 失敗、`message: "required"`） |
+| Z-04 | `{}`               | `ZodError`（`name` フィールド欠損）                |
+| Z-05 | `{ name: "a" }`    | 成功（1文字は有効）                                |
 
 ### 19-2. `storeResponseSchema` の型往復テスト（D-2 の確認）
 
-| # | 観点 | 確認方法 |
-|---|---|---|
-| R-01 | `StoreResponse` 型が `StoreDto` に代入可能であること | TypeScript の型チェック（`pnpm type-check`）で確認 |
-| R-02 | `storeResponseSchema.parse(storeDto)` が成功すること | Mapper が返す `StoreDto` を `storeResponseSchema` でパースして通過することを検証 |
-| R-03 | `createdAt` フィールドが `string` であること | `storeResponseSchema` の `createdAt: z.string()` が `toISOString()` の出力を受け入れること |
+| #    | 観点                                                 | 確認方法                                                                                   |
+| ---- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| R-01 | `StoreResponse` 型が `StoreDto` に代入可能であること | TypeScript の型チェック（`pnpm type-check`）で確認                                         |
+| R-02 | `storeResponseSchema.parse(storeDto)` が成功すること | Mapper が返す `StoreDto` を `storeResponseSchema` でパースして通過することを検証           |
+| R-03 | `createdAt` フィールドが `string` であること         | `storeResponseSchema` の `createdAt: z.string()` が `toISOString()` の出力を受け入れること |
 
 ### 19-3. 後方互換確認テスト
 
-| # | 観点 | 確認方法 |
-|---|---|---|
-| B-C1 | `createRecipeSchema` / `updateRecipeSchema` の動作が変わっていないこと | 既存の Recipe 契約テストが引き続き通ること |
+| #    | 観点                                                                              | 確認方法                                                                                                       |
+| ---- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| B-C1 | `createRecipeSchema` / `updateRecipeSchema` の動作が変わっていないこと            | 既存の Recipe 契約テストが引き続き通ること                                                                     |
 | B-C2 | `packages/api-contract/src/index.ts` の追記後に既存エクスポートが消えていないこと | `CreateRecipeBody` / `UpdateRecipeBody` / `unitSchema` 等が `@cookpit/api-contract` から引き続き参照できること |
 
 ### 19-4. 冪等性

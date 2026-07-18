@@ -37,9 +37,9 @@ describe('Recipe.create', () => {
   });
 
   it('名前が空文字なら拒否する (R-GAP-1)', () => {
-    expect(() =>
-      Recipe.create({ name: '', ingredients: [], steps: [], baseServings: 2 }),
-    ).toThrow('Recipe name is required');
+    expect(() => Recipe.create({ name: '', ingredients: [], steps: [], baseServings: 2 })).toThrow(
+      'Recipe name is required',
+    );
   });
 
   it('名前が空白なら拒否する (R2)', () => {

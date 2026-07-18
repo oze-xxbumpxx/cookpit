@@ -94,6 +94,7 @@ eval ベースライン（`.claude/evals/baselines/INDEX.md`）では、全15軸
 ## エラー処理
 
 本番コードのエラー処理は変更しない。テストは**既存の例外送出を検証**する:
+
 - `Recipe.create`: 名前空白 / `baseServings <= 0` / `cookingTime < 0` で throw。
 - `Quantity.of`: 負値で throw。
 - `RecipeIngredient.create`: `displayName` 空 / `amount` と `amountNote` の排他違反で throw。

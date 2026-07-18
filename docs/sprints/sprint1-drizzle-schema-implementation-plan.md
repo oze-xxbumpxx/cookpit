@@ -41,18 +41,18 @@ Recipe 集約の `ingredients` と `steps` は Recipe なしには存在しな�
 
 作成するテーブルは `recipes` の 1 つ。
 
-| カラム名 | Drizzle プロパティ | 型 | 制約 | 説明 |
-| --- | --- | --- | --- | --- |
-| `id` | `id` | `text` | PRIMARY KEY | UUID 文字列。Domain 層の `RecipeId` で採番する |
-| `name` | `name` | `text` | NOT NULL | レシピ名 |
-| `base_servings` | `baseServings` | `integer` | NOT NULL | 基準人数 |
-| `cooking_time` | `cookingTime` | `integer` | NULL 許容 | 調理時間。分単位 |
-| `tags` | `tags` | `text[]` | NOT NULL, DEFAULT `'{}'` | レシピタグ配列 |
-| `notes` | `notes` | `text` | NOT NULL, DEFAULT `''` | メモ |
-| `ingredients` | `ingredients` | `jsonb` | NOT NULL, DEFAULT `'[]'` | 材料配列 |
-| `steps` | `steps` | `jsonb` | NOT NULL, DEFAULT `'[]'` | 手順配列 |
-| `created_at` | `createdAt` | `timestamp` | NOT NULL, DEFAULT NOW() | 作成日時 |
-| `updated_at` | `updatedAt` | `timestamp` | NOT NULL, DEFAULT NOW() | 更新日時。更新時はアプリ側で更新する |
+| カラム名        | Drizzle プロパティ | 型          | 制約                     | 説明                                           |
+| --------------- | ------------------ | ----------- | ------------------------ | ---------------------------------------------- |
+| `id`            | `id`               | `text`      | PRIMARY KEY              | UUID 文字列。Domain 層の `RecipeId` で採番する |
+| `name`          | `name`             | `text`      | NOT NULL                 | レシピ名                                       |
+| `base_servings` | `baseServings`     | `integer`   | NOT NULL                 | 基準人数                                       |
+| `cooking_time`  | `cookingTime`      | `integer`   | NULL 許容                | 調理時間。分単位                               |
+| `tags`          | `tags`             | `text[]`    | NOT NULL, DEFAULT `'{}'` | レシピタグ配列                                 |
+| `notes`         | `notes`            | `text`      | NOT NULL, DEFAULT `''`   | メモ                                           |
+| `ingredients`   | `ingredients`      | `jsonb`     | NOT NULL, DEFAULT `'[]'` | 材料配列                                       |
+| `steps`         | `steps`            | `jsonb`     | NOT NULL, DEFAULT `'[]'` | 手順配列                                       |
+| `created_at`    | `createdAt`        | `timestamp` | NOT NULL, DEFAULT NOW()  | 作成日時                                       |
+| `updated_at`    | `updatedAt`        | `timestamp` | NOT NULL, DEFAULT NOW()  | 更新日時。更新時はアプリ側で更新する           |
 
 ## JSONB 格納構造
 
@@ -72,13 +72,13 @@ type IngredientRow = {
 
 各フィールドの意味は以下。
 
-| フィールド | 説明 |
-| --- | --- |
-| `productRef` | ProductId の UUID 文字列。Product 未紐付けなら `null` |
-| `displayName` | レシピ上の材料表示名 |
-| `amountValue` | 数値量。`amountNote` と排他 |
-| `amountUnit` | 単位。`amountValue` が `null` の場合は `null` |
-| `amountNote` | 「少々」「適量」など、数値化しない量の表現 |
+| フィールド    | 説明                                                  |
+| ------------- | ----------------------------------------------------- |
+| `productRef`  | ProductId の UUID 文字列。Product 未紐付けなら `null` |
+| `displayName` | レシピ上の材料表示名                                  |
+| `amountValue` | 数値量。`amountNote` と排他                           |
+| `amountUnit`  | 単位。`amountValue` が `null` の場合は `null`         |
+| `amountNote`  | 「少々」「適量」など、数値化しない量の表現            |
 
 ### `steps`
 

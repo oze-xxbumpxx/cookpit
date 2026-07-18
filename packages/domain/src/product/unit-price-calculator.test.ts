@@ -51,9 +51,9 @@ describe('UnitPriceCalculator', () => {
   });
 
   it('負の packageSize は Quantity.of の時点でスロー（UnitPriceCalculator に到達しない）(UPC-GAP-1)', () => {
-    expect(() =>
-      UnitPriceCalculator.calculate(Money.of(100, 'JPY'), Quantity.of(-1, 'g')),
-    ).toThrow('Quantity must be non-negative');
+    expect(() => UnitPriceCalculator.calculate(Money.of(100, 'JPY'), Quantity.of(-1, 'g'))).toThrow(
+      'Quantity must be non-negative',
+    );
   });
 
   it('個数系（else ブランチ）で割り切れない場合は小数点第 1 位で丸める (UPC-GAP-2)', () => {
