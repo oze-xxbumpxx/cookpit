@@ -201,7 +201,8 @@ export class Product {
     threshold.setDate(threshold.getDate() - periodDays);
 
     const records = this.productPriceHistory.filter(
-      (record) => record.storeId.equals(storeId) && record.observedAt.getTime() >= threshold.getTime(),
+      (record) =>
+        record.storeId.equals(storeId) && record.observedAt.getTime() >= threshold.getTime(),
     );
     const firstRecord = records[0] ?? null;
     if (firstRecord === null) {

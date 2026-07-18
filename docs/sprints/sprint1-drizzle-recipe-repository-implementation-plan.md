@@ -149,11 +149,7 @@ export class DrizzleRecipeRepository implements RecipeRepository {
   constructor(private readonly db: DrizzleClient) {}
 
   async findById(id: RecipeId): Promise<Recipe | null> {
-    const rows = await this.db
-      .select()
-      .from(recipes)
-      .where(eq(recipes.id, id.value))
-      .limit(1);
+    const rows = await this.db.select().from(recipes).where(eq(recipes.id, id.value)).limit(1);
 
     const row = rows[0];
     if (!row) {
@@ -195,25 +191,21 @@ export class DrizzleRecipeRepository implements RecipeRepository {
 
   private toEntity(row: RecipeRow): Recipe {
     const ingredients = (row.ingredients as IngredientRow[]).map((ingredient) => {
-      const amountUnit =
-        ingredient.amountUnit !== null ? toUnit(ingredient.amountUnit) : null;
+      const amountUnit = ingredient.amountUnit !== null ? toUnit(ingredient.amountUnit) : null;
       const amount =
         ingredient.amountValue !== null && amountUnit !== null
           ? Quantity.of(ingredient.amountValue, amountUnit)
           : null;
 
       return RecipeIngredient.create({
-        productRef:
-          ingredient.productRef !== null ? { value: ingredient.productRef } : null,
+        productRef: ingredient.productRef !== null ? { value: ingredient.productRef } : null,
         displayName: ingredient.displayName,
         amount,
         amountNote: ingredient.amountNote,
       });
     });
 
-    const steps = (row.steps as StepRow[]).map(
-      (step) => new CookingStep(step.description),
-    );
+    const steps = (row.steps as StepRow[]).map((step) => new CookingStep(step.description));
 
     return Recipe.reconstruct({
       id: RecipeId.fromString(row.id),

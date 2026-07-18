@@ -184,12 +184,12 @@ const TRANSITIONS: Record<MealPlanStatus, MealPlanStatus[]> = {
 ```
 
 | 現在 \ 次 | draft | shopping | cooking | consuming | completed |
-| --- | --- | --- | --- | --- | --- |
-| draft | — | 可 | 不可 | 不可 | 不可 |
-| shopping | 可 | — | 可 | 不可 | 不可 |
-| cooking | 不可 | 不可 | — | 可 | 不可 |
-| consuming | 不可 | 不可 | 不可 | — | 可 |
-| completed | 不可 | 不可 | 不可 | 不可 | — |
+| --------- | ----- | -------- | ------- | --------- | --------- |
+| draft     | —     | 可       | 不可    | 不可      | 不可      |
+| shopping  | 可    | —        | 可      | 不可      | 不可      |
+| cooking   | 不可  | 不可     | —       | 可        | 不可      |
+| consuming | 不可  | 不可     | 不可    | —         | 可        |
+| completed | 不可  | 不可     | 不可    | 不可      | —         |
 
 ### 5. `meal-plan/meal-plan.repository.ts` — MealPlanRepository インターフェース
 

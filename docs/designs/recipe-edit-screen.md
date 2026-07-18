@@ -116,13 +116,13 @@ apps/web/src/app/recipes/
 
 変更なし。既存エンドポイント `PUT /api/recipes/:id` を使用する。
 
-| 項目 | 値 |
-| --- | --- |
-| メソッド | PUT |
-| パス | /api/recipes/:id |
-| リクエスト | `UpdateRecipeBody`（`updateRecipeSchema` で検証済み） |
-| レスポンス成功 | 200 `RecipeDto` |
-| レスポンス失敗 | 404 `{ error: string }` / 400 / 500 |
+| 項目           | 値                                                    |
+| -------------- | ----------------------------------------------------- |
+| メソッド       | PUT                                                   |
+| パス           | /api/recipes/:id                                      |
+| リクエスト     | `UpdateRecipeBody`（`updateRecipeSchema` で検証済み） |
+| レスポンス成功 | 200 `RecipeDto`                                       |
+| レスポンス失敗 | 404 `{ error: string }` / 400 / 500                   |
 
 `updateRecipeSchema` に含まれるフィールド: `name` / `ingredients` / `steps` / `tags` / `cookingTime` / `notes`。`baseServings` はスキーマに含まれないため送信しない。
 
@@ -184,6 +184,7 @@ NotFound 時は `notFound()` で Next.js 標準の 404 ページへ遷移する�
 `UpdateRecipeUseCase` は `baseServings` を更新しない（`UpdateRecipeInputDto` にフィールドが存在しない）。編集画面では `baseServings` を **読み取り専用として表示する**。
 
 具体的な実装方針:
+
 - フォーム内に `基準人数: N人分` を静的テキストとして表示する（`Input` ではなく `<p>` タグ）。
 - キャプションとして「作成後は変更できません」または「基準人数」ラベルを添える。
 - `buildUpdateInput` で `baseServings` を含まない `UpdateRecipeBody` を組み立てる。
@@ -195,11 +196,13 @@ NotFound 時は `notFound()` で Next.js 標準の 404 ページへ遷移する�
 **楽観的更新は採用しない。保存後 redirect を採用する。**
 
 理由:
+
 - 楽観的更新はロールバック処理（更新失敗時に元の状態へ戻す）が必要であり、フォーム全体の状態管理が複雑になる。
 - 編集フォームはユーザーが意図的に「保存」を押す操作であり、即時のフィードバックよりも確実な保存確認の方が UX に合う。
 - 詳細画面へ redirect することで、保存後に最新状態が Server Component を通じて取得され一貫性が保たれる。
 
 フロー:
+
 1. `handleSubmit` 内で `buildUpdateInput()` を呼び入力バリデーション。
 2. `client.api.recipes[':id'].$put(...)` で `PUT /api/recipes/:id` を呼ぶ。
 3. 成功（`response.ok`）: `router.push(`/recipes/${recipe.id}`)` + `router.refresh()`。
@@ -216,9 +219,10 @@ NotFound 時は `notFound()` で Next.js 標準の 404 ページへ遷移する�
 
 ```typescript
 // 切り出す関数のシグネチャ（実装は指示範囲外）
-export function buildIngredientInput(
-  rows: IngredientRowValue[],
-): { ingredients: RecipeIngredientBody[]; errors: Record<string, string> }
+export function buildIngredientInput(rows: IngredientRowValue[]): {
+  ingredients: RecipeIngredientBody[];
+  errors: Record<string, string>;
+};
 ```
 
 - `RecipeIngredientBody` は `CreateRecipeBody['ingredients'][number]` と同型（`updateRecipeSchema` の `ingredients` も同じ `recipeIngredientSchema` を使用しているため共有可能）。
@@ -246,12 +250,12 @@ header: [戻るボタン] [タイトル] [編集ボタン]
 
 ## エラー処理
 
-| エラー種別 | 発生箇所 | 処理方法 |
-| --- | --- | --- |
-| レシピ未存在（RecipeNotFoundError） | Server Component（初期表示時） | `notFound()` で 404 |
-| 入力バリデーションエラー | Client Component（handleSubmit） | `fieldErrors` / `errorMessage` を setState で表示 |
-| PUT 失敗（!response.ok） | Client Component（handleSubmit） | `errorMessage` に「保存に失敗しました。」表示 |
-| ネットワークエラー | Client Component（handleSubmit） | `errorMessage` に「通信エラーが発生しました。」表示 |
+| エラー種別                          | 発生箇所                         | 処理方法                                            |
+| ----------------------------------- | -------------------------------- | --------------------------------------------------- |
+| レシピ未存在（RecipeNotFoundError） | Server Component（初期表示時）   | `notFound()` で 404                                 |
+| 入力バリデーションエラー            | Client Component（handleSubmit） | `fieldErrors` / `errorMessage` を setState で表示   |
+| PUT 失敗（!response.ok）            | Client Component（handleSubmit） | `errorMessage` に「保存に失敗しました。」表示       |
+| ネットワークエラー                  | Client Component（handleSubmit） | `errorMessage` に「通信エラーが発生しました。」表示 |
 
 アーキテクチャ原則に従い、ドメイン境界（UseCase 入口）でのハンドリングはバックエンド側が担う。Presentation 層は HTTP レスポンスのステータスコードを見てユーザー向けメッセージを表示する。
 
@@ -306,6 +310,7 @@ MVP1 は認証なし（ADR-003 準拠）。URL を知っていれば誰でも編
 L2（Presentation 層増分）のため、Domain 層テストへの影響なし。
 
 手動テスト観点:
+
 - 詳細画面に「編集」ボタンが表示される。
 - 編集ボタンで `/recipes/[id]/edit` へ遷移する。
 - 編集フォームに既存値が初期表示される（全フィールド確認）。
@@ -326,11 +331,11 @@ L2（Presentation 層増分）のため、Domain 層テストへの影響なし�
 
 ## リスク
 
-| リスク | 影響 | 対策 |
-| --- | --- | --- |
+| リスク                                                                  | 影響                  | 対策                                                                                                             |
+| ----------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `IngredientRow` / `StepRow` の `import type` の参照パスが相対パスになる | 型エラー・lint エラー | `@/` エイリアスが `apps/web/src/` を指すため、絶対パス `@/app/recipes/new/_components/ingredient-row` で参照する |
-| 作成フォームリファクタリング（ユーティリティ切り出し）による回帰 | 作成機能の破損 | 切り出し後に作成フォームの手動テストを必ず実施。未決事項として確認を取る |
-| `RecipeDto` から `IngredientRowValue` への変換の実装誤り | 初期値が欠損する | `amountNote` 側と `amountValue` 側の判定条件を `recipeIngredientSchema` の `superRefine` と対応させる |
+| 作成フォームリファクタリング（ユーティリティ切り出し）による回帰        | 作成機能の破損        | 切り出し後に作成フォームの手動テストを必ず実施。未決事項として確認を取る                                         |
+| `RecipeDto` から `IngredientRowValue` への変換の実装誤り                | 初期値が欠損する      | `amountNote` 側と `amountValue` 側の判定条件を `recipeIngredientSchema` の `superRefine` と対応させる            |
 
 ## 未決事項
 

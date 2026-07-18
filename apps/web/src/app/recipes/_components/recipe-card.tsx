@@ -25,7 +25,9 @@ export function RecipeCard({ recipe }: Props) {
                 key={`${tag}-${index}`}
                 className={cn(
                   'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                  index === 0 ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
+                  index === 0
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-secondary text-muted-foreground',
                 )}
               >
                 {tag}

@@ -21,7 +21,6 @@
   - トークン: 176,022
 
   原因として2つの構造的問題を確認:
-
   1. **逐次実行**: requirements-analyst → architecture-designer → contract-designer → implementation-planner → test-designer が直列で、後段は前段の完了を待つ。architecture-designer と contract-designer、implementation-planner と test-designer は並列実行できるが現状は逐次。
   2. **重複ファイル探索**: 各 subagent が毎回コードベースを再探索する（同一ファイルを複数 agent が読む）。orchestrator が調査結果を先取りして各 agent に渡す仕組みがない。
 

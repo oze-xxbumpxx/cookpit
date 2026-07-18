@@ -143,7 +143,9 @@ export class AddRecipeToMealPlanUseCase {
   constructor(private readonly mealPlanRepository: MealPlanRepository) {}
 
   async execute(input: AddRecipeToMealPlanInputDto): Promise<PlannedRecipeDto> {
-    const mealPlan = await this.mealPlanRepository.findById(MealPlanId.fromString(input.mealPlanId));
+    const mealPlan = await this.mealPlanRepository.findById(
+      MealPlanId.fromString(input.mealPlanId),
+    );
     if (mealPlan === null) {
       throw new MealPlanNotFoundError(input.mealPlanId);
     }
@@ -171,7 +173,9 @@ export class RemoveRecipeFromMealPlanUseCase {
   constructor(private readonly mealPlanRepository: MealPlanRepository) {}
 
   async execute(input: RemoveRecipeFromMealPlanInputDto): Promise<void> {
-    const mealPlan = await this.mealPlanRepository.findById(MealPlanId.fromString(input.mealPlanId));
+    const mealPlan = await this.mealPlanRepository.findById(
+      MealPlanId.fromString(input.mealPlanId),
+    );
     if (mealPlan === null) {
       throw new MealPlanNotFoundError(input.mealPlanId);
     }

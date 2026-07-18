@@ -26,14 +26,14 @@
 
 ### 踏襲パターン
 
-| 既存パターン | 踏襲先 |
-|---|---|
+| 既存パターン                                          | 踏襲先                                                                                                                |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `nonBlankString`（モジュールローカル、export しない） | `product.schema.ts` でも同名で再定義する。`recipe.schema.ts` から import しない（パッケージ内クロス依存を避けるため） |
-| `unitSchema`（`recipe.schema.ts` で export 済み） | `product.schema.ts` から `import { unitSchema } from './recipe.schema'` で流用する。**再定義しない（DRY 優先）** |
-| `z.uuid()` による param バリデーション | `idParamSchema` を `products.ts` / `stores.ts` でも使用 |
-| `c.json(dto, 201)` / `c.body(null, 204)` | POST 系は 201、DELETE は 204（後述の確認事項あり） |
-| `onError` での `{ error: string }` 形式 | 全エラーレスポンスに踏襲 |
-| DTO の `createdAt` / `updatedAt` は ISO 文字列 | `.toISOString()` 変換、`RecipeDto` と同パターン |
+| `unitSchema`（`recipe.schema.ts` で export 済み）     | `product.schema.ts` から `import { unitSchema } from './recipe.schema'` で流用する。**再定義しない（DRY 優先）**      |
+| `z.uuid()` による param バリデーション                | `idParamSchema` を `products.ts` / `stores.ts` でも使用                                                               |
+| `c.json(dto, 201)` / `c.body(null, 204)`              | POST 系は 201、DELETE は 204（後述の確認事項あり）                                                                    |
+| `onError` での `{ error: string }` 形式               | 全エラーレスポンスに踏襲                                                                                              |
+| DTO の `createdAt` / `updatedAt` は ISO 文字列        | `.toISOString()` 変換、`RecipeDto` と同パターン                                                                       |
 
 ### unitSchema の流用方針（DRY 観点）
 
@@ -133,6 +133,7 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 **方針: UseCase 入口で処理する（Zod transform は使わない）**
 
 理由:
+
 - `aliases` の空文字除去は「フォーム入力の正規化」であり、ドメインルールではなくアプリケーションの
   入力処理責務に属する。
 - Zod の `transform` でスキーマ自体を変換すると、`z.infer<typeof createProductSchema>` の型が
@@ -152,16 +153,16 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 
 ### 3-1. 全エンドポイント
 
-| # | メソッド | パス | UseCase | 成功ステータス | リクエスト param | リクエスト body | レスポンス body |
-|---|---|---|---|---|---|---|---|
-| 1 | GET | `/api/products` | GetProductsUseCase | 200 | なし | なし | `ProductDto[]` |
-| 2 | POST | `/api/products` | CreateProductUseCase | 201 | なし | `CreateProductBody` | `ProductDto` |
-| 3 | GET | `/api/products/:id` | GetProductUseCase | 200 | `id: uuid` | なし | `ProductDto` |
-| 4 | PUT | `/api/products/:id` | UpdateProductUseCase | 200 | `id: uuid` | `UpdateProductBody` | `ProductDto` |
-| 5 | DELETE | `/api/products/:id` | DeleteProductUseCase | 204 | `id: uuid` | なし | なし（空ボディ） |
-| 6 | POST | `/api/products/:id/price-records` | RecordPriceUseCase | **200**（確定: 案A） | `id: uuid` | `RecordPriceBody` | なし（空ボディ） |
-| 7 | GET | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 200 | `id: uuid` | なし | `{ data: CheapestStoreResult \| null }`（確定: 案A） |
-| 8 | GET | `/api/stores` | GetStoresUseCase | 200 | なし | なし | `StoreDto[]` |
+| #   | メソッド | パス                               | UseCase                 | 成功ステータス       | リクエスト param | リクエスト body     | レスポンス body                                      |
+| --- | -------- | ---------------------------------- | ----------------------- | -------------------- | ---------------- | ------------------- | ---------------------------------------------------- |
+| 1   | GET      | `/api/products`                    | GetProductsUseCase      | 200                  | なし             | なし                | `ProductDto[]`                                       |
+| 2   | POST     | `/api/products`                    | CreateProductUseCase    | 201                  | なし             | `CreateProductBody` | `ProductDto`                                         |
+| 3   | GET      | `/api/products/:id`                | GetProductUseCase       | 200                  | `id: uuid`       | なし                | `ProductDto`                                         |
+| 4   | PUT      | `/api/products/:id`                | UpdateProductUseCase    | 200                  | `id: uuid`       | `UpdateProductBody` | `ProductDto`                                         |
+| 5   | DELETE   | `/api/products/:id`                | DeleteProductUseCase    | 204                  | `id: uuid`       | なし                | なし（空ボディ）                                     |
+| 6   | POST     | `/api/products/:id/price-records`  | RecordPriceUseCase      | **200**（確定: 案A） | `id: uuid`       | `RecordPriceBody`   | なし（空ボディ）                                     |
+| 7   | GET      | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 200                  | `id: uuid`       | なし                | `{ data: CheapestStoreResult \| null }`（確定: 案A） |
+| 8   | GET      | `/api/stores`                      | GetStoresUseCase        | 200                  | なし             | なし                | `StoreDto[]`                                         |
 
 ### 3-2. エンドポイント別の詳細
 
@@ -262,11 +263,11 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 
 **RecordPrice の成功ステータス（確定: 案A / 200）:**
 
-| 案 | ステータス | レスポンスボディ | 根拠 |
-|---|---|---|---|
-| 案A（推奨） | 200 | 空ボディ（`c.body(null, 200)` 相当） | `void` を返す UseCase であり、新規リソース URL が生成されないため 201 の意味論に合わない。`204 No Content` は成功かつ空ボディの標準的表現だが、DELETE と区別するため 200 を選択 |
-| 案B | 201 | 空ボディ | 新規 PriceRecord が作成されるという観点で 201 とする案（recipes.ts の POST パターン踏襲） |
-| 案C | 204 | 空ボディ | DELETE との対称性は下がるが、RFC 的には最も正確（空レスポンス成功） |
+| 案          | ステータス | レスポンスボディ                     | 根拠                                                                                                                                                                            |
+| ----------- | ---------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 案A（推奨） | 200        | 空ボディ（`c.body(null, 200)` 相当） | `void` を返す UseCase であり、新規リソース URL が生成されないため 201 の意味論に合わない。`204 No Content` は成功かつ空ボディの標準的表現だが、DELETE と区別するため 200 を選択 |
+| 案B         | 201        | 空ボディ                             | 新規 PriceRecord が作成されるという観点で 201 とする案（recipes.ts の POST パターン踏襲）                                                                                       |
+| 案C         | 204        | 空ボディ                             | DELETE との対称性は下がるが、RFC 的には最も正確（空レスポンス成功）                                                                                                             |
 
 設計推奨は **案A（200）**。理由: RecordPriceUseCase は PriceRecord を作成するが、その URL を
 クライアントに知らせる必要がない（`Location` ヘッダーなし）。`void` の操作は 200 または
@@ -295,6 +296,7 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 **null 表現の方針（確定推奨: 200 + `{ "data": null }`）:**
 
 `null` の返却に `204 No Content` を使わない理由:
+
 - `204` はリソース操作が成功し返すべきコンテンツがないことを示す。
   「最安店舗が存在しない」は正常なビジネス状態であり、空コンテンツとは意味が異なる。
 - クライアント（TanStack Query）が `null` と「エラー」を型安全に区別できる。
@@ -303,6 +305,7 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
   GET が `204` を返すパターンはこのコードベースに存在しない。
 
 ラッパー形式 `{ "data": null }` を採用する理由:
+
 - 価格記録ありの場合はフラットなオブジェクトが直接返り、価格記録なしは `{ "data": null }` と
   なると応答形状が非対称になる問題を避けるため、統一的なラッパー形式が望ましい。
 - ただし、既存の recipes.ts は `c.json(recipe)` / `c.json(recipes)` とフラットに返しており、
@@ -310,10 +313,10 @@ export type StoreSchemaType = z.infer<typeof storeSchema>;
 
 **確定: 案A**（実装済み）。当初検討した2案:
 
-| 案 | null のレスポンス | 非null のレスポンス | 一貫性 |
-|---|---|---|---|
-| 案A（推奨） | `{ "data": null }` | `{ "data": { storeId, storeName, latestPrice, unitPrice } }` | ラッパーで統一（cheapest-store のみ独自形式） |
-| 案B | `null`（JSON の null） | `{ storeId, storeName, latestPrice, unitPrice }` | フラット（recipes と同形式、null レスポンスが `null` リテラル） |
+| 案          | null のレスポンス      | 非null のレスポンス                                          | 一貫性                                                          |
+| ----------- | ---------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+| 案A（推奨） | `{ "data": null }`     | `{ "data": { storeId, storeName, latestPrice, unitPrice } }` | ラッパーで統一（cheapest-store のみ独自形式）                   |
+| 案B         | `null`（JSON の null） | `{ storeId, storeName, latestPrice, unitPrice }`             | フラット（recipes と同形式、null レスポンスが `null` リテラル） |
 
 Hono の `c.json(null)` は `null` を JSON としてシリアライズするため技術的には可能。
 TanStack Query では `data === null` として扱える。設計推奨は**案A**（ラッパーで非対称を避ける）で、
@@ -350,28 +353,28 @@ import type { Unit } from '@cookpit/domain/src/shared/unit';
 // 出力 DTO ————————————————————————————————————————
 
 export interface PriceRecordDto {
-  storeId: string;            // StoreId.value（UUID 文字列）
-  storeName: string;          // UseCase 内で StoreRepository により解決済み（非null）
-  priceAmount: number;        // Money.amount（小数点以下1桁、推奨案 U1）
-  unitPriceAmount: number;    // 正規化済み unitPrice（同上）
-  packageSizeValue: number;   // Quantity.value
-  packageSizeUnit: Unit;      // Quantity.unit
-  observedAt: string;         // ISO 8601（.toISOString()）
+  storeId: string; // StoreId.value（UUID 文字列）
+  storeName: string; // UseCase 内で StoreRepository により解決済み（非null）
+  priceAmount: number; // Money.amount（小数点以下1桁、推奨案 U1）
+  unitPriceAmount: number; // 正規化済み unitPrice（同上）
+  packageSizeValue: number; // Quantity.value
+  packageSizeUnit: Unit; // Quantity.unit
+  observedAt: string; // ISO 8601（.toISOString()）
 }
 
 export interface ProductDto {
-  id: string;                         // ProductId.value（UUID 文字列）
+  id: string; // ProductId.value（UUID 文字列）
   name: string;
-  aliases: string[];                  // 空配列許容
+  aliases: string[]; // 空配列許容
   category: ProductCategory;
   defaultUnit: Unit;
-  priceHistory: PriceRecordDto[];     // 空配列許容（価格記録なし）
-  createdAt: string;                  // ISO 8601
-  updatedAt: string;                  // ISO 8601
+  priceHistory: PriceRecordDto[]; // 空配列許容（価格記録なし）
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
 }
 
 export interface StoreDto {
-  id: string;       // StoreId.value（UUID 文字列）
+  id: string; // StoreId.value（UUID 文字列）
   name: string;
 }
 
@@ -380,8 +383,8 @@ export interface StoreDto {
 export interface CheapestStoreResultDto {
   storeId: string;
   storeName: string;
-  latestPrice: number;    // その店舗の最新 priceAmount（Money.amount）
-  unitPrice: number;      // その店舗の最新 unitPriceAmount
+  latestPrice: number; // その店舗の最新 priceAmount（Money.amount）
+  unitPrice: number; // その店舗の最新 unitPriceAmount
 }
 
 // 入力 DTO ————————————————————————————————————————
@@ -390,13 +393,13 @@ export interface CheapestStoreResultDto {
 
 export interface CreateProductInputDto {
   name: string;
-  aliases: string[];         // UseCase 入口でトリム・空文字除去後の配列
+  aliases: string[]; // UseCase 入口でトリム・空文字除去後の配列
   category: ProductCategory;
   defaultUnit: Unit;
 }
 
 export interface UpdateProductInputDto {
-  id: string;                // URL param 由来
+  id: string; // URL param 由来
   name: string;
   aliases: string[];
   category: ProductCategory;
@@ -404,7 +407,7 @@ export interface UpdateProductInputDto {
 }
 
 export interface RecordPriceInputDto {
-  productId: string;         // URL param 由来
+  productId: string; // URL param 由来
   storeId: string;
   priceAmount: number;
   packageSizeValue: number;
@@ -414,14 +417,14 @@ export interface RecordPriceInputDto {
 
 ### DTO Nullability まとめ
 
-| フィールド | 型 | null 許容 | 備考 |
-|---|---|---|---|
-| `ProductDto.priceHistory` | `PriceRecordDto[]` | 不可（空配列）| 価格記録なし = `[]` |
-| `PriceRecordDto.storeName` | `string` | 不可 | UseCase 内で解決済み（U6 確定） |
-| `PriceRecordDto.priceAmount` | `number` | 不可 | Money.amount >= 0 保証 |
-| `PriceRecordDto.unitPriceAmount` | `number` | 不可 | 同上 |
-| `CheapestStoreResultDto` | object | 不可（UseCase から null が来る場合は Hono 層で変換） | UseCase 戻り値は `CheapestStoreResultDto \| null` |
-| `ProductDto.aliases` | `string[]` | 不可（空配列）| 空の場合 `[]` |
+| フィールド                       | 型                 | null 許容                                            | 備考                                              |
+| -------------------------------- | ------------------ | ---------------------------------------------------- | ------------------------------------------------- |
+| `ProductDto.priceHistory`        | `PriceRecordDto[]` | 不可（空配列）                                       | 価格記録なし = `[]`                               |
+| `PriceRecordDto.storeName`       | `string`           | 不可                                                 | UseCase 内で解決済み（U6 確定）                   |
+| `PriceRecordDto.priceAmount`     | `number`           | 不可                                                 | Money.amount >= 0 保証                            |
+| `PriceRecordDto.unitPriceAmount` | `number`           | 不可                                                 | 同上                                              |
+| `CheapestStoreResultDto`         | object             | 不可（UseCase から null が来る場合は Hono 層で変換） | UseCase 戻り値は `CheapestStoreResultDto \| null` |
+| `ProductDto.aliases`             | `string[]`         | 不可（空配列）                                       | 空の場合 `[]`                                     |
 
 「値なし」の表現はコーディング規約に従い `null` に統一。`undefined` は使用しない。
 
@@ -441,13 +444,13 @@ export interface RecordPriceInputDto {
 
 ### 5-2. エラークラスと HTTP ステータスのマッピング
 
-| エラークラス | 発生 UseCase | HTTP | onError マッピング | エラーメッセージパターン |
-|---|---|---|---|---|
-| `ProductNotFoundError` | GetProduct / Update / Delete / RecordPrice / GetCheapestStore | 404 | `app.ts` の `onError` に追加 | `"Product not found: <id>"` |
-| `StoreNotFoundError` | RecordPrice（U4 推奨: UseCase 内で Store 存在検証） | 404 | `app.ts` の `onError` に追加 | `"Store not found: <storeId>"` |
-| Zod バリデーションエラー | 全 Hono ルート（`zValidator`） | 400 | `@hono/zod-validator` が自動処理 | `@hono/zod-validator` の標準メッセージ |
-| ドメインルール違反（name 空白等） | CreateProduct / UpdateProduct | 500（現状）→ 将来 400 | `onError` で 500 として処理（Sprint 2 スコープ外で ValidationError 導入予定 — design §11 参照） | `"Internal Server Error"` |
-| DB 接続エラー・予期しない例外 | 全 | 500 | `onError` の `console.error` + 500 | `"Internal Server Error"` |
+| エラークラス                      | 発生 UseCase                                                  | HTTP                  | onError マッピング                                                                              | エラーメッセージパターン               |
+| --------------------------------- | ------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `ProductNotFoundError`            | GetProduct / Update / Delete / RecordPrice / GetCheapestStore | 404                   | `app.ts` の `onError` に追加                                                                    | `"Product not found: <id>"`            |
+| `StoreNotFoundError`              | RecordPrice（U4 推奨: UseCase 内で Store 存在検証）           | 404                   | `app.ts` の `onError` に追加                                                                    | `"Store not found: <storeId>"`         |
+| Zod バリデーションエラー          | 全 Hono ルート（`zValidator`）                                | 400                   | `@hono/zod-validator` が自動処理                                                                | `@hono/zod-validator` の標準メッセージ |
+| ドメインルール違反（name 空白等） | CreateProduct / UpdateProduct                                 | 500（現状）→ 将来 400 | `onError` で 500 として処理（Sprint 2 スコープ外で ValidationError 導入予定 — design §11 参照） | `"Internal Server Error"`              |
+| DB 接続エラー・予期しない例外     | 全                                                            | 500                   | `onError` の `console.error` + 500                                                              | `"Internal Server Error"`              |
 
 ### 5-3. ErrorClass 定義案
 
@@ -520,16 +523,16 @@ try {
 
 ### 6-2. 冪等性の整理
 
-| エンドポイント | 冪等性 | 備考 |
-|---|---|---|
-| GET /api/products | 冪等 | 副作用なし |
-| GET /api/products/:id | 冪等 | 副作用なし |
-| GET /api/products/:id/cheapest-store | 冪等 | 副作用なし |
-| GET /api/stores | 冪等 | 副作用なし |
-| PUT /api/products/:id | 冪等 | 同じボディで複数回呼んでも同じ結果 |
-| DELETE /api/products/:id | 非冪等（U3 推奨案） | 2回目は ProductNotFoundError → 404 |
-| POST /api/products | 非冪等 | 毎回新規 Product が作成される |
-| POST /api/products/:id/price-records | **非冪等** | U5 推奨案（重複許可）により同一ボディで複数回呼ぶと同数の PriceRecord が作成される |
+| エンドポイント                       | 冪等性              | 備考                                                                               |
+| ------------------------------------ | ------------------- | ---------------------------------------------------------------------------------- |
+| GET /api/products                    | 冪等                | 副作用なし                                                                         |
+| GET /api/products/:id                | 冪等                | 副作用なし                                                                         |
+| GET /api/products/:id/cheapest-store | 冪等                | 副作用なし                                                                         |
+| GET /api/stores                      | 冪等                | 副作用なし                                                                         |
+| PUT /api/products/:id                | 冪等                | 同じボディで複数回呼んでも同じ結果                                                 |
+| DELETE /api/products/:id             | 非冪等（U3 推奨案） | 2回目は ProductNotFoundError → 404                                                 |
+| POST /api/products                   | 非冪等              | 毎回新規 Product が作成される                                                      |
+| POST /api/products/:id/price-records | **非冪等**          | U5 推奨案（重複許可）により同一ボディで複数回呼ぶと同数の PriceRecord が作成される |
 
 **RecordPrice の非冪等性について:**
 冪等性キーの導入（リクエストに `idempotencyKey` を付与して重複排除する）は MVP1 スコープ外。
@@ -550,62 +553,62 @@ UI 側でフォーム送信後にボタンを disabled にするなどの UX 対
 
 #### createProductSchema
 
-| 観点 | テスト値 | 期待結果 |
-|---|---|---|
-| name 必須 | `name: ""` | バリデーション失敗（required） |
-| name 空白のみ | `name: "  "` | バリデーション失敗（trim 後空文字） |
-| name 正常 | `name: "玉ねぎ"` | 成功 |
-| category 列挙外 | `category: "果物"` | バリデーション失敗 |
-| category 全7値 | 各 enum 値 | 成功 |
-| defaultUnit 列挙外 | `defaultUnit: "oz"` | バリデーション失敗 |
-| defaultUnit 全17値 | 各 enum 値 | 成功 |
-| aliases 空配列 | `aliases: []` | 成功 |
-| aliases 空文字含む | `aliases: ["", "玉ねぎ"]` | Zod 層では成功（空文字除去は UseCase 責務） |
-| aliases なし（フィールド欠損） | `aliases` フィールドなし | バリデーション失敗（required） |
+| 観点                           | テスト値                  | 期待結果                                    |
+| ------------------------------ | ------------------------- | ------------------------------------------- |
+| name 必須                      | `name: ""`                | バリデーション失敗（required）              |
+| name 空白のみ                  | `name: "  "`              | バリデーション失敗（trim 後空文字）         |
+| name 正常                      | `name: "玉ねぎ"`          | 成功                                        |
+| category 列挙外                | `category: "果物"`        | バリデーション失敗                          |
+| category 全7値                 | 各 enum 値                | 成功                                        |
+| defaultUnit 列挙外             | `defaultUnit: "oz"`       | バリデーション失敗                          |
+| defaultUnit 全17値             | 各 enum 値                | 成功                                        |
+| aliases 空配列                 | `aliases: []`             | 成功                                        |
+| aliases 空文字含む             | `aliases: ["", "玉ねぎ"]` | Zod 層では成功（空文字除去は UseCase 責務） |
+| aliases なし（フィールド欠損） | `aliases` フィールドなし  | バリデーション失敗（required）              |
 
 #### recordPriceSchema
 
-| 観点 | テスト値 | 期待結果 |
-|---|---|---|
-| priceAmount = 0 | `priceAmount: 0` | バリデーション失敗（positive 制約） |
-| priceAmount < 0 | `priceAmount: -1` | バリデーション失敗 |
-| priceAmount 最小正数 | `priceAmount: 0.01` | 成功 |
-| packageSizeValue = 0 | `packageSizeValue: 0` | バリデーション失敗（positive 制約） |
-| packageSizeValue < 0 | `packageSizeValue: -1` | バリデーション失敗 |
-| storeId が UUID 形式外 | `storeId: "not-a-uuid"` | バリデーション失敗 |
-| storeId が UUID 形式 | `storeId: "550e8400-..."` | Zod 層では成功（存在確認は UseCase 責務） |
-| packageSizeUnit 列挙外 | `packageSizeUnit: "oz"` | バリデーション失敗 |
+| 観点                   | テスト値                  | 期待結果                                  |
+| ---------------------- | ------------------------- | ----------------------------------------- |
+| priceAmount = 0        | `priceAmount: 0`          | バリデーション失敗（positive 制約）       |
+| priceAmount < 0        | `priceAmount: -1`         | バリデーション失敗                        |
+| priceAmount 最小正数   | `priceAmount: 0.01`       | 成功                                      |
+| packageSizeValue = 0   | `packageSizeValue: 0`     | バリデーション失敗（positive 制約）       |
+| packageSizeValue < 0   | `packageSizeValue: -1`    | バリデーション失敗                        |
+| storeId が UUID 形式外 | `storeId: "not-a-uuid"`   | バリデーション失敗                        |
+| storeId が UUID 形式   | `storeId: "550e8400-..."` | Zod 層では成功（存在確認は UseCase 責務） |
+| packageSizeUnit 列挙外 | `packageSizeUnit: "oz"`   | バリデーション失敗                        |
 
 ### 7-2. API 契約（Hono ルート）の検証観点
 
-| 観点 | 確認内容 |
-|---|---|
-| param UUID チェック | `GET /api/products/not-a-uuid` → 400（`zValidator('param', idParamSchema)` で弾かれる） |
-| ProductNotFoundError → 404 | 存在しない UUID で `GET /api/products/:id` → `{ error: "Product not found: ..." }` + 404 |
-| StoreNotFoundError → 404 | 存在しない storeId で `POST /api/products/:id/price-records` → 404 |
-| createProductSchema バリデーション | name 空文字 POST → 400 |
-| recordPriceSchema バリデーション | priceAmount = 0 POST → 400 |
-| 201 ステータス（POST /api/products） | 成功時に 201 が返ること |
-| 204 ステータス（DELETE） | 成功時に 204 + 空ボディが返ること |
-| cheapest-store null 表現 | 価格記録なしの Product ID で `GET /api/products/:id/cheapest-store` → 200 + null 相当 |
+| 観点                                 | 確認内容                                                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| param UUID チェック                  | `GET /api/products/not-a-uuid` → 400（`zValidator('param', idParamSchema)` で弾かれる）  |
+| ProductNotFoundError → 404           | 存在しない UUID で `GET /api/products/:id` → `{ error: "Product not found: ..." }` + 404 |
+| StoreNotFoundError → 404             | 存在しない storeId で `POST /api/products/:id/price-records` → 404                       |
+| createProductSchema バリデーション   | name 空文字 POST → 400                                                                   |
+| recordPriceSchema バリデーション     | priceAmount = 0 POST → 400                                                               |
+| 201 ステータス（POST /api/products） | 成功時に 201 が返ること                                                                  |
+| 204 ステータス（DELETE）             | 成功時に 204 + 空ボディが返ること                                                        |
+| cheapest-store null 表現             | 価格記録なしの Product ID で `GET /api/products/:id/cheapest-store` → 200 + null 相当    |
 
 ### 7-3. DTO 往復テスト観点（型の整合性確認）
 
-| 観点 | 確認内容 |
-|---|---|
-| ProductDto の型一致 | Repository → Entity → Mapper → ProductDto の全フィールド型が一致すること |
+| 観点                          | 確認内容                                                                          |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| ProductDto の型一致           | Repository → Entity → Mapper → ProductDto の全フィールド型が一致すること          |
 | PriceRecordDto.storeName 解決 | UseCase が StoreRepository から storeName を解決し、PriceRecordDto に含まれること |
-| priceHistory 空配列 | 価格記録なし Product の ProductDto.priceHistory が `[]` であること |
-| ISO 文字列変換 | createdAt / updatedAt / observedAt が ISO 8601 文字列として返ること |
-| aliases 空文字除去 | UseCase 入口で `["", " 玉ねぎ ", "  "]` → `["玉ねぎ"]` に正規化されること |
+| priceHistory 空配列           | 価格記録なし Product の ProductDto.priceHistory が `[]` であること                |
+| ISO 文字列変換                | createdAt / updatedAt / observedAt が ISO 8601 文字列として返ること               |
+| aliases 空文字除去            | UseCase 入口で `["", " 玉ねぎ ", "  "]` → `["玉ねぎ"]` に正規化されること         |
 
 ### 7-4. 後方互換検証観点
 
-| 観点 | 確認内容 |
-|---|---|
-| recipe 契約への無影響 | `GET /api/recipes` が引き続き正常動作すること |
+| 観点                            | 確認内容                                                           |
+| ------------------------------- | ------------------------------------------------------------------ |
+| recipe 契約への無影響           | `GET /api/recipes` が引き続き正常動作すること                      |
 | api-contract の既存エクスポート | `unitSchema` / `createRecipeSchema` 等が変わらず import できること |
-| onError の既存動作 | `RecipeNotFoundError` が引き続き 404 にマップされること |
+| onError の既存動作              | `RecipeNotFoundError` が引き続き 404 にマップされること            |
 
 ---
 
@@ -617,11 +620,11 @@ UI 側でフォーム送信後にボタンを disabled にするなどの UX 対
 
 **確認内容**: `POST /api/products/:id/price-records` 成功時のステータスを何にするか。
 
-| 案 | ステータス | 推奨度 |
-|---|---|---|
-| 案A | **200**（空ボディ） | 推奨（新規 URL 非発行の副作用操作） |
-| 案B | 201（空ボディ） | recipes.ts の POST との統一性 |
-| 案C | 204（空ボディ） | RFC 的に最も正確だが DELETE との区別が消える |
+| 案  | ステータス          | 推奨度                                       |
+| --- | ------------------- | -------------------------------------------- |
+| 案A | **200**（空ボディ） | 推奨（新規 URL 非発行の副作用操作）          |
+| 案B | 201（空ボディ）     | recipes.ts の POST との統一性                |
+| 案C | 204（空ボディ）     | RFC 的に最も正確だが DELETE との区別が消える |
 
 設計推奨: **案A（200）**。
 
@@ -629,10 +632,10 @@ UI 側でフォーム送信後にボタンを disabled にするなどの UX 対
 
 **確認内容**: 価格記録なしの場合の `GET /api/products/:id/cheapest-store` レスポンス形式。
 
-| 案 | 200 の body | 非null の body |
-|---|---|---|
-| 案A | `{ "data": null }` | `{ "data": { storeId, storeName, ... } }` |
-| 案B | `null`（JSON リテラル） | `{ storeId, storeName, ... }` |
+| 案  | 200 の body             | 非null の body                            |
+| --- | ----------------------- | ----------------------------------------- |
+| 案A | `{ "data": null }`      | `{ "data": { storeId, storeName, ... } }` |
+| 案B | `null`（JSON リテラル） | `{ storeId, storeName, ... }`             |
 
 設計推奨: **案A（ラッパー統一）**。ただし既存 recipes.ts のフラット形式との乖離が生じることに留意。
 

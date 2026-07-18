@@ -112,9 +112,7 @@ describe('WeekIdentifier', () => {
   });
 
   it('年またぎ週は前年の土曜を週開始日にする', () => {
-    expect(WeekIdentifier.fromDate(new Date('2027-01-01T00:00:00')).toString()).toBe(
-      '2026-12-26',
-    );
+    expect(WeekIdentifier.fromDate(new Date('2027-01-01T00:00:00')).toString()).toBe('2026-12-26');
   });
 
   it('fromString と toString は土曜入力で YYYY-MM-DD ラウンドトリップする', () => {

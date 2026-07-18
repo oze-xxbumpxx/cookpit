@@ -83,7 +83,10 @@ export class DrizzleProductRepository implements ProductRepository {
       await this.db
         .delete(priceRecords)
         .where(
-          and(eq(priceRecords.productId, product.id.value), notInArray(priceRecords.id, currentIds)),
+          and(
+            eq(priceRecords.productId, product.id.value),
+            notInArray(priceRecords.id, currentIds),
+          ),
         );
     } else {
       await this.db.delete(priceRecords).where(eq(priceRecords.productId, product.id.value));

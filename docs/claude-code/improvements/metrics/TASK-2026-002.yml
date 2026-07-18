@@ -6,22 +6,22 @@ change_level: 2
 date: 2026-07-01
 
 agents:
-  calls: unknown          # 実装セッション（リモート）は 0（計画確定済みのため直接実装）。計画セッション（2026-07-01 別コンテナ・PR #20）は subagent-log 欠落で不明
-  retries: 0              # 実装セッション内の差し戻し・再依頼なし
+  calls: unknown # 実装セッション（リモート）は 0（計画確定済みのため直接実装）。計画セッション（2026-07-01 別コンテナ・PR #20）は subagent-log 欠落で不明
+  retries: 0 # 実装セッション内の差し戻し・再依頼なし
   unnecessary_calls: 0
 
 quality:
-  tests_added: 25         # infrastructure 16（IR-P/IR-S/INFRA-E/B/M）+ apps/web 9（WH-P-01〜05 / WC-P-01〜04）
+  tests_added: 25 # infrastructure 16（IR-P/IR-S/INFRA-E/B/M）+ apps/web 9（WH-P-01〜05 / WC-P-01〜04）
   initial_test_failures: 0 # 全テスト初回実行から PASS。lint/type-check も初回通過。既存 domain/application テスト退行なし
-  reviewer_critical: 0    # 実装後 reviewer 未実施（下記 unresolved 参照）
+  reviewer_critical: 0 # 実装後 reviewer 未実施（下記 unresolved 参照）
   reviewer_major: 0
   reviewer_minor: 0
-  user_corrections: 0     # 成果物への修正指示なし
-  escaped_defects: 0      # 既知の流出欠陥なし
+  user_corrections: 0 # 成果物への修正指示なし
+  escaped_defects: 0 # 既知の流出欠陥なし
 
 process:
   requirement_rework: 0
-  design_rework: 0        # 設計指定の defineWorkspace は Vitest 3.2 非推奨のため test.projects へ実装時置換（構成同一・手戻りには数えない。candidates/test-infra-expansion.md 事象 2）
+  design_rework: 0 # 設計指定の defineWorkspace は Vitest 3.2 非推奨のため test.projects へ実装時置換（構成同一・手戻りには数えない。candidates/test-infra-expansion.md 事象 2）
   implementation_rework: 0 # 計画ステップ 1〜8 を一発完遂
-  missing_documents: 1  # docs 存在チェックから自動補完（docs/tests/test-infra-expansion.md 未作成。テスト自体が成果物のため試験観点は要件書 §試験観点で代替）
-  unresolved_items: 1     # 実装後 reviewer / security-reviewer レビュー未実施（テスト・設定のみの変更としてユーザー判断で PR #21 マージ）
+  missing_documents: 1 # docs 存在チェックから自動補完（docs/tests/test-infra-expansion.md 未作成。テスト自体が成果物のため試験観点は要件書 §試験観点で代替）
+  unresolved_items: 1 # 実装後 reviewer / security-reviewer レビュー未実施（テスト・設定のみの変更としてユーザー判断で PR #21 マージ）

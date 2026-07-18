@@ -65,7 +65,13 @@ export const getMealPlanHistoryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(12).default(4),
 });
 
-export const mealPlanStatusSchema = z.enum(['draft', 'shopping', 'cooking', 'consuming', 'completed']);
+export const mealPlanStatusSchema = z.enum([
+  'draft',
+  'shopping',
+  'cooking',
+  'consuming',
+  'completed',
+]);
 
 export const plannedRecipeResponseSchema = z.object({
   id: z.uuid(),

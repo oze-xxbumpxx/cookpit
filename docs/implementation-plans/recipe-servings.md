@@ -24,28 +24,28 @@
 
 ## 変更対象ファイル（修正）
 
-| # | パス | 変更理由 |
-|---|---|---|
-| 1 | `packages/api-contract/src/recipe.schema.ts` | `servings` フィールドを両スキーマに追加 |
-| 2 | `packages/domain/src/recipe/recipe.ts` | Entity フィールド・バリデーション・メソッド追加、private フィールド改名 |
-| 3 | `packages/application/src/recipe/recipe.dto.ts` | `servings` フィールドを 3 インターフェースに追加 |
-| 4 | `packages/application/src/recipe/recipe.mapper.ts` | `toRecipeDto()` に `servings` マッピング追加 |
-| 5 | `packages/application/src/recipe/create-recipe.use-case.ts` | `Recipe.create()` への `servings` 引き渡し追加 |
-| 6 | `packages/application/src/recipe/update-recipe.use-case.ts` | `recipe.updateServings()` 呼び出し追加 |
-| 7 | `packages/infrastructure/src/db/schema.ts` | `servings` カラム定義追加 |
-| 8 | `packages/infrastructure/src/repositories/drizzle-recipe.repository.ts` | `toEntity()`・`toRow()`・`save()` の `servings` 対応 |
-| 9 | `packages/infrastructure/src/testing/create-test-db.ts` | テスト用 DDL に `servings integer` カラム追加 |
-| 10 | `packages/domain/src/recipe/recipe.test.ts` | T-D01〜T-D11 追加 |
-| 11 | `packages/application/src/recipe/recipe-use-cases.test.ts` | `seededRecipe` ヘルパー更新 + T-A01〜T-A04 追加 |
-| 12 | `packages/application/src/recipe/recipe.mapper.test.ts` | `toRecipeDto` テストに `servings` フィールドの検証を追加 |
+| #   | パス                                                                    | 変更理由                                                                |
+| --- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1   | `packages/api-contract/src/recipe.schema.ts`                            | `servings` フィールドを両スキーマに追加                                 |
+| 2   | `packages/domain/src/recipe/recipe.ts`                                  | Entity フィールド・バリデーション・メソッド追加、private フィールド改名 |
+| 3   | `packages/application/src/recipe/recipe.dto.ts`                         | `servings` フィールドを 3 インターフェースに追加                        |
+| 4   | `packages/application/src/recipe/recipe.mapper.ts`                      | `toRecipeDto()` に `servings` マッピング追加                            |
+| 5   | `packages/application/src/recipe/create-recipe.use-case.ts`             | `Recipe.create()` への `servings` 引き渡し追加                          |
+| 6   | `packages/application/src/recipe/update-recipe.use-case.ts`             | `recipe.updateServings()` 呼び出し追加                                  |
+| 7   | `packages/infrastructure/src/db/schema.ts`                              | `servings` カラム定義追加                                               |
+| 8   | `packages/infrastructure/src/repositories/drizzle-recipe.repository.ts` | `toEntity()`・`toRow()`・`save()` の `servings` 対応                    |
+| 9   | `packages/infrastructure/src/testing/create-test-db.ts`                 | テスト用 DDL に `servings integer` カラム追加                           |
+| 10  | `packages/domain/src/recipe/recipe.test.ts`                             | T-D01〜T-D11 追加                                                       |
+| 11  | `packages/application/src/recipe/recipe-use-cases.test.ts`              | `seededRecipe` ヘルパー更新 + T-A01〜T-A04 追加                         |
+| 12  | `packages/application/src/recipe/recipe.mapper.test.ts`                 | `toRecipeDto` テストに `servings` フィールドの検証を追加                |
 
 ## 新規作成ファイル
 
-| # | パス | 作成理由 |
-|---|---|---|
-| 13 | `apps/web/src/db/migrations/0004_*.sql` | `drizzle-kit generate` による自動生成（ALTER TABLE） |
-| 14 | `packages/infrastructure/src/repositories/drizzle-recipe.repository.test.ts` | T-I01〜T-I03（Recipe Repository 結合テスト） |
-| 15 | `apps/web/src/server/routes/recipes.test.ts` | T-P01〜T-P05（Hono ルートテスト） |
+| #   | パス                                                                         | 作成理由                                             |
+| --- | ---------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 13  | `apps/web/src/db/migrations/0004_*.sql`                                      | `drizzle-kit generate` による自動生成（ALTER TABLE） |
+| 14  | `packages/infrastructure/src/repositories/drizzle-recipe.repository.test.ts` | T-I01〜T-I03（Recipe Repository 結合テスト）         |
+| 15  | `apps/web/src/server/routes/recipes.test.ts`                                 | T-P01〜T-P05（Hono ルートテスト）                    |
 
 ---
 
@@ -65,6 +65,7 @@ servings: integer('servings'),
 `.notNull()` なし・`.default()` なし（NULL 許可、既存行は NULL）。
 
 **完了条件**:
+
 - `RecipeRow`（`typeof recipes.$inferSelect`）の型に `servings: number | null` が含まれること。
 - `pnpm type-check`（`packages/infrastructure` スコープ）がエラーなしで通ること。
 
@@ -90,6 +91,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 それ以外の差分（`DROP COLUMN` など）が含まれていれば、Step 1 の schema.ts に意図しない変更が混入している可能性があるため差し戻すこと。
 
 **完了条件**:
+
 - `apps/web/src/db/migrations/0004_*.sql` が存在し、上記 ALTER TABLE 文のみを含む。
 - `apps/web/src/db/migrations/meta/_journal.json` の `entries` に `idx: 4` のエントリが追加される。
 
@@ -118,6 +120,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 コメントが示す通り、このファイルは `schema.ts` と機械的に対応させる（設計書 §5.4 案 b の注釈による）。Step 1 で `schema.ts` に追加したカラムをここにも反映させる。
 
 **完了条件**:
+
 - DDL を適用した PGlite テスト DB の `recipes` テーブルに `servings integer` カラムが存在すること（Step 5 の infrastructure テストで確認できる）。
 
 **依存**: Step 1 完了後に実施。Step 2 とは独立（並行可）。
@@ -131,11 +134,13 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 **変更内容**:
 
 1. **インターフェース `CreateRecipeInput` にフィールド追加**:
+
    ```
    servings?: number | null
    ```
 
 2. **インターフェース `RecipeProps` にフィールド追加**:
+
    ```
    servings: number | null
    ```
@@ -159,6 +164,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
    - `new Recipe(...)` 呼び出しの末尾に `props.servings` を追加する（バリデーションなし）。
 
 8. **`get servings(): number | null` ゲッターを追加**:
+
    ```typescript
    get servings(): number | null {
      return this.servingsValue;
@@ -171,6 +177,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
    - `this.servingsValue = servings` + `this.touch()` を呼ぶ。
 
 **完了条件**:
+
 - `get baseServings()` が引き続き正しく動作すること（既存テストが通ること）。
 - `Recipe.create({ servings: 4 }).servings === 4` が成立すること。
 - `Recipe.create({ servings: 0 })` がエラーをスローすること。
@@ -195,6 +202,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 - `UpdateRecipeInputDto` に任意フィールドを追加: `servings?: number | null`
 
 **完了条件**:
+
 - `RecipeDto['servings']` の型が `number | null`（必須、`undefined` を含まない）であること。
 - `CreateRecipeInputDto['servings']` の型が `number | null | undefined` であること。
 
@@ -206,6 +214,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 `toRecipeDto()` 関数の返却オブジェクトに `servings: recipe.servings` を追加する。
 
 **完了条件**:
+
 - `toRecipeDto()` が `servings` フィールドを返すこと。
 
 #### Step 5-c: `create-recipe.use-case.ts`
@@ -218,6 +227,7 @@ ALTER TABLE "recipes" ADD COLUMN "servings" integer;
 `input.servings` が `undefined`（省略）の場合も `?? null` で `null` に正規化して渡す。
 
 **完了条件**:
+
 - `CreateRecipeInputDto.servings` が `undefined` のとき `Recipe.create()` に `null` が渡ること。
 
 #### Step 5-d: `update-recipe.use-case.ts`
@@ -234,6 +244,7 @@ recipe.updateServings(input.servings ?? null);
 `input.servings` が `undefined`（省略）の場合も `?? null` で正規化する。
 
 **完了条件**:
+
 - 更新 UseCase が `servings` を `null` に正規化してドメインへ渡すこと。
 - `pnpm type-check`（`packages/application` スコープ）がエラーなしで通ること。
 
@@ -259,6 +270,7 @@ recipe.updateServings(input.servings ?? null);
    これにより upsert 時の冪等性を保持する。
 
 **完了条件**:
+
 - `save(recipe)` → `findById(id)` の往復で `recipe.servings` が保持されること。
 - `pnpm type-check`（`packages/infrastructure` スコープ）がエラーなしで通ること。
 
@@ -275,6 +287,7 @@ recipe.updateServings(input.servings ?? null);
 **追加するテストケース**（設計書「テスト方針 Domain 層」T-D01〜T-D11）:
 
 `Recipe.create` describe ブロックに追加:
+
 - T-D01: `Recipe.create({ servings: 4 })` → `recipe.servings === 4`
 - T-D02: `Recipe.create({ servings: null })` → `recipe.servings === null`
 - T-D03: `Recipe.create()` で `servings` 省略 → `recipe.servings === null`
@@ -283,15 +296,18 @@ recipe.updateServings(input.servings ?? null);
 - T-D06: `Recipe.create({ servings: 1.5 })` → エラー `'Recipe servings must be a positive integer'`
 
 `Recipe の状態変更` describe ブロックに追加:
+
 - T-D07: `recipe.updateServings(2)` → `servings === 2`、`updatedAt` が createdAt 以降に進む
 - T-D08: `recipe.updateServings(null)` → `servings === null`
 - T-D09: `recipe.updateServings(0)` → エラー `'Recipe servings must be a positive integer'`
 
 `Recipe.reconstruct` describe ブロックに追加:
+
 - T-D10: `Recipe.reconstruct({ servings: 3 })` → `recipe.servings === 3`
 - T-D11: `Recipe.reconstruct({ servings: null })` → `recipe.servings === null`
 
 既存テストの更新:
+
 - `Recipe.reconstruct` の既存テスト（R12）で使用している `RecipeProps` を構築する箇所に
   `servings: null` を追加する（インターフェース変更により必須フィールドになるため）。
 
@@ -311,10 +327,12 @@ recipe.updateServings(input.servings ?? null);
 **追加テストケース**（T-A01〜T-A04）:
 
 `CreateRecipeUseCase` describe ブロックに追加:
+
 - T-A01: `execute({ ...baseInput, servings: 4 })` → DTO `servings === 4`
 - T-A02: `execute(baseInput)`（`servings` 省略）→ DTO `servings === null`
 
 `UpdateRecipeUseCase` describe ブロックに追加:
+
 - T-A03: `execute({ ...updateInput, servings: 2 })` → DTO `servings === 2`
 - T-A04: `execute({ ...updateInput, servings: null })` → DTO `servings === null`
 
@@ -367,6 +385,7 @@ describe('DrizzleRecipeRepository', () => {
 **対象ファイル（新規）**: `apps/web/src/server/routes/recipes.test.ts`
 
 `apps/web/src/server/routes/products.test.ts` のモック構造を参照して作成する。
+
 - `vi.mock('@/db/client', ...)` で DB をモック
 - `vi.mock('@cookpit/application', ...)` で UseCase をモック
 - Hono `app` に対して `app.request()` または `fetch` で HTTP リクエストを送信
@@ -406,6 +425,7 @@ pnpm test
 ```
 
 確認対象パッケージ:
+
 - `packages/domain`
 - `packages/application`
 - `packages/infrastructure`
@@ -436,6 +456,7 @@ Step 8 (quality gate) ← 全 Step
 ```
 
 **並行実施可能な組み合わせ**:
+
 - Step 1 と Step 4 は独立しており同時に着手できる。
 - Step 2（migration）と Step 3（test DDL）は Step 1 完了後に並行できる。
 - Step 5-a〜5-d は Step 4 完了後に並行できる。
@@ -465,6 +486,7 @@ Step 8 の `pnpm type-check` で `apps/web` を通した際に型エラーが発
 本変更はすべて後方互換。問題発生時のロールバック手順:
 
 1. **DB ロールバック**: 以下 SQL を本番 DB に適用する。
+
    ```sql
    ALTER TABLE "recipes" DROP COLUMN "servings";
    ```
@@ -479,8 +501,8 @@ Step 8 の `pnpm type-check` で `apps/web` を通した際に型エラーが発
 
 本変更で更新が必要なドキュメント:
 
-| ドキュメント | 更新内容 |
-|---|---|
+| ドキュメント              | 更新内容                                                                 |
+| ------------------------- | ------------------------------------------------------------------------ |
 | `docs/04-domain-model.md` | `Recipe` 集約のフィールド一覧に `servings: number \| null`（任意）を追記 |
 
 `docs/designs/recipe-servings.md` のステータスを `confirmed` に更新する（実装完了後）。

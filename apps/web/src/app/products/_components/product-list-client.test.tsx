@@ -51,7 +51,11 @@ describe('ProductListClient', () => {
     const user = userEvent.setup();
     const products = [
       createProductDto(),
-      createProductDto({ id: '3c9f1dcc-4d2f-5d73-ae7b-7b2f7c0b1d22', name: '豚肉', category: '肉' }),
+      createProductDto({
+        id: '3c9f1dcc-4d2f-5d73-ae7b-7b2f7c0b1d22',
+        name: '豚肉',
+        category: '肉',
+      }),
     ];
     render(<ProductListClient initialProducts={products} />);
 
@@ -65,7 +69,11 @@ describe('ProductListClient', () => {
     const user = userEvent.setup();
     const products = [
       createProductDto(),
-      createProductDto({ id: '3c9f1dcc-4d2f-5d73-ae7b-7b2f7c0b1d22', name: '豚肉', category: '肉' }),
+      createProductDto({
+        id: '3c9f1dcc-4d2f-5d73-ae7b-7b2f7c0b1d22',
+        name: '豚肉',
+        category: '肉',
+      }),
     ];
     render(<ProductListClient initialProducts={products} />);
 

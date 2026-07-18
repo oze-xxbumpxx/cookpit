@@ -32,12 +32,12 @@
 
 ### 画面構成
 
-| 画面 | パス | 初期データ取得 | ミューテーション |
-|---|---|---|---|
-| 商品一覧 | `/products` | Server Component（GetProductsUseCase 直接呼び出し） | Hono RPC（Client 検索フィルタ） |
-| 商品作成 | `/products/new` | — | Hono RPC POST `/api/products` |
-| 商品詳細 | `/products/[id]` | Server Component（GetProductUseCase + GetCheapestStoreUseCase 直接呼び出し） | Hono RPC POST `/api/products/:id/price-records` |
-| 商品編集 | `/products/[id]/edit` | Server Component（GetProductUseCase 直接呼び出し） | Hono RPC PUT `/api/products/:id` |
+| 画面     | パス                  | 初期データ取得                                                               | ミューテーション                                |
+| -------- | --------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
+| 商品一覧 | `/products`           | Server Component（GetProductsUseCase 直接呼び出し）                          | Hono RPC（Client 検索フィルタ）                 |
+| 商品作成 | `/products/new`       | —                                                                            | Hono RPC POST `/api/products`                   |
+| 商品詳細 | `/products/[id]`      | Server Component（GetProductUseCase + GetCheapestStoreUseCase 直接呼び出し） | Hono RPC POST `/api/products/:id/price-records` |
+| 商品編集 | `/products/[id]/edit` | Server Component（GetProductUseCase 直接呼び出し）                           | Hono RPC PUT `/api/products/:id`                |
 
 ---
 
@@ -125,18 +125,18 @@ test-designer への橋渡しとして、優先度・対象・観点を整理す
 
 Domain 層は Vitest で co-located テスト（`src/**/*.test.ts`）が導入済み。新規ドメインオブジェクト・UseCase を追加するため、以下を追加・実施する。
 
-| 対象 | テスト観点 |
-|---|---|
-| `Money` 値オブジェクト | `Money.of` 非負チェック、`add`・`multiply`・`isLessThan` の正常動作 |
-| `ProductId` 値オブジェクト | `generate()` が UUID 形式を返すこと、`fromString()` が往復で一致すること |
-| `StoreId` 値オブジェクト | ProductId と同様 |
-| `Product` 集約 | `create()` バリデーション（name 空白）、`recordPrice()` でヒストリ追加、`latestPriceAt()` 正常・空ケース、`cheapestStoreAt()` 単一店舗・複数店舗・記録なし |
-| unitPrice 計算（`UnitPriceCalculator`） | 重量系 g/kg・容量系 ml/l・個数系・調理単位の全パターン、ゼロ除算防止（packageSizeValue > 0 の前提で確認） |
-| `CreateProductUseCase` | name 空白エラー、正常作成で ProductDto 返却 |
-| `RecordPriceUseCase` | priceAmount = 0 エラー、packageSizeValue = 0 エラー、Store 不存在エラー（U4 推奨案）、正常価格記録 |
-| `GetCheapestStoreUseCase` | 価格記録なし → null、単一店舗、複数店舗の最安選択 |
-| `UpdateProductUseCase` | 存在しない ID → ProductNotFoundError |
-| `DeleteProductUseCase` | 存在しない ID → ProductNotFoundError（U3 推奨案） |
+| 対象                                    | テスト観点                                                                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Money` 値オブジェクト                  | `Money.of` 非負チェック、`add`・`multiply`・`isLessThan` の正常動作                                                                                        |
+| `ProductId` 値オブジェクト              | `generate()` が UUID 形式を返すこと、`fromString()` が往復で一致すること                                                                                   |
+| `StoreId` 値オブジェクト                | ProductId と同様                                                                                                                                           |
+| `Product` 集約                          | `create()` バリデーション（name 空白）、`recordPrice()` でヒストリ追加、`latestPriceAt()` 正常・空ケース、`cheapestStoreAt()` 単一店舗・複数店舗・記録なし |
+| unitPrice 計算（`UnitPriceCalculator`） | 重量系 g/kg・容量系 ml/l・個数系・調理単位の全パターン、ゼロ除算防止（packageSizeValue > 0 の前提で確認）                                                  |
+| `CreateProductUseCase`                  | name 空白エラー、正常作成で ProductDto 返却                                                                                                                |
+| `RecordPriceUseCase`                    | priceAmount = 0 エラー、packageSizeValue = 0 エラー、Store 不存在エラー（U4 推奨案）、正常価格記録                                                         |
+| `GetCheapestStoreUseCase`               | 価格記録なし → null、単一店舗、複数店舗の最安選択                                                                                                          |
+| `UpdateProductUseCase`                  | 存在しない ID → ProductNotFoundError                                                                                                                       |
+| `DeleteProductUseCase`                  | 存在しない ID → ProductNotFoundError（U3 推奨案）                                                                                                          |
 
 ### 手動テスト観点
 
@@ -162,6 +162,7 @@ Domain 層は Vitest で co-located テスト（`src/**/*.test.ts`）が導入�
 `packages/domain/src/product/unit-price-calculator.ts` にドメインサービスとして配置する。
 
 **理由:**
+
 - unitPrice 計算は「単位の意味論に基づく正規化」というドメイン知識。単位の種別判定（g/kg は重量系など）および換算定数（1kg = 1000g）は純粋なドメインロジックであり、Application 層の手続きではない。
 - `Product.recordPrice(record: PriceRecord)` の呼び出し前に Application 層（RecordPriceUseCase）が `UnitPriceCalculator.calculate(priceAmount, packageSize)` を呼んで `unitPrice` を得る。これにより UseCase は組み立て役に徹し、計算ロジックはドメインに閉じる。
 - 将来 `isPriceLow` 等の計算に unitPrice の正規化を再利用する際もドメイン層に閉じているため呼び出しやすい。
@@ -195,6 +196,7 @@ UnitPriceCalculator.calculate(priceAmount: number, packageSize: Quantity): Money
 **推奨案: 小数点以下1桁で `Math.round`（DB 保存も同様）**
 
 根拠:
+
 - 「137円 / 300g × 100 = 45.666...」→ `Math.round(45.7)` = 46 では誤差が生じる
 - 小数点以下1桁（45.7円/100g）で保存すると、`Math.round(value * 10) / 10` により精度を保ちつつ表示では整数に丸められる
 - `Math.floor` より `Math.round` のほうが系統的なバイアスが小さく、価格比較での誤判定リスクが低い
@@ -276,20 +278,22 @@ price_records テーブル（pgTable）
 ```
 
 **インデックス:**
+
 - `(productId, observedAt DESC)` — `latestPriceAt()` / `cheapestStoreAt()` のクエリ最適化
 - `(productId, storeId)` — 店舗別絞り込み
 
 **Money カラム型の選択（U1 と連動）:**
 
-| 丸め方針 | 推奨カラム型 | 理由 |
-|---|---|---|
+| 丸め方針              | 推奨カラム型     | 理由                                |
+| --------------------- | ---------------- | ----------------------------------- |
 | 小数点以下1桁（推奨） | `numeric(10, 1)` | 精度保証・DB 側での正確な比較が可能 |
-| 整数円単位 | `integer` | シンプルだが精度が低い |
-| 小数点以下2桁 | `numeric(10, 2)` | 精度は高いが表示上の意味が薄い |
+| 整数円単位            | `integer`        | シンプルだが精度が低い              |
+| 小数点以下2桁         | `numeric(10, 2)` | 精度は高いが表示上の意味が薄い      |
 
 `real`（IEEE 754 float）は DB 内での浮動小数点誤差が生じるため**非推奨**。
 
 **price_records の PK について:**
+
 - UUID 文字列（`text`）を使用。`PriceRecordId` を新規に定義する必要がある。代替として複合 PK `(productId, storeId, observedAt)` も可能だが、同日同店の複数記録（U5）を許容する設計では UUID PK が適切。
 - **要ユーザー確認（U5）**: 同日・同店・同商品の重複記録を許可するかは PK 設計と直結する。UUID PK であれば重複は技術的に許可される。
 
@@ -316,15 +320,15 @@ ON CONFLICT (id) DO NOTHING;
 
 要件書 U1〜U7 すべてに対する設計者推奨案と根拠。
 
-| # | 未決事項 | 設計者推奨案 | 根拠 | ユーザー確認要否 |
-|---|---|---|---|---|
-| U1 | unitPrice の丸め桁数・方式 | **小数点以下1桁、Math.round**。DB カラムは `numeric(10, 1)`。`Math.round(value * 10) / 10` で計算後に `Money.of` に渡す | 円/100g 単位で1桁あれば価格比較の精度として十分。Math.round の方が Math.floor より系統バイアスが小さい | **要ユーザー確認** |
-| U2 | Store シード ID の固定化可否 | **固定 UUID を採用**。実装者が適切な UUID を割り当てる | 将来の ID 参照（ShoppingItem.targetStore など）の再現性確保。テスト環境衝突リスクは DB 分離で対応 | アーキテクチャ設計者判断で推奨。ユーザー確認は任意 |
-| U3 | DeleteProductUseCase の存在チェック | **`ProductNotFoundError` を throw**（冪等成功ではなく NotFound エラー） | Recipe パターン（GetRecipe は NotFound）との一貫性を優先。DELETE も存在チェックを行うことでバグ検出が早くなる | **要ユーザー確認** |
-| U4 | RecordPriceUseCase の Store 存在検証 | **UseCase 内で `StoreRepository.findById()` による検証**（Zod のみでは不十分） | フロントで Store 選択肢を制限しても、API を直接呼ばれた場合に不正な storeId が通る。UseCase でも存在チェックし `StoreNotFoundError` を throw する。これは契約（バリデーション）ではなくビジネスルールの強制 | アーキテクチャ設計者判断で推奨 |
-| U5 | 価格記録の重複可否 | **重複を許可**（同日・同店・同商品の複数登録を可とする） | 買い物中に価格を見直して再記録するユースケースが自然に存在する。「最新 = observedAt が最大のレコード」として扱い、表示は最新1件 | **要ユーザー確認** |
-| U6 | PriceRecordDto の storeName 解決 | **UseCase 内で `StoreRepository` を使って解決**（PriceRecordDto に storeName を含める） | フロント側で別途 GetStoresUseCase を呼んでジョインする方法は、Store 数が増えた際に N+1 的な問題を引き起こす。UseCase が1回の操作で完結する方が設計として明快 | アーキテクチャ設計者判断で推奨 |
-| U7 | price_records テーブル設計 | **案B（独立テーブル）を推奨**（§6 参照） | 将来の分析クエリ・集計への柔軟性、後からの変更困難性を考慮 | **要ユーザー確認** |
+| #   | 未決事項                             | 設計者推奨案                                                                                                            | 根拠                                                                                                                                                                                                        | ユーザー確認要否                                   |
+| --- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| U1  | unitPrice の丸め桁数・方式           | **小数点以下1桁、Math.round**。DB カラムは `numeric(10, 1)`。`Math.round(value * 10) / 10` で計算後に `Money.of` に渡す | 円/100g 単位で1桁あれば価格比較の精度として十分。Math.round の方が Math.floor より系統バイアスが小さい                                                                                                      | **要ユーザー確認**                                 |
+| U2  | Store シード ID の固定化可否         | **固定 UUID を採用**。実装者が適切な UUID を割り当てる                                                                  | 将来の ID 参照（ShoppingItem.targetStore など）の再現性確保。テスト環境衝突リスクは DB 分離で対応                                                                                                           | アーキテクチャ設計者判断で推奨。ユーザー確認は任意 |
+| U3  | DeleteProductUseCase の存在チェック  | **`ProductNotFoundError` を throw**（冪等成功ではなく NotFound エラー）                                                 | Recipe パターン（GetRecipe は NotFound）との一貫性を優先。DELETE も存在チェックを行うことでバグ検出が早くなる                                                                                               | **要ユーザー確認**                                 |
+| U4  | RecordPriceUseCase の Store 存在検証 | **UseCase 内で `StoreRepository.findById()` による検証**（Zod のみでは不十分）                                          | フロントで Store 選択肢を制限しても、API を直接呼ばれた場合に不正な storeId が通る。UseCase でも存在チェックし `StoreNotFoundError` を throw する。これは契約（バリデーション）ではなくビジネスルールの強制 | アーキテクチャ設計者判断で推奨                     |
+| U5  | 価格記録の重複可否                   | **重複を許可**（同日・同店・同商品の複数登録を可とする）                                                                | 買い物中に価格を見直して再記録するユースケースが自然に存在する。「最新 = observedAt が最大のレコード」として扱い、表示は最新1件                                                                             | **要ユーザー確認**                                 |
+| U6  | PriceRecordDto の storeName 解決     | **UseCase 内で `StoreRepository` を使って解決**（PriceRecordDto に storeName を含める）                                 | フロント側で別途 GetStoresUseCase を呼んでジョインする方法は、Store 数が増えた際に N+1 的な問題を引き起こす。UseCase が1回の操作で完結する方が設計として明快                                                | アーキテクチャ設計者判断で推奨                     |
+| U7  | price_records テーブル設計           | **案B（独立テーブル）を推奨**（§6 参照）                                                                                | 将来の分析クエリ・集計への柔軟性、後からの変更困難性を考慮                                                                                                                                                  | **要ユーザー確認**                                 |
 
 ---
 
@@ -336,16 +340,16 @@ ON CONFLICT (id) DO NOTHING;
 
 ### API エンドポイント
 
-| メソッド | パス | UseCase | 説明 |
-|---|---|---|---|
-| GET | `/api/products` | GetProductsUseCase | 商品一覧 |
-| POST | `/api/products` | CreateProductUseCase | 商品作成 |
-| GET | `/api/products/:id` | GetProductUseCase | 商品詳細 |
-| PUT | `/api/products/:id` | UpdateProductUseCase | 商品更新 |
-| DELETE | `/api/products/:id` | DeleteProductUseCase | 商品削除 |
-| POST | `/api/products/:id/price-records` | RecordPriceUseCase | 価格記録 |
-| GET | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 最安店舗取得 |
-| GET | `/api/stores` | GetStoresUseCase | 店舗一覧 |
+| メソッド | パス                               | UseCase                 | 説明         |
+| -------- | ---------------------------------- | ----------------------- | ------------ |
+| GET      | `/api/products`                    | GetProductsUseCase      | 商品一覧     |
+| POST     | `/api/products`                    | CreateProductUseCase    | 商品作成     |
+| GET      | `/api/products/:id`                | GetProductUseCase       | 商品詳細     |
+| PUT      | `/api/products/:id`                | UpdateProductUseCase    | 商品更新     |
+| DELETE   | `/api/products/:id`                | DeleteProductUseCase    | 商品削除     |
+| POST     | `/api/products/:id/price-records`  | RecordPriceUseCase      | 価格記録     |
+| GET      | `/api/products/:id/cheapest-store` | GetCheapestStoreUseCase | 最安店舗取得 |
+| GET      | `/api/stores`                      | GetStoresUseCase        | 店舗一覧     |
 
 ### スキーマ前提方針
 
@@ -433,14 +437,14 @@ ON CONFLICT (id) DO NOTHING;
 
 ## 11. エラー処理
 
-| エラー種別 | 発生箇所 | HTTP ステータス | 処理方法 |
-|---|---|---|---|
-| ProductNotFoundError | UseCase（GetProduct / Update / Delete / RecordPrice / GetCheapestStore） | 404 | `app.ts` の `onError` で `ProductNotFoundError` → 404 JSON レスポンス |
-| StoreNotFoundError | UseCase（RecordPriceUseCase、U4 推奨） | 404 | `app.ts` の `onError` で `StoreNotFoundError` → 404 JSON レスポンス |
-| Zod バリデーションエラー | Hono ルート（`zValidator`） | 400 | `@hono/zod-validator` が自動で 400 Bad Request を返す（既存パターン） |
-| ビジネスルール違反（name 空白等） | UseCase 入口 | 500（→ 400 に変更推奨） | 現状は `onError` で 500 になるが、将来 `ValidationError` クラスを導入して 400 にマップすることを推奨（本 Sprint スコープ外） |
-| DB 接続エラー | Repository | 500 | `onError` が `console.error` + 500 JSON を返す（既存パターン） |
-| Server Component での ProductNotFoundError | Server Component（`page.tsx`） | Next.js 404 | catch して `notFound()` を呼ぶ（RecipeEditPage パターン踏襲） |
+| エラー種別                                 | 発生箇所                                                                 | HTTP ステータス         | 処理方法                                                                                                                     |
+| ------------------------------------------ | ------------------------------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| ProductNotFoundError                       | UseCase（GetProduct / Update / Delete / RecordPrice / GetCheapestStore） | 404                     | `app.ts` の `onError` で `ProductNotFoundError` → 404 JSON レスポンス                                                        |
+| StoreNotFoundError                         | UseCase（RecordPriceUseCase、U4 推奨）                                   | 404                     | `app.ts` の `onError` で `StoreNotFoundError` → 404 JSON レスポンス                                                          |
+| Zod バリデーションエラー                   | Hono ルート（`zValidator`）                                              | 400                     | `@hono/zod-validator` が自動で 400 Bad Request を返す（既存パターン）                                                        |
+| ビジネスルール違反（name 空白等）          | UseCase 入口                                                             | 500（→ 400 に変更推奨） | 現状は `onError` で 500 になるが、将来 `ValidationError` クラスを導入して 400 にマップすることを推奨（本 Sprint スコープ外） |
+| DB 接続エラー                              | Repository                                                               | 500                     | `onError` が `console.error` + 500 JSON を返す（既存パターン）                                                               |
+| Server Component での ProductNotFoundError | Server Component（`page.tsx`）                                           | Next.js 404             | catch して `notFound()` を呼ぶ（RecipeEditPage パターン踏襲）                                                                |
 
 ---
 
@@ -500,9 +504,9 @@ MVP1 対象の2名利用・週1回の買い物では、Product 数100件・Price
 
 実装着手前にユーザー確認が必要な設計判断。
 
-| 優先度 | 項目 | 推奨案 | 確認が必要な理由 |
-|---|---|---|---|
-| 高 | **U1: unitPrice 丸め方針** | 小数点以下1桁 + Math.round + `numeric(10, 1)` カラム | DB スキーマ確定に直結。後から変更困難 |
-| 高 | **U7: price_records テーブル設計** | 独立テーブル（案B） | スキーマ設計の根幹。jsonb との切り替えはマイグレーションコストが高い |
-| 中 | **U3: DeleteProductUseCase 存在チェック** | ProductNotFoundError を throw | ユーザー体験・API 契約に影響 |
-| 中 | **U5: 価格記録の重複可否** | 重複許可（最新 = 最大 observedAt） | PK 設計と DB 制約に影響 |
+| 優先度 | 項目                                      | 推奨案                                               | 確認が必要な理由                                                     |
+| ------ | ----------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------- |
+| 高     | **U1: unitPrice 丸め方針**                | 小数点以下1桁 + Math.round + `numeric(10, 1)` カラム | DB スキーマ確定に直結。後から変更困難                                |
+| 高     | **U7: price_records テーブル設計**        | 独立テーブル（案B）                                  | スキーマ設計の根幹。jsonb との切り替えはマイグレーションコストが高い |
+| 中     | **U3: DeleteProductUseCase 存在チェック** | ProductNotFoundError を throw                        | ユーザー体験・API 契約に影響                                         |
+| 中     | **U5: 価格記録の重複可否**                | 重複許可（最新 = 最大 observedAt）                   | PK 設計と DB 制約に影響                                              |

@@ -29,13 +29,13 @@ classify-change: 実施済み・再判定不要
 
 ### 2-1. 含む（このユニットで作るもの）
 
-| 層                  | 実装対象                                                                                                                   |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Domain              | Pantry / PantryId / Stock / StockId 新規集約、`PantryRepository`（インターフェース）                                        |
-| Infrastructure      | Drizzle スキーマ（新規テーブル。分離 or 単一かは設計判断 §6-d）+ `DrizzlePantryRepository`                                  |
-| Application          | UseCase 4 本：`CompleteShoppingUseCase` / `ConsumeStockUseCase` / `DiscardStockUseCase` / `GetPantryUseCase`               |
-| API Contract         | Zod スキーマ（`packages/api-contract/src/pantry.schema.ts` 相当）+ **買い物完了 API の新規スキーマ**                       |
-| Presentation (API)   | Hono ルート（`apps/web/src/server/routes/pantry.ts` 相当）+ **`shopping-lists.ts` への買い物完了エンドポイント追加**       |
+| 層                 | 実装対象                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Domain             | Pantry / PantryId / Stock / StockId 新規集約、`PantryRepository`（インターフェース）                                 |
+| Infrastructure     | Drizzle スキーマ（新規テーブル。分離 or 単一かは設計判断 §6-d）+ `DrizzlePantryRepository`                           |
+| Application        | UseCase 4 本：`CompleteShoppingUseCase` / `ConsumeStockUseCase` / `DiscardStockUseCase` / `GetPantryUseCase`         |
+| API Contract       | Zod スキーマ（`packages/api-contract/src/pantry.schema.ts` 相当）+ **買い物完了 API の新規スキーマ**                 |
+| Presentation (API) | Hono ルート（`apps/web/src/server/routes/pantry.ts` 相当）+ **`shopping-lists.ts` への買い物完了エンドポイント追加** |
 
 ### 2-2. 含まない（対象外・他ユニット/他フェーズのスコープ）
 
@@ -66,11 +66,11 @@ classify-change: 実施済み・再判定不要
 `docs/04-domain-model.md` §Pantry 集約（L486-591）を要件のベースラインとする（**未実装の構想**。
 シグネチャ・型は設計フェーズで確定）。
 
-| 要素      | 内容                                                                                                    |
-| --------- | --------------------------------------------------------------------------------------------------------- |
-| Pantry    | 集約ルート。`_stocks: Stock[]` を保持。`addStock` / `consumeStock` / `discardStock` / `findExpiringSoon`（Phase 2 保留候補） / `findByProduct`（§6-e） / `calculateRequiredAmount`（§6-e） |
-| Stock     | 集約内エンティティ。`productId: ProductId`（ID 参照）、`amount: Quantity`、`purchasedAt: Date`、`expiresAt: Date \| null`、`storedLocation`（`'fridge' \| 'freezer' \| 'pantry'` 相当の文字列 union。既存 `ItemStatus` 等と同型のパターン） |
-| StockId   | Stock の識別子。既存 ID VO（`ShoppingItemId` 等）と同じ `generate()` / `fromString()` / `equals()` / `value` パターンを踏襲想定 |
+| 要素    | 内容                                                                                                                                                                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pantry  | 集約ルート。`_stocks: Stock[]` を保持。`addStock` / `consumeStock` / `discardStock` / `findExpiringSoon`（Phase 2 保留候補） / `findByProduct`（§6-e） / `calculateRequiredAmount`（§6-e）                                                  |
+| Stock   | 集約内エンティティ。`productId: ProductId`（ID 参照）、`amount: Quantity`、`purchasedAt: Date`、`expiresAt: Date \| null`、`storedLocation`（`'fridge' \| 'freezer' \| 'pantry'` 相当の文字列 union。既存 `ItemStatus` 等と同型のパターン） |
+| StockId | Stock の識別子。既存 ID VO（`ShoppingItemId` 等）と同じ `generate()` / `fromString()` / `equals()` / `value` パターンを踏襲想定                                                                                                             |
 
 主要な振る舞い（要件レベル。厳密なシグネチャは設計フェーズで確定）:
 
@@ -96,46 +96,46 @@ classify-change: 実施済み・再判定不要
 `docs/04-domain-model.md` §L627-671 の擬似コードをベースラインとするが、**未実装の構想**であり
 `getBoughtItemsForPantry()` を含め Pantry 集約の設計時に再設計する（S-8 申し送り）。
 
-| 項目           | 内容                                                                                                                                                                                                 |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Input          | `shoppingListId: string`                                                                                                                                                                             |
-| 事前条件       | 対象 ShoppingList が存在すること。`status === 'active'`（`complete()` の既存ガードに一致）                                                                                                          |
-| ドメイン操作   | (1) 買った品目（`status === 'bought'`）を Pantry に `addStock` → 保存。(2) 品目ごとに `productId` があれば `Product.recordPrice()` で価格履歴記録 → 保存。(3) `ShoppingList.complete()` → 保存。(4) `MealPlan.transitionTo('cooking')` → 保存 |
-| 集約をまたぐ数 | 4 集約（ShoppingList / Pantry / Product / MealPlan）。既存 UseCase で最多（`GenerateShoppingListUseCase` は 3 集約）                                                                              |
-| 正常系         | 買った品目分だけ Stock が Pantry に追加され、価格履歴が記録され、ShoppingList が completed、MealPlan が cooking になる                                                                              |
-| 異常系         | ShoppingList が存在しない → `ShoppingListNotFoundError`（404 想定）。`status !== 'active'` →
-`InvalidShoppingListStateError`（`complete()` の既存ガードに一致・422 想定）。MealPlan が存在しない（不整合ケース）の扱いは未確定 |
-| 未確定         | 買った品目が 0 件（全て pending/skipped のまま完了）の扱い。Pantry 保存後に後続処理（価格記録・complete・MealPlan遷移）が失敗した場合の部分失敗の扱い（§6-c）。`actualPrice.amount === 0`（無料でもらった品）が `PriceRecord.create` の正数チェックと矛盾する点（§5-2 参照） |
+| 項目                                                                                                                              | 内容                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Input                                                                                                                             | `shoppingListId: string`                                                                                                                                                                                                                                                     |
+| 事前条件                                                                                                                          | 対象 ShoppingList が存在すること。`status === 'active'`（`complete()` の既存ガードに一致）                                                                                                                                                                                   |
+| ドメイン操作                                                                                                                      | (1) 買った品目（`status === 'bought'`）を Pantry に `addStock` → 保存。(2) 品目ごとに `productId` があれば `Product.recordPrice()` で価格履歴記録 → 保存。(3) `ShoppingList.complete()` → 保存。(4) `MealPlan.transitionTo('cooking')` → 保存                                |
+| 集約をまたぐ数                                                                                                                    | 4 集約（ShoppingList / Pantry / Product / MealPlan）。既存 UseCase で最多（`GenerateShoppingListUseCase` は 3 集約）                                                                                                                                                         |
+| 正常系                                                                                                                            | 買った品目分だけ Stock が Pantry に追加され、価格履歴が記録され、ShoppingList が completed、MealPlan が cooking になる                                                                                                                                                       |
+| 異常系                                                                                                                            | ShoppingList が存在しない → `ShoppingListNotFoundError`（404 想定）。`status !== 'active'` →                                                                                                                                                                                 |
+| `InvalidShoppingListStateError`（`complete()` の既存ガードに一致・422 想定）。MealPlan が存在しない（不整合ケース）の扱いは未確定 |
+| 未確定                                                                                                                            | 買った品目が 0 件（全て pending/skipped のまま完了）の扱い。Pantry 保存後に後続処理（価格記録・complete・MealPlan遷移）が失敗した場合の部分失敗の扱い（§6-c）。`actualPrice.amount === 0`（無料でもらった品）が `PriceRecord.create` の正数チェックと矛盾する点（§5-2 参照） |
 
 #### ConsumeStockUseCase
 
-| 項目         | 内容                                                                                             |
-| ------------ | -------------------------------------------------------------------------------------------------- |
-| Input        | `stockId: string`、`amount: { value: number; unit: Unit }`、`reason: ConsumptionReason`            |
-| 事前条件     | 対象 Pantry・対象 Stock が存在すること                                                             |
-| ドメイン操作 | `pantryRepo.find()` → `pantry.consumeStock(stockId, Quantity, reason)` → `save()`                  |
-| 正常系       | Stock の `amount` が減る。ゼロになれば Stock が削除される                                          |
-| 異常系       | Pantry が存在しない → 扱い未確定（§3-2）。Stock が存在しない → `StockNotFoundError`（404 想定）    |
+| 項目         | 内容                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| Input        | `stockId: string`、`amount: { value: number; unit: Unit }`、`reason: ConsumptionReason`                 |
+| 事前条件     | 対象 Pantry・対象 Stock が存在すること                                                                  |
+| ドメイン操作 | `pantryRepo.find()` → `pantry.consumeStock(stockId, Quantity, reason)` → `save()`                       |
+| 正常系       | Stock の `amount` が減る。ゼロになれば Stock が削除される                                               |
+| 異常系       | Pantry が存在しない → 扱い未確定（§3-2）。Stock が存在しない → `StockNotFoundError`（404 想定）         |
 | 境界条件     | 消費量が現在の在庫量を上回る場合の扱い（`Quantity` に `subtract()` が存在しないため実装ギャップ。§5-5） |
 
 #### DiscardStockUseCase
 
-| 項目         | 内容                                                                          |
-| ------------ | -------------------------------------------------------------------------------- |
-| Input        | `stockId: string`、`reason: string`                                              |
-| 事前条件     | 対象 Pantry・対象 Stock が存在すること                                           |
-| ドメイン操作 | `pantryRepo.find()` → `pantry.discardStock(stockId, reason)` → `save()`          |
-| 正常系       | 対象 Stock が全量削除される（残量に関わらず、部分廃棄はできない）                |
+| 項目         | 内容                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| Input        | `stockId: string`、`reason: string`                                                             |
+| 事前条件     | 対象 Pantry・対象 Stock が存在すること                                                          |
+| ドメイン操作 | `pantryRepo.find()` → `pantry.discardStock(stockId, reason)` → `save()`                         |
+| 正常系       | 対象 Stock が全量削除される（残量に関わらず、部分廃棄はできない）                               |
 | 異常系       | Pantry が存在しない → 扱い未確定（§3-2）。Stock が存在しない → `StockNotFoundError`（404 想定） |
 
 #### GetPantryUseCase
 
-| 項目         | 内容                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| Input        | なし（シングルトン。`GetShoppingListUseCase` と異なり ID を取らない設計になる見込み）                       |
-| ドメイン操作 | `pantryRepo.find()` → `PantryDto` に変換                                                                   |
-| 正常系       | Pantry の Stock 一覧を返す                                                                                 |
-| 異常系/境界   | Pantry が未作成（`find()` が null）の場合の扱い（空の Pantry を返すか、404 か。§3-2 の確定次第）。Stock 0件（空配列）の扱い |
+| 項目         | 内容                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Input        | なし（シングルトン。`GetShoppingListUseCase` と異なり ID を取らない設計になる見込み）                                       |
+| ドメイン操作 | `pantryRepo.find()` → `PantryDto` に変換                                                                                    |
+| 正常系       | Pantry の Stock 一覧を返す                                                                                                  |
+| 異常系/境界  | Pantry が未作成（`find()` が null）の場合の扱い（空の Pantry を返すか、404 か。§3-2 の確定次第）。Stock 0件（空配列）の扱い |
 
 ### 3-4. API 要求
 
@@ -247,12 +247,12 @@ roadmap のスコープ注記どおり実装済みであることを確認した
 
 既存 4 つの Repository インターフェースを全て確認した。
 
-| Repository            | メソッド                                                        |
-| ---------------------- | ----------------------------------------------------------------- |
-| `MealPlanRepository`  | `findById` / `findByWeek` / `findRecent(limit)` / `save`         |
-| `ProductRepository`   | `findById` / `findAll` / `save` / `delete`                       |
-| `StoreRepository`     | `findById` / `findAll` / `save`                                  |
-| `ShoppingListRepository` | `findById` / `findByMealPlanId` / `save`                       |
+| Repository               | メソッド                                                 |
+| ------------------------ | -------------------------------------------------------- |
+| `MealPlanRepository`     | `findById` / `findByWeek` / `findRecent(limit)` / `save` |
+| `ProductRepository`      | `findById` / `findAll` / `save` / `delete`               |
+| `StoreRepository`        | `findById` / `findAll` / `save`                          |
+| `ShoppingListRepository` | `findById` / `findByMealPlanId` / `save`                 |
 
 **いずれも ID または検索条件を伴うクエリのみで、引数なしで単一のインスタンスを返す `find()` の
 前例はない**。`docs/04-domain-model.md` の `pantryRepo.find()`（引数なし）＝単一世帯前提の
@@ -483,26 +483,26 @@ apps/web/src/server/routes/
 
 ### 8-2. 既存ファイルへの追記が見込まれる箇所
 
-| ファイル                                     | 変更内容                                                                     |
-| --------------------------------------------- | -------------------------------------------------------------------------------- |
-| `packages/domain/src/shared/quantity.ts`      | `subtract()` の新規実装が必要（§5-5・§6 追加論点）                              |
-| `packages/infrastructure/src/db/schema.ts`    | Pantry / Stock テーブル定義を追記                                              |
-| `packages/infrastructure/src/index.ts`        | `DrizzlePantryRepository` の re-export 追加                                    |
-| `packages/application/src/index.ts`           | `export * from './pantry'` を追加                                              |
-| `packages/api-contract/src/index.ts`          | `export * from './pantry.schema'` を追加                                       |
-| `apps/web/src/server/app.ts`                  | `pantryRoute` の `.route()` 登録、新規エラークラス（`StockNotFoundError` 等）の `onError` ハンドリング追加 |
+| ファイル                                   | 変更内容                                                                                                   |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `packages/domain/src/shared/quantity.ts`   | `subtract()` の新規実装が必要（§5-5・§6 追加論点）                                                         |
+| `packages/infrastructure/src/db/schema.ts` | Pantry / Stock テーブル定義を追記                                                                          |
+| `packages/infrastructure/src/index.ts`     | `DrizzlePantryRepository` の re-export 追加                                                                |
+| `packages/application/src/index.ts`        | `export * from './pantry'` を追加                                                                          |
+| `packages/api-contract/src/index.ts`       | `export * from './pantry.schema'` を追加                                                                   |
+| `apps/web/src/server/app.ts`               | `pantryRoute` の `.route()` 登録、新規エラークラス（`StockNotFoundError` 等）の `onError` ハンドリング追加 |
 
 ### 8-3. 既存集約・既存コードへの影響
 
-| 対象                                                                | 影響                                                                                                                                     |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 対象                                                                      | 影響                                                                                                                                              |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ShoppingList 集約（`packages/domain/src/shopping-list/shopping-list.ts`） | **コード変更が必要な可能性**（§6-b の確定次第。`getBoughtItemsForPantry()` を Domain に追加する場合のみ。Application 層で済ませる場合は変更不要） |
-| `ShoppingListRepository`                                             | 変更不要（`findById` / `save` で足りる）                                                                                                     |
-| MealPlan 集約                                                        | **コード変更は不要**（`transitionTo('cooking')` は実装済み）。`CompleteShoppingUseCase` から呼び出される（依存追加）                          |
-| `MealPlanRepository`                                                 | 変更不要（`findById` / `save` で足りる）                                                                                                     |
-| Product 集約（`packages/domain/src/product/product.ts`）              | 変更不要。`recordPrice()` は実装済み（ただし §5-2 の入力ギャップに注意）                                                                     |
-| `ProductRepository`                                                  | 変更不要（`findById` / `save` で足りる）                                                                                                     |
-| `Quantity` VO（`packages/domain/src/shared/quantity.ts`）             | `subtract()` の新規実装が必要（本ユニット `ConsumeStockUseCase` に必須。共有 VO のため既存利用箇所への影響確認は要る）                       |
+| `ShoppingListRepository`                                                  | 変更不要（`findById` / `save` で足りる）                                                                                                          |
+| MealPlan 集約                                                             | **コード変更は不要**（`transitionTo('cooking')` は実装済み）。`CompleteShoppingUseCase` から呼び出される（依存追加）                              |
+| `MealPlanRepository`                                                      | 変更不要（`findById` / `save` で足りる）                                                                                                          |
+| Product 集約（`packages/domain/src/product/product.ts`）                  | 変更不要。`recordPrice()` は実装済み（ただし §5-2 の入力ギャップに注意）                                                                          |
+| `ProductRepository`                                                       | 変更不要（`findById` / `save` で足りる）                                                                                                          |
+| `Quantity` VO（`packages/domain/src/shared/quantity.ts`）                 | `subtract()` の新規実装が必要（本ユニット `ConsumeStockUseCase` に必須。共有 VO のため既存利用箇所への影響確認は要る）                            |
 
 ---
 

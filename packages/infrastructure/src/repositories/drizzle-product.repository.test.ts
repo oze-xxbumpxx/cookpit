@@ -141,10 +141,16 @@ describe('DrizzleProductRepository', () => {
     const store = await insertStore();
     const product = createProduct();
     product.recordPrice(
-      createPriceRecord(store.id, { priceAmount: 300, observedAt: new Date('2026-06-01T00:00:00.000Z') }),
+      createPriceRecord(store.id, {
+        priceAmount: 300,
+        observedAt: new Date('2026-06-01T00:00:00.000Z'),
+      }),
     );
     product.recordPrice(
-      createPriceRecord(store.id, { priceAmount: 280, observedAt: new Date('2026-06-15T00:00:00.000Z') }),
+      createPriceRecord(store.id, {
+        priceAmount: 280,
+        observedAt: new Date('2026-06-15T00:00:00.000Z'),
+      }),
     );
     await repository.save(product);
 

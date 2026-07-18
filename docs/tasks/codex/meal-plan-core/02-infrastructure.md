@@ -31,20 +31,22 @@ export const mealPlans = pgTable('meal_plans', {
 export type MealPlanRow = typeof mealPlans.$inferSelect;
 export type NewMealPlanRow = typeof mealPlans.$inferInsert;
 
-export const plannedRecipes = pgTable('planned_recipes', {
-  id: text('id').primaryKey(),
-  mealPlanId: text('meal_plan_id')
-    .notNull()
-    .references(() => mealPlans.id, { onDelete: 'cascade' }),
-  recipeId: text('recipe_id').notNull(),
-  scaleFactor: numeric('scale_factor', { precision: 10, scale: 3 }).notNull(),
-  scheduledDate: date('scheduled_date'),
-  cookedAt: timestamp('cooked_at'),
-  notes: text('notes').notNull().default(''),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('planned_recipes_meal_plan_id_idx').on(table.mealPlanId),
-]);
+export const plannedRecipes = pgTable(
+  'planned_recipes',
+  {
+    id: text('id').primaryKey(),
+    mealPlanId: text('meal_plan_id')
+      .notNull()
+      .references(() => mealPlans.id, { onDelete: 'cascade' }),
+    recipeId: text('recipe_id').notNull(),
+    scaleFactor: numeric('scale_factor', { precision: 10, scale: 3 }).notNull(),
+    scheduledDate: date('scheduled_date'),
+    cookedAt: timestamp('cooked_at'),
+    notes: text('notes').notNull().default(''),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('planned_recipes_meal_plan_id_idx').on(table.mealPlanId)],
+);
 
 export type PlannedRecipeRow = typeof plannedRecipes.$inferSelect;
 export type NewPlannedRecipeRow = typeof plannedRecipes.$inferInsert;
@@ -125,13 +127,25 @@ import {
 export class DrizzleMealPlanRepository implements MealPlanRepository {
   constructor(private readonly db: DrizzleClient) {}
 
-  async findById(id: MealPlanId): Promise<MealPlan | null> { /* ... */ }
-  async findByWeek(weekIdentifier: WeekIdentifier): Promise<MealPlan | null> { /* ... */ }
-  async findRecent(limit: number): Promise<MealPlan[]> { /* ... */ }
-  async save(mealPlan: MealPlan): Promise<void> { /* ... */ }
+  async findById(id: MealPlanId): Promise<MealPlan | null> {
+    /* ... */
+  }
+  async findByWeek(weekIdentifier: WeekIdentifier): Promise<MealPlan | null> {
+    /* ... */
+  }
+  async findRecent(limit: number): Promise<MealPlan[]> {
+    /* ... */
+  }
+  async save(mealPlan: MealPlan): Promise<void> {
+    /* ... */
+  }
 
-  private toMealPlans(rows: /* leftJoin 結果の行型 */[]): MealPlan[] { /* グルーピング */ }
-  private toEntity(mealPlanRow: MealPlanRow, plannedRecipeRows: PlannedRecipeRow[]): MealPlan { /* ... */ }
+  private toMealPlans(rows: /* leftJoin 結果の行型 */ []): MealPlan[] {
+    /* グルーピング */
+  }
+  private toEntity(mealPlanRow: MealPlanRow, plannedRecipeRows: PlannedRecipeRow[]): MealPlan {
+    /* ... */
+  }
 }
 ```
 

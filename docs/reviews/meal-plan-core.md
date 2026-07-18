@@ -14,28 +14,28 @@
 
 commit `3c1f622` の Domain 層のみ（929 行 / 9 ファイル）。Infrastructure / Application / API-Contract / Presentation は未実装のため対象外。
 
-| ファイル | 内容 |
-|---|---|
-| `packages/domain/src/meal-plan/meal-plan-id.ts` | MealPlanId VO |
-| `packages/domain/src/meal-plan/planned-recipe-id.ts` | PlannedRecipeId VO |
-| `packages/domain/src/shared/week-identifier.ts` | WeekIdentifier VO（土曜始まり） |
-| `packages/domain/src/meal-plan/meal-plan.ts` | MealPlan 集約 + PlannedRecipe + MealPlanStatus |
-| `packages/domain/src/meal-plan/meal-plan.repository.ts` | MealPlanRepository インターフェース |
-| （+ 上記各 `.test.ts` 4 ファイル） | 単体テスト |
+| ファイル                                                | 内容                                           |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| `packages/domain/src/meal-plan/meal-plan-id.ts`         | MealPlanId VO                                  |
+| `packages/domain/src/meal-plan/planned-recipe-id.ts`    | PlannedRecipeId VO                             |
+| `packages/domain/src/shared/week-identifier.ts`         | WeekIdentifier VO（土曜始まり）                |
+| `packages/domain/src/meal-plan/meal-plan.ts`            | MealPlan 集約 + PlannedRecipe + MealPlanStatus |
+| `packages/domain/src/meal-plan/meal-plan.repository.ts` | MealPlanRepository インターフェース            |
+| （+ 上記各 `.test.ts` 4 ファイル）                      | 単体テスト                                     |
 
 ---
 
 ## 確認観点と結果サマリ
 
-| # | 観点 | 結果 |
-|---|---|---|
-| 1 | 設計 §4 / 実装計画 Step 1〜3 との整合 | 完全一致（遷移表・振る舞い・シグネチャ） |
-| 2 | コーディング規約（`any`/default export/`import type`/`===`/`null`） | 準拠 |
-| 3 | 責務分離（Domain 依存方向・集約跨ぎ ID 参照） | 準拠（`RecipeId` の ID 参照のみ）。ただし集約エンティティの可変性漏れあり（N-B） |
-| 4 | 不変条件・値の一貫性 | **`fromDate`/`fromString` の土曜スナップ非対称**（N-A）。堅牢性ギャップ（N-C） |
-| 5 | エラー処理 | 計画採用方針（素 `Error` + UseCase 側変換）どおり。申し送り（N-C-err） |
-| 6 | テスト（試験計画 vs 実装 / public API 網羅 / 防御性） | ほぼ完全網羅。防御的コピーは配列レベルのみ検証（N-B 関連）・軽微な未実装（N-E） |
-| 7 | Codex 頻出バグ（タイポ・無限ループ getter・結線漏れ） | 検出なし |
+| #   | 観点                                                                | 結果                                                                             |
+| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 1   | 設計 §4 / 実装計画 Step 1〜3 との整合                               | 完全一致（遷移表・振る舞い・シグネチャ）                                         |
+| 2   | コーディング規約（`any`/default export/`import type`/`===`/`null`） | 準拠                                                                             |
+| 3   | 責務分離（Domain 依存方向・集約跨ぎ ID 参照）                       | 準拠（`RecipeId` の ID 参照のみ）。ただし集約エンティティの可変性漏れあり（N-B） |
+| 4   | 不変条件・値の一貫性                                                | **`fromDate`/`fromString` の土曜スナップ非対称**（N-A）。堅牢性ギャップ（N-C）   |
+| 5   | エラー処理                                                          | 計画採用方針（素 `Error` + UseCase 側変換）どおり。申し送り（N-C-err）           |
+| 6   | テスト（試験計画 vs 実装 / public API 網羅 / 防御性）               | ほぼ完全網羅。防御的コピーは配列レベルのみ検証（N-B 関連）・軽微な未実装（N-E）  |
+| 7   | Codex 頻出バグ（タイポ・無限ループ getter・結線漏れ）               | 検出なし                                                                         |
 
 ---
 
@@ -119,16 +119,16 @@ get plannedRecipes(): PlannedRecipe[] {
 
 ## テスト網羅（試験計画 §4 Domain との対応）
 
-| 試験観点 | 実装 |
-|---|---|
-| D-ID / D-PRID（ID VO 各 5 ケース） | ✅ `meal-plan-id.test.ts` / `planned-recipe-id.test.ts` |
-| D-WI-01〜15（週境界・年またぎ・current・ラウンドトリップ・防御的コピー・R-4 回帰） | ✅ `week-identifier.test.ts`（+ 引数不変テスト追加） |
-| D-PR-01〜09（create/reconstruct/scheduleFor/markAsCooked/防御的コピー） | ✅ `meal-plan.test.ts` |
-| D-MP-01〜05（create/reconstruct/防御的コピー） | ✅ |
-| D-AR / D-RR（status ガード・重複追加・not-found） | ✅（D-AR-08 のみ N-E 参照） |
-| T-01〜T-14（全 14 経路 / completed→any 5 サブケース） | ✅ 悉皆 |
-| D-SCH / D-COOK（正常・not-found） | ✅ |
-| D-TR-15（completedAt 副作用） | ✅ |
+| 試験観点                                                                           | 実装                                                    |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| D-ID / D-PRID（ID VO 各 5 ケース）                                                 | ✅ `meal-plan-id.test.ts` / `planned-recipe-id.test.ts` |
+| D-WI-01〜15（週境界・年またぎ・current・ラウンドトリップ・防御的コピー・R-4 回帰） | ✅ `week-identifier.test.ts`（+ 引数不変テスト追加）    |
+| D-PR-01〜09（create/reconstruct/scheduleFor/markAsCooked/防御的コピー）            | ✅ `meal-plan.test.ts`                                  |
+| D-MP-01〜05（create/reconstruct/防御的コピー）                                     | ✅                                                      |
+| D-AR / D-RR（status ガード・重複追加・not-found）                                  | ✅（D-AR-08 のみ N-E 参照）                             |
+| T-01〜T-14（全 14 経路 / completed→any 5 サブケース）                              | ✅ 悉皆                                                 |
+| D-SCH / D-COOK（正常・not-found）                                                  | ✅                                                      |
+| D-TR-15（completedAt 副作用）                                                      | ✅                                                      |
 
 public API（全 static ファクトリ・メソッド・getter）にテストあり。
 
