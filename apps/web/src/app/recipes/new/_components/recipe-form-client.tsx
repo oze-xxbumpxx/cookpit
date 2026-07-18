@@ -2,132 +2,42 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { client } from '@/lib/api-client';
-import { cn } from '@/lib/utils';
-import { recipeTagSchema, unitSchema, type CreateRecipeBody } from '@cookpit/api-contract';
-import { Plus } from 'lucide-react';
+import type { CreateRecipeBody } from '@cookpit/api-contract';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
-import { useId, useRef, useState } from 'react';
-import { IngredientRow, type IngredientRowValue } from '@/app/recipes/_components/ingredient-row';
-import { StepRow, type StepRowValue } from '@/app/recipes/_components/step-row';
-import { buildIngredientInput } from '@/app/recipes/_utils/build-ingredient-input';
-
-type RecipeTag = CreateRecipeBody['tags'][number];
-
-interface FieldErrors {
-  baseServings: string | null;
-  cookingTime: string | null;
-  ingredients: Record<string, string>;
-}
+import { useId, useState } from 'react';
+import {
+  RecipeFormFields,
+  buildRecipeFormBody,
+  createInitialRecipeFormValue,
+  emptyRecipeFieldErrors,
+  type RecipeFieldErrors,
+} from '@/app/recipes/_components/recipe-form-fields';
 
 interface BuildResult {
   input: CreateRecipeBody | null;
-  errors: FieldErrors;
-}
-
-const TAG_OPTIONS = recipeTagSchema.options;
-const UNIT_OPTIONS = unitSchema.options;
-
-function emptyFieldErrors(): FieldErrors {
-  return {
-    baseServings: null,
-    cookingTime: null,
-    ingredients: {},
-  };
-}
-
-function createIngredientRow(id: string): IngredientRowValue {
-  return {
-    id,
-    displayName: '',
-    amountText: '',
-    amountUnit: '',
-  };
-}
-
-function createStepRow(id: string): StepRowValue {
-  return {
-    id,
-    description: '',
-  };
+  errors: RecipeFieldErrors;
 }
 
 export function RecipeFormClient() {
   const router = useRouter();
-  const nameId = useId();
   const baseServingsId = useId();
-  const cookingTimeId = useId();
-  const notesId = useId();
   const baseServingsErrorId = useId();
-  const cookingTimeErrorId = useId();
-  const nextIngredientId = useRef(2);
-  const nextStepId = useRef(2);
 
-  const [name, setName] = useState('');
-  const [tags, setTags] = useState<RecipeTag[]>([]);
+  const [value, setValue] = useState(createInitialRecipeFormValue);
   const [baseServings, setBaseServings] = useState('2');
-  const [cookingTime, setCookingTime] = useState('');
-  const [ingredients, setIngredients] = useState<IngredientRowValue[]>([
-    createIngredientRow('ingredient-1'),
-  ]);
-  const [steps, setSteps] = useState<StepRowValue[]>([createStepRow('step-1')]);
-  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(emptyFieldErrors);
+  const [fieldErrors, setFieldErrors] = useState<RecipeFieldErrors>(emptyRecipeFieldErrors);
 
-  const canSubmit = name.trim() !== '' && !submitting;
-
-  function toggleTag(tag: RecipeTag): void {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((value) => value !== tag) : [...prev, tag],
-    );
-  }
-
-  function addIngredient(): void {
-    const nextId = `ingredient-${nextIngredientId.current}`;
-    nextIngredientId.current += 1;
-    setIngredients((prev) => [...prev, createIngredientRow(nextId)]);
-  }
-
-  function updateIngredient(next: IngredientRowValue): void {
-    setIngredients((prev) => prev.map((row) => (row.id === next.id ? next : row)));
-  }
-
-  function removeIngredient(id: string): void {
-    setIngredients((prev) => prev.filter((row) => row.id !== id));
-    setFieldErrors((prev) => {
-      const nextIngredientErrors = { ...prev.ingredients };
-      delete nextIngredientErrors[id];
-      return {
-        ...prev,
-        ingredients: nextIngredientErrors,
-      };
-    });
-  }
-
-  function addStep(): void {
-    const nextId = `step-${nextStepId.current}`;
-    nextStepId.current += 1;
-    setSteps((prev) => [...prev, createStepRow(nextId)]);
-  }
-
-  function updateStep(next: StepRowValue): void {
-    setSteps((prev) => prev.map((row) => (row.id === next.id ? next : row)));
-  }
-
-  function removeStep(id: string): void {
-    setSteps((prev) => prev.filter((row) => row.id !== id));
-  }
+  const canSubmit = value.name.trim() !== '' && !submitting;
 
   function buildCreateInput(): BuildResult {
-    const errors = emptyFieldErrors();
+    const result = buildRecipeFormBody(value);
+    const errors = result.errors;
     const trimmedBaseServings = baseServings.trim();
     const parsedBaseServings = Number(trimmedBaseServings);
-    const trimmedCookingTime = cookingTime.trim();
-    const parsedCookingTime = trimmedCookingTime === '' ? null : Number(trimmedCookingTime);
 
     if (
       trimmedBaseServings === '' ||
@@ -137,38 +47,14 @@ export function RecipeFormClient() {
       errors.baseServings = '基準人数は1以上の数値で入力してください。';
     }
 
-    if (
-      parsedCookingTime !== null &&
-      (!Number.isFinite(parsedCookingTime) ||
-        !Number.isInteger(parsedCookingTime) ||
-        parsedCookingTime < 0)
-    ) {
-      errors.cookingTime = '調理時間は0以上の整数で入力してください。';
-    }
-
-    const { ingredients: parsedIngredients, errors: ingredientErrors } =
-      buildIngredientInput(ingredients);
-    errors.ingredients = ingredientErrors;
-
-    const hasIngredientErrors = Object.keys(errors.ingredients).length > 0;
-    if (errors.baseServings !== null || errors.cookingTime !== null || hasIngredientErrors) {
-      return {
-        input: null,
-        errors,
-      };
+    if (result.input === null || errors.baseServings !== null) {
+      return { input: null, errors };
     }
 
     return {
       input: {
-        name: name.trim(),
-        tags,
+        ...result.input,
         baseServings: parsedBaseServings,
-        cookingTime: parsedCookingTime,
-        notes,
-        ingredients: parsedIngredients,
-        steps: steps
-          .map((row) => ({ description: row.description.trim() }))
-          .filter((row) => row.description !== ''),
       },
       errors,
     };
@@ -238,48 +124,11 @@ export function RecipeFormClient() {
           </p>
         )}
 
-        <div className="flex flex-col gap-5">
-          <section className="flex flex-col gap-2">
-            <label htmlFor={nameId} className="text-sm font-medium text-foreground">
-              レシピ名 <span className="text-xs font-normal text-red-600">必須</span>
-            </label>
-            <Input
-              id={nameId}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="例：鶏むね肉の塩こうじ漬け"
-              className="h-11 rounded-xl bg-card"
-            />
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-foreground">
-              タグ <span className="text-xs font-normal text-muted-foreground">複数選択可</span>
-            </p>
-            <div className="flex flex-wrap gap-2" aria-label="レシピタグ">
-              {TAG_OPTIONS.map((tag) => {
-                const selected = tags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    aria-pressed={selected}
-                    className={cn(
-                      'rounded-full border px-3 py-1 text-sm transition-colors',
-                      selected
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border bg-secondary text-secondary-foreground hover:bg-muted',
-                    )}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="grid grid-cols-2 gap-3">
+        <RecipeFormFields
+          value={value}
+          fieldErrors={fieldErrors}
+          onChange={setValue}
+          baseServingsSlot={
             <div className="flex flex-col gap-2">
               <label htmlFor={baseServingsId} className="text-sm font-medium text-foreground">
                 基準人数
@@ -304,94 +153,8 @@ export function RecipeFormClient() {
                 </p>
               )}
             </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor={cookingTimeId} className="text-sm font-medium text-foreground">
-                調理時間 <span className="text-xs font-normal text-muted-foreground">任意</span>
-              </label>
-              <Input
-                id={cookingTimeId}
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={cookingTime}
-                onChange={(event) => setCookingTime(event.target.value)}
-                placeholder="25"
-                aria-invalid={fieldErrors.cookingTime !== null}
-                aria-describedby={fieldErrors.cookingTime === null ? undefined : cookingTimeErrorId}
-                className="h-11 rounded-xl bg-card"
-              />
-              {fieldErrors.cookingTime !== null && (
-                <p id={cookingTimeErrorId} className="text-xs text-red-600">
-                  {fieldErrors.cookingTime}
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-foreground">材料</p>
-            <div className="flex flex-col gap-2">
-              {ingredients.map((ingredient) => (
-                <IngredientRow
-                  key={ingredient.id}
-                  value={ingredient}
-                  errorMessage={fieldErrors.ingredients[ingredient.id] ?? null}
-                  onChange={updateIngredient}
-                  onRemove={() => removeIngredient(ingredient.id)}
-                  unitOptions={UNIT_OPTIONS}
-                />
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addIngredient}
-                className="h-10 justify-start rounded-lg border-dashed bg-card text-foreground"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                材料を追加
-              </Button>
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-foreground">作り方</p>
-            <div className="flex flex-col gap-3">
-              {steps.map((step, index) => (
-                <StepRow
-                  key={step.id}
-                  index={index}
-                  value={step}
-                  onChange={updateStep}
-                  onRemove={() => removeStep(step.id)}
-                />
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addStep}
-                className="h-10 justify-start rounded-lg border-dashed bg-card text-foreground"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                ステップを追加
-              </Button>
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <label htmlFor={notesId} className="text-sm font-medium text-foreground">
-              メモ <span className="text-xs font-normal text-muted-foreground">任意</span>
-            </label>
-            <Textarea
-              id={notesId}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="補足や保存方法など"
-              className="min-h-24 rounded-xl bg-card"
-            />
-          </section>
-        </div>
+          }
+        />
       </form>
     </main>
   );
