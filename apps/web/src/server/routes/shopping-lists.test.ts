@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '@/server/app';
 import {
   AddItemUseCase,
+  CompleteShoppingUseCase,
   GenerateShoppingListUseCase,
   GetShoppingListUseCase,
   InvalidMealPlanStateError,
@@ -25,6 +26,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
   return {
     ...actual,
     AddItemUseCase: vi.fn(),
+    CompleteShoppingUseCase: vi.fn(),
     GenerateShoppingListUseCase: vi.fn(),
     GetShoppingListUseCase: vi.fn(),
     MarkAsBoughtUseCase: vi.fn(),
@@ -58,6 +60,11 @@ const shoppingListDto: ShoppingListDto = {
   status: 'active',
   items: [shoppingItemDto],
   createdAt: '2026-07-11T00:00:00.000Z',
+};
+
+const completedShoppingListDto: ShoppingListDto = {
+  ...shoppingListDto,
+  status: 'completed',
 };
 
 const addItemBody = {
@@ -530,5 +537,72 @@ describe('shoppingListsRoute', () => {
     expect(await res.json()).toEqual({
       error: "Cannot reassignStore a ShoppingList with status 'completed'",
     });
+  });
+
+  it('POST /api/shopping-lists/:id/complete は 200 で ShoppingListDto を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(completedShoppingListDto);
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CompleteShoppingUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/complete`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(completedShoppingListDto);
+    expect(execute).toHaveBeenCalledWith({ shoppingListId: SHOPPING_LIST_ID });
+  });
+
+  it('POST /api/shopping-lists/:id/complete は不正な id で 400 を返す', async () => {
+    const execute = vi.fn();
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CompleteShoppingUseCase,
+    );
+
+    const res = await app.request('/api/shopping-lists/not-a-uuid/complete', {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/shopping-lists/:id/complete は ShoppingListNotFoundError を 404 に変換する', async () => {
+    const execute = vi.fn().mockRejectedValue(new ShoppingListNotFoundError(SHOPPING_LIST_ID));
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CompleteShoppingUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/complete`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      error: `ShoppingList not found: ${SHOPPING_LIST_ID}`,
+    });
+  });
+
+  it('POST /api/shopping-lists/:id/complete は 2 回連続でも同じ形を 200 で返す', async () => {
+    const execute = vi.fn().mockResolvedValue(completedShoppingListDto);
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CompleteShoppingUseCase,
+    );
+
+    const first = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/complete`, {
+      method: 'POST',
+    });
+    const second = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/complete`, {
+      method: 'POST',
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await first.json()).toEqual(completedShoppingListDto);
+    expect(await second.json()).toEqual(completedShoppingListDto);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenNthCalledWith(1, { shoppingListId: SHOPPING_LIST_ID });
+    expect(execute).toHaveBeenNthCalledWith(2, { shoppingListId: SHOPPING_LIST_ID });
   });
 });

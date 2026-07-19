@@ -1,3 +1,4 @@
+import { getDb } from '@/db/client';
 import {
   addItemSchema,
   generateShoppingListSchema,
@@ -8,11 +9,13 @@ import {
 } from '@cookpit/api-contract';
 import {
   AddItemUseCase,
+  CompleteShoppingUseCase,
   GenerateShoppingListUseCase,
   GetShoppingListUseCase,
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
 } from '@cookpit/application';
+import { DrizzlePantryRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import {
@@ -21,6 +24,10 @@ import {
   recipeRepository,
   shoppingListRepository,
 } from '../repositories';
+
+function pantryRepository(): DrizzlePantryRepository {
+  return new DrizzlePantryRepository(getDb());
+}
 
 /** Generate は新規作成時 201、冪等な既存返却時 200 を返す。 */
 export const shoppingListsRoute = new Hono()
@@ -76,4 +83,15 @@ export const shoppingListsRoute = new Hono()
       const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
       return c.json(dto, 200);
     },
-  );
+  )
+  .post('/:id/complete', zValidator('param', shoppingListIdParamSchema), async (c) => {
+    const { id } = c.req.valid('param');
+    const usecase = new CompleteShoppingUseCase(
+      shoppingListRepository(),
+      pantryRepository(),
+      productRepository(),
+      mealPlanRepository(),
+    );
+    const dto = await usecase.execute({ shoppingListId: id });
+    return c.json(dto, 200);
+  });
