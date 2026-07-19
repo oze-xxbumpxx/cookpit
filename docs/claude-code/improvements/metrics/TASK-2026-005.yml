@@ -28,7 +28,7 @@ process:
 
 machine:
   # collect-task-metrics.mjs による自動集計。手で編集しない（--write の再実行で更新）
-  collected_at: 2026-07-17
+  collected_at: 2026-07-19
   branch_filters: ['pantry-core']
   sessions: # session_id 単位でマージ・累積（1 行 = 1 セッション）
     - {
@@ -65,15 +65,52 @@ machine:
     - {
         'id': '533e2b47-6114-4c87-bee6-2cc6a6eb0cdd',
         'date': '2026-07-17',
-        'branches': ['feature/pantry-api-contract', 'main'],
+        'branches': ['docs/improvement-proposals-025-026', 'feature/pantry-api-contract', 'main'],
         'matched_by': 'subagent-log',
-        'active_minutes': 25,
+        'active_minutes': 84,
         'tokens':
-          { 'input': 1658, 'output': 14669, 'cache_creation': 302283, 'cache_read': 6318674 },
-        'tool_uses': 92,
-        'user_prompts': 2,
-        'agent_calls': { 'reflection-agent': 1 },
-        'models': ['claude-fable-5', 'claude-sonnet-5'],
+          { 'input': 1718, 'output': 32013, 'cache_creation': 539958, 'cache_read': 8627704 },
+        'tool_uses': 135,
+        'user_prompts': 4,
+        'agent_calls': { 'agent-improvement-manager': 1, 'reflection-agent': 1 },
+        'models': ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5'],
+      }
+    - {
+        'id': '7f9eeaa6-e4d4-4262-892a-f31064017347',
+        'date': '2026-07-18',
+        'branches': ['claude/imp-025-026-protected-apply', 'main'],
+        'matched_by': 'subagent-log',
+        'active_minutes': 19,
+        'tokens': { 'input': 7324, 'output': 388, 'cache_creation': 166361, 'cache_read': 2173041 },
+        'tool_uses': 35,
+        'user_prompts': 10,
+        'agent_calls': {},
+        'models': ['claude-fable-5'],
+      }
+    - {
+        'id': 'fe4bc927-e25f-4783-9061-0c1ee39007fb',
+        'date': '2026-07-18',
+        'branches': ['main'],
+        'matched_by': 'subagent-log',
+        'active_minutes': 0,
+        'tokens': { 'input': 6, 'output': 9, 'cache_creation': 39039, 'cache_read': 73069 },
+        'tool_uses': 3,
+        'user_prompts': 1,
+        'agent_calls': {},
+        'models': ['claude-fable-5'],
+      }
+    - {
+        'id': '0c952c9b-9eeb-41cd-9779-6154f5e64d68',
+        'date': '2026-07-19',
+        'branches': ['feature/pantry-core-presentation'],
+        'matched_by': 'branch',
+        'active_minutes': 34,
+        'tokens':
+          { 'input': 3058, 'output': 53940, 'cache_creation': 192566, 'cache_read': 4416448 },
+        'tool_uses': 56,
+        'user_prompts': 7,
+        'agent_calls': {},
+        'models': ['claude-fable-5'],
       }
   gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
     - {
@@ -83,17 +120,31 @@ machine:
         'fail': [],
         'skip': [],
       }
+    - {
+        'ts': '2026-07-19T05:59:27.035Z',
+        'branch': 'feature/pantry-core-presentation',
+        'pass': ['lint', 'type-check', 'test'],
+        'fail': [],
+        'skip': [],
+      }
+    - {
+        'ts': '2026-07-19T06:22:06.101Z',
+        'branch': 'feature/pantry-core-presentation',
+        'pass': ['lint', 'type-check', 'test'],
+        'fail': [],
+        'skip': [],
+      }
   totals:
-    sessions: 2
-    active_minutes: 571 # 約9時間31分（活動時間ベース・空白30分超は除外）
-    tokens_input: 13403
-    tokens_output: 295624
-    tokens_cache_creation: 9557298
-    tokens_cache_read: 115647050
-    tokens_total: 125513375
-    tool_uses: 973
-    user_prompts: 44
-    agent_calls: 14
+    sessions: 5
+    active_minutes: 683 # 約11時間23分（活動時間ベース・空白30分超は除外）
+    tokens_input: 23851
+    tokens_output: 367305
+    tokens_cache_creation: 10192939
+    tokens_cache_read: 124618638
+    tokens_total: 135202733
+    tool_uses: 1110
+    user_prompts: 64
+    agent_calls: 15
     agent_calls_by_type:
       {
         'orchestrator': 2,
@@ -104,9 +155,10 @@ machine:
         'requirements-analyst': 1,
         'architecture-designer': 1,
         'implementation-planner': 2,
+        'agent-improvement-manager': 1,
       }
     agent_restarts: 6 # 同一 Subagent 種の再起動数（手戻りプロキシ）
-    gate_runs: 1
+    gate_runs: 3
     gate_fail_runs: 0
     gate_rework_rate: 0 # FAIL を含む実行 / 総実行（手戻りプロキシ）
 # 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
