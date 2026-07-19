@@ -1,13 +1,8 @@
-import { getDb } from '@/db/client';
 import { consumeStockSchema, stockIdParamSchema } from '@cookpit/api-contract';
 import { ConsumeStockUseCase, DiscardStockUseCase, GetPantryUseCase } from '@cookpit/application';
-import { DrizzlePantryRepository } from '@cookpit/infrastructure';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-
-function pantryRepository(): DrizzlePantryRepository {
-  return new DrizzlePantryRepository(getDb());
-}
+import { pantryRepository } from '../repositories';
 
 export const pantryRoute = new Hono()
   .get('/', async (c) => {

@@ -1,6 +1,7 @@
 import { getDb } from '@/db/client';
 import {
   DrizzleMealPlanRepository,
+  DrizzlePantryRepository,
   DrizzleProductRepository,
   DrizzleRecipeRepository,
   DrizzleShoppingListRepository,
@@ -25,4 +26,8 @@ export function mealPlanRepository(): DrizzleMealPlanRepository {
 
 export function shoppingListRepository(): DrizzleShoppingListRepository {
   return new DrizzleShoppingListRepository(getDb());
+}
+
+export function pantryRepository(): DrizzlePantryRepository {
+  return new DrizzlePantryRepository(getDb());
 }
