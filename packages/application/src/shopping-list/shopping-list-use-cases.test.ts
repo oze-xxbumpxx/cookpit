@@ -6,6 +6,9 @@ import {
 import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
 import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
 import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
+import type { CreateStockInput } from '@cookpit/domain/src/pantry/pantry';
+import { Pantry } from '@cookpit/domain/src/pantry/pantry';
+import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
 import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
 import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
 import { ProductId } from '@cookpit/domain/src/product/product-id';
@@ -17,6 +20,7 @@ import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.reposit
 import { Money } from '@cookpit/domain/src/shared/money';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
 import { StoreId } from '@cookpit/domain/src/shared/store';
+import type { Unit } from '@cookpit/domain/src/shared/unit';
 import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
 import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
 import { ShoppingItem, ShoppingList } from '@cookpit/domain/src/shopping-list/shopping-list';
@@ -137,6 +141,45 @@ class InMemoryShoppingListRepository implements ShoppingListRepository {
   seed(shoppingList: ShoppingList): void {
     this.map.set(shoppingList.id.value, shoppingList);
   }
+}
+
+class InMemoryPantryRepository implements PantryRepository {
+  private pantry: Pantry = Pantry.create();
+  public saveCount = 0;
+
+  async find(): Promise<Pantry> {
+    return this.pantry;
+  }
+
+  async save(pantry: Pantry): Promise<void> {
+    this.saveCount += 1;
+    this.pantry = pantry;
+  }
+
+  seedStock(input: CreateStockInput): void {
+    this.pantry.addStock(input);
+  }
+
+  current(): Pantry {
+    return this.pantry;
+  }
+}
+
+function stockInput(
+  productId: string | null,
+  value: number,
+  unit: Unit,
+  options: { displayName?: string; expiresAt?: Date | null; purchasedAt?: Date } = {},
+): CreateStockInput {
+  return {
+    productId: productId === null ? null : ProductId.fromString(productId),
+    displayName: options.displayName ?? '玉ねぎ',
+    amount: Quantity.of(value, unit),
+    purchasedAt: options.purchasedAt ?? new Date('2026-07-01T00:00:00.000Z'),
+    expiresAt: options.expiresAt ?? null,
+    storedLocation: null,
+    sourceShoppingItemId: null,
+  };
 }
 
 function seededPlannedRecipe(id: string, recipeId: string, scaleFactor = 1): PlannedRecipe {
@@ -275,12 +318,14 @@ let mealPlanRepository: InMemoryMealPlanRepository;
 let recipeRepository: InMemoryRecipeRepository;
 let productRepository: InMemoryProductRepository;
 let shoppingListRepository: InMemoryShoppingListRepository;
+let pantryRepository: InMemoryPantryRepository;
 
 beforeEach(() => {
   mealPlanRepository = new InMemoryMealPlanRepository();
   recipeRepository = new InMemoryRecipeRepository();
   productRepository = new InMemoryProductRepository();
   shoppingListRepository = new InMemoryShoppingListRepository();
+  pantryRepository = new InMemoryPantryRepository();
 });
 
 function generateUseCase(): GenerateShoppingListUseCase {
@@ -289,6 +334,7 @@ function generateUseCase(): GenerateShoppingListUseCase {
     recipeRepository,
     productRepository,
     shoppingListRepository,
+    pantryRepository,
   );
 }
 
@@ -439,6 +485,139 @@ describe('GenerateShoppingListUseCase', () => {
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
     expect(result.shoppingList.items.map((item) => item.targetStoreId)).toEqual([null, null]);
+  });
+
+  it('在庫なしでは差し引かず全量を生成し Pantry を保存しない（回帰）', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(1);
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 2, unit: '個' });
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('在庫が必要量以上なら食材を出さず、必要量分だけ在庫を消費する', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 5, '個'));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(0);
+    expect(pantryRepository.saveCount).toBe(1);
+    const stocks = pantryRepository.current().stocks;
+    expect(stocks).toHaveLength(1);
+    expect(stocks[0]?.amount.value).toBe(3);
+    expect(stocks[0]?.amount.unit).toBe('個');
+  });
+
+  it('数えられる単位は端数を切り上げ、在庫は全量消費する', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 0.5, '個'));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    // 必要 2 − 在庫 0.5 = 1.5 → 数えられる単位なので 2 に切り上げ
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 2, unit: '個' });
+    expect(pantryRepository.current().stocks).toHaveLength(0);
+  });
+
+  it('連続量（g）は切り上げず小数のまま差し引く', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('小麦粉', 100, 'g', 'product-flour')]),
+    );
+    pantryRepository.seedStock(stockInput('product-flour', 30, 'g', { displayName: '小麦粉' }));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 70, unit: 'g' });
+    expect(pantryRepository.current().stocks).toHaveLength(0);
+  });
+
+  it('単位が一致しない在庫は差し引かず、Pantry も変更しない', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g'));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 2, unit: '個' });
+    expect(pantryRepository.saveCount).toBe(0);
+    expect(pantryRepository.current().stocks[0]?.amount.value).toBe(100);
+    expect(pantryRepository.current().stocks[0]?.amount.unit).toBe('g');
+  });
+
+  it('productId を持たない食材は在庫と突合しない', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [amountIngredient('塩', 10, 'g')]));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '塩' }));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 10, unit: 'g' });
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('同一 product の複数在庫は賞味期限の近い順に消費する', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 3, '個', PRODUCT_ID)]),
+    );
+    // 期限の遠い在庫（残るべき）
+    pantryRepository.seedStock(
+      stockInput(PRODUCT_ID, 2, '個', { expiresAt: new Date('2026-08-01') }),
+    );
+    // 期限の近い在庫（先に消費されるべき）
+    pantryRepository.seedStock(
+      stockInput(PRODUCT_ID, 2, '個', { expiresAt: new Date('2026-07-15') }),
+    );
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    // 必要 3 − 在庫 4 = -1 → 全量まかなえるため食材は出ない。消費は 3 個
+    expect(result.shoppingList.items).toHaveLength(0);
+    const stocks = pantryRepository.current().stocks;
+    // 期限の近い在庫が全量消費されて消え、遠い在庫が 1 個残る
+    expect(stocks).toHaveLength(1);
+    expect(stocks[0]?.expiresAt?.getTime()).toBe(new Date('2026-08-01').getTime());
+    expect(stocks[0]?.amount.value).toBe(1);
+    expect(stocks[0]?.amount.unit).toBe('個');
+  });
+
+  it('冪等再実行（既存リストあり）では在庫を消費しない', async () => {
+    mealPlanRepository.seed(seededMealPlan());
+    shoppingListRepository.seed(seededShoppingList());
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 5, '個'));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.created).toBe(false);
+    expect(pantryRepository.saveCount).toBe(0);
+    expect(pantryRepository.current().stocks[0]?.amount.value).toBe(5);
+    expect(pantryRepository.current().stocks[0]?.amount.unit).toBe('個');
+  });
+
+  it('数値でない量（少々）の食材は在庫と突合しない', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('塩', '少々')]));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '塩' }));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items[0]?.amountNote).toBe('少々');
+    expect(pantryRepository.saveCount).toBe(0);
   });
 });
 
