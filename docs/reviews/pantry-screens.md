@@ -43,7 +43,7 @@ feature 全体のレビュー記録。タスク単位（Codex 委譲 Task 1〜�
 
 実画面確認は画面変更を含まないため対象外。
 
-### 敵対的精査パスで確認した点（問題なし）
+### 敵対的精査パスで確認した点（問題なし・Task 1）
 
 - **固定順の逆転リスク**（shopping-list の `groupItemsByStore` は未定が先頭）→ `LOCATION_ORDER`
   は `fridge → freezer → pantry → null` で指示書どおり。PV-01 が逆順入力で担保。
@@ -53,7 +53,7 @@ feature 全体のレビュー記録。タスク単位（Codex 委譲 Task 1〜�
 - **ラベル網羅**: PV-06 が 4 パターン全件を `toEqual` で固定（弱いアサーションなし）。
 - **入力配列の非破壊**: `filter` は新配列を返すため入力を変更しない。
 
-### 申し送り（修正不要）
+### 申し送り（修正不要・Task 1）
 
 1. **`LOCATION_ORDER` の網羅性は型で担保されない**: `LOCATION_LABELS` は
    `Record<StorageLocation, string>` のためキー漏れが型エラーになるが、`LOCATION_ORDER` は
@@ -107,7 +107,7 @@ feature 全体のレビュー記録。タスク単位（Codex 委譲 Task 1〜�
 | 差し戻しの部分反映    | N/A              | 初回レビュー                                                                     |
 | バリデーション分岐    | PASS（対象なし） | Zod スキーマ変更なし。consume の json 形は型付き Hono RPC + PC-05 完全一致で担保 |
 
-### 実画面確認（manual-browser-verify・dev:pglite + Playwright・390px モバイル幅）
+### 実画面確認（manual-browser-verify・dev:pglite + Playwright・390px モバイル幅・Task 2）
 
 在庫 3 件（全件 `storedLocation: null`・牛乳のみ期限 2026-08-01）を PGlite に投入し 2 タブで確認:
 
@@ -152,3 +152,83 @@ feature 全体のレビュー記録。タスク単位（Codex 委譲 Task 1〜�
 2. **silent refetch 成功時の errorMessage クリア**: focus による silent refetch が成功すると
    表示中のエラーバナーも消える（指示書は silent 時の成功挙動を明記していない）。最新化に
    成功した時点でエラーは陳腐化しているため UX 上はむしろ自然。変更不要・挙動の記録のみ。
+
+---
+
+## Task 3: 導線追加 — 「買い物完了」+「在庫」リンク（受け入れレビュー）
+
+- 実施日: 2026-07-20
+- 実装ルート: Codex 委譲（指示書: `docs/tasks/codex/pantry-screens/03-entry-links.md`）
+- レビュー手順: review-codex-implementation Skill（機械チェック → 品質ゲート → 人間チェックリスト → 敵対的精査パス → 実画面確認）
+- ブランチ: `feature/pantry-entry-links`（基準コミット `89055ea`。レビュー時点では未コミットの作業ツリー）
+- **判定: 受け入れ可（差し戻しなし。Must 0 / Should 0 / 申し送り 0）**
+
+### レビュー範囲（Task 3 分・新規ファイルなし、既存 4 ファイルへの追記のみ）
+
+| ファイル                                                                    | 内容                                                                              |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/web/src/app/shopping-lists/_components/shopping-list-client.tsx`      | 新規 state 4 つ + `handleComplete` + 新規 JSX 3 ブロック + 手動追加ボタン条件変更 |
+| `apps/web/src/app/shopping-lists/_components/shopping-list-client.test.tsx` | CB-01〜11 追加（11 件）                                                           |
+| `apps/web/src/app/meal-plans/_components/meal-plan-client.tsx`              | ヘッダー右側 `gap-1` + 「在庫」リンク追加                                         |
+| `apps/web/src/app/meal-plans/_components/meal-plan-client.test.tsx`         | MN-01〜02 追加（2 件）                                                            |
+
+### 機械チェック + 品質ゲート（Task 3）
+
+- check-codex-implementation.mjs: 対象 2 ファイル（.tsx のみ。.test.tsx は対象外） →
+  **FAIL 0 / WARN 0 / INFO 0**（指摘なし）
+- run-quality-gates.sh: lint / type-check / test すべて **PASS**（apps/web 313 テスト green）
+- turbo キャッシュ非経由の直接 Vitest 実行でも `shopping-list-client`（33 件）/
+  `meal-plan-client`（18 件）が全 green
+- サーバー側 `/complete` エンドポイント（`shopping-lists.ts:82`）の実在を確認
+  （`CompleteShoppingUseCase` 経由・既存実装。Task 3 はフロント配線のみ）
+
+### チェックリスト（docs/06-ai-tools.md 全 8 項目・Task 3）
+
+| 項目               | 判定             | 根拠                                                                                  |
+| ------------------ | ---------------- | ------------------------------------------------------------------------------------- |
+| 識別子のタイポ     | PASS             | WARN 0。公開識別子一覧（指示書 §公開識別子）と目視で完全一致                          |
+| Tailwind クラス    | PASS             | 既存クラス列のコピー + 実画面（MB-08 相当）でスクリーンショット確認、崩れなし         |
+| ハンドラ結線漏れ   | PASS             | CB-03 テスト + 実画面で「買い物完了」クリック → API 呼び出し・画面遷移まで動作確認    |
+| 'use client'       | PASS（対象外）   | 両ファイルとも既存の `'use client'` のまま変更なし                                    |
+| `import type` 規約 | PASS             | 新規 import 追加なし（既存 import のみで実装完結）                                    |
+| 命名の傾向ずれ     | PASS             | RPC パス `client.api['shopping-lists'][':id'].complete.$post`（ブラケット記法）正しい |
+| 差し戻しの部分反映 | N/A              | 初回レビュー                                                                          |
+| バリデーション分岐 | PASS（対象なし） | Zod スキーマ変更なし                                                                  |
+
+### 実画面確認（manual-browser-verify・dev:pglite + Playwright・390px モバイル幅・Task 3）
+
+献立作成 → レシピ追加 → 買い物リスト生成 → 完了 → 在庫遷移の一連のフローを実データで確認:
+
+| #     | 結果 | 内容                                                                                               |
+| ----- | ---- | -------------------------------------------------------------------------------------------------- |
+| MB-06 | PASS | `/meal-plans` ヘッダーの「在庫」リンク `href="/pantry"`                                            |
+| MB-07 | PASS | `/shopping-lists/[id]` で「買い物完了」→ 成功バナー + 「在庫を見る」→ `/pantry` へ実遷移           |
+| MB-08 | PASS | Task 3 の追記 2 箇所（完了バナー・ヘッダー gap-1）ともトークンのみ使用、モバイル幅で崩れなし       |
+| MB-09 | PASS | 献立作成・レシピ追加・買い物リスト生成の既存フローが回帰なく動作（完了後も品目チェック UI が残存） |
+
+Task 2 レビュー時に持ち越した MB-06/07/09 はこれで確認完了（MB-10 は Task 2 で PASS 済み）。
+
+### 敵対的精査パスで確認した点（問題なし・Task 3）
+
+- **diff スコープ**: `git diff --stat` で変更 4 ファイルのみ。`.tsx` 2 ファイルの差分は
+  指示書が許可した範囲（新規 state・`handleComplete`・新規 JSX 3 ブロック・手動追加ボタンへの
+  `status === 'active'` AND 条件・ヘッダー `gap-1`）に限定されることを diff 全文目視で確認。
+  既存ロジック（`handleMarkAsBought` / `handleReassignStore` / `handleAddItem` 等）は無変更。
+- **既存テストの無改変**: `shopping-list-client.test.tsx` は LC-01〜22（22 件）+ CB-01〜11
+  （11 件）＝ 33 件、`meal-plan-client.test.tsx` は既存 16 件（MC 5 件 + WC-M 11 件）+ MN-01〜02
+  （2 件）＝ 18 件で実行結果と一致。**MC-03 の欠番は Task 3 以前から存在**（`git show HEAD`
+  で事前確認済み。今回の差分による削除ではない）。
+- **CB-05（P-5・自動遷移しないこと）の実効性**: `shopping-list-client.tsx` は元々 `useRouter`
+  を import していない（router 遷移の経路自体が無い）ため、テストが追加した
+  `vi.mock('next/navigation')` は現状は発火し得ないが、**将来 `handleComplete` に
+  `router.push`/`refresh` が追加された場合の回帰検知として機能する**正当な防御的テスト
+  （指示書が明示的に要求する CB-05 の意図どおり）。
+- **P-4（確認ダイアログなし）**: CB-08 で `queryByRole('dialog')` が null であることを担保 +
+  実画面でクリック直後に即座に API 呼び出しが発火することを確認。
+- **CB-11（回帰・R-5）**: 完了後も pending item のチェックボックス・店舗再割当ボタンが
+  残ることをテスト + 実画面スクリーンショットの両方で確認。「手動で追加」のみが非表示。
+- **エラー分離**: 新規 `completeErrorMessage` と既存 `errorMessage` が独立した state・JSX
+  であることを diff で確認（指示書の「混同しない」要求どおり。既存エラー系ハンドラの
+  分岐・文言には触れていない）。
+
+実画面確認に使った一時スクリプト・PGlite 状態は確認後に削除・破棄済み（リポジトリへの影響なし）。

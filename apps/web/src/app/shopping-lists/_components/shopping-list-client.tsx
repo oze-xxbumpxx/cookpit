@@ -37,6 +37,10 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [submittingItemId, setSubmittingItemId] = useState<string | null>(null);
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [status, setStatus] = useState(shoppingList.status);
+  const [completeSubmitting, setCompleteSubmitting] = useState(false);
+  const [completeSuccess, setCompleteSuccess] = useState(false);
+  const [completeErrorMessage, setCompleteErrorMessage] = useState<string | null>(null);
 
   async function handleRefetch({ silent }: { silent: boolean }): Promise<void> {
     if (!silent) {
@@ -167,6 +171,30 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     setExpandedItemId((current) => (current === itemId ? null : itemId));
   }
 
+  async function handleComplete(): Promise<void> {
+    if (completeSubmitting) {
+      return;
+    }
+    setCompleteSubmitting(true);
+    setCompleteErrorMessage(null);
+    try {
+      const response = await client.api['shopping-lists'][':id'].complete.$post({
+        param: { id: shoppingList.id },
+      });
+      if (!response.ok) {
+        setCompleteErrorMessage('操作に失敗しました。');
+        return;
+      }
+      const dto = await response.json();
+      setStatus(dto.status);
+      setCompleteSuccess(true);
+    } catch {
+      setCompleteErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setCompleteSubmitting(false);
+    }
+  }
+
   const groupedItems = groupItemsByStore(optimisticItems, stores);
 
   return (
@@ -207,6 +235,38 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           </p>
         )}
 
+        {status === 'active' && (
+          <Button
+            type="button"
+            onClick={() => void handleComplete()}
+            disabled={completeSubmitting}
+            className="h-11 w-full"
+          >
+            買い物完了
+          </Button>
+        )}
+
+        {completeErrorMessage !== null && (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {completeErrorMessage}
+          </p>
+        )}
+
+        {completeSuccess && (
+          <div className="rounded-lg border bg-secondary px-3 py-2 text-sm text-foreground">
+            <p>買い物を完了しました</p>
+            <Link
+              href="/pantry"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-9 px-2 text-foreground',
+              )}
+            >
+              在庫を見る
+            </Link>
+          </div>
+        )}
+
         {optimisticItems.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             リストにアイテムがありません
@@ -232,22 +292,23 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           </div>
         )}
 
-        {addFormOpen ? (
-          <AddItemForm
-            stores={stores}
-            submitting={addSubmitting}
-            onAdd={(input) => void handleAddItem(input)}
-          />
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setAddFormOpen(true)}
-            className="h-11 w-full"
-          >
-            手動で追加
-          </Button>
-        )}
+        {status === 'active' &&
+          (addFormOpen ? (
+            <AddItemForm
+              stores={stores}
+              submitting={addSubmitting}
+              onAdd={(input) => void handleAddItem(input)}
+            />
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddFormOpen(true)}
+              className="h-11 w-full"
+            >
+              手動で追加
+            </Button>
+          ))}
       </div>
     </main>
   );
