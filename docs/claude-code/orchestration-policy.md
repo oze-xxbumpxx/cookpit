@@ -119,69 +119,20 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
 
-## stop/resume を跨ぐ委譲の扱い（通知非依存）
+## 再開時の完了判定（1 原則）
 
-出典: IMP-2026-008（store-master 事象1・stop/resume 後の Sub-agent notification 待ちループ解消）。
+resume・再開直後（stop/resume・強制中断・killed からの復帰を含む）は notification を
+待たず、**直前までに委譲した未確認の Sub-agent すべてについて、それぞれの期待成果物の
+存在・更新時刻で完了を冪等判定してから次を決める**。完了した分は次工程へ進め、
+未完了のものだけを再委譲する（並列 background 委譲の部分完了では、完了済み Sub-agent を
+再起動しない）。単一委譲・並列委譲を問わず適用する（「完了待ちループ」と二重起動の
+両方を防ぐ。出典: IMP-2026-009 の一般化。単一委譲での実績: meal-plan-screens 2026-07-09 /
+pantry-screens 2026-07-19。並列委譲は同判定を各成果物へ適用する）。
 
-- **適用レベル: L3 のみ**（L1/L2 では `inflight-agents.json` を使わない）。
-- **background 委譲時のみ**、その前に `.claude/state/inflight-agents.json` へ
-  `{ agent, purpose, expected_outputs[] }` を追記する。単一 Sub-agent の同期委譲では追記しない。
-- resume 直後（未処理エントリがある場合のみ）は notification を待たず expected_outputs の
-  存在で完了を冪等判定する。stop していない通常フローでは発動しない。
-- 単一 Sub-agent への委譲は**同期待機を意図**する（stop を跨ぐ揮発状態を最小化）。ただし
-  実行環境によっては `run_in_background: false` を指定しても Agent ツールが常に background
-  起動になることがある（後述の既知の制約）。その場合も完了判定は notification に依存せず、
-  期待成果物の存在確認（本節・IMP-2026-009）で行う。
-- background の**意図的な利用**は、複数 Sub-agent の明示的並列化に限定する。
-- **クリアタイミング**: `reflection-agent` 起動時、または feature 完了報告前に空にする。
-- **追記責務**: 委譲指示の禁止事項に「`inflight-agents.json` の追記を成果物確定前に行わない」を
-  明記し、部分書き込みによる完了誤判定を防ぐ。
-- **L1/L2 の単一 Sub-agent 委譲への拡張**（2026-07-03 ドライラン検証で発見）: `inflight-agents.json` は
-  L3 background 限定だが、L1/L2 の単一 Sub-agent 委譲でも resume 直後に「直前の委譲が完了したか
-  分からない」状況は起こりうる（実測: L2 タスクで architecture-designer が resume 後に二重起動）。
-  エントリの有無に関わらず、resume 直後で直前の一手が Sub-agent 委譲だった場合は期待成果物の存在・
-  更新時刻を確認してから次を決める（`.claude/agents/orchestrator.md` §進め方 4 参照）。
-
-### 既知の制約: 単一 Sub-agent 委譲でも background 起動になり得る
-
-2026-07-09 meal-plan-screens で観測。orchestration-policy は単一委譲を同期待機意図としているが、
-一部環境では Agent ツールが `run_in_background: false` 指定でも常に background 起動になる。
-Cookpit の Agent 定義だけでは起動方式を強制できない場合がある。
-
-- **運用**: 完了は notification 待ちではなく、期待成果物の存在・更新で冪等判定する（IMP-2026-009）。
-- **計測**: SubagentStop Hook / `current-feature` 事前設定（IMP-2026-019）と組み合わせる。
-
-### 既知の制約: Orchestrator を Agent ツールで子エージェントとして起動した場合
-
-2026-07-03 のドライラン検証（実タスクで改善ループを検証）で観測。本来の起動方法である
-`claude --agent orchestrator`（メインセッション）ではなく、Claude Code の `Agent` ツールで
-Orchestrator 自体を子エージェントとして起動すると（例: 検証目的の isolation 付き dry run）、
-以下の既知の制約がある。
-
-- Orchestrator からさらに委譲した孫 Sub-agent（例: contract-designer）の完了通知が、Orchestrator
-  本体ではなく最上位セッションへ直接届くことがある。Orchestrator 自身は完了を認識できない。
-- `isolation: worktree` で Orchestrator を分離しても、そこから委譲される孫 Sub-agent のファイル
-  I/O には継承されず、実ブランチへ直接書き込まれることがある。
-
-これは Cookpit の Agent 定義ではなく Claude Code 側の子エージェント委譲・通知配送の挙動に起因する。
-Orchestrator を本来の起動方法（メインセッション）で使う通常運用では発生しない想定だが、Orchestrator
-自体を検証目的で子エージェントとして呼び出す場合はこの制約を踏まえること。全工程を通した生の
-Orchestrator ドライランより、既存の `agent-evaluator` による dry run（`.claude/evals/cases` を
-使った評価、IMP-2026-006/007 で実績あり）の方が現状は安定した検証手段。
-
-### 既知の制約: フォアグラウンド割り込みによるバックグラウンドタスクの停止
-
-2026-07-05 に観測（`logs/2026-07-05.md`）。バックグラウンドで実行中の Orchestrator /
-Sub-agent は、ユーザーのフォアグラウンド割り込み操作（Escape 等）で `killed` 状態になる
-ことがある。フォアグラウンドの操作だけを中断したつもりでも、紐づくバックグラウンドタスク
-ごと停止する。
-
-- 長時間のバックグラウンド委譲中は `TaskOutput`（`block: false`）で時々状態を確認する。
-- ユーザーが割り込む可能性がある場面では、委譲を細かい単位に分け、各 Sub-agent の成果物を
-  こまめに確定させる（killed 時の損失を最小化）。
-- killed になった場合は notification を待たず**成果物の存在で進捗を冪等判定**し
-  （上記 stop/resume と同じ扱い）、未完了の工程だけを再委譲する。実績: 2026-07-05 は
-  contract/plan/test の成果物が確定済みだったため、implementer 以降のみ Codex 委譲へ切替できた。
+> 旧 stop/resume 機構（`inflight-agents.json`・IMP-2026-008）と既知の制約の詳細は
+> [archive/orchestration-frozen-mechanisms.md](./archive/orchestration-frozen-mechanisms.md)
+> に凍結した（IMP-2026-028。2026-07 時点のハーネス挙動を前提とした機構。ハーネス側の
+> 通知配送・isolation 継承が改善されたら復元を判断する）。`inflight-agents.json` の運用は停止。
 
 ## contract-designer の必須起動トリガー
 
@@ -339,14 +290,18 @@ agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定�
 > 一律上書きし、Agent 定義の `model` より優先されてしまう。モデルは各 Agent ファイルの
 > `model` で個別指定する。
 
-## 起動方法
+## 起動方法（正規ルート）
 
-Orchestrator はメインセッションとして起動するのが安定する。
+**Orchestrator 役はメインセッションが務める。**
 
-```
-claude --agent orchestrator
-```
+- ローカル: `claude --agent orchestrator`（メインセッション起動）。
+- リモート: 通常セッションが本ポリシーに従い専門 Subagent を直接起動する
+  （実績: pantry-screens 2026-07-19）。
+- **Orchestrator 自体を `Agent` ツールの子エージェントとして起動する多段委譲は行わない**
+  （孫 Sub-agent の通知配送先・isolation 未継承の既知問題により「成果物なし完了」が
+  累計 3 系統で反復。詳細は
+  [archive/orchestration-frozen-mechanisms.md](./archive/orchestration-frozen-mechanisms.md)）。
 
 メインセッションとして起動した場合、`tools` の `Agent(...)` で起動可能な Subagent を
-制限できる。通常の Subagent として起動するとこの許可リストは無視されるため、
-Orchestrator はメインスレッドとして使う。
+制限できる。通常の Subagent として起動するとこの許可リストは無視される点も、
+メインセッション正規化の理由の一つ。
