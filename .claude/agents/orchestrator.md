@@ -52,27 +52,12 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
    **最初の委譲より前に** current-feature が設定済みかを確認し、未設定なら最初に起動する
    Write 可能な Subagent に書き込ませる（後から書いても SubagentStop の feature 相関が
    `null` のままになる — IMP-2026-019）。
-   - **L3 で** Sub-agent を **background で** 委譲する場合に限り（L1/L2 および単一 Sub-agent の
-     同期委譲では不要）、起動する Write 可能な Subagent へ「起動する Sub-agent 名 / 目的 /
-     期待成果物パス」を `.claude/state/inflight-agents.json` へ追記するよう指示する（通知非依存の
-     再開判定用）。単一 Sub-agent の委譲は原則同期待機とし、background は明示的に並列化する複数
-     Sub-agent に限定する。ただし実行環境によっては単一委譲でも常に background 起動になり得る
-     （完了は notification ではなく期待成果物の存在で冪等判定する。正典:
-     orchestration-policy.md §既知の制約）。feature 完了時（reflection-agent 起動時または完了報告前）に
-     同ファイルを空にする（古いエントリの誤判定防止）。詳細は orchestration-policy.md を参照。
 4. 各 Subagent へ委譲する。委譲時は必ず以下を明示する。
    - 目的 / 対象範囲 / 対象外 / 参照すべきファイル / 期待する成果物 / 出力先 /
      完了条件 / 禁止事項
-   - resume（会話再開）直後かつ `.claude/state/inflight-agents.json` に未処理エントリがある場合
-     のみ、notification を待たず各エントリの期待成果物の存在を確認する。存在すれば完了とみなし
-     当該エントリを除去して次工程へ進み、無ければ再委譲する（「完了待ちループ」に入らない）。
-     stop していない通常フローでは本手順は発動しない。
-   - 上記は L3 background 委譲限定の仕組みだが、resume 直後は L1/L2 の同期委譲（`inflight-agents.json`
-     を使わない単一 Sub-agent への委譲）でも「直前に委譲した Sub-agent が完了したかどうか resume 後の
-     自分には分からない」という同じ状況が起こりうる。`inflight-agents.json` にエントリが無くても、
-     resume 直後で直前の一手が Sub-agent への委譲だった場合は、その Sub-agent の期待成果物（ファイル
-     パス）の存在と更新時刻を確認してから次を決める。存在すれば完了とみなし次工程へ進み、無ければ
-     初めて再委譲する。「まだ実行中のはず」という前提だけで無条件に再委譲しない（二重起動の防止）。
+   - resume・再開直後は、直前までに委譲した未確認の Sub-agent すべてについて期待成果物の
+     存在・更新時刻で完了を冪等判定し、完了分は次工程へ・未完了分のみ再委譲する
+     （正典: orchestration-policy.md §再開時の完了判定）。
 5. 成果物を統合し、矛盾があれば該当 Subagent へ差し戻す。
 6. （L2/L3）全委譲の完了後（L3 では主要委譲の完了ごとでもよい）、
    `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行して

@@ -18,8 +18,9 @@
 ## 開発ワークフロー（Orchestrator 主導）
 
 複数工程・複数ファイル・複数層にまたがる開発タスク（機能追加・仕様変更・新規 API/画面・
-スキーマ変更など）は **Orchestrator**（`claude --agent orchestrator`）が指揮し、専門 Subagent へ
-委譲する。単発の質問・調査には不要。委譲方針・`Agent` ツール保持者・工程の詳細は
+スキーマ変更など）は**メインセッションが Orchestrator 役を務め**（ローカルは
+`claude --agent orchestrator`）、専門 Subagent へ委譲する。単発の質問・調査には不要。
+委譲方針・`Agent` ツール保持者・工程の詳細は
 [orchestration-policy.md](docs/claude-code/orchestration-policy.md) /
 [development-workflow.md](docs/claude-code/development-workflow.md) /
 [agent-responsibilities.md](docs/claude-code/agent-responsibilities.md) を正典とする。

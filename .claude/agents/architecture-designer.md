@@ -30,11 +30,10 @@ tools: Read, Grep, Glob, Write
 
 ## アーキテクチャ遵守（このプロジェクトの核）
 
-- 依存方向：`Presentation → Application → Domain ← Infrastructure`。
-- `packages/domain` は他に依存しない。Domain 層に Drizzle・HTTP の型を持ち込まない。
-- 集約をまたぐ参照は ID 参照のみ。集約をまたぐ操作は UseCase に置く。
-- Entity 生成は `static create()`、DB 復元は `static reconstruct()`。
-- UseCase は 1 ユースケース = 1 クラス・`execute()`。DI は手動 DI。
+進め方 2〜3 の参照先（`docs/03-architecture.md` / `.claude/rules/domain-layer.md`）が正典。
+骨子: 依存方向 `Presentation → Application → Domain ← Infrastructure`・集約間は ID 参照のみ・
+`create()`/`reconstruct()`・1 UseCase = 1 クラス。例外・詳細はここに再掲しない
+（既存の必読指示があるため追加 Read なし）。
 
 ## 出力
 

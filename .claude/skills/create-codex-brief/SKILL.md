@@ -36,7 +36,11 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
 2. 実装単位を層ごとに分割する（Domain → Infrastructure → Application → API → UI の依存順。
    実例: `docs/tasks/codex/01〜05`）。1 ファイル = 1 タスク = Codex の 1 セッションが目安。
 3. `docs/tasks/codex/<feature>/` に `README.md`（タスク一覧・確定値表・完了条件）と
-   `NN-<layer>.md`（各指示書）を下記テンプレートで作成する。
+   `NN-<layer>.md`（各指示書）を下記テンプレートで作成する。確定値表には必ず「モデル」行として
+   「**Codex モデル / reasoning effort**: ＿＿＿＿（実装完了時に実際に使った値をこの行に記入し、
+   `docs/reviews/<feature>.md` と metrics YAML の codex 欄に同じ値を記録する）」を含める
+   （出典: 2026-07-18 ユーザー承認・IMP-2026-025 効果実測の記録経路。
+   実例: `docs/tasks/codex/pantry-screens/README.md`）。
 4. 各指示書に**必ず**含める（過去の Codex ミス実績への先回り。出典: docs/06-ai-tools.md /
    shopping-list-core 事象 1・4 で初回 FAIL 0 を再現した必須パターン）:
    - アーキテクチャ制約の抜粋（依存方向 / create・reconstruct / any 禁止 /
