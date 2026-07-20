@@ -122,10 +122,12 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
 ## 再開時の完了判定（1 原則）
 
 resume・再開直後（stop/resume・強制中断・killed からの復帰を含む）は notification を
-待たず、**直前に委譲した Sub-agent の期待成果物の存在・更新時刻で完了を冪等判定してから
-次を決める**。存在すれば完了として次工程へ進み、無ければそのときだけ再委譲する
-（「完了待ちループ」と二重起動の両方を防ぐ。出典: IMP-2026-009 の一般化。
-実績: meal-plan-screens 2026-07-09 / pantry-screens 2026-07-19）。
+待たず、**直前までに委譲した未確認の Sub-agent すべてについて、それぞれの期待成果物の
+存在・更新時刻で完了を冪等判定してから次を決める**。完了した分は次工程へ進め、
+未完了のものだけを再委譲する（並列 background 委譲の部分完了では、完了済み Sub-agent を
+再起動しない）。単一委譲・並列委譲を問わず適用する（「完了待ちループ」と二重起動の
+両方を防ぐ。出典: IMP-2026-009 の一般化。単一委譲での実績: meal-plan-screens 2026-07-09 /
+pantry-screens 2026-07-19。並列委譲は同判定を各成果物へ適用する）。
 
 > 旧 stop/resume 機構（`inflight-agents.json`・IMP-2026-008）と既知の制約の詳細は
 > [archive/orchestration-frozen-mechanisms.md](./archive/orchestration-frozen-mechanisms.md)
