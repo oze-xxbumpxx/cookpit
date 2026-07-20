@@ -318,4 +318,35 @@ describe('MealPlanClient', () => {
     });
     expect(push).not.toHaveBeenCalled();
   });
+
+  it('MN-01: mealPlan の有無に関わらず在庫リンクを表示する', () => {
+    const { rerender } = render(
+      <MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
+    );
+
+    expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
+
+    rerender(
+      <MealPlanClient
+        mealPlan={createMealPlanDto()}
+        recipes={[]}
+        currentWeekIdentifier={CURRENT_WEEK}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
+  });
+
+  it('MN-02: 既存導線の href と表示順を維持する', () => {
+    render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
+
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['レシピ', '商品', '履歴', '在庫']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/recipes',
+      '/products',
+      '/meal-plans/history',
+      '/pantry',
+    ]);
+  });
 });

@@ -140,7 +140,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             </Link>
           </div>
           <h1 className="text-lg font-semibold text-foreground">今週の献立</h1>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-1">
             <Link
               href="/meal-plans/history"
               className={cn(
@@ -149,6 +149,15 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               )}
             >
               履歴
+            </Link>
+            <Link
+              href="/pantry"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-9 px-2 text-foreground',
+              )}
+            >
+              在庫
             </Link>
           </div>
         </header>
