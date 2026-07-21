@@ -232,7 +232,7 @@ export function RecipeFormFields({ value, fieldErrors, onChange, baseServingsSlo
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
         <label htmlFor={nameId} className="text-sm font-medium text-foreground">
-          レシピ名 <span className="text-xs font-normal text-red-600">必須</span>
+          レシピ名 <span className="text-xs font-normal text-destructive">必須</span>
         </label>
         <Input
           id={nameId}
@@ -291,7 +291,7 @@ export function RecipeFormFields({ value, fieldErrors, onChange, baseServingsSlo
             className="h-11 rounded-xl bg-card"
           />
           {fieldErrors.cookingTime !== null && (
-            <p id={cookingTimeErrorId} className="text-xs text-red-600">
+            <p id={cookingTimeErrorId} className="text-xs text-destructive">
               {fieldErrors.cookingTime}
             </p>
           )}

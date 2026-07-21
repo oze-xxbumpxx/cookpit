@@ -79,7 +79,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
 
       <div className="flex flex-col gap-2">
         <label htmlFor={displayNameId} className="text-sm font-medium text-foreground">
-          品目名 <span className="text-xs font-normal text-red-600">必須</span>
+          品目名 <span className="text-xs font-normal text-destructive">必須</span>
         </label>
         <Input
           id={displayNameId}

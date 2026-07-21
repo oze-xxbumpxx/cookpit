@@ -132,7 +132,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -165,7 +165,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             </Button>
 
             {shoppingListErrorMessage !== null && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {shoppingListErrorMessage}
               </p>
             )}

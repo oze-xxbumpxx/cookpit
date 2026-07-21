@@ -72,6 +72,17 @@ ProN', sans-serif` に。本文は sans のまま（階層のコントラスト�
 - 実画面確認（`dev:pglite` + Playwright）: ダッシュボード・レシピの見出しが丸ゴシックで描画。
   品質ゲート type-check 5/5 / lint 0 error / web 327 テスト PASS。
 
+## エラー配色のトークン化（実装済み・2026-07-21）
+
+エラーバナー・必須/入力エラーが `red-200/red-50/red-700/red-600` を直書きしており、温かい
+パレットから浮いていた。**全 15 ファイルを `destructive` トークンへ統一**:
+
+- バナー: `border-red-200 bg-red-50 text-red-700` → `border-destructive/30 bg-destructive/5 text-destructive`
+  （`bg-destructive/5` は背景 #FAF6F0 上で text-destructive とのコントラスト 4.7:1 ✓）。
+- 入力/必須エラー: `text-red-600` → `text-destructive`（#C0392B・背景で 5.05:1 ✓）。
+- 実画面で描画確認（Tailwind v4 が `bg-destructive/5` 等を color-mix で生成）。品質ゲート
+  type-check 5/5 / lint 0 error / web 327 テスト PASS。
+
 ## Phase B 残（提案・統一）
 
 - **ダークモードの温かい配色化**: 現状 `.dark` は素の shadcn グレー（oklch 無彩色）のままで

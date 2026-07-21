@@ -112,7 +112,7 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
         </Button>
       </div>
       {errorMessage !== null && (
-        <p id={errorId} className="text-xs text-red-600">
+        <p id={errorId} className="text-xs text-destructive">
           {errorMessage}
         </p>
       )}
