@@ -154,6 +154,7 @@ export function RecipeFormClient() {
               )}
             </div>
           }
+          autoFocusName
         />
       </form>
     </main>

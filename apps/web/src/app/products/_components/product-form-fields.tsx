@@ -28,6 +28,8 @@ interface Props {
   value: ProductFormValue;
   fieldErrors: ProductFieldErrors;
   onChange: (value: ProductFormValue) => void;
+  /** 新規作成時に商品名へ自動フォーカスする（連続入力を速める）。 */
+  autoFocusName?: boolean;
 }
 
 export const PRODUCT_CATEGORY_OPTIONS = productCategorySchema.options;
@@ -96,7 +98,7 @@ export function buildProductFormBody(value: ProductFormValue): ProductFormBuildR
   };
 }
 
-export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
+export function ProductFormFields({ value, fieldErrors, onChange, autoFocusName = false }: Props) {
   const nameId = useId();
   const aliasesId = useId();
   const categoryId = useId();
@@ -121,6 +123,7 @@ export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
           value={value.name}
           onChange={(event) => updateValue({ name: event.currentTarget.value })}
           placeholder="例：玉ねぎ"
+          autoFocus={autoFocusName}
           aria-invalid={fieldErrors.name !== null}
           aria-describedby={fieldErrors.name === null ? undefined : nameErrorId}
           className="h-11 rounded-xl bg-card"
