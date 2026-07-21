@@ -131,4 +131,11 @@
   main {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
+  /* 見出しは丸ゴシックで温かみ・料理らしさを出す（本文は sans のまま） */
+  h1,
+  h2,
+  h3 {
+    font-family:
+      'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'ヒラギノ丸ゴ ProN', sans-serif;
+  }
 }

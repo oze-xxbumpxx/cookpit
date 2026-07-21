@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
+// 見出し用の丸ゴシック（自ホスト・日本語グリフ込み）。next/font は日本語サブセット非対応のため Fontsource を使う。
+// 見出しは font-semibold（→700 にマップ）のため 700 のみ読み込む（日本語 woff2 は重いので必要最小限）。
+import '@fontsource/zen-maru-gothic/japanese-700.css';
 import { NavBar } from './_components/nav-bar';
 import './globals.css';
 

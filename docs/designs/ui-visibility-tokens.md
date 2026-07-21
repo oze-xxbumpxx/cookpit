@@ -57,14 +57,26 @@
 - **既知の IA トレードオフ**: タブは 5 枠のため「商品」はタブ外（ダッシュボードのメニューから到達）。
   商品画面ではアクティブタブが点かない。必要ならタブ構成の見直し可。
 
-## Phase B（提案・統一）
+## 見出しフォント（実装済み・2026-07-21）
+
+見出しと本文が同一書体（sans）で階層が弱く、料理らしさも無かった。丸ゴシックの
+**Zen Maru Gothic** を見出し（`h1/h2/h3`）に適用し、温かみ・料理らしさと階層を出す。
+
+- **配信方法**: `next/font/google` は日本語サブセット非対応（`Zen Maru Gothic` の subsets に
+  `japanese` が無い）ため、**Fontsource（`@fontsource/zen-maru-gothic`）で自ホスト**。
+  日本語 woff2 を同梱するのでオフライン・クロスデバイスで一貫。
+- **読み込み最小化**: 見出しは `font-semibold`（→ 700 にマップ）のため **weight 700 のみ**読み込む
+  （日本語 woff2 は 1 ウェイト約 1.5MB。Service Worker キャッシュ対象）。
+- `globals.css` の base で `h1,h2,h3` の `font-family` を `'Zen Maru Gothic', 'Hiragino Maru Gothic
+ProN', sans-serif` に。本文は sans のまま（階層のコントラスト）。
+- 実画面確認（`dev:pglite` + Playwright）: ダッシュボード・レシピの見出しが丸ゴシックで描画。
+  品質ゲート type-check 5/5 / lint 0 error / web 327 テスト PASS。
+
+## Phase B 残（提案・統一）
 
 - **ダークモードの温かい配色化**: 現状 `.dark` は素の shadcn グレー（oklch 無彩色）のままで
   ライトの温かいパレットと不整合。ただし現状はテーマ切替 UI が無く `.dark` は到達不能のため、
   切替導入とセットで対応するか、後回し可（要判断）。
-- **見出しフォント（`--font-heading`）の差し替え**: 現状 `--font-heading` = `--font-sans`（Geist）で
-  見出しと本文が同一。温かみのある書体で階層を明確化（料理っぽさにも寄与）。
-  候補: 丸ゴシック系（日本語対応・親しみやすさ）。next/font での読み込みコストを確認して確定。
 
 ## Phase C（提案・料理っぽさ）
 
