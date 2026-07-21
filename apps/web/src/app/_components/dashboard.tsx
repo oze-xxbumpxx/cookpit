@@ -34,7 +34,7 @@ export function Dashboard({ mealPlan, expiringStocks }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-4">
-        <h1 className="text-lg font-semibold text-foreground">今週の状態</h1>
+        <h1 className="text-xl font-semibold text-foreground">今週の状態</h1>
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-foreground">今週の献立</h2>

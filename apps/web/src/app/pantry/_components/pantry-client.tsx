@@ -1,8 +1,10 @@
 'use client';
 
+import { EmptyState } from '@/app/_components/empty-state';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import type { PantryDto, StockDto } from '@cookpit/application';
+import { Refrigerator } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { groupStocksByLocation } from '../_utils/pantry-view';
 import { LocationGroup } from './location-group';
@@ -114,7 +116,7 @@ export function PantryClient({ pantry }: Props) {
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="truncate text-lg font-semibold text-foreground">在庫</h1>
+          <h1 className="truncate text-xl font-semibold text-foreground">在庫</h1>
           <div className="flex justify-end">
             <Button
               type="button"
@@ -136,7 +138,7 @@ export function PantryClient({ pantry }: Props) {
         )}
 
         {stocks.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">在庫がありません</p>
+          <EmptyState Icon={Refrigerator} message="在庫がありません" />
         ) : (
           <div className="flex flex-col gap-4">
             {groupedStocks.map((group) => (

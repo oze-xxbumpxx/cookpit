@@ -45,7 +45,7 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-foreground">買い物リスト</h1>
+          <h1 className="text-xl font-semibold text-foreground">買い物リスト</h1>
         </header>
 
         {errorMessage !== null && (

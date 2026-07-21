@@ -90,7 +90,7 @@ export function ProductEditFormClient({ product }: Props) {
               キャンセル
             </Button>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">商品を編集</h1>
+          <h1 className="text-xl font-semibold text-foreground">商品を編集</h1>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!canSubmit} className="h-9 px-4">
               {submitting ? '保存中' : '保存'}
