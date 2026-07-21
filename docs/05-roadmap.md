@@ -444,6 +444,19 @@ Unit A で確定済みだった未決事項（対応済み）:
 積み残し（改善バックログ候補）: 集約横断（ShoppingList / Pantry / MealPlan）の書き込みは UoW が
 無いため部分失敗を許容している（設計書 D-7）。将来トランザクション導入時に見直す。
 
+### Sprint 5 完了サマリ（2026-07-21）
+
+- **全 3 完了条件を達成・Pantry 在庫管理が機能的に完成**。Unit A（pantry-core・L3・Codex）+
+  Unit B（pantry-screens・L2・Codex）+ Unit C（在庫引き算連携・L2・メイン直接指揮）が完了し、
+  **MVP1 の機能ドメインが出揃った**（残るは Sprint 6 = 仕上げ・運用開始）。
+- **品質**: Codex 受け入れレビュー 3 本連続で差し戻しゼロ（Task 5 Should 1 / Task 2 Nice 1 /
+  Task 3 特記 1・いずれも Must 0）。手戻り 0。
+- **期間中の運用改善**: Obsidian Vault 化 / IMP-2026-025〜029 採用・適用（Codex 上流二重生成の解消・
+  ハーネス複雑度の簡素化・承認デッドロック解消）/ CI Dependency Audit 復旧（brace-expansion ReDoS）。
+- **残課題**（Sprint 6 or バックログ）: 027/028 ハーネス改善の実地確認 / L2 タスクの TASK メトリクス
+  経路強化 + IMP-2026-025 効果の定量締め / CI DATABASE_URL（Neon）設定 / 週次レビューの Routine 化。
+- レビュー詳細: [docs/sprints/sprint5-review-2026-07-21.md](sprints/sprint5-review-2026-07-21.md)。
+
 ## Sprint 6：仕上げ・運用開始（1週間）
 
 ### ゴール
