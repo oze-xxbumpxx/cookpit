@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { productCategoryChipClass } from '@/app/_utils/category-color';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -85,7 +86,12 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
         </header>
 
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-medium',
+              productCategoryChipClass(product.category),
+            )}
+          >
             {product.category}
           </span>
           <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
