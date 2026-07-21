@@ -44,6 +44,19 @@
 - `apps/web/src/app/_components/dashboard.tsx`: 表示コンポーネント（既存 `pantry-view` / `meal-plan-view` を再利用・+ RTL 5 件）。
 - 品質ゲート: type-check 5/5 / lint 0 error / web 324 テスト PASS。
 
+## 実画面確認（manual-browser-verify・2026-07-21）
+
+`dev:pglite` + Playwright（Chromium 同梱）でリモート live 確認。**FAIL 0**。
+
+- **populated 状態（22 項目 → 17 チェック）全 PASS**: 今週の献立カード（週レンジ `7/18（土）〜7/24（金）`・
+  状態バッジ `買い物中`・`レシピ 1 品`・カード href `/meal-plans`）/ 賞味期限リスト（期限切れ 07-20 →
+  期限内 07-22 の昇順・閾値外 07-31 と期限 null を除外・`M/Dまで` 表記・保存場所ラベル）/
+  クイックリンク 5 件と href・実遷移（在庫 → `/pantry`）。
+- **empty 状態（5 項目）全 PASS**: 献立なしメッセージ + 作成 CTA（href `/meal-plans`）/ 在庫空メッセージ /
+  クイックリンク 5 件。
+- レイアウト・トークン（温かいキッチン）崩れなし（スクリーンショット確認）。BLOCKED 項目なし
+  （PGlite 経路で DB 込み live 確認が成立。PWA/Service Worker はダッシュボードのスコープ外）。
+
 ## 設計判断（先例準拠・D-x）
 
 - **D-1**: Server Component から repository ファクトリ（`@/server/repositories`）経由で UseCase を直接呼ぶ
