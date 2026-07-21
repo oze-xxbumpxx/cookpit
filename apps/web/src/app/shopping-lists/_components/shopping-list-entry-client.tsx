@@ -56,12 +56,12 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
 
         {mealPlan === null ? (
           <section className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">今週の献立がまだありません</p>
+            <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
             <Link
               href="/meal-plans"
               className={cn(buttonVariants({ variant: 'default' }), 'h-11 px-6')}
             >
-              献立をはじめる
+              今週の献立を作る
             </Link>
           </section>
         ) : (

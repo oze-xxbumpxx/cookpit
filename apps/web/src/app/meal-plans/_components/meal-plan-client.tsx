@@ -146,7 +146,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               disabled={submitting}
               className="h-11 px-6"
             >
-              {submitting ? '作成中' : '今週の献立をはじめる'}
+              {submitting ? '作成中' : '今週の献立を作る'}
             </Button>
           </section>
         ) : (

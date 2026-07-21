@@ -101,7 +101,7 @@ describe('MealPlanClient', () => {
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
     expect(screen.getByText('今週の献立はまだありません')).toBeDefined();
-    expect(screen.getByRole('button', { name: '今週の献立をはじめる' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '今週の献立を作る' })).toBeDefined();
   });
 
   it('WC-M-02: 作成ボタン押下で POST が呼ばれ、成功で router.refresh される', async () => {
@@ -109,7 +109,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockResolvedValue({ ok: true });
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(postMealPlan).toHaveBeenCalledWith({ json: { weekIdentifier: CURRENT_WEEK } });
@@ -122,7 +122,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockResolvedValue({ ok: false });
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
@@ -135,7 +135,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockRejectedValue(new Error('network'));
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
@@ -240,7 +240,7 @@ describe('MealPlanClient', () => {
     );
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '作成中' }).hasAttribute('disabled')).toBe(true);
