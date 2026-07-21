@@ -38,7 +38,7 @@ export function StockRow({ stock, submitting, onConsume, onDiscard }: Props) {
           onClick={() => onDiscard(stock.id)}
           disabled={submitting}
         >
-          捨てた
+          廃棄
         </Button>
       </div>
     </li>

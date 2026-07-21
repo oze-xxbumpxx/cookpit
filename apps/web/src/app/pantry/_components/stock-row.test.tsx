@@ -67,13 +67,13 @@ describe('StockRow', () => {
     expect(onConsume).toHaveBeenCalledWith(stock.id);
   });
 
-  it('SR-05: 「捨てた」click で onDiscard に stock.id が渡される', async () => {
+  it('SR-05: 「廃棄」click で onDiscard に stock.id が渡される', async () => {
     const user = userEvent.setup();
     const onDiscard = vi.fn();
     const stock = createStockDto({ id: '10000000-0000-4000-8000-000000000005' });
     renderRow({ stock, onDiscard });
 
-    await user.click(screen.getByRole('button', { name: '捨てた' }));
+    await user.click(screen.getByRole('button', { name: '廃棄' }));
 
     expect(onDiscard).toHaveBeenCalledWith(stock.id);
   });
@@ -82,7 +82,7 @@ describe('StockRow', () => {
     renderRow({ submitting: true });
 
     expect(screen.getByRole('button', { name: '使った' }).hasAttribute('disabled')).toBe(true);
-    expect(screen.getByRole('button', { name: '捨てた' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: '廃棄' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('SR-07: 確認 UI を挟まず各コールバックが即座に呼ばれる', async () => {
@@ -92,7 +92,7 @@ describe('StockRow', () => {
     renderRow({ onConsume, onDiscard });
 
     await user.click(screen.getByRole('button', { name: '使った' }));
-    await user.click(screen.getByRole('button', { name: '捨てた' }));
+    await user.click(screen.getByRole('button', { name: '廃棄' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onConsume).toHaveBeenCalledTimes(1);

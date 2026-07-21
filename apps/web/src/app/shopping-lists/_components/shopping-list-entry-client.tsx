@@ -44,20 +44,8 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start">
-            <Link
-              href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              戻る
-            </Link>
-          </div>
+        <header className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold text-foreground">買い物リスト</h1>
-          <div />
         </header>
 
         {errorMessage !== null && (

@@ -127,4 +127,8 @@
   html {
     @apply font-sans;
   }
+  /* 固定のボトムナビに隠れないよう、全画面の下端に余白を確保する */
+  main {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
 }

@@ -137,10 +137,9 @@ describe('ShoppingListEntryClient', () => {
     resolvePost({ ok: true, json: async () => ({ id: 'x' }) });
   });
 
-  it('EC-08: ヘッダーに「戻る」導線とタイトルが表示される', () => {
+  it('EC-08: ヘッダーにタイトルが表示される（画面間の導線はボトムナビ）', () => {
     render(<ShoppingListEntryClient mealPlan={createMealPlanDto()} />);
 
-    expect(screen.getByRole('link', { name: '戻る' }).getAttribute('href')).toBe('/meal-plans');
     expect(screen.getByRole('heading', { name: '買い物リスト' })).toBeDefined();
   });
 });
