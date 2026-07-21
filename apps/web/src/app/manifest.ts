@@ -17,8 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#faf6f0',
     orientation: 'portrait',
     icons: [
-      // アイコンはクリーム地 × テラコッタ（brand primary）の湯気立つ丼。フルブリード
-      // （角丸・縁まで到達）で中央の丼+湯気は maskable セーフゾーン内に収まる。any / maskable
+      // アイコンはクリーム地 × テラコッタ（brand primary）の湯気立つ両手鍋。フルブリード
+      // （角丸・縁まで到達）で中央の鍋+湯気は maskable セーフゾーン内に収まる。any / maskable
       // 両文脈で使えるよう、同一アセットを両 purpose で宣言する（Next の型は purpose 単一値のみ
       // 許可のため別エントリ化）。ソースは public/icons/icon.svg。
       {

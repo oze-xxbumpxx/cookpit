@@ -8,13 +8,15 @@
   <rect width="512" height="512" rx="114" fill="url(#bg)"/>
   <!-- steam -->
   <g fill="none" stroke="#C64B27" stroke-width="20" stroke-linecap="round">
-    <path d="M204 156 q-24 -28 0 -58"/>
-    <path d="M256 164 q-24 -28 0 -58"/>
-    <path d="M308 156 q-24 -28 0 -58"/>
+    <path d="M206 150 q-24 -28 0 -58"/>
+    <path d="M256 158 q-24 -28 0 -58"/>
+    <path d="M306 150 q-24 -28 0 -58"/>
   </g>
-  <!-- bowl: flat rim + shallow rounded body (symmetric) -->
-  <path d="M104 262 h304 a152 122 0 0 1 -304 0 z" fill="#C64B27"/>
-  <!-- rim highlight (cream) to suggest the opening -->
-  <ellipse cx="256" cy="262" rx="152" ry="24" fill="#F6EDDF"/>
-  <path d="M104 262 a152 24 0 0 0 304 0" fill="#C64B27"/>
+  <!-- side handles (symmetric, clearly protruding) -->
+  <rect x="98"  y="282" width="52" height="30" rx="15" fill="#C64B27"/>
+  <rect x="362" y="282" width="52" height="30" rx="15" fill="#C64B27"/>
+  <!-- pot body -->
+  <rect x="140" y="252" width="232" height="132" rx="30" fill="#C64B27"/>
+  <!-- rim opening (cream) -->
+  <rect x="164" y="266" width="184" height="20" rx="10" fill="#F6EDDF"/>
 </svg>
