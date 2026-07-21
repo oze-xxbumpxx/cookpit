@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { CalendarDays, ChefHat, House, Refrigerator, ShoppingCart } from 'lucide-react';
+import { CalendarDays, ChefHat, House, Refrigerator, ShoppingCart, Tag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,6 +18,7 @@ const TABS: Tab[] = [
   { href: '/shopping-lists', label: '買い物', Icon: ShoppingCart },
   { href: '/pantry', label: '在庫', Icon: Refrigerator },
   { href: '/recipes', label: 'レシピ', Icon: ChefHat },
+  { href: '/products', label: '商品', Icon: Tag },
 ];
 
 function isActive(pathname: string, href: string): boolean {

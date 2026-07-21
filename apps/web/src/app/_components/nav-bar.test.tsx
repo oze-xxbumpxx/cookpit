@@ -22,7 +22,7 @@ describe('NavBar', () => {
     cleanup();
   });
 
-  it('5 つのタブを href つきで表示する', () => {
+  it('6 つのタブを href つきで表示する', () => {
     state.pathname = '/';
     render(<NavBar />);
 
@@ -33,6 +33,7 @@ describe('NavBar', () => {
     );
     expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
     expect(screen.getByRole('link', { name: 'レシピ' }).getAttribute('href')).toBe('/recipes');
+    expect(screen.getByRole('link', { name: '商品' }).getAttribute('href')).toBe('/products');
   });
 
   it('現在の画面のタブに aria-current=page が付く', () => {
@@ -48,6 +49,13 @@ describe('NavBar', () => {
     render(<NavBar />);
 
     expect(screen.getByRole('link', { name: 'レシピ' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('商品ページで商品タブがアクティブ', () => {
+    state.pathname = '/products/xyz';
+    render(<NavBar />);
+
+    expect(screen.getByRole('link', { name: '商品' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('ホームは完全一致のときのみアクティブ', () => {
