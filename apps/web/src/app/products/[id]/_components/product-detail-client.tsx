@@ -69,7 +69,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-lg font-semibold text-foreground">
+          <h1 className="truncate text-center text-xl font-semibold text-foreground">
             {product.name}
           </h1>
           <Button

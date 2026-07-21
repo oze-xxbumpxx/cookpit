@@ -4,6 +4,10 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/application';
+import { EmptyState } from '@/app/_components/empty-state';
+import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
+import { MEAL_PLAN_STATUS_LABELS } from '@/app/_utils/dashboard-view';
+import { Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -119,7 +123,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-foreground">今週の献立</h1>
+          <h1 className="text-xl font-semibold text-foreground">今週の献立</h1>
           <Link
             href="/meal-plans/history"
             className={cn(
@@ -151,9 +155,19 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
           </section>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground">
-              {formatWeekRange(mealPlan.weekIdentifier)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground">
+                {formatWeekRange(mealPlan.weekIdentifier)}
+              </p>
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-xs font-medium',
+                  mealPlanStatusChipClass(mealPlan.status),
+                )}
+              >
+                {MEAL_PLAN_STATUS_LABELS[mealPlan.status]}
+              </span>
+            </div>
 
             <Button
               type="button"
@@ -172,9 +186,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
 
             <section aria-label="献立" className="flex flex-col gap-2">
               {mealPlan.plannedRecipes.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  レシピがまだ追加されていません
-                </p>
+                <EmptyState Icon={Utensils} message="レシピがまだ追加されていません" />
               ) : (
                 <ul className="flex flex-col gap-2">
                   {mealPlan.plannedRecipes.map((plannedRecipe) => (
