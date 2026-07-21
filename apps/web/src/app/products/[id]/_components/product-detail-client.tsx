@@ -192,7 +192,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                 削除すると元に戻せません。価格履歴も削除されます。
               </AlertDialogDescription>
               {deleteErrorMessage !== null && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                   {deleteErrorMessage}
                 </p>
               )}

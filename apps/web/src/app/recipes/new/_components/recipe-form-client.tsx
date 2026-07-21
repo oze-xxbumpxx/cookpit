@@ -119,7 +119,7 @@ export function RecipeFormClient() {
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -148,7 +148,7 @@ export function RecipeFormClient() {
                 className="h-11 rounded-xl bg-card"
               />
               {fieldErrors.baseServings !== null && (
-                <p id={baseServingsErrorId} className="text-xs text-red-600">
+                <p id={baseServingsErrorId} className="text-xs text-destructive">
                   {fieldErrors.baseServings}
                 </p>
               )}

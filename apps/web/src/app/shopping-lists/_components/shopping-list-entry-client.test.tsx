@@ -52,8 +52,8 @@ describe('ShoppingListEntryClient', () => {
   it('EC-01: mealPlan なしのとき空状態と /meal-plans への導線が表示される', () => {
     render(<ShoppingListEntryClient mealPlan={null} />);
 
-    expect(screen.getByText('今週の献立がまだありません')).toBeDefined();
-    const link = screen.getByRole('link', { name: '献立をはじめる' });
+    expect(screen.getByText('今週の献立はまだありません')).toBeDefined();
+    const link = screen.getByRole('link', { name: '今週の献立を作る' });
     expect(link.getAttribute('href')).toBe('/meal-plans');
     expect(screen.queryByRole('button', { name: '買い物リストを作る' })).toBeNull();
     expect(screen.queryByRole('button', { name: '買い物リストを開く' })).toBeNull();
@@ -137,10 +137,9 @@ describe('ShoppingListEntryClient', () => {
     resolvePost({ ok: true, json: async () => ({ id: 'x' }) });
   });
 
-  it('EC-08: ヘッダーに「戻る」導線とタイトルが表示される', () => {
+  it('EC-08: ヘッダーにタイトルが表示される（画面間の導線はボトムナビ）', () => {
     render(<ShoppingListEntryClient mealPlan={createMealPlanDto()} />);
 
-    expect(screen.getByRole('link', { name: '戻る' }).getAttribute('href')).toBe('/meal-plans');
     expect(screen.getByRole('heading', { name: '買い物リスト' })).toBeDefined();
   });
 });

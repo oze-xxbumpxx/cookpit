@@ -118,52 +118,21 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start gap-1">
-            <Link
-              href="/recipes"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              レシピ
-            </Link>
-            <Link
-              href="/products"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              商品
-            </Link>
-          </div>
+        <header className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold text-foreground">今週の献立</h1>
-          <div className="flex justify-end gap-1">
-            <Link
-              href="/meal-plans/history"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              履歴
-            </Link>
-            <Link
-              href="/pantry"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              在庫
-            </Link>
-          </div>
+          <Link
+            href="/meal-plans/history"
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'h-9 px-2 text-foreground',
+            )}
+          >
+            履歴
+          </Link>
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -177,7 +146,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               disabled={submitting}
               className="h-11 px-6"
             >
-              {submitting ? '作成中' : '今週の献立をはじめる'}
+              {submitting ? '作成中' : '今週の献立を作る'}
             </Button>
           </section>
         ) : (
@@ -196,7 +165,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             </Button>
 
             {shoppingListErrorMessage !== null && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {shoppingListErrorMessage}
               </p>
             )}

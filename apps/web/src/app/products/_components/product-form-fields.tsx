@@ -114,7 +114,7 @@ export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
         <label htmlFor={nameId} className="text-sm font-medium text-foreground">
-          商品名 <span className="text-xs font-normal text-red-600">必須</span>
+          商品名 <span className="text-xs font-normal text-destructive">必須</span>
         </label>
         <Input
           id={nameId}
@@ -126,7 +126,7 @@ export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
           className="h-11 rounded-xl bg-card"
         />
         {fieldErrors.name !== null && (
-          <p id={nameErrorId} className="text-xs text-red-600">
+          <p id={nameErrorId} className="text-xs text-destructive">
             {fieldErrors.name}
           </p>
         )}

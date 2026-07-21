@@ -46,34 +46,12 @@ export function ProductListClient({ initialProducts }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start gap-1">
-            <Link
-              href="/recipes"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              レシピ
-            </Link>
-            <Link
-              href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              献立
-            </Link>
-          </div>
+        <header className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold text-foreground">商品</h1>
-          <div className="flex justify-end">
-            <Link href="/products/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
-              <Plus className="size-3.5" aria-hidden="true" />
-              追加
-            </Link>
-          </div>
+          <Link href="/products/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            追加
+          </Link>
         </header>
 
         <div>

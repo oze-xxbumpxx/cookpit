@@ -11,7 +11,7 @@ interface Props {
 
 export function StockRow({ stock, submitting, onConsume, onDiscard }: Props) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+    <li className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="truncate text-sm font-medium text-foreground">{stock.displayName}</p>
         <p className="text-xs text-muted-foreground">
@@ -38,7 +38,7 @@ export function StockRow({ stock, submitting, onConsume, onDiscard }: Props) {
           onClick={() => onDiscard(stock.id)}
           disabled={submitting}
         >
-          捨てた
+          廃棄
         </Button>
       </div>
     </li>

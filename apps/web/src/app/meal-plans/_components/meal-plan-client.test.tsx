@@ -101,7 +101,7 @@ describe('MealPlanClient', () => {
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
     expect(screen.getByText('今週の献立はまだありません')).toBeDefined();
-    expect(screen.getByRole('button', { name: '今週の献立をはじめる' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '今週の献立を作る' })).toBeDefined();
   });
 
   it('WC-M-02: 作成ボタン押下で POST が呼ばれ、成功で router.refresh される', async () => {
@@ -109,7 +109,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockResolvedValue({ ok: true });
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(postMealPlan).toHaveBeenCalledWith({ json: { weekIdentifier: CURRENT_WEEK } });
@@ -122,7 +122,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockResolvedValue({ ok: false });
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
@@ -135,7 +135,7 @@ describe('MealPlanClient', () => {
     postMealPlan.mockRejectedValue(new Error('network'));
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
@@ -240,7 +240,7 @@ describe('MealPlanClient', () => {
     );
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    await user.click(screen.getByRole('button', { name: '今週の献立をはじめる' }));
+    await user.click(screen.getByRole('button', { name: '今週の献立を作る' }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '作成中' }).hasAttribute('disabled')).toBe(true);
@@ -249,11 +249,9 @@ describe('MealPlanClient', () => {
     resolvePost({ ok: true });
   });
 
-  it('WC-M-11: ヘッダーの導線リンクが正しい href を持つ', () => {
+  it('WC-M-11: ヘッダーの履歴リンクが正しい href を持つ', () => {
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
-    expect(screen.getByRole('link', { name: 'レシピ' }).getAttribute('href')).toBe('/recipes');
-    expect(screen.getByRole('link', { name: '商品' }).getAttribute('href')).toBe('/products');
     expect(screen.getByRole('link', { name: '履歴' }).getAttribute('href')).toBe(
       '/meal-plans/history',
     );
@@ -319,34 +317,11 @@ describe('MealPlanClient', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('MN-01: mealPlan の有無に関わらず在庫リンクを表示する', () => {
-    const { rerender } = render(
-      <MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />,
-    );
-
-    expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
-
-    rerender(
-      <MealPlanClient
-        mealPlan={createMealPlanDto()}
-        recipes={[]}
-        currentWeekIdentifier={CURRENT_WEEK}
-      />,
-    );
-
-    expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
-  });
-
-  it('MN-02: 既存導線の href と表示順を維持する', () => {
+  it('MN-02: ヘッダーの導線は履歴のみ（他はボトムナビへ移設）', () => {
     render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
 
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['レシピ', '商品', '履歴', '在庫']);
-    expect(links.map((link) => link.getAttribute('href'))).toEqual([
-      '/recipes',
-      '/products',
-      '/meal-plans/history',
-      '/pantry',
-    ]);
+    expect(links.map((link) => link.textContent)).toEqual(['履歴']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/meal-plans/history']);
   });
 });
