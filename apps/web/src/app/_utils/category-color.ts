@@ -30,6 +30,15 @@ const PRODUCT_CATEGORY_CHIP: Record<string, string> = {
   その他: CHIP.neutral,
 };
 
+// 献立ステータスの進行段階を色で示す（準備→買い物→調理→消費→完了）。
+const MEAL_PLAN_STATUS_CHIP: Record<string, string> = {
+  draft: CHIP.neutral,
+  shopping: CHIP.amber,
+  cooking: CHIP.rose,
+  consuming: CHIP.olive,
+  completed: CHIP.blue,
+};
+
 /** レシピタグのチップ配色クラスを返す（未知タグは neutral）。 */
 export function recipeTagChipClass(tag: string): string {
   return RECIPE_TAG_CHIP[tag] ?? CHIP.neutral;
@@ -38,4 +47,9 @@ export function recipeTagChipClass(tag: string): string {
 /** 商品カテゴリのチップ配色クラスを返す（未知カテゴリは neutral）。 */
 export function productCategoryChipClass(category: string): string {
   return PRODUCT_CATEGORY_CHIP[category] ?? CHIP.neutral;
+}
+
+/** 献立ステータスのチップ配色クラスを返す（未知ステータスは neutral）。 */
+export function mealPlanStatusChipClass(status: string): string {
+  return MEAL_PLAN_STATUS_CHIP[status] ?? CHIP.neutral;
 }

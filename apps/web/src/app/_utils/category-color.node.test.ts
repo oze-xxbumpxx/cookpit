@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { productCategoryChipClass, recipeTagChipClass } from './category-color';
+import {
+  mealPlanStatusChipClass,
+  productCategoryChipClass,
+  recipeTagChipClass,
+} from './category-color';
 
 describe('recipeTagChipClass', () => {
   it('既知タグは固定の配色クラスを返す', () => {
@@ -23,5 +27,19 @@ describe('productCategoryChipClass', () => {
   it('その他・未知カテゴリは neutral', () => {
     expect(productCategoryChipClass('その他')).toBe('bg-secondary text-secondary-foreground');
     expect(productCategoryChipClass('未知')).toBe('bg-secondary text-secondary-foreground');
+  });
+});
+
+describe('mealPlanStatusChipClass', () => {
+  it('進行段階ごとに配色クラスを返す', () => {
+    expect(mealPlanStatusChipClass('draft')).toBe('bg-secondary text-secondary-foreground');
+    expect(mealPlanStatusChipClass('shopping')).toContain('bg-[#F4E8D2]');
+    expect(mealPlanStatusChipClass('cooking')).toContain('bg-[#F3E2DC]');
+    expect(mealPlanStatusChipClass('consuming')).toContain('bg-[#E7EEDD]');
+    expect(mealPlanStatusChipClass('completed')).toContain('bg-[#E2E8F1]');
+  });
+
+  it('未知ステータスは neutral', () => {
+    expect(mealPlanStatusChipClass('unknown')).toBe('bg-secondary text-secondary-foreground');
   });
 });

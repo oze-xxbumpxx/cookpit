@@ -1,4 +1,5 @@
 import type { MealPlanDto, StockDto } from '@cookpit/application';
+import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -56,7 +57,12 @@ export function Dashboard({ mealPlan, expiringStocks }: Props) {
                 {formatWeekRange(mealPlan.weekIdentifier)}
               </span>
               <span className="flex items-center gap-2">
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-xs font-medium',
+                    mealPlanStatusChipClass(mealPlan.status),
+                  )}
+                >
                   {MEAL_PLAN_STATUS_LABELS[mealPlan.status]}
                 </span>
                 <span className="text-sm text-muted-foreground">
