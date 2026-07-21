@@ -17,7 +17,10 @@ export const metadata: Metadata = {
   // iOS ホーム画面（apple-touch-icon）とブラウザタブのアイコンを既存 PWA アイコンに解決させる。
   // manifest の icons は Android 側。iOS はこの apple-touch-icon を参照する。
   icons: {
-    icon: '/icons/icon-192x192.png',
+    icon: [
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+    ],
     apple: '/icons/icon-192x192.png',
   },
   appleWebApp: {

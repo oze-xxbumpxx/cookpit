@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8F0E4"/>
+      <stop offset="1" stop-color="#EEE1CF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <!-- steam -->
+  <g fill="none" stroke="#C64B27" stroke-width="20" stroke-linecap="round">
+    <path d="M204 156 q-24 -28 0 -58"/>
+    <path d="M256 164 q-24 -28 0 -58"/>
+    <path d="M308 156 q-24 -28 0 -58"/>
+  </g>
+  <!-- bowl: flat rim + shallow rounded body (symmetric) -->
+  <path d="M104 262 h304 a152 122 0 0 1 -304 0 z" fill="#C64B27"/>
+  <!-- rim highlight (cream) to suggest the opening -->
+  <ellipse cx="256" cy="262" rx="152" ry="24" fill="#F6EDDF"/>
+  <path d="M104 262 a152 24 0 0 0 304 0" fill="#C64B27"/>
+</svg>
