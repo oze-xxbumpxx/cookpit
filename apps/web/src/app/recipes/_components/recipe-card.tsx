@@ -15,7 +15,7 @@ export function RecipeCard({ recipe }: Props) {
     <Link
       href={`/recipes/${recipe.id}`}
       aria-label={`${recipe.name}の詳細を見る`}
-      className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-all hover:bg-muted hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-all hover:bg-muted hover:shadow active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div
         className="flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground"
