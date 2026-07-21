@@ -1,9 +1,19 @@
-import type { MealPlanDto, StockDto } from '@cookpit/application';
+import type { MealPlanDto, StockDto, StorageLocation } from '@cookpit/application';
 import { ThemeToggle } from '@/app/_components/theme-toggle';
-import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
+import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CalendarDays, ChefHat, Refrigerator, ShoppingCart, Tag } from 'lucide-react';
+import {
+  CalendarDays,
+  ChefHat,
+  CircleHelp,
+  Clock,
+  Package,
+  Refrigerator,
+  ShoppingCart,
+  Snowflake,
+  Tag,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -12,11 +22,17 @@ import {
   formatExpiresAt,
 } from '../pantry/_utils/pantry-view';
 import { formatWeekRange } from '../meal-plans/_utils/meal-plan-view';
-import { MEAL_PLAN_STATUS_LABELS } from '../_utils/dashboard-view';
+import {
+  MEAL_PLAN_STATUS_LABELS,
+  formatExpiryUrgencyLabel,
+  getExpiryRemainingDays,
+  getExpiryUrgency,
+} from '../_utils/dashboard-view';
 
 interface Props {
   mealPlan: MealPlanDto | null;
   expiringStocks: StockDto[];
+  asOf: Date;
 }
 
 const QUICK_LINKS: { href: string; label: string; Icon: LucideIcon }[] = [
@@ -27,13 +43,23 @@ const QUICK_LINKS: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: '/products', label: '商品', Icon: Tag },
 ];
 
+const LOCATION_ICONS: Record<StorageLocation, LucideIcon> = {
+  fridge: Refrigerator,
+  freezer: Snowflake,
+  pantry: Package,
+};
+
 function locationLabel(stock: StockDto): string {
   return stock.storedLocation === null
     ? UNSET_LOCATION_LABEL
     : LOCATION_LABELS[stock.storedLocation];
 }
 
-export function Dashboard({ mealPlan, expiringStocks }: Props) {
+function locationIcon(stock: StockDto): LucideIcon {
+  return stock.storedLocation === null ? CircleHelp : LOCATION_ICONS[stock.storedLocation];
+}
+
+export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-4">
@@ -81,7 +107,15 @@ export function Dashboard({ mealPlan, expiringStocks }: Props) {
 
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">賞味期限が近い在庫</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
+              賞味期限が近い在庫
+              {expiringStocks.length > 0 && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                  {expiringStocks.length}
+                </span>
+              )}
+            </h2>
             <Link href="/pantry" className="text-xs text-muted-foreground underline">
               在庫を見る
             </Link>
@@ -92,20 +126,40 @@ export function Dashboard({ mealPlan, expiringStocks }: Props) {
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {expiringStocks.map((stock) => (
-                <li
-                  key={stock.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2"
-                >
-                  <span className="flex flex-col">
-                    <span className="text-sm font-medium text-foreground">{stock.displayName}</span>
-                    <span className="text-xs text-muted-foreground">{locationLabel(stock)}</span>
-                  </span>
-                  <span className="text-sm font-medium text-foreground">
-                    {formatExpiresAt(stock.expiresAt ?? '')}
-                  </span>
-                </li>
-              ))}
+              {expiringStocks.map((stock) => {
+                const Icon = locationIcon(stock);
+                const remainingDays = getExpiryRemainingDays(stock.expiresAt ?? '', asOf);
+                const urgency = getExpiryUrgency(remainingDays);
+                return (
+                  <li
+                    key={stock.id}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+                    </span>
+                    <span className="flex flex-1 flex-col">
+                      <span className="text-sm font-medium text-foreground">
+                        {stock.displayName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{locationLabel(stock)}</span>
+                    </span>
+                    <span className="flex flex-col items-end gap-1">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-xs font-medium',
+                          expiryUrgencyChipClass(urgency),
+                        )}
+                      >
+                        {formatExpiryUrgencyLabel(remainingDays)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatExpiresAt(stock.expiresAt ?? '')}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

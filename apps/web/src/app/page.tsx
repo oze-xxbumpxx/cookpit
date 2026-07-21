@@ -16,5 +16,5 @@ export default async function Home() {
 
   const expiringStocks = selectExpiringStocks(pantry.stocks, now, EXPIRY_WITHIN_DAYS);
 
-  return <Dashboard mealPlan={mealPlan} expiringStocks={expiringStocks} />;
+  return <Dashboard mealPlan={mealPlan} expiringStocks={expiringStocks} asOf={now} />;
 }

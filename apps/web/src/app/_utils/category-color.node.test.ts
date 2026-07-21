@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  expiryUrgencyChipClass,
   mealPlanStatusChipClass,
   productCategoryChipClass,
   recipeTagChipClass,
@@ -41,5 +42,31 @@ describe('mealPlanStatusChipClass', () => {
 
   it('未知ステータスは neutral', () => {
     expect(mealPlanStatusChipClass('unknown')).toBe('bg-secondary text-secondary-foreground');
+  });
+});
+
+describe('expiryUrgencyChipClass', () => {
+  it('EC-01: overdue は赤系の配色クラスを返す', () => {
+    const result = expiryUrgencyChipClass('overdue');
+    expect(result).toContain('bg-destructive/10');
+    expect(result).toContain('text-destructive');
+  });
+
+  it('EC-02: critical はオレンジ系（accent）の配色クラスを返す', () => {
+    const result = expiryUrgencyChipClass('critical');
+    expect(result).toContain('bg-accent');
+    expect(result).toContain('text-accent-foreground');
+  });
+
+  it('EC-03: soon は amber（黄）の配色クラスを返す', () => {
+    expect(expiryUrgencyChipClass('soon')).toBe('bg-[#F4E8D2] text-[#785A1E]');
+  });
+
+  it('EC-04: critical は肉カテゴリの rose と混同しない', () => {
+    expect(expiryUrgencyChipClass('critical')).not.toBe(productCategoryChipClass('肉'));
+  });
+
+  it('EC-05: 未知値は neutral にフォールバックする', () => {
+    expect(expiryUrgencyChipClass('unknown')).toBe('bg-secondary text-secondary-foreground');
   });
 });

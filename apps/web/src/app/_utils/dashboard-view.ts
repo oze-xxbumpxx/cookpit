@@ -38,3 +38,42 @@ export function selectExpiringStocks(
     .filter((stock) => parseExpiryDate(stock.expiresAt) <= threshold)
     .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
 }
+
+export type ExpiryUrgency = 'overdue' | 'critical' | 'soon';
+
+/**
+ * `asOf` から `expiresAt` までの残日数を返す（負値は期限切れ日数）。
+ * `selectExpiringStocks` と同一のローカル日付規約（ローカル 0 時基準）に従う。
+ */
+export function getExpiryRemainingDays(expiresAt: string, asOf: Date): number {
+  const diff = parseExpiryDate(expiresAt).getTime() - toLocalMidnight(asOf).getTime();
+  return Math.round(diff / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * 残日数を 3 段階の緊急度に分類する（P-4 の閾値）。
+ * `selectExpiringStocks` の 3 日以内フィルタ済みの値を渡す前提のため、4 日以上も `'soon'` に収束する。
+ */
+export function getExpiryUrgency(remainingDays: number): ExpiryUrgency {
+  if (remainingDays < 0) {
+    return 'overdue';
+  }
+  if (remainingDays <= 1) {
+    return 'critical';
+  }
+  return 'soon';
+}
+
+/** 残日数を人間可読な文言に変換する（P-6 Option B）。 */
+export function formatExpiryUrgencyLabel(remainingDays: number): string {
+  if (remainingDays < 0) {
+    return '期限切れ';
+  }
+  if (remainingDays === 0) {
+    return '本日まで';
+  }
+  if (remainingDays === 1) {
+    return '明日まで';
+  }
+  return `あと${remainingDays}日`;
+}
