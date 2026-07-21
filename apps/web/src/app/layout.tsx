@@ -14,6 +14,12 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: 'Cookpit',
   description: '毎週の作り置き運用を支える献立・買い物・在庫管理アプリ',
+  // iOS ホーム画面（apple-touch-icon）とブラウザタブのアイコンを既存 PWA アイコンに解決させる。
+  // manifest の icons は Android 側。iOS はこの apple-touch-icon を参照する。
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
