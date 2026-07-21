@@ -85,7 +85,12 @@ export function ProductFormClient() {
           </p>
         )}
 
-        <ProductFormFields value={value} fieldErrors={fieldErrors} onChange={setValue} />
+        <ProductFormFields
+          value={value}
+          fieldErrors={fieldErrors}
+          onChange={setValue}
+          autoFocusName
+        />
       </form>
     </main>
   );

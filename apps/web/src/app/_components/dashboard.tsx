@@ -1,4 +1,5 @@
 import type { MealPlanDto, StockDto } from '@cookpit/application';
+import { ThemeToggle } from '@/app/_components/theme-toggle';
 import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,7 +37,10 @@ export function Dashboard({ mealPlan, expiringStocks }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-4">
-        <h1 className="text-xl font-semibold text-foreground">今週の状態</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-foreground">今週の状態</h1>
+          <ThemeToggle />
+        </div>
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-foreground">今週の献立</h2>

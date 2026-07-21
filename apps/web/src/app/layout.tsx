@@ -31,9 +31,10 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-// OS のダーク設定に追従して .dark を付与する（描画前に実行しちらつきを防ぐ）。
+// 保存済みテーマ（light/dark/system）を尊重しつつ、未設定/system は OS 設定に追従する。
+// 描画前に実行してちらつきを防ぐ。
 const themeScript =
-  "try{var m=window.matchMedia('(prefers-color-scheme: dark)');var a=function(){document.documentElement.classList.toggle('dark',m.matches)};a();m.addEventListener('change',a)}catch(e){}";
+  "try{var t=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)');var a=function(){var d=t==='dark'||((t===null||t==='system')&&m.matches);document.documentElement.classList.toggle('dark',d)};a();m.addEventListener('change',function(){if(t===null||t==='system'){a()}})}catch(e){}";
 
 export default function RootLayout({
   children,
