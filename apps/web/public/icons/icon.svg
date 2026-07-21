@@ -1,22 +1,66 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#F8F0E4"/>
-      <stop offset="1" stop-color="#EEE1CF"/>
+      <stop offset="0" stop-color="#FBF5EA"/>
+      <stop offset="1" stop-color="#EDDFC9"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D65C33"/>
+      <stop offset="1" stop-color="#A83A1B"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E06B41"/>
+      <stop offset="1" stop-color="#C74C27"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BE4622"/>
+      <stop offset="1" stop-color="#9C3418"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C64B27" stop-opacity="0"/>
+      <stop offset="1" stop-color="#C64B27" stop-opacity="0.75"/>
+    </linearGradient>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#7A3218" flood-opacity="0.28"/>
+    </filter>
+    <filter id="groundBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
   </defs>
+
+  <!-- background -->
   <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="114" fill="url(#glow)"/>
+
   <!-- steam -->
-  <g fill="none" stroke="#C64B27" stroke-width="20" stroke-linecap="round">
-    <path d="M206 150 q-24 -28 0 -58"/>
-    <path d="M256 158 q-24 -28 0 -58"/>
-    <path d="M306 150 q-24 -28 0 -58"/>
+  <g fill="none" stroke="url(#steam)" stroke-width="16" stroke-linecap="round">
+    <path d="M224 176 q-22 -26 0 -52 q22 -26 0 -52"/>
+    <path d="M288 176 q22 -26 0 -52 q-22 -26 0 -52"/>
   </g>
-  <!-- side handles (symmetric, clearly protruding) -->
-  <rect x="98"  y="282" width="52" height="30" rx="15" fill="#C64B27"/>
-  <rect x="362" y="282" width="52" height="30" rx="15" fill="#C64B27"/>
-  <!-- pot body -->
-  <rect x="140" y="252" width="232" height="132" rx="30" fill="#C64B27"/>
-  <!-- rim opening (cream) -->
-  <rect x="164" y="266" width="184" height="20" rx="10" fill="#F6EDDF"/>
+
+  <!-- grounding shadow -->
+  <ellipse cx="256" cy="398" rx="150" ry="26" fill="#7A3218" opacity="0.20" filter="url(#groundBlur)"/>
+
+  <g filter="url(#softShadow)">
+    <!-- side handles (behind body) -->
+    <rect x="92"  y="286" width="58" height="34" rx="17" fill="url(#handle)"/>
+    <rect x="362" y="286" width="58" height="34" rx="17" fill="url(#handle)"/>
+
+    <!-- pot body -->
+    <path d="M150 268 h212 a16 16 0 0 1 16 16 v40 a40 40 0 0 1 -40 40 h-180 a40 40 0 0 1 -40 -40 v-40 a16 16 0 0 1 16 -16 z" fill="url(#body)"/>
+
+    <!-- lid -->
+    <rect x="140" y="240" width="232" height="34" rx="17" fill="url(#lid)"/>
+    <!-- knob -->
+    <rect x="238" y="214" width="36" height="30" rx="12" fill="url(#lid)"/>
+  </g>
+
+  <!-- body highlight -->
+  <path d="M168 292 q10 -12 26 -12 q-14 8 -18 30 q-3 16 -12 26 q-8 -24 4 -44 z" fill="#FFFFFF" opacity="0.16"/>
+  <!-- lid highlight -->
+  <rect x="156" y="247" width="120" height="8" rx="4" fill="#FFFFFF" opacity="0.22"/>
 </svg>
