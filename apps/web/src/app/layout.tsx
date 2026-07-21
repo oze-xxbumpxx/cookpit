@@ -22,11 +22,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#ffffff',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#faf6f0' },
+    { media: '(prefers-color-scheme: dark)', color: '#221e1a' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
 };
+
+// OS のダーク設定に追従して .dark を付与する（描画前に実行しちらつきを防ぐ）。
+const themeScript =
+  "try{var m=window.matchMedia('(prefers-color-scheme: dark)');var a=function(){document.documentElement.classList.toggle('dark',m.matches)};a();m.addEventListener('change',a)}catch(e){}";
 
 export default function RootLayout({
   children,
@@ -34,8 +41,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="ja" suppressHydrationWarning className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
         <NavBar />
       </body>
