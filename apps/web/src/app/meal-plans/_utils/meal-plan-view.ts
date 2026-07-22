@@ -3,10 +3,10 @@ import type { MealPlanDto, RecipeDto } from '@cookpit/application';
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
 // レシピの追加・削除が許されるステータスか。サーバー仕様（AddRecipe/RemoveRecipe UseCase・
-// Domain の canChangeRecipes）に合わせ draft / shopping のみ許可。買い物完了で cooking 以降に
-// 遷移すると編集不可になるため、UI 側でも同じ条件でボタンを出し分ける（422 の誤操作防止）。
+// Domain の canChangeRecipes）に合わせ、進行中の週（completed 以外）は編集可。過去分（completed）
+// のみ不可。UI 側でも同じ条件でボタンを出し分ける（422 の誤操作防止）。
 export function canEditPlannedRecipes(status: MealPlanDto['status']): boolean {
-  return status === 'draft' || status === 'shopping';
+  return status !== 'completed';
 }
 
 function formatDatePart(date: Date): string {

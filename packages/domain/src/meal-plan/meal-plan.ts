@@ -189,8 +189,10 @@ export class MealPlan {
     return this.completedDate === null ? null : new Date(this.completedDate);
   }
 
+  // 進行中の週（draft/shopping/cooking/consuming）はレシピを編集できる。ビュッフェ運用で
+  // 週の途中でも献立を足し引きするため。過去分（completed）のみ編集不可。
   private canChangeRecipes(): boolean {
-    return this.mealPlanStatus === 'draft' || this.mealPlanStatus === 'shopping';
+    return this.mealPlanStatus !== 'completed';
   }
 
   private canTransitionTo(newStatus: MealPlanStatus): boolean {

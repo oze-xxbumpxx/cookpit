@@ -17,7 +17,7 @@ export class AddRecipeToMealPlanUseCase {
       throw new MealPlanNotFoundError(input.mealPlanId);
     }
 
-    if (mealPlan.status !== 'draft' && mealPlan.status !== 'shopping') {
+    if (mealPlan.status === 'completed') {
       throw new InvalidMealPlanStateError(mealPlan.status, 'addRecipe');
     }
 

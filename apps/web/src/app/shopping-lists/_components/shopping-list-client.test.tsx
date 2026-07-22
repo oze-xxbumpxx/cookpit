@@ -9,6 +9,7 @@ const {
   postBought,
   postTargetStore,
   postComplete,
+  postReopen,
   routerPush,
   routerRefresh,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   postBought: vi.fn(),
   postTargetStore: vi.fn(),
   postComplete: vi.fn(),
+  postReopen: vi.fn(),
   routerPush: vi.fn(),
   routerRefresh: vi.fn(),
 }));
@@ -33,6 +35,9 @@ vi.mock('@/lib/api-client', () => ({
           $get: (...args: unknown[]) => getShoppingList(...args),
           complete: {
             $post: (...args: unknown[]) => postComplete(...args),
+          },
+          reopen: {
+            $post: (...args: unknown[]) => postReopen(...args),
           },
           items: {
             $post: (...args: unknown[]) => postItem(...args),
@@ -870,5 +875,29 @@ describe('ShoppingListClient', () => {
     expect(screen.getByRole('checkbox', { name: /醤油/ })).toBeDefined();
     expect(screen.getByRole('button', { name: '店舗A' })).toBeDefined();
     expect(screen.queryByRole('button', { name: '手動で追加' })).toBeNull();
+  });
+
+  it('completed のリストは「買い物を再開」を表示し、押すと active に戻り「手動で追加」が再表示される', async () => {
+    const user = userEvent.setup();
+    postReopen.mockResolvedValue({
+      ok: true,
+      json: async () => createShoppingListDto({ status: 'active' }),
+    });
+    const shoppingList = createShoppingListDto({
+      status: 'completed',
+      items: [createShoppingItemDto()],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    // 完了状態では追加・完了ボタンは無く、「買い物を再開」がある
+    expect(screen.queryByRole('button', { name: '手動で追加' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '買い物完了' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '買い物を再開' }));
+
+    await waitFor(() => {
+      expect(postReopen).toHaveBeenCalledWith({ param: { id: shoppingList.id } });
+      expect(screen.getByRole('button', { name: '手動で追加' })).toBeDefined();
+    });
   });
 });

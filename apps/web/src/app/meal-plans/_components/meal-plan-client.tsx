@@ -226,7 +226,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               )
             ) : (
               <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-center text-sm text-muted-foreground">
-                買い物完了後の献立はレシピを追加・削除できません
+                完了した献立はレシピを追加・削除できません
               </p>
             )}
           </>
