@@ -86,14 +86,14 @@ describe('resolveHistoryLimit', () => {
 });
 
 describe('canEditPlannedRecipes', () => {
-  it('U-V-11: draft / shopping は編集可', () => {
+  it('U-V-11: completed 以外（draft/shopping/cooking/consuming）は編集可', () => {
     expect(canEditPlannedRecipes('draft')).toBe(true);
     expect(canEditPlannedRecipes('shopping')).toBe(true);
+    expect(canEditPlannedRecipes('cooking')).toBe(true);
+    expect(canEditPlannedRecipes('consuming')).toBe(true);
   });
 
-  it('U-V-12: cooking / consuming / completed は編集不可', () => {
-    expect(canEditPlannedRecipes('cooking')).toBe(false);
-    expect(canEditPlannedRecipes('consuming')).toBe(false);
+  it('U-V-12: completed は編集不可', () => {
     expect(canEditPlannedRecipes('completed')).toBe(false);
   });
 });

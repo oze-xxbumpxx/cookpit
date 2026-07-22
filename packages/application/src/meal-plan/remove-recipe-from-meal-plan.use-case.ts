@@ -23,7 +23,7 @@ export class RemoveRecipeFromMealPlanUseCase {
       throw new PlannedRecipeNotFoundError(input.plannedRecipeId);
     }
 
-    if (mealPlan.status !== 'draft' && mealPlan.status !== 'shopping') {
+    if (mealPlan.status === 'completed') {
       throw new InvalidMealPlanStateError(mealPlan.status, 'removeRecipe');
     }
 

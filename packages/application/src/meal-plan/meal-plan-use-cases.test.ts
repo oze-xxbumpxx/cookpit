@@ -205,21 +205,34 @@ describe('AddRecipeToMealPlanUseCase', () => {
     expect(repository.saveCount).toBe(0);
   });
 
-  it.each<MealPlanStatus>(['cooking', 'consuming', 'completed'])(
-    '%s の MealPlan にはレシピを追加できない',
+  it.each<MealPlanStatus>(['cooking', 'consuming'])(
+    '進行中の %s の MealPlan にはレシピを追加できる',
     async (status) => {
       repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', status));
 
-      await expect(
-        new AddRecipeToMealPlanUseCase(repository).execute({
-          mealPlanId: 'meal-plan-1',
-          recipeId: 'recipe-1',
-          scaleFactor: 1,
-        }),
-      ).rejects.toBeInstanceOf(InvalidMealPlanStateError);
-      expect(repository.saveCount).toBe(0);
+      const result = await new AddRecipeToMealPlanUseCase(repository).execute({
+        mealPlanId: 'meal-plan-1',
+        recipeId: 'recipe-1',
+        scaleFactor: 1,
+      });
+
+      expect(result.id).toBeDefined();
+      expect(repository.saveCount).toBe(1);
     },
   );
+
+  it('completed の MealPlan にはレシピを追加できない', async () => {
+    repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', 'completed'));
+
+    await expect(
+      new AddRecipeToMealPlanUseCase(repository).execute({
+        mealPlanId: 'meal-plan-1',
+        recipeId: 'recipe-1',
+        scaleFactor: 1,
+      }),
+    ).rejects.toBeInstanceOf(InvalidMealPlanStateError);
+    expect(repository.saveCount).toBe(0);
+  });
 
   it.each([0, -1])(
     'scaleFactor %s は Domain のバリデーションエラーを伝搬し、保存しない',
@@ -278,8 +291,8 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
     expect(repository.saveCount).toBe(0);
   });
 
-  it.each<MealPlanStatus>(['cooking', 'consuming', 'completed'])(
-    '%s の MealPlan からはレシピを削除できない',
+  it.each<MealPlanStatus>(['cooking', 'consuming'])(
+    '進行中の %s の MealPlan からはレシピを削除できる',
     async (status) => {
       repository.seed(
         seededMealPlan('meal-plan-1', '2026-07-04', status, [
@@ -287,15 +300,32 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
         ]),
       );
 
-      await expect(
-        new RemoveRecipeFromMealPlanUseCase(repository).execute({
-          mealPlanId: 'meal-plan-1',
-          plannedRecipeId: 'planned-recipe-1',
-        }),
-      ).rejects.toBeInstanceOf(InvalidMealPlanStateError);
-      expect(repository.saveCount).toBe(0);
+      await new RemoveRecipeFromMealPlanUseCase(repository).execute({
+        mealPlanId: 'meal-plan-1',
+        plannedRecipeId: 'planned-recipe-1',
+      });
+
+      const saved = await repository.findById(MealPlanId.fromString('meal-plan-1'));
+      expect(saved?.plannedRecipes).toEqual([]);
+      expect(repository.saveCount).toBe(1);
     },
   );
+
+  it('completed の MealPlan からはレシピを削除できない', async () => {
+    repository.seed(
+      seededMealPlan('meal-plan-1', '2026-07-04', 'completed', [
+        seededPlannedRecipe('planned-recipe-1'),
+      ]),
+    );
+
+    await expect(
+      new RemoveRecipeFromMealPlanUseCase(repository).execute({
+        mealPlanId: 'meal-plan-1',
+        plannedRecipeId: 'planned-recipe-1',
+      }),
+    ).rejects.toBeInstanceOf(InvalidMealPlanStateError);
+    expect(repository.saveCount).toBe(0);
+  });
 });
 
 describe('GetCurrentMealPlanUseCase', () => {

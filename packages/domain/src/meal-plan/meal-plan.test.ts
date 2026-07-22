@@ -202,28 +202,25 @@ describe('MealPlan.create / reconstruct', () => {
 });
 
 describe('MealPlan.addRecipe', () => {
-  it('draft と shopping で PlannedRecipe を追加できる', () => {
-    const draftMealPlan = createMealPlanAtStatus('draft');
-    const shoppingMealPlan = createMealPlanAtStatus('shopping');
-
-    const draftPlannedRecipeId = draftMealPlan.addRecipe(createRecipeId(), 1.5);
-    const shoppingPlannedRecipeId = shoppingMealPlan.addRecipe(createRecipeId(), 2);
-
-    expect(findPlannedRecipe(draftMealPlan, draftPlannedRecipeId).scaleFactor).toBe(1.5);
-    expect(findPlannedRecipe(shoppingMealPlan, shoppingPlannedRecipeId).scaleFactor).toBe(2);
-  });
-
-  it('cooking / consuming / completed では追加できない', () => {
-    const statuses: MealPlanStatus[] = ['cooking', 'consuming', 'completed'];
+  it('completed 以外（draft/shopping/cooking/consuming）で PlannedRecipe を追加できる', () => {
+    const statuses: MealPlanStatus[] = ['draft', 'shopping', 'cooking', 'consuming'];
 
     for (const status of statuses) {
       const mealPlan = createMealPlanAtStatus(status);
 
-      expect(() => mealPlan.addRecipe(createRecipeId(), 1)).toThrow(
-        `Cannot addRecipe to a MealPlan with status '${status}'`,
-      );
-      expect(mealPlan.plannedRecipes).toEqual([]);
+      const plannedRecipeId = mealPlan.addRecipe(createRecipeId(), 2);
+
+      expect(findPlannedRecipe(mealPlan, plannedRecipeId).scaleFactor).toBe(2);
     }
+  });
+
+  it('completed では追加できない', () => {
+    const mealPlan = createMealPlanAtStatus('completed');
+
+    expect(() => mealPlan.addRecipe(createRecipeId(), 1)).toThrow(
+      `Cannot addRecipe to a MealPlan with status 'completed'`,
+    );
+    expect(mealPlan.plannedRecipes).toEqual([]);
   });
 
   it('同一 recipeId を2回追加しても別 PlannedRecipeId で2件作成する', () => {
@@ -239,20 +236,16 @@ describe('MealPlan.addRecipe', () => {
 });
 
 describe('MealPlan.removeRecipe', () => {
-  it('draft と shopping で PlannedRecipe を削除できる', () => {
-    const draftMealPlan = createMealPlanAtStatus('draft');
-    const draftPlannedRecipeId = draftMealPlan.addRecipe(createRecipeId(), 1);
+  it('completed 以外（draft/shopping/cooking/consuming）で PlannedRecipe を削除できる', () => {
+    const statuses: MealPlanStatus[] = ['draft', 'shopping', 'cooking', 'consuming'];
 
-    draftMealPlan.removeRecipe(draftPlannedRecipeId);
+    for (const status of statuses) {
+      const { mealPlan, plannedRecipeId } = createMealPlanWithRecipeAtStatus(status);
 
-    expect(draftMealPlan.plannedRecipes).toHaveLength(0);
+      mealPlan.removeRecipe(plannedRecipeId);
 
-    const shoppingMealPlan = createMealPlanAtStatus('shopping');
-    const shoppingPlannedRecipeId = shoppingMealPlan.addRecipe(createRecipeId(), 1);
-
-    shoppingMealPlan.removeRecipe(shoppingPlannedRecipeId);
-
-    expect(shoppingMealPlan.plannedRecipes).toHaveLength(0);
+      expect(mealPlan.plannedRecipes).toHaveLength(0);
+    }
   });
 
   it('存在しない PlannedRecipeId は拒否する', () => {
@@ -263,16 +256,12 @@ describe('MealPlan.removeRecipe', () => {
     );
   });
 
-  it('cooking / consuming / completed では削除できない', () => {
-    const statuses: MealPlanStatus[] = ['cooking', 'consuming', 'completed'];
+  it('completed では削除できない', () => {
+    const { mealPlan, plannedRecipeId } = createMealPlanWithRecipeAtStatus('completed');
 
-    for (const status of statuses) {
-      const { mealPlan, plannedRecipeId } = createMealPlanWithRecipeAtStatus(status);
-
-      expect(() => mealPlan.removeRecipe(plannedRecipeId)).toThrow(
-        `Cannot removeRecipe from a MealPlan with status '${status}'`,
-      );
-    }
+    expect(() => mealPlan.removeRecipe(plannedRecipeId)).toThrow(
+      `Cannot removeRecipe from a MealPlan with status 'completed'`,
+    );
   });
 });
 
