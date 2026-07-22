@@ -7,7 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /* 本文・見出し共通の丸ゴシック。日本語グリフは Fontsource（layout.tsx で読み込み）。 */
+  --font-sans:
+    'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'ヒラギノ丸ゴ ProN', ui-sans-serif, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -132,11 +134,5 @@
   main {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
-  /* 見出しは丸ゴシックで温かみ・料理らしさを出す（本文は sans のまま） */
-  h1,
-  h2,
-  h3 {
-    font-family:
-      'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'ヒラギノ丸ゴ ProN', sans-serif;
-  }
+  /* 本文も見出しも --font-sans（丸ゴシック）で統一するため、見出し専用の指定は持たない。 */
 }
