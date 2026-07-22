@@ -9,9 +9,17 @@ interface Props {
   recipeName: string | null;
   onRemove: (plannedRecipeId: string) => void;
   submitting: boolean;
+  /** 追加・削除が許されるステータス（draft/shopping）のときのみ削除ボタンを出す。 */
+  canEdit: boolean;
 }
 
-export function PlannedRecipeItem({ plannedRecipe, recipeName, onRemove, submitting }: Props) {
+export function PlannedRecipeItem({
+  plannedRecipe,
+  recipeName,
+  onRemove,
+  submitting,
+  canEdit,
+}: Props) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -33,17 +41,19 @@ export function PlannedRecipeItem({ plannedRecipe, recipeName, onRemove, submitt
           {plannedRecipe.scaleFactor}×
         </span>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => onRemove(plannedRecipe.id)}
-        disabled={submitting}
-        aria-label="献立から削除"
-        className="shrink-0 text-muted-foreground hover:text-foreground"
-      >
-        <X className="size-4" aria-hidden="true" />
-      </Button>
+      {canEdit && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onRemove(plannedRecipe.id)}
+          disabled={submitting}
+          aria-label="献立から削除"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </Button>
+      )}
     </div>
   );
 }

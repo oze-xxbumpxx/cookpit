@@ -230,6 +230,37 @@ describe('MealPlanClient', () => {
     });
   });
 
+  it('WC-M-12: cooking 以降はレシピ編集 UI を出さず注意文を表示する', () => {
+    const plannedRecipe = createPlannedRecipeDto();
+    const mealPlan = createMealPlanDto({ status: 'cooking', plannedRecipes: [plannedRecipe] });
+    render(
+      <MealPlanClient
+        mealPlan={mealPlan}
+        recipes={[createRecipeDto()]}
+        currentWeekIdentifier={CURRENT_WEEK}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'レシピを追加' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '献立から削除' })).toBeNull();
+    expect(screen.getByText('買い物完了後の献立はレシピを追加・削除できません')).toBeDefined();
+    // 献立の閲覧（レシピ名）は引き続き可能
+    expect(screen.getByText('肉じゃが')).toBeDefined();
+  });
+
+  it('WC-M-13: shopping ステータスではレシピ追加 UI が表示される', () => {
+    const mealPlan = createMealPlanDto({ status: 'shopping', plannedRecipes: [] });
+    render(
+      <MealPlanClient
+        mealPlan={mealPlan}
+        recipes={[createRecipeDto()]}
+        currentWeekIdentifier={CURRENT_WEEK}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'レシピを追加' })).toBeDefined();
+  });
+
   it('WC-M-10: 送信中は作成ボタンが disabled になる', async () => {
     const user = userEvent.setup();
     let resolvePost: (value: { ok: boolean }) => void = () => {};
