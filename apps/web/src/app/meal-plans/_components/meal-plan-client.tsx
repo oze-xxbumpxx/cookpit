@@ -11,7 +11,11 @@ import { Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { buildRecipeNameMap, formatWeekRange } from '../_utils/meal-plan-view';
+import {
+  buildRecipeNameMap,
+  canEditPlannedRecipes,
+  formatWeekRange,
+} from '../_utils/meal-plan-view';
 import { PlannedRecipeItem } from './planned-recipe-item';
 import { RecipePicker } from './recipe-picker';
 
@@ -31,6 +35,9 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
   const [shoppingListErrorMessage, setShoppingListErrorMessage] = useState<string | null>(null);
 
   const recipeNameMap = buildRecipeNameMap(recipes);
+  // 買い物完了後（cooking 以降）はサーバーがレシピの追加・削除を 422 で拒否するため、
+  // その状態では編集 UI（追加ボタン・削除ボタン）を出さない。
+  const canEditRecipes = mealPlan !== null && canEditPlannedRecipes(mealPlan.status);
 
   async function handleCreate(): Promise<void> {
     setSubmitting(true);
@@ -196,6 +203,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
                         recipeName={recipeNameMap.get(plannedRecipe.recipeId) ?? null}
                         onRemove={handleRemove}
                         submitting={submitting}
+                        canEdit={canEditRecipes}
                       />
                     </li>
                   ))}
@@ -203,17 +211,23 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               )}
             </section>
 
-            {pickerOpen ? (
-              <RecipePicker recipes={recipes} onAdd={handleAdd} submitting={submitting} />
+            {canEditRecipes ? (
+              pickerOpen ? (
+                <RecipePicker recipes={recipes} onAdd={handleAdd} submitting={submitting} />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPickerOpen(true)}
+                  className="h-11 w-full"
+                >
+                  レシピを追加
+                </Button>
+              )
             ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPickerOpen(true)}
-                className="h-11 w-full"
-              >
-                レシピを追加
-              </Button>
+              <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-center text-sm text-muted-foreground">
+                買い物完了後の献立はレシピを追加・削除できません
+              </p>
             )}
           </>
         )}

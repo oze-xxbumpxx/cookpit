@@ -1,6 +1,11 @@
 import type { RecipeDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
-import { buildRecipeNameMap, formatWeekRange, resolveHistoryLimit } from './meal-plan-view';
+import {
+  buildRecipeNameMap,
+  canEditPlannedRecipes,
+  formatWeekRange,
+  resolveHistoryLimit,
+} from './meal-plan-view';
 
 function createRecipeDto(overrides: Partial<RecipeDto> = {}): RecipeDto {
   return {
@@ -77,5 +82,18 @@ describe('resolveHistoryLimit', () => {
   it('U-V-10: 非整数は既定値 4', () => {
     expect(resolveHistoryLimit('abc')).toBe(4);
     expect(resolveHistoryLimit('4.5')).toBe(4);
+  });
+});
+
+describe('canEditPlannedRecipes', () => {
+  it('U-V-11: draft / shopping は編集可', () => {
+    expect(canEditPlannedRecipes('draft')).toBe(true);
+    expect(canEditPlannedRecipes('shopping')).toBe(true);
+  });
+
+  it('U-V-12: cooking / consuming / completed は編集不可', () => {
+    expect(canEditPlannedRecipes('cooking')).toBe(false);
+    expect(canEditPlannedRecipes('consuming')).toBe(false);
+    expect(canEditPlannedRecipes('completed')).toBe(false);
   });
 });

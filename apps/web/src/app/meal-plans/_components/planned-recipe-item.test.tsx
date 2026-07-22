@@ -36,6 +36,7 @@ describe('PlannedRecipeItem', () => {
         recipeName="肉じゃが"
         onRemove={vi.fn()}
         submitting={false}
+        canEdit={true}
       />,
     );
 
@@ -50,6 +51,7 @@ describe('PlannedRecipeItem', () => {
         recipeName={null}
         onRemove={vi.fn()}
         submitting={false}
+        canEdit={true}
       />,
     );
 
@@ -67,6 +69,7 @@ describe('PlannedRecipeItem', () => {
         recipeName="肉じゃが"
         onRemove={onRemove}
         submitting={false}
+        canEdit={true}
       />,
     );
 
@@ -85,6 +88,7 @@ describe('PlannedRecipeItem', () => {
         recipeName={null}
         onRemove={onRemove}
         submitting={false}
+        canEdit={true}
       />,
     );
 
@@ -101,6 +105,7 @@ describe('PlannedRecipeItem', () => {
         recipeName="肉じゃが"
         onRemove={vi.fn()}
         submitting={true}
+        canEdit={true}
       />,
     );
 
@@ -116,9 +121,26 @@ describe('PlannedRecipeItem', () => {
         recipeName="肉じゃが"
         onRemove={vi.fn()}
         submitting={false}
+        canEdit={true}
       />,
     );
 
     expect(screen.getByText('1.5×')).toBeDefined();
+  });
+
+  it('WC-I-07: canEdit=false のとき削除ボタンを表示しない', () => {
+    render(
+      <PlannedRecipeItem
+        plannedRecipe={createPlannedRecipeDto()}
+        recipeName="肉じゃが"
+        onRemove={vi.fn()}
+        submitting={false}
+        canEdit={false}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: '献立から削除' })).toBeNull();
+    // レシピ名は引き続き表示される（閲覧は可能）
+    expect(screen.getByRole('link', { name: '肉じゃが' })).toBeDefined();
   });
 });
