@@ -52,7 +52,12 @@ export function ShoppingItemRow({
   }
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+    <li
+      className={cn(
+        'flex flex-col gap-2 rounded-xl border border-border p-3 transition-colors',
+        bought ? 'bg-muted/40' : 'bg-card',
+      )}
+    >
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -72,7 +77,14 @@ export function ShoppingItemRow({
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="truncate text-sm font-medium text-foreground">{item.displayName}</p>
+          <p
+            className={cn(
+              'truncate text-sm font-medium',
+              bought ? 'text-muted-foreground line-through' : 'text-foreground',
+            )}
+          >
+            {item.displayName}
+          </p>
           <p className="text-xs text-muted-foreground">
             {item.requiredAmount !== null
               ? `${item.requiredAmount.value}${item.requiredAmount.unit}`

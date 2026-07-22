@@ -4,7 +4,8 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ProductDto } from '@cookpit/application';
-import { Plus } from 'lucide-react';
+import { Package, Plus, Search } from 'lucide-react';
+import { EmptyState } from '@/app/_components/empty-state';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { PRODUCT_CATEGORY_OPTIONS } from './product-form-fields';
@@ -47,7 +48,7 @@ export function ProductListClient({ initialProducts }: Props) {
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-foreground">商品</h1>
+          <h1 className="text-xl font-semibold text-foreground">商品</h1>
           <Link href="/products/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
             <Plus className="size-3.5" aria-hidden="true" />
             追加
@@ -96,13 +97,9 @@ export function ProductListClient({ initialProducts }: Props) {
 
         <section aria-label="商品一覧">
           {initialProducts.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              まだ商品がありません。右上から追加できます。
-            </p>
+            <EmptyState Icon={Package} message="まだ商品がありません。右上から追加できます。" />
           ) : filteredProducts.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              該当する商品がありません
-            </p>
+            <EmptyState Icon={Search} message="該当する商品がありません" />
           ) : (
             <ul className="flex flex-col gap-3">
               {filteredProducts.map((product) => (

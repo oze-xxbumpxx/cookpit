@@ -11,8 +11,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { recipeTagChipClass } from '@/app/_utils/category-color';
 import type { RecipeDto } from '@cookpit/application';
-import { ChevronLeft, Pencil } from 'lucide-react';
+import { ChevronLeft, Clock, Pencil, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -79,7 +80,7 @@ export function RecipeDetailClient({ recipe }: Props) {
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-lg font-semibold text-foreground">
+          <h1 className="truncate text-center text-xl font-semibold text-foreground">
             {recipe.name}
           </h1>
           <Button
@@ -101,9 +102,7 @@ export function RecipeDetailClient({ recipe }: Props) {
                 key={`${tag}-${index}`}
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
-                  index === 0
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-secondary text-muted-foreground',
+                  recipeTagChipClass(tag),
                 )}
               >
                 {tag}
@@ -114,13 +113,19 @@ export function RecipeDetailClient({ recipe }: Props) {
 
         <section className="grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">調理時間</p>
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="size-3.5" aria-hidden="true" />
+              調理時間
+            </p>
             <p className="text-lg font-semibold text-foreground">
               {recipe.cookingTime === null ? '—' : `${recipe.cookingTime}分`}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card p-3">
-            <p className="text-xs text-muted-foreground">基準人数</p>
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Users className="size-3.5" aria-hidden="true" />
+              基準人数
+            </p>
             <p className="text-lg font-semibold text-foreground">{recipe.baseServings}人分</p>
           </div>
         </section>
