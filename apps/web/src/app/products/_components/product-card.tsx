@@ -4,6 +4,7 @@ import {
   formatYen,
   unitPriceBasisLabel,
 } from '@/app/products/_utils/product-format';
+import { productCategoryChipClass } from '@/app/_utils/category-color';
 import { cn } from '@/lib/utils';
 import type { ProductDto } from '@cookpit/application';
 import { Package } from 'lucide-react';
@@ -20,7 +21,7 @@ export function ProductCard({ product }: Props) {
     <Link
       href={`/products/${product.id}`}
       aria-label={`${product.name}の詳細を見る`}
-      className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-all hover:bg-muted hover:shadow active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div
         className="flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground"
@@ -31,7 +32,12 @@ export function ProductCard({ product }: Props) {
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-start justify-between gap-2">
           <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
-          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium',
+              productCategoryChipClass(product.category),
+            )}
+          >
             {product.category}
           </span>
         </div>

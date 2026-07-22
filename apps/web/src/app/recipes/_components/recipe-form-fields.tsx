@@ -173,9 +173,17 @@ interface Props {
   onChange: (value: RecipeFormValue) => void;
   /** 基準人数フィールド。new は編集可能な Input、edit は読み取り専用表示を注入する。 */
   baseServingsSlot: ReactNode;
+  /** 新規作成時にレシピ名へ自動フォーカスする（連続入力を速める）。 */
+  autoFocusName?: boolean;
 }
 
-export function RecipeFormFields({ value, fieldErrors, onChange, baseServingsSlot }: Props) {
+export function RecipeFormFields({
+  value,
+  fieldErrors,
+  onChange,
+  baseServingsSlot,
+  autoFocusName = false,
+}: Props) {
   const nameId = useId();
   const cookingTimeId = useId();
   const notesId = useId();
@@ -232,13 +240,14 @@ export function RecipeFormFields({ value, fieldErrors, onChange, baseServingsSlo
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
         <label htmlFor={nameId} className="text-sm font-medium text-foreground">
-          レシピ名 <span className="text-xs font-normal text-red-600">必須</span>
+          レシピ名 <span className="text-xs font-normal text-destructive">必須</span>
         </label>
         <Input
           id={nameId}
           value={value.name}
           onChange={(event) => updateValue({ name: event.target.value })}
           placeholder="例：鶏むね肉の塩こうじ漬け"
+          autoFocus={autoFocusName}
           className="h-11 rounded-xl bg-card"
         />
       </section>
@@ -291,7 +300,7 @@ export function RecipeFormFields({ value, fieldErrors, onChange, baseServingsSlo
             className="h-11 rounded-xl bg-card"
           />
           {fieldErrors.cookingTime !== null && (
-            <p id={cookingTimeErrorId} className="text-xs text-red-600">
+            <p id={cookingTimeErrorId} className="text-xs text-destructive">
               {fieldErrors.cookingTime}
             </p>
           )}

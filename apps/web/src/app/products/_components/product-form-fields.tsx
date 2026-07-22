@@ -28,6 +28,8 @@ interface Props {
   value: ProductFormValue;
   fieldErrors: ProductFieldErrors;
   onChange: (value: ProductFormValue) => void;
+  /** 新規作成時に商品名へ自動フォーカスする（連続入力を速める）。 */
+  autoFocusName?: boolean;
 }
 
 export const PRODUCT_CATEGORY_OPTIONS = productCategorySchema.options;
@@ -96,7 +98,7 @@ export function buildProductFormBody(value: ProductFormValue): ProductFormBuildR
   };
 }
 
-export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
+export function ProductFormFields({ value, fieldErrors, onChange, autoFocusName = false }: Props) {
   const nameId = useId();
   const aliasesId = useId();
   const categoryId = useId();
@@ -114,19 +116,20 @@ export function ProductFormFields({ value, fieldErrors, onChange }: Props) {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
         <label htmlFor={nameId} className="text-sm font-medium text-foreground">
-          商品名 <span className="text-xs font-normal text-red-600">必須</span>
+          商品名 <span className="text-xs font-normal text-destructive">必須</span>
         </label>
         <Input
           id={nameId}
           value={value.name}
           onChange={(event) => updateValue({ name: event.currentTarget.value })}
           placeholder="例：玉ねぎ"
+          autoFocus={autoFocusName}
           aria-invalid={fieldErrors.name !== null}
           aria-describedby={fieldErrors.name === null ? undefined : nameErrorId}
           className="h-11 rounded-xl bg-card"
         />
         {fieldErrors.name !== null && (
-          <p id={nameErrorId} className="text-xs text-red-600">
+          <p id={nameErrorId} className="text-xs text-destructive">
             {fieldErrors.name}
           </p>
         )}

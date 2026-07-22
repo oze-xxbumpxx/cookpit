@@ -4,7 +4,9 @@ import { cn } from '@/lib/utils';
 import { GetMealPlanHistoryUseCase, GetRecipesUseCase } from '@cookpit/application';
 import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
 import { DrizzleMealPlanRepository, DrizzleRecipeRepository } from '@cookpit/infrastructure';
+import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
+import { EmptyState } from '@/app/_components/empty-state';
 import { HistoryWeekCard } from '../_components/history-week-card';
 import { buildRecipeNameMap, resolveHistoryLimit } from '../_utils/meal-plan-view';
 
@@ -48,12 +50,12 @@ export default async function MealPlanHistoryPage({ searchParams }: Props) {
               戻る
             </Link>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">献立の履歴</h1>
+          <h1 className="text-xl font-semibold text-foreground">献立の履歴</h1>
           <div />
         </header>
 
         {mealPlans.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">履歴はまだありません</p>
+          <EmptyState Icon={CalendarDays} message="履歴はまだありません" />
         ) : (
           <ul className="flex flex-col gap-3">
             {mealPlans.map((mealPlan) => (

@@ -81,7 +81,7 @@ export function RecipeEditFormClient({ recipe }: Props) {
               キャンセル
             </Button>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">レシピを編集</h1>
+          <h1 className="text-xl font-semibold text-foreground">レシピを編集</h1>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!canSubmit} className="h-9 px-4">
               {submitting ? '保存中' : '保存'}
@@ -90,7 +90,7 @@ export function RecipeEditFormClient({ recipe }: Props) {
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}

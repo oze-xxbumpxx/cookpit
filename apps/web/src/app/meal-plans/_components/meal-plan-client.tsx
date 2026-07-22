@@ -4,6 +4,10 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/application';
+import { EmptyState } from '@/app/_components/empty-state';
+import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
+import { MEAL_PLAN_STATUS_LABELS } from '@/app/_utils/dashboard-view';
+import { Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -118,52 +122,21 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start gap-1">
-            <Link
-              href="/recipes"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              レシピ
-            </Link>
-            <Link
-              href="/products"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              商品
-            </Link>
-          </div>
-          <h1 className="text-lg font-semibold text-foreground">今週の献立</h1>
-          <div className="flex justify-end gap-1">
-            <Link
-              href="/meal-plans/history"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              履歴
-            </Link>
-            <Link
-              href="/pantry"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              在庫
-            </Link>
-          </div>
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-foreground">今週の献立</h1>
+          <Link
+            href="/meal-plans/history"
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'h-9 px-2 text-foreground',
+            )}
+          >
+            履歴
+          </Link>
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -177,14 +150,24 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
               disabled={submitting}
               className="h-11 px-6"
             >
-              {submitting ? '作成中' : '今週の献立をはじめる'}
+              {submitting ? '作成中' : '今週の献立を作る'}
             </Button>
           </section>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground">
-              {formatWeekRange(mealPlan.weekIdentifier)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground">
+                {formatWeekRange(mealPlan.weekIdentifier)}
+              </p>
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-xs font-medium',
+                  mealPlanStatusChipClass(mealPlan.status),
+                )}
+              >
+                {MEAL_PLAN_STATUS_LABELS[mealPlan.status]}
+              </span>
+            </div>
 
             <Button
               type="button"
@@ -196,16 +179,14 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             </Button>
 
             {shoppingListErrorMessage !== null && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {shoppingListErrorMessage}
               </p>
             )}
 
             <section aria-label="献立" className="flex flex-col gap-2">
               {mealPlan.plannedRecipes.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  レシピがまだ追加されていません
-                </p>
+                <EmptyState Icon={Utensils} message="レシピがまだ追加されていません" />
               ) : (
                 <ul className="flex flex-col gap-2">
                   {mealPlan.plannedRecipes.map((plannedRecipe) => (

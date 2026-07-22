@@ -33,6 +33,7 @@ export const shoppingListsRoute = new Hono()
       recipeRepository(),
       productRepository(),
       shoppingListRepository(),
+      pantryRepository(),
     );
     const result = await usecase.execute(body);
     return c.json(result.shoppingList, result.created ? 201 : 200);

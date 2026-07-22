@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { productCategoryChipClass } from '@/app/_utils/category-color';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -69,7 +70,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-lg font-semibold text-foreground">
+          <h1 className="truncate text-center text-xl font-semibold text-foreground">
             {product.name}
           </h1>
           <Button
@@ -85,7 +86,12 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
         </header>
 
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-medium',
+              productCategoryChipClass(product.category),
+            )}
+          >
             {product.category}
           </span>
           <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
@@ -192,7 +198,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                 削除すると元に戻せません。価格履歴も削除されます。
               </AlertDialogDescription>
               {deleteErrorMessage !== null && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                   {deleteErrorMessage}
                 </p>
               )}

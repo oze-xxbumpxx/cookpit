@@ -44,36 +44,24 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start">
-            <Link
-              href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              戻る
-            </Link>
-          </div>
-          <h1 className="text-lg font-semibold text-foreground">買い物リスト</h1>
-          <div />
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-foreground">買い物リスト</h1>
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
 
         {mealPlan === null ? (
           <section className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">今週の献立がまだありません</p>
+            <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
             <Link
               href="/meal-plans"
               className={cn(buttonVariants({ variant: 'default' }), 'h-11 px-6')}
             >
-              献立をはじめる
+              今週の献立を作る
             </Link>
           </section>
         ) : (

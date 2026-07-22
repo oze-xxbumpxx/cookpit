@@ -4,6 +4,8 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { ShoppingItemDto, ShoppingListDto, StoreDto } from '@cookpit/application';
+import { EmptyState } from '@/app/_components/empty-state';
+import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { startTransition, useEffect, useOptimistic, useState } from 'react';
 import { formatShoppingDate, groupItemsByStore } from '../_utils/shopping-list-view';
@@ -212,7 +214,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
               戻る
             </Link>
           </div>
-          <h1 className="truncate text-center text-lg font-semibold text-foreground">
+          <h1 className="truncate text-center text-xl font-semibold text-foreground">
             {formatShoppingDate(shoppingList.shoppingDate)}
           </h1>
           <div className="flex justify-end">
@@ -230,7 +232,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -247,7 +249,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         )}
 
         {completeErrorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {completeErrorMessage}
           </p>
         )}
@@ -268,9 +270,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         )}
 
         {optimisticItems.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            リストにアイテムがありません
-          </p>
+          <EmptyState Icon={ShoppingCart} message="リストにアイテムがありません" />
         ) : (
           <div className="flex flex-col gap-4">
             {groupedItems.map((group) => (

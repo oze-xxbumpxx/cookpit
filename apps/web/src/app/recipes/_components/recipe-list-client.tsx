@@ -3,9 +3,10 @@
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { RecipeDto } from '@cookpit/application';
-import { Plus } from 'lucide-react';
+import { ChefHat, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { EmptyState } from '@/app/_components/empty-state';
 import { TagFilter, type TagFilterValue } from './tag-filter';
 import { RecipeCard } from './recipe-card';
 import { Input } from '@/components/ui/input';
@@ -31,34 +32,12 @@ export function RecipeListClient({ initialRecipes }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start gap-1">
-            <Link
-              href="/products"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              商品
-            </Link>
-            <Link
-              href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              献立
-            </Link>
-          </div>
-          <h1 className="text-lg font-semibold text-foreground">レシピ</h1>
-          <div className="flex justify-end">
-            <Link href="/recipes/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
-              <Plus className="size-3.5" aria-hidden="true" />
-              追加
-            </Link>
-          </div>
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-foreground">レシピ</h1>
+          <Link href="/recipes/new" className={cn(buttonVariants({ size: 'sm' }), 'h-9 px-3')}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            追加
+          </Link>
         </header>
         <div>
           <label htmlFor="recipe-search" className="sr-only">
@@ -76,13 +55,9 @@ export function RecipeListClient({ initialRecipes }: Props) {
         <TagFilter value={selectedTag} onChange={setSelectedTag} />
         <section aria-label="レシピ一覧">
           {initialRecipes.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              まだレシピがありません。右上から追加できます。
-            </p>
+            <EmptyState Icon={ChefHat} message="まだレシピがありません。右上から追加できます。" />
           ) : filteredRecipes.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              該当するレシピがありません
-            </p>
+            <EmptyState Icon={Search} message="該当するレシピがありません" />
           ) : (
             <ul className="flex flex-col gap-3">
               {filteredRecipes.map((recipe) => (

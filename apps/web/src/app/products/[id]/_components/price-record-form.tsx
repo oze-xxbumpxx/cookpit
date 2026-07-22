@@ -236,7 +236,7 @@ export function PriceRecordForm({ product }: Props) {
       </div>
 
       {(errorMessage !== null || storesErrorMessage !== null) && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {errorMessage ?? storesErrorMessage}
         </p>
       )}
@@ -257,7 +257,7 @@ export function PriceRecordForm({ product }: Props) {
             describedBy={fieldErrors.storeId === null ? undefined : storeIdErrorId}
           />
           {fieldErrors.storeId !== null && (
-            <p id={storeIdErrorId} className="text-xs text-red-600">
+            <p id={storeIdErrorId} className="text-xs text-destructive">
               {fieldErrors.storeId}
             </p>
           )}
@@ -312,7 +312,7 @@ export function PriceRecordForm({ product }: Props) {
               className="h-11 rounded-xl bg-card"
             />
             {fieldErrors.priceAmount !== null && (
-              <p id={priceAmountErrorId} className="text-xs text-red-600">
+              <p id={priceAmountErrorId} className="text-xs text-destructive">
                 {fieldErrors.priceAmount}
               </p>
             )}
@@ -338,7 +338,7 @@ export function PriceRecordForm({ product }: Props) {
               className="h-11 rounded-xl bg-card"
             />
             {fieldErrors.packageSizeValue !== null && (
-              <p id={packageSizeValueErrorId} className="text-xs text-red-600">
+              <p id={packageSizeValueErrorId} className="text-xs text-destructive">
                 {fieldErrors.packageSizeValue}
               </p>
             )}

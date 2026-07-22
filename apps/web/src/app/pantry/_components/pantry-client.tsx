@@ -1,10 +1,10 @@
 'use client';
 
-import { Button, buttonVariants } from '@/components/ui/button';
+import { EmptyState } from '@/app/_components/empty-state';
+import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
-import { cn } from '@/lib/utils';
 import type { PantryDto, StockDto } from '@cookpit/application';
-import Link from 'next/link';
+import { Refrigerator } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { groupStocksByLocation } from '../_utils/pantry-view';
 import { LocationGroup } from './location-group';
@@ -115,19 +115,8 @@ export function PantryClient({ pantry }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex justify-start">
-            <Link
-              href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
-            >
-              戻る
-            </Link>
-          </div>
-          <h1 className="truncate text-center text-lg font-semibold text-foreground">在庫</h1>
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="truncate text-xl font-semibold text-foreground">在庫</h1>
           <div className="flex justify-end">
             <Button
               type="button"
@@ -143,13 +132,13 @@ export function PantryClient({ pantry }: Props) {
         </header>
 
         {errorMessage !== null && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
 
         {stocks.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">在庫がありません</p>
+          <EmptyState Icon={Refrigerator} message="在庫がありません" />
         ) : (
           <div className="flex flex-col gap-4">
             {groupedStocks.map((group) => (
