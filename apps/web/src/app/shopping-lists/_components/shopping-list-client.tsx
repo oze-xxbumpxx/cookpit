@@ -43,6 +43,8 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [completeSubmitting, setCompleteSubmitting] = useState(false);
   const [completeSuccess, setCompleteSuccess] = useState(false);
   const [completeErrorMessage, setCompleteErrorMessage] = useState<string | null>(null);
+  const [reopenSubmitting, setReopenSubmitting] = useState(false);
+  const [reopenErrorMessage, setReopenErrorMessage] = useState<string | null>(null);
 
   async function handleRefetch({ silent }: { silent: boolean }): Promise<void> {
     if (!silent) {
@@ -197,6 +199,31 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     }
   }
 
+  async function handleReopen(): Promise<void> {
+    if (reopenSubmitting) {
+      return;
+    }
+    setReopenSubmitting(true);
+    setReopenErrorMessage(null);
+    try {
+      const response = await client.api['shopping-lists'][':id'].reopen.$post({
+        param: { id: shoppingList.id },
+      });
+      if (!response.ok) {
+        setReopenErrorMessage('操作に失敗しました。');
+        return;
+      }
+      const dto = await response.json();
+      setStatus(dto.status);
+      // 再開したので「完了しました」バナーは消す。以降は追加・チェックが再び可能になる。
+      setCompleteSuccess(false);
+    } catch {
+      setReopenErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setReopenSubmitting(false);
+    }
+  }
+
   const groupedItems = groupItemsByStore(optimisticItems, stores);
 
   return (
@@ -251,6 +278,24 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         {completeErrorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {completeErrorMessage}
+          </p>
+        )}
+
+        {status === 'completed' && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void handleReopen()}
+            disabled={reopenSubmitting}
+            className="h-11 w-full"
+          >
+            買い物を再開
+          </Button>
+        )}
+
+        {reopenErrorMessage !== null && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {reopenErrorMessage}
           </p>
         )}
 

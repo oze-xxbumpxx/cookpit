@@ -35,6 +35,7 @@ import { GetShoppingListUseCase } from './get-shopping-list.use-case';
 import { InvalidShoppingListStateError } from './invalid-shopping-list-state.error';
 import { MarkAsBoughtUseCase } from './mark-as-bought.use-case';
 import { ReassignStoreUseCase } from './reassign-store.use-case';
+import { ReopenShoppingListUseCase } from './reopen-shopping-list.use-case';
 import { ShoppingItemNotFoundError } from './shopping-item-not-found.error';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
@@ -852,5 +853,38 @@ describe('GetShoppingListUseCase', () => {
         shoppingListId: 'missing',
       }),
     ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
+  });
+});
+
+describe('ReopenShoppingListUseCase', () => {
+  it('completed のリストを active に戻して保存する', async () => {
+    shoppingListRepository.seed(seededShoppingList('completed'));
+
+    const dto = await new ReopenShoppingListUseCase(shoppingListRepository).execute({
+      shoppingListId: SHOPPING_LIST_ID,
+    });
+
+    expect(dto.status).toBe('active');
+    expect(shoppingListRepository.saveCount).toBe(1);
+  });
+
+  it('存在しない shoppingListId は ShoppingListNotFoundError を投げる', async () => {
+    await expect(
+      new ReopenShoppingListUseCase(shoppingListRepository).execute({
+        shoppingListId: 'missing',
+      }),
+    ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
+    expect(shoppingListRepository.saveCount).toBe(0);
+  });
+
+  it('active（completed 以外）のリストは InvalidShoppingListStateError を投げる', async () => {
+    shoppingListRepository.seed(seededShoppingList('active'));
+
+    await expect(
+      new ReopenShoppingListUseCase(shoppingListRepository).execute({
+        shoppingListId: SHOPPING_LIST_ID,
+      }),
+    ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
+    expect(shoppingListRepository.saveCount).toBe(0);
   });
 });

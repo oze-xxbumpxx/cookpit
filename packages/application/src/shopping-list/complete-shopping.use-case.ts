@@ -23,7 +23,8 @@ import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
  * 修復のみ行って現状の ShoppingListDto を返す（S-3 案 B2）。保存順序は
  * Pantry → Product → ShoppingList → MealPlan（S-3 (2)）。ShoppingList の保存が
  * 「これより前は再実行対象・これより後は修復のみ」の境界（冪等ガードのコミットポイント）。
- * 価格記録のみ非冪等（重複記録があり得る。S-3 (4) 案 B）。
+ * 在庫・価格記録とも「既に在庫化済みの品目」を除外して処理するため、reopen（買い物を再開）
+ * → 買い足し → 再 complete しても、前回処理済みの品目は二重在庫・二重価格記録されない。
  * 数量不明または 0 以下の bought 品目は、在庫欠落を避けるため 1 個として Stock 化し、
  * 価格記録のみスキップする。
  *
@@ -53,10 +54,16 @@ export class CompleteShoppingUseCase {
     const now = new Date();
 
     const pantry = await this.pantryRepository.find();
-    this.addStocks(pantry, boughtItems, now);
+    // 既に在庫化済み（前回の完了で処理済み）の品目は在庫・価格とも再処理しない。
+    // 買い物を再開（reopen）→買い足し→再完了したときに、二重在庫・二重価格記録を防ぐ
+    // （品目単位の冪等化。在庫の有無を「その品目が前回処理済みか」の判定に使う）。
+    const newlySettledItems = boughtItems.filter(
+      (item) => !pantry.hasStockFromShoppingItem(item.id),
+    );
+    this.addStocks(pantry, newlySettledItems, now);
     await this.pantryRepository.save(pantry);
 
-    await this.recordPrices(boughtItems, now);
+    await this.recordPrices(newlySettledItems, now);
 
     shoppingList.complete();
     await this.shoppingListRepository.save(shoppingList);

@@ -13,6 +13,7 @@ import {
   GetShoppingListUseCase,
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
+  ReopenShoppingListUseCase,
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
@@ -88,6 +89,12 @@ export const shoppingListsRoute = new Hono()
       productRepository(),
       mealPlanRepository(),
     );
+    const dto = await usecase.execute({ shoppingListId: id });
+    return c.json(dto, 200);
+  })
+  .post('/:id/reopen', zValidator('param', shoppingListIdParamSchema), async (c) => {
+    const { id } = c.req.valid('param');
+    const usecase = new ReopenShoppingListUseCase(shoppingListRepository());
     const dto = await usecase.execute({ shoppingListId: id });
     return c.json(dto, 200);
   });

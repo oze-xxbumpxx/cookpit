@@ -354,7 +354,7 @@ describe('CompleteShoppingUseCase', () => {
     expect(mealPlanRepository.saveCount).toBe(0);
   });
 
-  it('Pantry 保存後の再実行では既存 Stock を重複追加せず後続処理を完了する', async () => {
+  it('既に在庫化済みの品目は Stock も価格記録も重複させず、新規品目のみ処理する', async () => {
     const item1 = seededItem();
     const item2 = seededItem({ id: SHOPPING_ITEM_ID_2 });
     const shoppingList = seededShoppingList([item1, item2]);
@@ -378,7 +378,9 @@ describe('CompleteShoppingUseCase', () => {
       pantry.stocks.filter((stock) => stock.sourceShoppingItemId?.value === SHOPPING_ITEM_ID_1),
     ).toHaveLength(1);
     expect(productRepository.saveCount).toBe(1);
-    expect(product.priceHistory).toHaveLength(2);
+    // 既に在庫化済みの item1 は価格記録もスキップし、新規 item2 の 1 件のみ記録する
+    // （reopen→再 complete での二重記録を防ぐ冪等化）。
+    expect(product.priceHistory).toHaveLength(1);
     expect(shoppingList.status).toBe('completed');
     expect(mealPlan.status).toBe('cooking');
     expect(mealPlanRepository.saveCount).toBe(1);

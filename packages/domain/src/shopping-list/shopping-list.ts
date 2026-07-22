@@ -181,6 +181,7 @@ export interface CreateShoppingListInput {
 /**
  * 買い物リスト集約。すべての更新操作（addItem / markAsBought / reassignStore /
  * markAsSkipped / complete）は active 状態でのみ可能で、completed では Error を投げる。
+ * 例外として reopen() のみ completed 状態で呼べ、active に戻す（買い物の再開）。
  */
 export class ShoppingList {
   private constructor(
@@ -240,6 +241,18 @@ export class ShoppingList {
   complete(): void {
     this.assertActive('complete');
     this.listStatus = 'completed';
+  }
+
+  /**
+   * 完了済みの買い物リストを active に戻す（買い物を再開）。週の途中で買い足しがある運用向け。
+   * 再度 complete() したときの在庫二重生成は CompleteShopping 側の品目単位冪等ガードで防ぐ。
+   * @throws Error status が completed 以外の場合
+   */
+  reopen(): void {
+    if (this.listStatus !== 'completed') {
+      throw new Error(`Cannot reopen a ShoppingList with status '${this.listStatus}'`);
+    }
+    this.listStatus = 'active';
   }
 
   get id(): ShoppingListId {

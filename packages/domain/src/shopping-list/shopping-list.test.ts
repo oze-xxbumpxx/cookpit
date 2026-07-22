@@ -300,6 +300,28 @@ describe('ShoppingList', () => {
     expect(() => list.complete()).toThrow("Cannot complete a ShoppingList with status 'completed'");
   });
 
+  it('reopen は completed から active に戻す', () => {
+    const list = reconstructCompletedList();
+
+    list.reopen();
+
+    expect(list.status).toBe('active');
+  });
+
+  it('reopen 後は addItem 等の更新操作が再び可能になる', () => {
+    const list = reconstructCompletedList([]);
+    list.reopen();
+
+    expect(() => list.addItem(createItem())).not.toThrow();
+    expect(list.items).toHaveLength(1);
+  });
+
+  it('reopen は active 状態では拒否する', () => {
+    const list = createList();
+
+    expect(() => list.reopen()).toThrow("Cannot reopen a ShoppingList with status 'active'");
+  });
+
   it('items getter は配列の防御的コピーを返す', () => {
     const list = createList();
     const items = list.items;

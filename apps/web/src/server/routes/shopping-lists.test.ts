@@ -10,6 +10,7 @@ import {
   MarkAsBoughtUseCase,
   MealPlanNotFoundError,
   ReassignStoreUseCase,
+  ReopenShoppingListUseCase,
   ShoppingItemNotFoundError,
   ShoppingListNotFoundError,
 } from '@cookpit/application';
@@ -31,6 +32,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     GetShoppingListUseCase: vi.fn(),
     MarkAsBoughtUseCase: vi.fn(),
     ReassignStoreUseCase: vi.fn(),
+    ReopenShoppingListUseCase: vi.fn(),
   };
 });
 
@@ -604,5 +606,38 @@ describe('shoppingListsRoute', () => {
     expect(execute).toHaveBeenCalledTimes(2);
     expect(execute).toHaveBeenNthCalledWith(1, { shoppingListId: SHOPPING_LIST_ID });
     expect(execute).toHaveBeenNthCalledWith(2, { shoppingListId: SHOPPING_LIST_ID });
+  });
+
+  it('POST /api/shopping-lists/:id/reopen は 200 で active の ShoppingListDto を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(shoppingListDto);
+    vi.mocked(ReopenShoppingListUseCase).mockImplementation(
+      () => ({ execute }) as unknown as ReopenShoppingListUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/reopen`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(shoppingListDto);
+    expect(execute).toHaveBeenCalledWith({ shoppingListId: SHOPPING_LIST_ID });
+  });
+
+  it('POST /api/shopping-lists/:id/reopen は InvalidShoppingListStateError を 422 に変換する', async () => {
+    const execute = vi
+      .fn()
+      .mockRejectedValue(new InvalidShoppingListStateError('active', 'reopen'));
+    vi.mocked(ReopenShoppingListUseCase).mockImplementation(
+      () => ({ execute }) as unknown as ReopenShoppingListUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/reopen`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({
+      error: "Cannot reopen a ShoppingList with status 'active'",
+    });
   });
 });
