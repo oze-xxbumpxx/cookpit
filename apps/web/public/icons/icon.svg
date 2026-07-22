@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.36" r="0.85">
+      <stop offset="0" stop-color="#FDF9F1"/>
+      <stop offset="1" stop-color="#EFE4D2"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EC7C55"/>
+      <stop offset="1" stop-color="#D25F38"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F28D66"/>
+      <stop offset="1" stop-color="#E06E45"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E06E45"/>
+      <stop offset="1" stop-color="#C85832"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D9673C" stop-opacity="0"/>
+      <stop offset="1" stop-color="#D9673C" stop-opacity="0.55"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#B65E3A" flood-opacity="0.20"/>
+    </filter>
+    <filter id="blur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+
+  <!-- steam (soft, rounded) -->
+  <g fill="none" stroke="url(#steam)" stroke-width="17" stroke-linecap="round">
+    <path d="M226 172 q-20 -24 0 -48 q20 -24 0 -48"/>
+    <path d="M286 172 q20 -24 0 -48 q-20 -24 0 -48"/>
+  </g>
+
+  <!-- soft grounding shadow -->
+  <ellipse cx="256" cy="392" rx="146" ry="24" fill="#B65E3A" opacity="0.16" filter="url(#blur)"/>
+
+  <g filter="url(#soft)">
+    <!-- handles (behind body, soft rounded ovals) -->
+    <rect x="94"  y="290" width="60" height="36" rx="18" fill="url(#handle)"/>
+    <rect x="358" y="290" width="60" height="36" rx="18" fill="url(#handle)"/>
+
+    <!-- pot body (plump, very rounded) -->
+    <rect x="148" y="266" width="216" height="116" rx="52" fill="url(#body)"/>
+
+    <!-- lid dome -->
+    <path d="M150 272 a106 46 0 0 1 212 0 z" fill="url(#lid)"/>
+    <!-- lid rim -->
+    <rect x="146" y="264" width="220" height="20" rx="10" fill="url(#lid)"/>
+    <!-- knob -->
+    <circle cx="256" cy="214" r="16" fill="url(#lid)"/>
+  </g>
+
+  <!-- soft diffuse highlight over upper pot -->
+  <ellipse cx="212" cy="250" rx="86" ry="30" fill="#FFFFFF" opacity="0.16" filter="url(#blur)"/>
+</svg>
