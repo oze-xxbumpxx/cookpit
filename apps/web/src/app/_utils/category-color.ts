@@ -39,6 +39,14 @@ const MEAL_PLAN_STATUS_CHIP: Record<string, string> = {
   completed: CHIP.blue,
 };
 
+// 賞味期限の緊急度（期限切れ/当日〜1日/2〜3日）を色で示す。
+// critical には CHIP.rose（肉カテゴリで既使用）を避け accent を採用し、意味衝突を回避する。
+const EXPIRY_URGENCY_CHIP: Record<string, string> = {
+  overdue: 'bg-destructive/10 text-destructive',
+  critical: 'bg-accent text-accent-foreground',
+  soon: CHIP.amber,
+};
+
 /** レシピタグのチップ配色クラスを返す（未知タグは neutral）。 */
 export function recipeTagChipClass(tag: string): string {
   return RECIPE_TAG_CHIP[tag] ?? CHIP.neutral;
@@ -52,4 +60,9 @@ export function productCategoryChipClass(category: string): string {
 /** 献立ステータスのチップ配色クラスを返す（未知ステータスは neutral）。 */
 export function mealPlanStatusChipClass(status: string): string {
   return MEAL_PLAN_STATUS_CHIP[status] ?? CHIP.neutral;
+}
+
+/** 賞味期限の緊急度のチップ配色クラスを返す（未知の値は neutral）。 */
+export function expiryUrgencyChipClass(urgency: string): string {
+  return EXPIRY_URGENCY_CHIP[urgency] ?? CHIP.neutral;
 }
