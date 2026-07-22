@@ -36,7 +36,7 @@ export function NavBar() {
       aria-label="メインナビゲーション"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur"
     >
-      <ul className="mx-auto flex w-full max-w-md items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
+      <ul className="mx-auto flex w-full max-w-md items-stretch justify-around px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {TABS.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href);
           return (

@@ -1,15 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist } from 'next/font/google';
-// 見出し用の丸ゴシック（自ホスト・日本語グリフ込み）。next/font は日本語サブセット非対応のため Fontsource を使う。
-// 見出しは font-semibold（→700 にマップ）のため 700 のみ読み込む（日本語 woff2 は重いので必要最小限）。
+// 丸ゴシック（自ホスト・日本語グリフ込み）を本文・見出し共通のアプリフォントにする。
+// next/font は日本語サブセット非対応のため Fontsource を使う。
+// 本文=400 / font-medium=500 / 見出し・font-semibold/bold=700 をカバーする最小限の重みだけ読み込む。
+import '@fontsource/zen-maru-gothic/japanese-400.css';
+import '@fontsource/zen-maru-gothic/japanese-500.css';
 import '@fontsource/zen-maru-gothic/japanese-700.css';
 import { NavBar } from './_components/nav-bar';
 import './globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
 
 export const metadata: Metadata = {
   title: 'Cookpit',
@@ -38,6 +35,9 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  // iOS で env(safe-area-inset-*) を有効化する。これがないとホームバー分の余白が 0 になり、
+  // ボトムナビが画面最下端に張り付いてタップしづらくなる。
+  viewportFit: 'cover',
 };
 
 // 保存済みテーマ（light/dark/system）を尊重しつつ、未設定/system は OS 設定に追従する。
@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" suppressHydrationWarning className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="ja" suppressHydrationWarning className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
