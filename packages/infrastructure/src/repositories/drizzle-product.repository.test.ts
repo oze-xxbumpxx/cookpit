@@ -162,6 +162,54 @@ describe('DrizzleProductRepository', () => {
     expect(amounts).toEqual([280, 300]);
   });
 
+  it('IR-P-08: 複数 priceRecords のバッチ upsert は各行を自身の値で更新する', async () => {
+    const store = await insertStore();
+    const idA = PriceRecordId.generate();
+    const idB = PriceRecordId.generate();
+
+    const buildProduct = (amountA: number, amountB: number): Product =>
+      Product.reconstruct({
+        id: ProductId.fromString('product-batch-upsert'),
+        name: 'トマト',
+        aliases: [],
+        category: '野菜',
+        defaultUnit: '個',
+        priceHistory: [
+          PriceRecord.reconstruct({
+            id: idA,
+            storeId: store.id,
+            price: Money.of(amountA, 'JPY'),
+            unitPrice: Money.of(1.5, 'JPY'),
+            packageSize: Quantity.of(200, 'g'),
+            observedAt: new Date('2026-06-01T00:00:00.000Z'),
+          }),
+          PriceRecord.reconstruct({
+            id: idB,
+            storeId: store.id,
+            price: Money.of(amountB, 'JPY'),
+            unitPrice: Money.of(1.5, 'JPY'),
+            packageSize: Quantity.of(200, 'g'),
+            observedAt: new Date('2026-06-15T00:00:00.000Z'),
+          }),
+        ],
+        createdAt: new Date('2026-06-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-01T00:00:00.000Z'),
+      });
+
+    await repository.save(buildProduct(300, 280));
+    // 同一 id で異なる値を再 save → ON CONFLICT の更新経路をバッチで通す。
+    // excluded.* 参照が正しければ各行は自身の新しい値に更新される。
+    await repository.save(buildProduct(350, 250));
+
+    const found = await repository.findById(ProductId.fromString('product-batch-upsert'));
+    const byId = new Map(
+      found?.priceHistory.map((record) => [record.id.value, record.price.amount]),
+    );
+    expect(found?.priceHistory).toHaveLength(2);
+    expect(byId.get(idA.value)).toBe(350);
+    expect(byId.get(idB.value)).toBe(250);
+  });
+
   it('INFRA-E-03: stores に存在しない storeId の priceRecord は FK 制約違反になる', async () => {
     const product = createProduct();
     product.recordPrice(createPriceRecord(StoreId.generate()));
