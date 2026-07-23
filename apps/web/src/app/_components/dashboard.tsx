@@ -116,7 +116,7 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
                 </span>
               )}
             </h2>
-            <Link href="/pantry" className="text-xs text-muted-foreground underline">
+            <Link href="/pantry" className="-my-1 py-1 text-xs text-muted-foreground underline">
               在庫を見る
             </Link>
           </div>

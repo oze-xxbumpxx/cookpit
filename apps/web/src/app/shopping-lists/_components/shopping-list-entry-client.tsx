@@ -66,7 +66,14 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
             </Link>
           </EmptyState>
         ) : (
-          <section className="flex flex-col items-center gap-4 py-12 text-center">
+          <EmptyState
+            Icon={ShoppingCart}
+            message={
+              mealPlan.status === 'draft'
+                ? '献立をもとに買い物リストを作成できます'
+                : '作成済みの買い物リストがあります'
+            }
+          >
             <Button
               type="button"
               onClick={() => void handleGenerate()}
@@ -75,7 +82,7 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
             >
               {mealPlan.status === 'draft' ? '買い物リストを作る' : '買い物リストを開く'}
             </Button>
-          </section>
+          </EmptyState>
         )}
       </div>
     </main>
