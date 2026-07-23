@@ -52,7 +52,7 @@ describe('ShoppingListEntryClient', () => {
   it('EC-01: mealPlan なしのとき空状態と /meal-plans への導線が表示される', () => {
     render(<ShoppingListEntryClient mealPlan={null} />);
 
-    expect(screen.getByText('今週の献立はまだありません')).toBeDefined();
+    expect(screen.getByText('買い物リストは献立から作られます')).toBeDefined();
     const link = screen.getByRole('link', { name: '今週の献立を作る' });
     expect(link.getAttribute('href')).toBe('/meal-plans');
     expect(screen.queryByRole('button', { name: '買い物リストを作る' })).toBeNull();

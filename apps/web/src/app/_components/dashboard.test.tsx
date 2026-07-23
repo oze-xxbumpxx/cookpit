@@ -74,7 +74,7 @@ describe('Dashboard', () => {
   it('賞味期限が近い在庫が無いとき空メッセージを表示する', () => {
     render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
 
-    expect(screen.getByText('まもなく期限を迎える在庫はありません。')).toBeTruthy();
+    expect(screen.getByText('まもなく期限を迎える在庫はありません')).toBeTruthy();
   });
 
   it('賞味期限が近い在庫を名称・保存場所・期限つきで一覧表示する', () => {
@@ -194,7 +194,7 @@ describe('Dashboard', () => {
   it('DC-08: 0 件時は件数バッジを表示せず空メッセージのみ表示する', () => {
     render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
 
-    expect(screen.getByText('まもなく期限を迎える在庫はありません。')).toBeTruthy();
+    expect(screen.getByText('まもなく期限を迎える在庫はありません')).toBeTruthy();
     expect(screen.queryByText('0')).toBeNull();
   });
 

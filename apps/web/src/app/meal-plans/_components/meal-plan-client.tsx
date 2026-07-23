@@ -7,7 +7,7 @@ import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/applicati
 import { EmptyState } from '@/app/_components/empty-state';
 import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { MEAL_PLAN_STATUS_LABELS } from '@/app/_utils/dashboard-view';
-import { Utensils } from 'lucide-react';
+import { CalendarDays, Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -149,8 +149,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
         )}
 
         {mealPlan === null ? (
-          <section className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
+          <EmptyState Icon={CalendarDays} message="今週の献立はまだありません">
             <Button
               type="button"
               onClick={handleCreate}
@@ -159,7 +158,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
             >
               {submitting ? '作成中' : '今週の献立を作る'}
             </Button>
-          </section>
+          </EmptyState>
         ) : (
           <>
             <div className="flex items-center gap-2">

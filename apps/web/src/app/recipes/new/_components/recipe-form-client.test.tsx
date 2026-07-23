@@ -78,7 +78,7 @@ describe('RecipeFormClient', () => {
 
     await user.type(screen.getByLabelText(/レシピ名/), '肉じゃが');
     // number input は選択 API を持たず user.clear が使えないため fireEvent で値を置換する
-    fireEvent.input(screen.getByLabelText('基準人数'), { target: { value: '0' } });
+    fireEvent.input(screen.getByLabelText(/基準人数/), { target: { value: '0' } });
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     expect(postRecipe).not.toHaveBeenCalled();

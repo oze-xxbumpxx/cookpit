@@ -1,9 +1,11 @@
 'use client';
 
+import { EmptyState } from '@/app/_components/empty-state';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { MealPlanDto, ShoppingListDto } from '@cookpit/application';
+import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -55,15 +57,14 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
         )}
 
         {mealPlan === null ? (
-          <section className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
+          <EmptyState Icon={ShoppingCart} message="買い物リストは献立から作られます">
             <Link
               href="/meal-plans"
               className={cn(buttonVariants({ variant: 'default' }), 'h-11 px-6')}
             >
               今週の献立を作る
             </Link>
-          </section>
+          </EmptyState>
         ) : (
           <section className="flex flex-col items-center gap-4 py-12 text-center">
             <Button

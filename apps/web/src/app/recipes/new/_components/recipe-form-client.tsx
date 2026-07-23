@@ -131,7 +131,7 @@ export function RecipeFormClient() {
           baseServingsSlot={
             <div className="flex flex-col gap-2">
               <label htmlFor={baseServingsId} className="text-sm font-medium text-foreground">
-                基準人数
+                基準人数 <span className="text-xs font-normal text-destructive">必須</span>
               </label>
               <Input
                 id={baseServingsId}
