@@ -82,10 +82,10 @@ export function ProductEditFormClient({ product }: Props) {
           <div className="flex justify-start">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => router.push(`/products/${product.id}`)}
-              className="h-9 px-2 text-foreground"
+              className="h-9 px-2"
             >
               キャンセル
             </Button>

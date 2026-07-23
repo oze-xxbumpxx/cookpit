@@ -233,10 +233,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           <div className="flex justify-start">
             <Link
               href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 px-2')}
             >
               戻る
             </Link>
