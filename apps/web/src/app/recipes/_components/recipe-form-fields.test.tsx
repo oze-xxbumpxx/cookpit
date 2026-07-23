@@ -80,13 +80,13 @@ describe('RecipeFormFields', () => {
     expect(screen.getAllByLabelText('食材名')).toHaveLength(1);
   });
 
-  it('RFF-03: 「ステップを追加」で手順行が増え、削除ボタンで減る', async () => {
+  it('RFF-03: 「手順を追加」で手順行が増え、削除ボタンで減る', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     expect(screen.getAllByLabelText(/手順 \d/)).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: 'ステップを追加' }));
+    await user.click(screen.getByRole('button', { name: '手順を追加' }));
     expect(screen.getAllByLabelText(/手順 \d/)).toHaveLength(2);
 
     await user.click(screen.getAllByRole('button', { name: '手順を削除' })[0]);

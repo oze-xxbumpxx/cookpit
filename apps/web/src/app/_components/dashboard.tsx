@@ -72,7 +72,7 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
           <h2 className="text-sm font-semibold text-foreground">今週の献立</h2>
           {mealPlan === null ? (
             <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">今週の献立はまだありません。</p>
+              <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
               <Link
                 href="/meal-plans"
                 className={cn(buttonVariants({ variant: 'default' }), 'h-11')}
@@ -122,7 +122,7 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
           </div>
           {expiringStocks.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              まもなく期限を迎える在庫はありません。
+              まもなく期限を迎える在庫はありません
             </p>
           ) : (
             <ul className="flex flex-col gap-2">

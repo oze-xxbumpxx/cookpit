@@ -351,7 +351,7 @@ export function RecipeFormFields({
             className="h-10 justify-start rounded-lg border-dashed bg-card text-foreground"
           >
             <Plus className="size-4" aria-hidden="true" />
-            ステップを追加
+            手順を追加
           </Button>
         </div>
       </section>
