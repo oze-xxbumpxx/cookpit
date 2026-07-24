@@ -68,11 +68,22 @@ export class CompleteShoppingUseCase {
       groups.set(key, existing);
     }
 
-    for (const [productIdValue, items] of groups) {
-      const product = await this.productRepository.findById(ProductId.fromString(productIdValue));
-      if (product === null) {
+    // product の取得（読み取り）は N+1 を避けて並列化する。保存は group 順に逐次実行し、
+    // 保存順序を決定的に保つ（複数 product でも並列書き込みにしない）。
+    const groupEntries = [...groups];
+    const products = await Promise.all(
+      groupEntries.map(([productIdValue]) =>
+        this.productRepository.findById(ProductId.fromString(productIdValue)),
+      ),
+    );
+
+    for (let index = 0; index < groupEntries.length; index += 1) {
+      const product = products[index];
+      const entry = groupEntries[index];
+      if (product === null || product === undefined || entry === undefined) {
         continue;
       }
+      const items = entry[1];
       let changed = false;
       for (const item of items) {
         // 価格レコード ID を品目 ID から決定的に導出し、既に記録済みならスキップする。
