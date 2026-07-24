@@ -1,5 +1,10 @@
-import { consumeStockSchema, stockIdParamSchema } from '@cookpit/api-contract';
-import { ConsumeStockUseCase, DiscardStockUseCase, GetPantryUseCase } from '@cookpit/application';
+import { addStockSchema, consumeStockSchema, stockIdParamSchema } from '@cookpit/api-contract';
+import {
+  AddStockUseCase,
+  ConsumeStockUseCase,
+  DiscardStockUseCase,
+  GetPantryUseCase,
+} from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { pantryRepository } from '../repositories';
@@ -9,6 +14,12 @@ export const pantryRoute = new Hono()
     const usecase = new GetPantryUseCase(pantryRepository());
     const dto = await usecase.execute();
     return c.json(dto, 200);
+  })
+  .post('/stocks', zValidator('json', addStockSchema), async (c) => {
+    const body = c.req.valid('json');
+    const usecase = new AddStockUseCase(pantryRepository());
+    const dto = await usecase.execute(body);
+    return c.json(dto, 201);
   })
   .post(
     '/stocks/:stockId/consume',
