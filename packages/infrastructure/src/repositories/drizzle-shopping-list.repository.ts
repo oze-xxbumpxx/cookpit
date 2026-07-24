@@ -13,7 +13,7 @@ import { ProductId } from '@cookpit/domain/src/product/product-id';
 import { Money } from '@cookpit/domain/src/shared/money';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
 import { StoreId } from '@cookpit/domain/src/shared/store';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
   shoppingItems,
@@ -92,21 +92,22 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
         .where(eq(shoppingItems.shoppingListId, shoppingList.id.value));
     }
 
-    for (const row of itemRows) {
+    if (itemRows.length > 0) {
+      // 配列バッチ upsert。set は各行の値を excluded.* で参照する。
       await this.db
         .insert(shoppingItems)
-        .values(row)
+        .values(itemRows)
         .onConflictDoUpdate({
           target: shoppingItems.id,
           set: {
-            displayName: row.displayName,
-            requiredAmountValue: row.requiredAmountValue,
-            requiredAmountUnit: row.requiredAmountUnit,
-            amountNote: row.amountNote,
-            targetStoreId: row.targetStoreId,
-            status: row.status,
-            actualPriceAmount: row.actualPriceAmount,
-            actualStoreId: row.actualStoreId,
+            displayName: sql`excluded.display_name`,
+            requiredAmountValue: sql`excluded.required_amount_value`,
+            requiredAmountUnit: sql`excluded.required_amount_unit`,
+            amountNote: sql`excluded.amount_note`,
+            targetStoreId: sql`excluded.target_store_id`,
+            status: sql`excluded.status`,
+            actualPriceAmount: sql`excluded.actual_price_amount`,
+            actualStoreId: sql`excluded.actual_store_id`,
           },
         });
     }

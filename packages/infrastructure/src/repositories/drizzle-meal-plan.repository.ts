@@ -8,7 +8,7 @@ import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan
 import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
 import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
 import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
-import { and, desc, eq, inArray, notInArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
   mealPlans,
@@ -130,19 +130,20 @@ export class DrizzleMealPlanRepository implements MealPlanRepository {
       await this.db.delete(plannedRecipes).where(eq(plannedRecipes.mealPlanId, mealPlan.id.value));
     }
 
-    for (const row of plannedRecipeRows) {
+    if (plannedRecipeRows.length > 0) {
+      // 配列バッチ upsert。set は各行の値を excluded.* で参照する。
       await this.db
         .insert(plannedRecipes)
-        .values(row)
+        .values(plannedRecipeRows)
         .onConflictDoUpdate({
           target: plannedRecipes.id,
           set: {
-            mealPlanId: row.mealPlanId,
-            recipeId: row.recipeId,
-            scaleFactor: row.scaleFactor,
-            scheduledDate: row.scheduledDate,
-            cookedAt: row.cookedAt,
-            notes: row.notes,
+            mealPlanId: sql`excluded.meal_plan_id`,
+            recipeId: sql`excluded.recipe_id`,
+            scaleFactor: sql`excluded.scale_factor`,
+            scheduledDate: sql`excluded.scheduled_date`,
+            cookedAt: sql`excluded.cooked_at`,
+            notes: sql`excluded.notes`,
           },
         });
     }

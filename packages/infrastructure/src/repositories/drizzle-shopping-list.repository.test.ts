@@ -166,6 +166,34 @@ describe('DrizzleShoppingListRepository', () => {
     expect(rows[0]?.status).toBe('completed');
   });
 
+  it('複数 item のバッチ upsert は各行を自身の値で更新する（excluded.* 参照）', async () => {
+    const itemA = createItem({ id: ShoppingItemId.fromString('shopping-item-a') });
+    const itemB = createItem({
+      id: ShoppingItemId.fromString('shopping-item-b'),
+      displayName: '人参',
+    });
+    await repository.save(createList({ items: [itemA, itemB] }));
+
+    // 同一 id で異なる値へ再 save → ON CONFLICT の更新経路をバッチで通す。
+    const updatedA = createItem({
+      id: ShoppingItemId.fromString('shopping-item-a'),
+      actualPrice: Money.of(111, 'JPY'),
+    });
+    const updatedB = createItem({
+      id: ShoppingItemId.fromString('shopping-item-b'),
+      displayName: '人参',
+      actualPrice: Money.of(222, 'JPY'),
+    });
+    await repository.save(createList({ items: [updatedA, updatedB] }));
+
+    const found = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    const byId = new Map(found.items.map((item) => [item.id.value, item.actualPrice?.amount]));
+    expect(byId.get('shopping-item-a')).toBe(111);
+    expect(byId.get('shopping-item-b')).toBe(222);
+  });
+
   it('再 save() で削除済み item を同期し、0 件では全削除する', async () => {
     const firstItem = createItem();
     const secondItem = createItem({ id: ShoppingItemId.fromString('shopping-item-2') });
