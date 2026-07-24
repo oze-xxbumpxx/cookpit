@@ -2,9 +2,10 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { UnitField } from '@/components/ui/unit-field';
 import { client } from '@/lib/api-client';
+import { parseQuantity } from '@/lib/parse-quantity';
 import type { CreateStoreBody, RecordPriceBody } from '@cookpit/api-contract';
 import type { ProductDto, StoreDto } from '@cookpit/application';
 import { useRouter } from 'next/navigation';
@@ -38,8 +39,7 @@ export function PriceRecordForm({ product }: Props) {
   const router = useRouter();
   const storeIdId = useId();
   const priceAmountId = useId();
-  const packageSizeValueId = useId();
-  const packageSizeUnitId = useId();
+  const packageSizeId = useId();
   const newStoreNameId = useId();
   const storeIdErrorId = useId();
   const priceAmountErrorId = useId();
@@ -52,14 +52,18 @@ export function PriceRecordForm({ product }: Props) {
   const [creatingStore, setCreatingStore] = useState(false);
   const [storeId, setStoreId] = useState('');
   const [priceAmount, setPriceAmount] = useState('');
-  const [packageSizeValue, setPackageSizeValue] = useState('');
-  const [packageSizeUnit, setPackageSizeUnit] = useState(product.defaultUnit);
+  const [packageSize, setPackageSize] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(emptyFieldErrors);
 
+  const parsedPackageSize = parseQuantity(packageSize);
   const canSubmit =
-    storeId !== '' && priceAmount.trim() !== '' && packageSizeValue.trim() !== '' && !submitting;
+    storeId !== '' &&
+    priceAmount.trim() !== '' &&
+    parsedPackageSize.kind === 'amount' &&
+    parsedPackageSize.value > 0 &&
+    !submitting;
   const canCreateStore = newStoreName.trim() !== '' && !creatingStore && !storesLoading;
   const storeOptions: SelectFieldOption[] = [
     {
@@ -114,7 +118,7 @@ export function PriceRecordForm({ product }: Props) {
   function buildInput(): BuildResult {
     const errors = emptyFieldErrors();
     const parsedPriceAmount = Number(priceAmount.trim());
-    const parsedPackageSizeValue = Number(packageSizeValue.trim());
+    const parsedSize = parseQuantity(packageSize);
 
     if (storeId === '') {
       errors.storeId = '店舗を選択してください。';
@@ -122,14 +126,15 @@ export function PriceRecordForm({ product }: Props) {
     if (!Number.isFinite(parsedPriceAmount) || parsedPriceAmount <= 0) {
       errors.priceAmount = '価格は1円以上の数値で入力してください。';
     }
-    if (!Number.isFinite(parsedPackageSizeValue) || parsedPackageSizeValue <= 0) {
-      errors.packageSizeValue = '内容量は1以上の数値で入力してください。';
+    if (parsedSize.kind !== 'amount' || parsedSize.value <= 0) {
+      errors.packageSizeValue = '内容量は「数値+単位」で入力してください（例：300g）。';
     }
 
     if (
       errors.storeId !== null ||
       errors.priceAmount !== null ||
-      errors.packageSizeValue !== null
+      errors.packageSizeValue !== null ||
+      parsedSize.kind !== 'amount'
     ) {
       return {
         input: null,
@@ -141,8 +146,8 @@ export function PriceRecordForm({ product }: Props) {
       input: {
         storeId,
         priceAmount: parsedPriceAmount,
-        packageSizeValue: parsedPackageSizeValue,
-        packageSizeUnit,
+        packageSizeValue: parsedSize.value,
+        packageSizeUnit: parsedSize.unit,
       },
       errors,
     };
@@ -209,7 +214,7 @@ export function PriceRecordForm({ product }: Props) {
       }
 
       setPriceAmount('');
-      setPackageSizeValue('');
+      setPackageSize('');
       router.refresh();
     } catch {
       setErrorMessage('通信エラーが発生しました。');
@@ -314,23 +319,19 @@ export function PriceRecordForm({ product }: Props) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor={packageSizeValueId} className="text-sm font-medium text-foreground">
-              内容量
+            <label htmlFor={packageSizeId} className="text-sm font-medium text-foreground">
+              内容量 <span className="text-xs font-normal text-muted-foreground">数量と単位</span>
             </label>
-            <Input
-              id={packageSizeValueId}
-              type="number"
-              min="1"
-              step="0.1"
-              inputMode="decimal"
-              value={packageSizeValue}
-              onChange={(event) => setPackageSizeValue(event.currentTarget.value)}
-              placeholder="300"
-              aria-invalid={fieldErrors.packageSizeValue !== null}
-              aria-describedby={
+            <QuantityField
+              id={packageSizeId}
+              value={packageSize}
+              onValueChange={setPackageSize}
+              placeholder={`例：300${product.defaultUnit}`}
+              className="h-11 rounded-xl bg-card"
+              invalid={fieldErrors.packageSizeValue !== null}
+              describedBy={
                 fieldErrors.packageSizeValue === null ? undefined : packageSizeValueErrorId
               }
-              className="h-11 rounded-xl bg-card"
             />
             {fieldErrors.packageSizeValue !== null && (
               <p id={packageSizeValueErrorId} className="text-xs text-destructive">
@@ -339,17 +340,6 @@ export function PriceRecordForm({ product }: Props) {
             )}
           </div>
         </section>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor={packageSizeUnitId} className="text-sm font-medium text-foreground">
-            内容量の単位
-          </label>
-          <UnitField
-            id={packageSizeUnitId}
-            value={packageSizeUnit}
-            onValueChange={setPackageSizeUnit}
-          />
-        </div>
       </div>
     </form>
   );

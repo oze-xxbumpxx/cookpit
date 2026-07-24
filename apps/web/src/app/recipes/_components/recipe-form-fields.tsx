@@ -9,11 +9,7 @@ import type { RecipeDto } from '@cookpit/application';
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useId, useRef } from 'react';
-import {
-  IngredientRow,
-  type IngredientRowValue,
-  type IngredientUnit,
-} from '@/app/recipes/_components/ingredient-row';
+import { IngredientRow, type IngredientRowValue } from '@/app/recipes/_components/ingredient-row';
 import { StepRow, type StepRowValue } from '@/app/recipes/_components/step-row';
 import { buildIngredientInput } from '@/app/recipes/_utils/build-ingredient-input';
 
@@ -54,7 +50,6 @@ function createIngredientRow(id: string): IngredientRowValue {
     id,
     displayName: '',
     amountText: '',
-    amountUnit: '',
   };
 }
 
@@ -81,28 +76,18 @@ function toIngredientRowValue(
   index: number,
 ): IngredientRowValue {
   const id = `ingredient-${index}`;
+  // 数量+単位は 1 欄（例：300g）へ結合。分量メモはそのまま。どちらも無い場合は空（防御的）。
   if (ingredient.amountValue !== null) {
     return {
       id,
       displayName: ingredient.displayName,
-      amountText: String(ingredient.amountValue),
-      amountUnit: ingredient.amountUnit as IngredientUnit,
+      amountText: `${ingredient.amountValue}${ingredient.amountUnit ?? ''}`,
     };
   }
-  if (ingredient.amountNote !== null) {
-    return {
-      id,
-      displayName: ingredient.displayName,
-      amountText: ingredient.amountNote,
-      amountUnit: '',
-    };
-  }
-  // 防御的フォールバック: DB 制約上この分岐には入らない
   return {
     id,
     displayName: ingredient.displayName,
-    amountText: '',
-    amountUnit: '',
+    amountText: ingredient.amountNote ?? '',
   };
 }
 

@@ -65,7 +65,7 @@ describe('RecipeEditFormClient', () => {
     expect(screen.getByRole('button', { name: '主菜' }).getAttribute('aria-pressed')).toBe('true');
     expect((screen.getByLabelText(/調理時間/) as HTMLInputElement).value).toBe('30');
     expect((screen.getByLabelText('食材名') as HTMLInputElement).value).toBe('玉ねぎ');
-    expect((screen.getByLabelText('量') as HTMLInputElement).value).toBe('2');
+    expect((screen.getByLabelText('分量') as HTMLInputElement).value).toBe('2個');
     expect((screen.getByLabelText('手順 1') as HTMLTextAreaElement).value).toBe('煮る');
     expect((screen.getByLabelText(/メモ/) as HTMLTextAreaElement).value).toBe('作り置き用');
   });

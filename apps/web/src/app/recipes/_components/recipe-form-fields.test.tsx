@@ -97,8 +97,8 @@ describe('RecipeFormFields', () => {
     const value: RecipeFormValue = {
       ...createInitialRecipeFormValue(),
       ingredients: [
-        { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2', amountUnit: '個' },
-        { id: 'ingredient-1', displayName: '', amountText: '2', amountUnit: '個' },
+        { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+        { id: 'ingredient-1', displayName: '', amountText: '2個' },
       ],
     };
     const fieldErrors: RecipeFieldErrors = {
@@ -193,9 +193,9 @@ describe('toRecipeFormValue', () => {
     expect(value.cookingTime).toBe('');
     expect(value.notes).toBe('メモ');
     expect(value.ingredients).toEqual([
-      { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2', amountUnit: '個' },
-      { id: 'ingredient-1', displayName: '塩', amountText: '適量', amountUnit: '' },
-      { id: 'ingredient-2', displayName: '水', amountText: '', amountUnit: '' },
+      { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+      { id: 'ingredient-1', displayName: '塩', amountText: '適量' },
+      { id: 'ingredient-2', displayName: '水', amountText: '' },
     ]);
     expect(value.steps).toEqual([{ id: 'step-0', description: '煮る' }]);
   });

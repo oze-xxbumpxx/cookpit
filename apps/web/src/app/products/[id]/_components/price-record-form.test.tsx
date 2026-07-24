@@ -70,10 +70,9 @@ describe('PriceRecordForm', () => {
     expect(await screen.findByText('選択肢にない店舗はここから追加できます。')).toBeDefined();
 
     await user.type(screen.getByLabelText('価格'), '298');
-    await user.type(screen.getByLabelText('内容量'), '300');
+    // 内容量は数量と単位を 1 欄で入力する（要望2）
+    await user.type(screen.getByLabelText('内容量', { exact: false }), '300個');
     expect(screen.getByRole('button', { name: '記録' }).hasAttribute('disabled')).toBe(false);
-    // happy-dom は step="0.1" の浮動小数点判定バグで内容量入力を invalid 扱いにし
-    // クリック経由の送信をブロックするため、submit イベントを直接発火する
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
@@ -89,7 +88,7 @@ describe('PriceRecordForm', () => {
     });
     expect(refresh).toHaveBeenCalled();
     expect((screen.getByLabelText('価格') as HTMLInputElement).value).toBe('');
-    expect((screen.getByLabelText('内容量') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('内容量', { exact: false }) as HTMLInputElement).value).toBe('');
   });
 
   it('PRF-02: 価格 0 では native min 制約により送信がブロックされ POST されない', async () => {
@@ -101,7 +100,7 @@ describe('PriceRecordForm', () => {
     expect(await screen.findByText('選択肢にない店舗はここから追加できます。')).toBeDefined();
 
     await user.type(screen.getByLabelText('価格'), '0');
-    await user.type(screen.getByLabelText('内容量'), '300');
+    await user.type(screen.getByLabelText('内容量', { exact: false }), '300個');
     await user.click(screen.getByRole('button', { name: '記録' }));
 
     expect(postPriceRecord).not.toHaveBeenCalled();

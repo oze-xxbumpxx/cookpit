@@ -359,7 +359,7 @@ describe('ShoppingListClient', () => {
 
     await user.click(screen.getByRole('button', { name: '手動で追加' }));
     await user.type(screen.getByLabelText('品目名', { exact: false }), '卵');
-    await user.type(screen.getByLabelText('数量'), '1');
+    await user.type(screen.getByLabelText('分量', { exact: false }), '1個');
     await user.click(screen.getByRole('button', { name: '追加' }));
 
     await waitFor(() => {
@@ -375,7 +375,7 @@ describe('ShoppingListClient', () => {
 
     await user.click(screen.getByRole('button', { name: '手動で追加' }));
     await user.type(screen.getByLabelText('品目名', { exact: false }), '卵');
-    await user.type(screen.getByLabelText('数量'), '1');
+    await user.type(screen.getByLabelText('分量', { exact: false }), '1個');
     await user.click(screen.getByRole('button', { name: '追加' }));
 
     await waitFor(() => {

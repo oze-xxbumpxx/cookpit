@@ -2,9 +2,10 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { UnitField } from '@/components/ui/unit-field';
-import { storageLocationSchema, UNIT_PRESETS } from '@cookpit/api-contract';
+import { parseQuantity } from '@/lib/parse-quantity';
+import { storageLocationSchema } from '@cookpit/api-contract';
 import type { StorageLocation } from '@cookpit/application';
 import { useId, useState } from 'react';
 import { LOCATION_LABELS } from '../_utils/pantry-view';
@@ -38,39 +39,32 @@ interface Props {
 /** 在庫の手動追加フォーム（展開パネル。add-item-form 同型）。 */
 export function AddStockForm({ submitting, onAdd }: Props) {
   const displayNameId = useId();
-  const valueId = useId();
-  const unitId = useId();
+  const amountId = useId();
   const locationId = useId();
   const expiresAtId = useId();
 
   const [displayName, setDisplayName] = useState('');
-  const [value, setValue] = useState('');
-  const [unit, setUnit] = useState<string>(UNIT_PRESETS[0]);
+  const [amountText, setAmountText] = useState('');
   const [location, setLocation] = useState(UNSET_LOCATION_VALUE);
   const [expiresAt, setExpiresAt] = useState('');
 
   const trimmedDisplayName = displayName.trim();
-  const trimmedValue = value.trim();
-  const parsedValue = Number(trimmedValue);
+  const parsed = parseQuantity(amountText);
   const canSubmit =
-    trimmedDisplayName !== '' &&
-    trimmedValue !== '' &&
-    Number.isFinite(parsedValue) &&
-    parsedValue > 0 &&
-    !submitting;
+    trimmedDisplayName !== '' && parsed.kind === 'amount' && parsed.value > 0 && !submitting;
 
   function handleAdd(): void {
-    if (!canSubmit) {
+    if (!canSubmit || parsed.kind !== 'amount') {
       return;
     }
     onAdd({
       displayName: trimmedDisplayName,
-      amount: { value: parsedValue, unit },
+      amount: { value: parsed.value, unit: parsed.unit },
       storedLocation: toStorageLocation(location),
       expiresAt: expiresAt === '' ? null : expiresAt,
     });
     setDisplayName('');
-    setValue('');
+    setAmountText('');
     setLocation(UNSET_LOCATION_VALUE);
     setExpiresAt('');
   }
@@ -92,29 +86,12 @@ export function AddStockForm({ submitting, onAdd }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2">
-          <label htmlFor={valueId} className="text-sm font-medium text-foreground">
-            数量 <span className="text-xs font-normal text-destructive">必須</span>
-          </label>
-          <Input
-            id={valueId}
-            type="number"
-            min={0}
-            inputMode="decimal"
-            value={value}
-            onChange={(event) => setValue(event.currentTarget.value)}
-            placeholder="1"
-            className="h-11 rounded-xl bg-background"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor={unitId} className="text-sm font-medium text-foreground">
-            単位
-          </label>
-          <UnitField id={unitId} value={unit} onValueChange={setUnit} />
-        </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor={amountId} className="text-sm font-medium text-foreground">
+          分量 <span className="text-xs font-normal text-destructive">必須</span>
+          <span className="ml-1 text-xs font-normal text-muted-foreground">数量と単位</span>
+        </label>
+        <QuantityField id={amountId} value={amountText} onValueChange={setAmountText} />
       </div>
 
       <div className="flex flex-col gap-2">

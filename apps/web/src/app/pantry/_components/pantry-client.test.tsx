@@ -394,13 +394,13 @@ describe('PantryClient', () => {
 
     await user.click(screen.getByRole('button', { name: '在庫を追加' }));
     await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
-    await user.type(screen.getByLabelText(/数量/), '3');
+    await user.type(screen.getByLabelText(/分量/), '3個');
     await user.click(screen.getByRole('button', { name: '追加' }));
 
     expect(postAddStock).toHaveBeenCalledWith({
       json: {
         displayName: '玉ねぎ',
-        amount: { value: 3, unit: 'g' },
+        amount: { value: 3, unit: '個' },
         storedLocation: null,
         expiresAt: null,
       },
@@ -418,7 +418,7 @@ describe('PantryClient', () => {
 
     await user.click(screen.getByRole('button', { name: '在庫を追加' }));
     await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
-    await user.type(screen.getByLabelText(/数量/), '3');
+    await user.type(screen.getByLabelText(/分量/), '3個');
     await user.click(screen.getByRole('button', { name: '追加' }));
 
     await waitFor(() => {

@@ -6,23 +6,20 @@ function createRow(overrides: Partial<IngredientRowValue> = {}): IngredientRowVa
   return {
     id: 'ingredient-0',
     displayName: '玉ねぎ',
-    amountText: '2',
-    amountUnit: '個',
+    amountText: '2個',
     ...overrides,
   };
 }
 
 describe('buildIngredientInput', () => {
   it('BI-01: 全項目が空の行はスキップされ ingredients にも errors にも含まれない', () => {
-    const result = buildIngredientInput([
-      createRow({ displayName: '', amountText: '', amountUnit: '' }),
-    ]);
+    const result = buildIngredientInput([createRow({ displayName: '', amountText: '' })]);
 
     expect(result.ingredients).toEqual([]);
     expect(result.errors).toEqual({});
   });
 
-  it('BI-02: 数値の量 + 単位ありは amountValue / amountUnit に入り amountNote は null', () => {
+  it('BI-02: 数値+単位の分量は amountValue / amountUnit に分解され amountNote は null', () => {
     const result = buildIngredientInput([createRow()]);
 
     expect(result.errors).toEqual({});
@@ -37,10 +34,8 @@ describe('buildIngredientInput', () => {
     ]);
   });
 
-  it('BI-03: 非数値の量は amountNote に入り amountValue / amountUnit は null', () => {
-    const result = buildIngredientInput([
-      createRow({ displayName: '塩', amountText: '適量', amountUnit: '' }),
-    ]);
+  it('BI-03: 数値で始まらない分量は amountNote に入り amountValue / amountUnit は null', () => {
+    const result = buildIngredientInput([createRow({ displayName: '塩', amountText: '適量' })]);
 
     expect(result.errors).toEqual({});
     expect(result.ingredients).toEqual([
@@ -61,31 +56,47 @@ describe('buildIngredientInput', () => {
     expect(result.errors).toEqual({ 'ingredient-3': '食材名を入力してください。' });
   });
 
-  it('BI-05: 量のみ空の行はエラーになる', () => {
-    const result = buildIngredientInput([createRow({ amountText: '', amountUnit: '' })]);
+  it('BI-05: 分量のみ空の行はエラーになる', () => {
+    const result = buildIngredientInput([createRow({ amountText: '' })]);
 
     expect(result.ingredients).toEqual([]);
     expect(result.errors).toEqual({ 'ingredient-0': '量を入力してください。' });
   });
 
-  it('BI-06: 負数の量はエラーになる', () => {
-    const result = buildIngredientInput([createRow({ amountText: '-1' })]);
+  it('BI-06: 数値のみ（単位なし）の分量はエラーになる', () => {
+    const result = buildIngredientInput([createRow({ amountText: '2' })]);
 
     expect(result.ingredients).toEqual([]);
-    expect(result.errors).toEqual({ 'ingredient-0': '量は0以上の数値で入力してください。' });
+    expect(result.errors).toEqual({ 'ingredient-0': '数値の量には単位も入力してください。' });
   });
 
-  it('BI-07: 数値の量で単位未選択はエラーになる', () => {
-    const result = buildIngredientInput([createRow({ amountUnit: '' })]);
-
-    expect(result.ingredients).toEqual([]);
-    expect(result.errors).toEqual({ 'ingredient-0': '数値の量には単位を選択してください。' });
-  });
-
-  it('BI-08: 量 0 はエラーにならず、食材名・量の前後空白は trim される', () => {
+  it('BI-07: 小数・分数の分量も分解される', () => {
     const result = buildIngredientInput([
-      createRow({ displayName: ' 卵 ', amountText: ' 0 ', amountUnit: '個' }),
+      createRow({ id: 'ingredient-0', displayName: 'みりん', amountText: '1.5本' }),
+      createRow({ id: 'ingredient-1', displayName: '水', amountText: '1/2cup' }),
     ]);
+
+    expect(result.errors).toEqual({});
+    expect(result.ingredients).toEqual([
+      {
+        productRef: null,
+        displayName: 'みりん',
+        amountValue: 1.5,
+        amountUnit: '本',
+        amountNote: null,
+      },
+      {
+        productRef: null,
+        displayName: '水',
+        amountValue: 0.5,
+        amountUnit: 'cup',
+        amountNote: null,
+      },
+    ]);
+  });
+
+  it('BI-08: 量 0 はエラーにならず、食材名・分量の前後空白は trim される', () => {
+    const result = buildIngredientInput([createRow({ displayName: ' 卵 ', amountText: ' 0個 ' })]);
 
     expect(result.errors).toEqual({});
     expect(result.ingredients).toEqual([

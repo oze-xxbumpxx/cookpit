@@ -1,19 +1,16 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UnitField } from '@/components/ui/unit-field';
+import { QuantityField } from '@/components/ui/quantity-field';
 import { X } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
 
-// 単位は自由記述（項目3）。空文字は「単位なし（分量メモ扱い）」を表す。
-export type IngredientUnit = string;
-
 export interface IngredientRowValue {
   id: string;
   displayName: string;
+  // 分量（数量+単位を 1 欄に統合）。数値+単位は amount、数値で始まらない入力は分量メモ扱い（要望2）。
   amountText: string;
-  amountUnit: string;
 }
 
 interface Props {
@@ -26,19 +23,15 @@ interface Props {
 export function IngredientRow({ value, errorMessage, onChange, onRemove }: Props) {
   const displayNameId = useId();
   const amountId = useId();
-  const unitId = useId();
   const errorId = useId();
 
   function handleDisplayNameChange(event: ChangeEvent<HTMLInputElement>): void {
     onChange({ ...value, displayName: event.target.value });
   }
 
-  function handleAmountTextChange(event: ChangeEvent<HTMLInputElement>): void {
-    onChange({ ...value, amountText: event.target.value });
-  }
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(70px,0.85fr)_82px_36px] gap-2">
+      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_36px] gap-2">
         <label htmlFor={displayNameId} className="sr-only">
           食材名
         </label>
@@ -53,27 +46,16 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove }: Props
         />
 
         <label htmlFor={amountId} className="sr-only">
-          量
+          分量
         </label>
-        <Input
+        <QuantityField
           id={amountId}
           value={value.amountText}
-          onChange={handleAmountTextChange}
-          placeholder="量"
-          aria-invalid={errorMessage !== null}
-          aria-describedby={errorMessage === null ? undefined : errorId}
-          className="h-11 rounded-lg bg-card px-2 text-sm"
-        />
-
-        <label htmlFor={unitId} className="sr-only">
-          単位
-        </label>
-        <UnitField
-          id={unitId}
-          value={value.amountUnit}
-          onValueChange={(next) => onChange({ ...value, amountUnit: next })}
-          placeholder="単位"
+          onValueChange={(next) => onChange({ ...value, amountText: next })}
+          placeholder="例：300g / 少々"
           className="h-11 w-full rounded-lg bg-card px-2 text-sm"
+          invalid={errorMessage !== null}
+          describedBy={errorMessage === null ? undefined : errorId}
         />
 
         <Button
