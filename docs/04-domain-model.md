@@ -485,7 +485,14 @@ export type ShoppingListStatus = 'active' | 'completed';
 
 ### Pantry 集約
 
-家にある食材を管理。買い物完了で自動追加、消費は手動。
+家にある食材を管理。買い物完了で自動追加、在庫画面から手動追加も可能、消費は手動。
+
+> 実装追記（2026-07-24, `docs/designs/pantry-manual-add.md`）: 在庫画面から在庫を手動で追加できる
+> （`AddStockUseCase` → `Pantry.addStock`）。手動追加分は `productId=null` /
+> `sourceShoppingItemId=null`（買い物完了由来の冪等キー非該当）で登録される。「追加＝常に新規 Stock」で
+> あり、既存 Stock への加算は行わない。なお本セクション以下のコード例は設計初期版で現行実装と乖離が
+> ある（`storedLocation`/`productId` は null 許容、`ConsumptionReason` は撤廃、消費はクランプ方式）。
+> 正典は `packages/domain/src/pantry/pantry.ts` と `docs/designs/pantry-core.md`。
 
 ```typescript
 export class Pantry {
