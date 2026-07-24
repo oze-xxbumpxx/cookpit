@@ -16,8 +16,14 @@ const { postMealPlan, postRecipe, deleteRecipe, postShoppingList, refresh, push 
 );
 
 vi.mock('next/link', () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: { children: ReactNode; href: string } & Record<string, unknown>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -346,6 +352,59 @@ describe('MealPlanClient', () => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
     });
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('WC-M-14: prev/next が揃うと週送りリンクが正しい href で描画される', () => {
+    render(
+      <MealPlanClient
+        mealPlan={null}
+        recipes={[]}
+        currentWeekIdentifier={CURRENT_WEEK}
+        selectedWeekIdentifier={CURRENT_WEEK}
+        previousWeekIdentifier="2026-06-27"
+        nextWeekIdentifier="2026-07-11"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: '前の週' }).getAttribute('href')).toBe(
+      '/meal-plans?week=2026-06-27',
+    );
+    expect(screen.getByRole('link', { name: '次の週' }).getAttribute('href')).toBe(
+      '/meal-plans?week=2026-07-11',
+    );
+    // 選択週が現在週なら週ナビラベルに「今週」を含む
+    expect(screen.getByText('今週 7/4（土）〜7/10（金）')).toBeDefined();
+  });
+
+  it('WC-M-15: 現在週以外を選択すると作成文言・空状態が変わり、作成 POST は選択週で呼ばれる', async () => {
+    const user = userEvent.setup();
+    postMealPlan.mockResolvedValue({ ok: true });
+    render(
+      <MealPlanClient
+        mealPlan={null}
+        recipes={[]}
+        currentWeekIdentifier={CURRENT_WEEK}
+        selectedWeekIdentifier="2026-07-11"
+        previousWeekIdentifier="2026-07-04"
+        nextWeekIdentifier="2026-07-18"
+      />,
+    );
+
+    expect(screen.getByText('7/11（土）〜7/17（金）の献立はまだありません')).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: 'この週の献立を作る' }));
+
+    await waitFor(() => {
+      expect(postMealPlan).toHaveBeenCalledWith({ json: { weekIdentifier: '2026-07-11' } });
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('WC-M-16: prev/next 未指定なら週送りリンクは描画されない（後方互換）', () => {
+    render(<MealPlanClient mealPlan={null} recipes={[]} currentWeekIdentifier={CURRENT_WEEK} />);
+
+    expect(screen.queryByRole('link', { name: '前の週' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '次の週' })).toBeNull();
   });
 
   it('MN-02: ヘッダーの導線は履歴のみ（他はボトムナビへ移設）', () => {

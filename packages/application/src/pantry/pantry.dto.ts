@@ -21,6 +21,14 @@ export interface ConsumeStockInputDto {
   amount: { value: number; unit: Unit };
 }
 
+export interface AddStockInputDto {
+  displayName: string;
+  amount: { value: number; unit: Unit };
+  storedLocation: StorageLocation | null;
+  /** ローカル日付文字列 `YYYY-MM-DD`。値なしは `null`。 */
+  expiresAt: string | null;
+}
+
 export interface DiscardStockInputDto {
   stockId: string;
 }

@@ -4,40 +4,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
 import { UnitField } from '@/components/ui/unit-field';
-import { UNIT_PRESETS } from '@cookpit/api-contract';
-import type { StoreDto } from '@cookpit/application';
+import { storageLocationSchema, UNIT_PRESETS } from '@cookpit/api-contract';
+import type { StorageLocation } from '@cookpit/application';
 import { useId, useState } from 'react';
+import { LOCATION_LABELS } from '../_utils/pantry-view';
 
-export interface AddItemFormInput {
+const UNSET_LOCATION_VALUE = '';
+
+const LOCATION_SELECT_OPTIONS: SelectFieldOption[] = [
+  { value: UNSET_LOCATION_VALUE, label: '未設定' },
+  ...storageLocationSchema.options.map((location) => ({
+    value: location,
+    label: LOCATION_LABELS[location],
+  })),
+];
+
+function toStorageLocation(value: string): StorageLocation | null {
+  return value === UNSET_LOCATION_VALUE ? null : (value as StorageLocation);
+}
+
+export interface AddStockFormInput {
   displayName: string;
-  requiredAmount: { value: number; unit: string };
-  targetStoreId: string | null;
+  amount: { value: number; unit: string };
+  storedLocation: StorageLocation | null;
+  expiresAt: string | null;
 }
 
 interface Props {
-  stores: StoreDto[];
   submitting: boolean;
-  onAdd: (input: AddItemFormInput) => void;
+  onAdd: (input: AddStockFormInput) => void;
 }
 
-const UNASSIGNED_STORE_VALUE = '';
-
-/** 手動追加フォーム（展開パネル、recipe-picker 同型。D-5/D-6）。 */
-export function AddItemForm({ stores, submitting, onAdd }: Props) {
+/** 在庫の手動追加フォーム（展開パネル。add-item-form 同型）。 */
+export function AddStockForm({ submitting, onAdd }: Props) {
   const displayNameId = useId();
   const valueId = useId();
   const unitId = useId();
-  const targetStoreId = useId();
+  const locationId = useId();
+  const expiresAtId = useId();
 
   const [displayName, setDisplayName] = useState('');
   const [value, setValue] = useState('');
   const [unit, setUnit] = useState<string>(UNIT_PRESETS[0]);
-  const [selectedStoreId, setSelectedStoreId] = useState(UNASSIGNED_STORE_VALUE);
-
-  const storeOptions: SelectFieldOption[] = [
-    { value: UNASSIGNED_STORE_VALUE, label: '店舗未定' },
-    ...stores.map((store) => ({ value: store.id, label: store.name })),
-  ];
+  const [location, setLocation] = useState(UNSET_LOCATION_VALUE);
+  const [expiresAt, setExpiresAt] = useState('');
 
   const trimmedDisplayName = displayName.trim();
   const trimmedValue = value.trim();
@@ -46,7 +56,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
     trimmedDisplayName !== '' &&
     trimmedValue !== '' &&
     Number.isFinite(parsedValue) &&
-    parsedValue >= 0 &&
+    parsedValue > 0 &&
     !submitting;
 
   function handleAdd(): void {
@@ -55,16 +65,19 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
     }
     onAdd({
       displayName: trimmedDisplayName,
-      requiredAmount: { value: parsedValue, unit },
-      targetStoreId: selectedStoreId === UNASSIGNED_STORE_VALUE ? null : selectedStoreId,
+      amount: { value: parsedValue, unit },
+      storedLocation: toStorageLocation(location),
+      expiresAt: expiresAt === '' ? null : expiresAt,
     });
     setDisplayName('');
     setValue('');
+    setLocation(UNSET_LOCATION_VALUE);
+    setExpiresAt('');
   }
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
-      <h2 className="text-sm font-medium text-foreground">手動で追加</h2>
+      <h2 className="text-sm font-medium text-foreground">在庫を手動で追加</h2>
 
       <div className="flex flex-col gap-2">
         <label htmlFor={displayNameId} className="text-sm font-medium text-foreground">
@@ -74,7 +87,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
           id={displayNameId}
           value={displayName}
           onChange={(event) => setDisplayName(event.currentTarget.value)}
-          placeholder="例：卵"
+          placeholder="例：玉ねぎ"
           className="h-11 rounded-xl bg-background"
         />
       </div>
@@ -82,7 +95,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <label htmlFor={valueId} className="text-sm font-medium text-foreground">
-            数量
+            数量 <span className="text-xs font-normal text-destructive">必須</span>
           </label>
           <Input
             id={valueId}
@@ -105,14 +118,27 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor={targetStoreId} className="text-sm font-medium text-foreground">
-          推奨店舗 <span className="text-xs font-normal text-muted-foreground">任意</span>
+        <label htmlFor={locationId} className="text-sm font-medium text-foreground">
+          保存場所 <span className="text-xs font-normal text-muted-foreground">任意</span>
         </label>
         <SelectField
-          id={targetStoreId}
-          value={selectedStoreId}
-          onValueChange={setSelectedStoreId}
-          options={storeOptions}
+          id={locationId}
+          value={location}
+          onValueChange={setLocation}
+          options={LOCATION_SELECT_OPTIONS}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor={expiresAtId} className="text-sm font-medium text-foreground">
+          賞味期限 <span className="text-xs font-normal text-muted-foreground">任意</span>
+        </label>
+        <Input
+          id={expiresAtId}
+          type="date"
+          value={expiresAt}
+          onChange={(event) => setExpiresAt(event.currentTarget.value)}
+          className="h-11 rounded-xl bg-background"
         />
       </div>
 

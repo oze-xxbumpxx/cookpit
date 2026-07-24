@@ -3,10 +3,11 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { getPantry, postConsume, postDiscard } = vi.hoisted(() => ({
+const { getPantry, postConsume, postDiscard, postAddStock } = vi.hoisted(() => ({
   getPantry: vi.fn(),
   postConsume: vi.fn(),
   postDiscard: vi.fn(),
+  postAddStock: vi.fn(),
 }));
 
 vi.mock('@/lib/api-client', () => ({
@@ -15,6 +16,7 @@ vi.mock('@/lib/api-client', () => ({
       pantry: {
         $get: (...args: unknown[]) => getPantry(...args),
         stocks: {
+          $post: (...args: unknown[]) => postAddStock(...args),
           ':stockId': {
             consume: {
               $post: (...args: unknown[]) => postConsume(...args),
@@ -372,6 +374,55 @@ describe('PantryClient', () => {
     await waitFor(() => {
       expect(screen.queryByText('牛乳')).toBeNull();
       expect(within(getStockRow('ジュース')).getByText('250ml')).toBeDefined();
+    });
+  });
+
+  it('PC-18: 在庫を追加ボタンからフォーム展開・入力・追加で一覧に反映しフォームを閉じる', async () => {
+    const user = userEvent.setup();
+    postAddStock.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createPantryDto([
+          createStockDto({
+            id: '30000000-0000-4000-8000-000000000020',
+            displayName: '玉ねぎ',
+            amount: { value: 3, unit: 'g' },
+          }),
+        ]),
+    });
+    render(<PantryClient pantry={createPantryDto()} />);
+
+    await user.click(screen.getByRole('button', { name: '在庫を追加' }));
+    await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
+    await user.type(screen.getByLabelText(/数量/), '3');
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    expect(postAddStock).toHaveBeenCalledWith({
+      json: {
+        displayName: '玉ねぎ',
+        amount: { value: 3, unit: 'g' },
+        storedLocation: null,
+        expiresAt: null,
+      },
+    });
+    await waitFor(() => {
+      expect(screen.getByText('玉ねぎ')).toBeDefined();
+      expect(screen.getByRole('button', { name: '在庫を追加' })).toBeDefined();
+    });
+  });
+
+  it('PC-19: 在庫追加が失敗したときエラーを表示する', async () => {
+    const user = userEvent.setup();
+    postAddStock.mockResolvedValue({ ok: false });
+    render(<PantryClient pantry={createPantryDto()} />);
+
+    await user.click(screen.getByRole('button', { name: '在庫を追加' }));
+    await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
+    await user.type(screen.getByLabelText(/数量/), '3');
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('在庫の追加に失敗しました。')).toBeDefined();
     });
   });
 

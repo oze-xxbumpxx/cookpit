@@ -1,6 +1,6 @@
-import { unitSchema } from '@cookpit/api-contract';
+import { UNIT_PRESETS } from '@cookpit/api-contract';
 import type { StoreDto } from '@cookpit/application';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AddItemForm } from './add-item-form';
@@ -132,14 +132,31 @@ describe('AddItemForm', () => {
     expect(screen.getByRole('button', { name: '追加' }).hasAttribute('disabled')).toBe(true);
   });
 
-  it('AF-09: 単位選択肢は unitSchema.options 全件が過不足なく描画される', async () => {
-    const user = userEvent.setup();
+  it('AF-09: 単位は自由入力欄で、プリセット候補（datalist）を全件持つ（項目3）', () => {
     render(<AddItemForm stores={STORES} submitting={false} onAdd={vi.fn()} />);
 
-    await user.click(screen.getByRole('combobox', { name: '単位' }));
-    const listbox = screen.getByRole('listbox');
+    const unitInput = screen.getByLabelText('単位') as HTMLInputElement;
+    expect(unitInput.tagName).toBe('INPUT');
+    const listId = unitInput.getAttribute('list');
+    expect(listId).not.toBeNull();
+    const datalist = document.getElementById(listId as string);
+    expect(datalist?.querySelectorAll('option')).toHaveLength(UNIT_PRESETS.length);
+  });
 
-    expect(within(listbox).getAllByRole('option')).toHaveLength(unitSchema.options.length);
+  it('AF-11: プリセット外の単位を自由入力して送信できる（項目3）', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddItemForm stores={STORES} submitting={false} onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText('品目名', { exact: false }), '卵');
+    await user.type(screen.getByLabelText('数量'), '1');
+    await user.clear(screen.getByLabelText('単位'));
+    await user.type(screen.getByLabelText('単位'), 'パック');
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ requiredAmount: { value: 1, unit: 'パック' } }),
+    );
   });
 
   it('AF-10: productId 選択に相当する UI 要素が存在しない（D-6）', () => {

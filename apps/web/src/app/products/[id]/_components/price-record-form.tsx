@@ -1,9 +1,9 @@
 'use client';
 
-import { UNIT_OPTIONS, toProductUnit } from '@/app/products/_components/product-form-fields';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import { UnitField } from '@/components/ui/unit-field';
 import { client } from '@/lib/api-client';
 import type { CreateStoreBody, RecordPriceBody } from '@cookpit/api-contract';
 import type { ProductDto, StoreDto } from '@cookpit/application';
@@ -33,11 +33,6 @@ function emptyFieldErrors(): FieldErrors {
     packageSizeValue: null,
   };
 }
-
-const UNIT_SELECT_OPTIONS: SelectFieldOption[] = UNIT_OPTIONS.map((unit) => ({
-  value: unit,
-  label: unit,
-}));
 
 export function PriceRecordForm({ product }: Props) {
   const router = useRouter();
@@ -349,11 +344,10 @@ export function PriceRecordForm({ product }: Props) {
           <label htmlFor={packageSizeUnitId} className="text-sm font-medium text-foreground">
             内容量の単位
           </label>
-          <SelectField
+          <UnitField
             id={packageSizeUnitId}
             value={packageSizeUnit}
-            onValueChange={(nextValue) => setPackageSizeUnit(toProductUnit(nextValue))}
-            options={UNIT_SELECT_OPTIONS}
+            onValueChange={setPackageSizeUnit}
           />
         </div>
       </div>

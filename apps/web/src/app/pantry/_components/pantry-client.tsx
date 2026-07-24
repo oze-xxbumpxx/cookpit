@@ -4,9 +4,10 @@ import { EmptyState } from '@/app/_components/empty-state';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import type { PantryDto, StockDto } from '@cookpit/application';
-import { Refrigerator } from 'lucide-react';
+import { Plus, Refrigerator } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { groupStocksByLocation } from '../_utils/pantry-view';
+import { AddStockForm, type AddStockFormInput } from './add-stock-form';
 import { LocationGroup } from './location-group';
 
 interface Props {
@@ -18,6 +19,8 @@ export function PantryClient({ pantry }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submittingStockId, setSubmittingStockId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [addFormOpen, setAddFormOpen] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
 
   async function handleConsume(stockId: string): Promise<void> {
     if (submittingStockId === stockId) {
@@ -71,6 +74,28 @@ export function PantryClient({ pantry }: Props) {
       setErrorMessage('通信エラーが発生しました。');
     } finally {
       setSubmittingStockId(null);
+    }
+  }
+
+  async function handleAddStock(input: AddStockFormInput): Promise<void> {
+    if (addSubmitting) {
+      return;
+    }
+    setAddSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const response = await client.api.pantry.stocks.$post({ json: input });
+      if (!response.ok) {
+        setErrorMessage('在庫の追加に失敗しました。');
+        return;
+      }
+      const dto = await response.json();
+      setStocks(dto.stocks);
+      setAddFormOpen(false);
+    } catch {
+      setErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setAddSubmitting(false);
     }
   }
 
@@ -152,6 +177,20 @@ export function PantryClient({ pantry }: Props) {
               />
             ))}
           </div>
+        )}
+
+        {addFormOpen ? (
+          <AddStockForm submitting={addSubmitting} onAdd={(input) => void handleAddStock(input)} />
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAddFormOpen(true)}
+            className="h-11 w-full"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            在庫を追加
+          </Button>
         )}
       </div>
     </main>

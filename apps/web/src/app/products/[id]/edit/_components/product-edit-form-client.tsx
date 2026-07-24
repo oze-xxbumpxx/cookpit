@@ -7,7 +7,6 @@ import {
   buildProductFormBody,
   emptyProductFieldErrors,
   toProductCategory,
-  toProductUnit,
   type ProductFormValue,
 } from '@/app/products/_components/product-form-fields';
 import type { ProductDto } from '@cookpit/application';
@@ -24,7 +23,7 @@ function toFormValue(product: ProductDto): ProductFormValue {
     name: product.name,
     aliasesText: product.aliases.join(', '),
     category: toProductCategory(product.category),
-    defaultUnit: toProductUnit(product.defaultUnit),
+    defaultUnit: product.defaultUnit,
   };
 }
 
@@ -82,10 +81,10 @@ export function ProductEditFormClient({ product }: Props) {
           <div className="flex justify-start">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => router.push(`/products/${product.id}`)}
-              className="h-9 px-2 text-foreground"
+              className="h-9 px-2"
             >
               キャンセル
             </Button>

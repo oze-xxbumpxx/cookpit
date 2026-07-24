@@ -1,10 +1,7 @@
-import { unitSchema } from '@cookpit/api-contract';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IngredientRow, type IngredientRowValue } from './ingredient-row';
-
-const UNIT_OPTIONS = unitSchema.options;
 
 function createValue(overrides: Partial<IngredientRowValue> = {}): IngredientRowValue {
   return {
@@ -31,7 +28,6 @@ describe('IngredientRow', () => {
         errorMessage={null}
         onChange={onChange}
         onRemove={vi.fn()}
-        unitOptions={UNIT_OPTIONS}
       />,
     );
 
@@ -41,23 +37,24 @@ describe('IngredientRow', () => {
     await user.type(screen.getByLabelText('量'), '2');
     expect(onChange).toHaveBeenLastCalledWith(createValue({ amountText: '2' }));
 
-    await user.selectOptions(screen.getByLabelText('単位'), '個');
-    expect(onChange).toHaveBeenLastCalledWith(createValue({ amountUnit: '個' }));
+    // 単位は自由入力（項目3）。プリセット外の文字列もそのまま反映される。
+    await user.type(screen.getByLabelText('単位'), '房');
+    expect(onChange).toHaveBeenLastCalledWith(createValue({ amountUnit: '房' }));
   });
 
-  it('IR-02: 単位選択肢は空オプション + unitOptions 全件が描画される', () => {
+  it('IR-02: 単位はプリセット候補付きの自由入力欄（textbox）である', () => {
     render(
       <IngredientRow
         value={createValue()}
         errorMessage={null}
         onChange={vi.fn()}
         onRemove={vi.fn()}
-        unitOptions={UNIT_OPTIONS}
       />,
     );
 
-    const select = screen.getByLabelText('単位');
-    expect(within(select).getAllByRole('option')).toHaveLength(UNIT_OPTIONS.length + 1);
+    const unitInput = screen.getByLabelText('単位') as HTMLInputElement;
+    expect(unitInput.tagName).toBe('INPUT');
+    expect(unitInput.getAttribute('list')).not.toBeNull();
   });
 
   it('IR-03: 削除ボタンで onRemove が呼ばれ、エラーがあるときのみメッセージ表示される', async () => {
@@ -69,7 +66,6 @@ describe('IngredientRow', () => {
         errorMessage={null}
         onChange={vi.fn()}
         onRemove={onRemove}
-        unitOptions={UNIT_OPTIONS}
       />,
     );
 
@@ -84,7 +80,6 @@ describe('IngredientRow', () => {
         errorMessage="食材名を入力してください。"
         onChange={vi.fn()}
         onRemove={onRemove}
-        unitOptions={UNIT_OPTIONS}
       />,
     );
     expect(screen.getByText('食材名を入力してください。')).toBeDefined();

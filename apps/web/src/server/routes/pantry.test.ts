@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '@/server/app';
 import {
+  AddStockUseCase,
   ConsumeStockUseCase,
   DiscardStockUseCase,
   GetPantryUseCase,
@@ -19,6 +20,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
   const actual = await importOriginal<typeof ApplicationModule>();
   return {
     ...actual,
+    AddStockUseCase: vi.fn(),
     ConsumeStockUseCase: vi.fn(),
     DiscardStockUseCase: vi.fn(),
     GetPantryUseCase: vi.fn(),
@@ -82,6 +84,71 @@ describe('pantryRoute', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(pantryDto);
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /api/pantry/stocks は 201 で更新後 PantryDto を返す', async () => {
+    const body = {
+      displayName: '玉ねぎ',
+      amount: { value: 3, unit: '個' },
+      storedLocation: 'fridge',
+      expiresAt: '2026-07-31',
+    };
+    const execute = vi.fn().mockResolvedValue(pantryDto);
+    vi.mocked(AddStockUseCase).mockImplementation(
+      () => ({ execute }) as unknown as AddStockUseCase,
+    );
+
+    const res = await app.request('/api/pantry/stocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual(pantryDto);
+    expect(execute).toHaveBeenCalledWith(body);
+  });
+
+  it('POST /api/pantry/stocks は displayName が空の場合 400 を返す', async () => {
+    const execute = vi.fn();
+    vi.mocked(AddStockUseCase).mockImplementation(
+      () => ({ execute }) as unknown as AddStockUseCase,
+    );
+
+    const res = await app.request('/api/pantry/stocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        displayName: '',
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/pantry/stocks は amount.value が 0 の場合 400 を返す', async () => {
+    const execute = vi.fn();
+    vi.mocked(AddStockUseCase).mockImplementation(
+      () => ({ execute }) as unknown as AddStockUseCase,
+    );
+
+    const res = await app.request('/api/pantry/stocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        displayName: '玉ねぎ',
+        amount: { value: 0, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('POST /api/pantry/stocks/:stockId/consume は 200 で PantryDto を返す', async () => {

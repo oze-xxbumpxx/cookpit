@@ -66,8 +66,11 @@ describe('createProductSchema', () => {
     );
   });
 
-  it('unitSchema の 17 値に含まれない defaultUnit を reject する', () => {
-    expect(() => createProductSchema.parse({ ...VALID_PRODUCT, defaultUnit: '箱' })).toThrow();
+  it('プリセット外の自由入力 defaultUnit も受け入れ、空文字は reject する（項目3）', () => {
+    expect(createProductSchema.parse({ ...VALID_PRODUCT, defaultUnit: '箱' }).defaultUnit).toBe(
+      '箱',
+    );
+    expect(() => createProductSchema.parse({ ...VALID_PRODUCT, defaultUnit: '' })).toThrow();
   });
 
   it('未知の category を reject する', () => {
@@ -113,7 +116,10 @@ describe('recordPriceSchema', () => {
     expect(() => recordPriceSchema.parse({ ...VALID_PRICE, packageSizeValue })).toThrow();
   });
 
-  it('unitSchema の 17 値に含まれない packageSizeUnit を reject する', () => {
-    expect(() => recordPriceSchema.parse({ ...VALID_PRICE, packageSizeUnit: '箱' })).toThrow();
+  it('プリセット外の自由入力 packageSizeUnit も受け入れ、空文字は reject する（項目3）', () => {
+    expect(recordPriceSchema.parse({ ...VALID_PRICE, packageSizeUnit: '箱' }).packageSizeUnit).toBe(
+      '箱',
+    );
+    expect(() => recordPriceSchema.parse({ ...VALID_PRICE, packageSizeUnit: '' })).toThrow();
   });
 });

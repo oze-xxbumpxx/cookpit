@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { recipeTagSchema, unitSchema, type UpdateRecipeBody } from '@cookpit/api-contract';
+import { recipeTagSchema, type UpdateRecipeBody } from '@cookpit/api-contract';
 import type { RecipeDto } from '@cookpit/application';
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -40,7 +40,6 @@ export interface RecipeFormBuildResult {
 }
 
 const TAG_OPTIONS = recipeTagSchema.options;
-const UNIT_OPTIONS = unitSchema.options;
 
 export function emptyRecipeFieldErrors(): RecipeFieldErrors {
   return {
@@ -317,7 +316,6 @@ export function RecipeFormFields({
               errorMessage={fieldErrors.ingredients[ingredient.id] ?? null}
               onChange={updateIngredient}
               onRemove={() => removeIngredient(ingredient.id)}
-              unitOptions={UNIT_OPTIONS}
             />
           ))}
           <Button

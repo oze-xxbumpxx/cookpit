@@ -90,7 +90,7 @@ describe('DrizzleMealPlanRepository', () => {
     expect(found.weekOf.toString()).toBe('2026-07-04');
   });
 
-  it('findRecent(1) は JOIN 行膨張後に MealPlan 単位で limit する', async () => {
+  it('findRecent(1) は MealPlan 単位で limit しつつ子行を全件保持する', async () => {
     const older = createMealPlan('2026-06-27');
     addRecipe(older, 'older-recipe', 1);
     await repository.save(older);
@@ -115,6 +115,30 @@ describe('DrizzleMealPlanRepository', () => {
 
     expect(recent).toHaveLength(1);
     expect(recent[0]?.id.equals(mealPlan.id)).toBe(true);
+  });
+
+  it('findRecent(2) は DB 件数 > limit のとき週降順で最新2件を返し、子行を切らない', async () => {
+    const oldest = createMealPlan('2026-06-20');
+    addRecipe(oldest, 'oldest-recipe', 1);
+    await repository.save(oldest);
+
+    const middle = createMealPlan('2026-06-27');
+    addRecipe(middle, 'middle-recipe', 1);
+    await repository.save(middle);
+
+    const newest = createMealPlan('2026-07-04');
+    addRecipe(newest, 'newest-recipe-1', 1);
+    addRecipe(newest, 'newest-recipe-2', 1);
+    await repository.save(newest);
+
+    const recent = await repository.findRecent(2);
+
+    expect(recent).toHaveLength(2);
+    expect(recent[0]?.id.equals(newest.id)).toBe(true);
+    expect(recent[1]?.id.equals(middle.id)).toBe(true);
+    // 最新の複数レシピを持つ MealPlan が SQL LIMIT で途中で切れないこと
+    expect(recent[0]?.plannedRecipes).toHaveLength(2);
+    expect(recent[1]?.plannedRecipes).toHaveLength(1);
   });
 
   it('同一 id の再 save() は status を更新し weekStartDate は変更しない', async () => {

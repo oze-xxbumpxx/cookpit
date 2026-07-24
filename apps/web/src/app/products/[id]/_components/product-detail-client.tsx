@@ -62,11 +62,10 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
         <header className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon-lg"
             onClick={() => router.push('/products')}
             aria-label="一覧に戻る"
-            className="text-foreground"
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>

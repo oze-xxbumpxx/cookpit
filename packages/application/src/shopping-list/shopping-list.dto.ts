@@ -71,3 +71,7 @@ export interface CompleteShoppingInputDto {
 export interface ReopenShoppingListInputDto {
   shoppingListId: string;
 }
+
+export interface SyncShoppingListInputDto {
+  shoppingListId: string;
+}

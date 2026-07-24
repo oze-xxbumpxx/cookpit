@@ -5,7 +5,7 @@ import { StockId } from '@cookpit/domain/src/pantry/stock-id';
 import { ProductId } from '@cookpit/domain/src/product/product-id';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
 import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { notInArray } from 'drizzle-orm';
+import { notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import { stocks, type NewStockRow, type StockRow } from '../db/schema';
 import { toUnit } from './mappers';
@@ -31,13 +31,14 @@ export class DrizzlePantryRepository implements PantryRepository {
       await this.db.delete(stocks);
     }
 
-    for (const row of stockRows) {
+    if (stockRows.length > 0) {
+      // 配列バッチ upsert。set は各行の値を excluded.* で参照する（Stock は amount のみ可変）。
       await this.db
         .insert(stocks)
-        .values(row)
+        .values(stockRows)
         .onConflictDoUpdate({
           target: stocks.id,
-          set: { amountValue: row.amountValue },
+          set: { amountValue: sql`excluded.amount_value` },
         });
     }
   }

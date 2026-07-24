@@ -101,11 +101,19 @@ describe('addItemSchema', () => {
     ).toBe(unit);
   });
 
-  it('unitSchema の 17 値に含まれない単位を reject する', () => {
-    expect(() =>
+  it('プリセット外の自由入力単位も受け入れ、空文字は reject する（項目3）', () => {
+    expect(
       addItemSchema.parse({
         displayName: '食材',
         requiredAmount: { value: 1, unit: '箱' },
+        productId: null,
+        targetStoreId: null,
+      }).requiredAmount.unit,
+    ).toBe('箱');
+    expect(() =>
+      addItemSchema.parse({
+        displayName: '食材',
+        requiredAmount: { value: 1, unit: '' },
         productId: null,
         targetStoreId: null,
       }),

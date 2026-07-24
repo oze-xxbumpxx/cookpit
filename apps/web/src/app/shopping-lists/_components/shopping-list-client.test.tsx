@@ -10,6 +10,7 @@ const {
   postTargetStore,
   postComplete,
   postReopen,
+  postSync,
   routerPush,
   routerRefresh,
 } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const {
   postTargetStore: vi.fn(),
   postComplete: vi.fn(),
   postReopen: vi.fn(),
+  postSync: vi.fn(),
   routerPush: vi.fn(),
   routerRefresh: vi.fn(),
 }));
@@ -38,6 +40,9 @@ vi.mock('@/lib/api-client', () => ({
           },
           reopen: {
             $post: (...args: unknown[]) => postReopen(...args),
+          },
+          sync: {
+            $post: (...args: unknown[]) => postSync(...args),
           },
           items: {
             $post: (...args: unknown[]) => postItem(...args),
@@ -689,6 +694,62 @@ describe('ShoppingListClient', () => {
     );
 
     expect(screen.getByRole('button', { name: '買い物完了' })).toBeDefined();
+  });
+
+  it('SY-01: active のとき「献立の変更を反映」で sync を呼び、追加件数を表示する', async () => {
+    const user = userEvent.setup();
+    const existing = createShoppingItemDto({ id: 'item-1', displayName: '醤油' });
+    const added = createShoppingItemDto({ id: 'item-2', displayName: '人参' });
+    postSync.mockResolvedValue({
+      ok: true,
+      json: async () => createShoppingListDto({ status: 'active', items: [existing, added] }),
+    });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '献立の変更を反映' }));
+
+    await waitFor(() => {
+      expect(postSync).toHaveBeenCalledWith({ param: { id: 'shopping-list-1' } });
+      expect(screen.getByText('1件の材料を追加しました')).toBeDefined();
+      expect(screen.getByRole('checkbox', { name: /人参/ })).toBeDefined();
+    });
+  });
+
+  it('SY-02: 追加が無いとき「追加する材料はありませんでした」を表示する', async () => {
+    const user = userEvent.setup();
+    const existing = createShoppingItemDto({ id: 'item-1', displayName: '醤油' });
+    postSync.mockResolvedValue({
+      ok: true,
+      json: async () => createShoppingListDto({ status: 'active', items: [existing] }),
+    });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '献立の変更を反映' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('追加する材料はありませんでした')).toBeDefined();
+    });
+  });
+
+  it('SY-03: completed のとき「献立の変更を反映」を表示しない', () => {
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'completed' })}
+        stores={STORES}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: '献立の変更を反映' })).toBeNull();
   });
 
   it('CB-02: completed のとき完了ボタンと手動追加ボタンを表示しない', () => {

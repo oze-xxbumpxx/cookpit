@@ -14,6 +14,16 @@ export const consumeStockSchema = z.object({
 
 export const storageLocationSchema = z.enum(['fridge', 'freezer', 'pantry']); // D-2
 
+export const addStockSchema = z.object({
+  displayName: z.string().min(1),
+  amount: z.object({
+    value: z.number().positive(),
+    unit: unitSchema,
+  }),
+  storedLocation: storageLocationSchema.nullable(),
+  expiresAt: z.iso.date().nullable(),
+});
+
 export const stockResponseSchema = z.object({
   id: z.uuid(),
   productId: z.uuid().nullable(),
@@ -30,6 +40,7 @@ export const pantryResponseSchema = z.object({
 
 export type StockIdParam = z.infer<typeof stockIdParamSchema>;
 export type ConsumeStockBody = z.infer<typeof consumeStockSchema>;
+export type AddStockBody = z.infer<typeof addStockSchema>;
 export type StorageLocationSchemaType = z.infer<typeof storageLocationSchema>;
 export type StockResponse = z.infer<typeof stockResponseSchema>;
 export type PantryResponse = z.infer<typeof pantryResponseSchema>;

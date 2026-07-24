@@ -8,7 +8,7 @@ import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan
 import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
 import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
 import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
-import { and, desc, eq, notInArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
   mealPlans,
@@ -71,17 +71,34 @@ export class DrizzleMealPlanRepository implements MealPlanRepository {
       return [];
     }
 
-    const rows = await this.db
-      .select({
-        mealPlan: mealPlans,
-        plannedRecipe: plannedRecipes,
-      })
+    // Limit the parent rows in SQL first; a JOIN + LIMIT would truncate child
+    // rows of the newest meal plan, so fetch children in a second query by id.
+    const mealPlanRows = await this.db
+      .select()
       .from(mealPlans)
-      .leftJoin(plannedRecipes, eq(mealPlans.id, plannedRecipes.mealPlanId))
-      .orderBy(desc(mealPlans.weekStartDate));
+      .orderBy(desc(mealPlans.weekStartDate))
+      .limit(limit);
 
-    // JOIN expands child rows, so apply the MealPlan limit after grouping.
-    return this.toMealPlans(rows).slice(0, limit);
+    if (mealPlanRows.length === 0) {
+      return [];
+    }
+
+    const ids = mealPlanRows.map((row) => row.id);
+    const plannedRecipeRows = await this.db
+      .select()
+      .from(plannedRecipes)
+      .where(inArray(plannedRecipes.mealPlanId, ids));
+
+    const plannedByMealPlan = new Map<string, PlannedRecipeRow[]>();
+    for (const row of plannedRecipeRows) {
+      const existing = plannedByMealPlan.get(row.mealPlanId) ?? [];
+      existing.push(row);
+      plannedByMealPlan.set(row.mealPlanId, existing);
+    }
+
+    return mealPlanRows.map((mealPlanRow) =>
+      this.toEntity(mealPlanRow, plannedByMealPlan.get(mealPlanRow.id) ?? []),
+    );
   }
 
   async save(mealPlan: MealPlan): Promise<void> {
@@ -113,19 +130,20 @@ export class DrizzleMealPlanRepository implements MealPlanRepository {
       await this.db.delete(plannedRecipes).where(eq(plannedRecipes.mealPlanId, mealPlan.id.value));
     }
 
-    for (const row of plannedRecipeRows) {
+    if (plannedRecipeRows.length > 0) {
+      // 配列バッチ upsert。set は各行の値を excluded.* で参照する。
       await this.db
         .insert(plannedRecipes)
-        .values(row)
+        .values(plannedRecipeRows)
         .onConflictDoUpdate({
           target: plannedRecipes.id,
           set: {
-            mealPlanId: row.mealPlanId,
-            recipeId: row.recipeId,
-            scaleFactor: row.scaleFactor,
-            scheduledDate: row.scheduledDate,
-            cookedAt: row.cookedAt,
-            notes: row.notes,
+            mealPlanId: sql`excluded.meal_plan_id`,
+            recipeId: sql`excluded.recipe_id`,
+            scaleFactor: sql`excluded.scale_factor`,
+            scheduledDate: sql`excluded.scheduled_date`,
+            cookedAt: sql`excluded.cooked_at`,
+            notes: sql`excluded.notes`,
           },
         });
     }

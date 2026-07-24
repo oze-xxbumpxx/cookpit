@@ -2,6 +2,7 @@ export * from './create-meal-plan.use-case';
 export * from './add-recipe-to-meal-plan.use-case';
 export * from './remove-recipe-from-meal-plan.use-case';
 export * from './get-current-meal-plan.use-case';
+export * from './get-meal-plan-by-week.use-case';
 export * from './get-meal-plan-history.use-case';
 export * from './meal-plan.dto';
 export * from './meal-plan.mapper';

@@ -45,6 +45,37 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [completeErrorMessage, setCompleteErrorMessage] = useState<string | null>(null);
   const [reopenSubmitting, setReopenSubmitting] = useState(false);
   const [reopenErrorMessage, setReopenErrorMessage] = useState<string | null>(null);
+  const [syncSubmitting, setSyncSubmitting] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncErrorMessage, setSyncErrorMessage] = useState<string | null>(null);
+
+  async function handleSync(): Promise<void> {
+    if (syncSubmitting) {
+      return;
+    }
+    setSyncSubmitting(true);
+    setSyncMessage(null);
+    setSyncErrorMessage(null);
+    try {
+      const response = await client.api['shopping-lists'][':id'].sync.$post({
+        param: { id: shoppingList.id },
+      });
+      if (!response.ok) {
+        setSyncErrorMessage('操作に失敗しました。');
+        return;
+      }
+      const dto = await response.json();
+      const addedCount = dto.items.length - items.length;
+      setItems(dto.items);
+      setSyncMessage(
+        addedCount > 0 ? `${addedCount}件の材料を追加しました` : '追加する材料はありませんでした',
+      );
+    } catch {
+      setSyncErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setSyncSubmitting(false);
+    }
+  }
 
   async function handleRefetch({ silent }: { silent: boolean }): Promise<void> {
     if (!silent) {
@@ -233,10 +264,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           <div className="flex justify-start">
             <Link
               href="/meal-plans"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-9 px-2 text-foreground',
-              )}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 px-2')}
             >
               戻る
             </Link>
@@ -265,14 +293,35 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         )}
 
         {status === 'active' && (
-          <Button
-            type="button"
-            onClick={() => void handleComplete()}
-            disabled={completeSubmitting}
-            className="h-11 w-full"
-          >
-            買い物完了
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleSync()}
+              disabled={syncSubmitting}
+              className="h-11 w-full"
+            >
+              献立の変更を反映
+            </Button>
+            {syncMessage !== null && (
+              <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {syncMessage}
+              </p>
+            )}
+            {syncErrorMessage !== null && (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {syncErrorMessage}
+              </p>
+            )}
+            <Button
+              type="button"
+              onClick={() => void handleComplete()}
+              disabled={completeSubmitting}
+              className="h-11 w-full"
+            >
+              買い物完了
+            </Button>
+          </>
         )}
 
         {completeErrorMessage !== null && (

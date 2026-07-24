@@ -220,37 +220,6 @@ describe('Pantry', () => {
     expect(() => pantry.discardStock(StockId.fromString('missing'))).toThrow('Stock not found');
   });
 
-  it('hasStockFromShoppingItem は一致する由来 ID があれば true を返す', () => {
-    const stock = reconstructStock({
-      sourceShoppingItemId: ShoppingItemId.fromString('shopping-item-1'),
-    });
-    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
-
-    expect(pantry.hasStockFromShoppingItem(ShoppingItemId.fromString('shopping-item-1'))).toBe(
-      true,
-    );
-  });
-
-  it('hasStockFromShoppingItem は由来 ID が null の Stock だけなら false を返す', () => {
-    const stock = reconstructStock({ sourceShoppingItemId: null });
-    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
-
-    expect(pantry.hasStockFromShoppingItem(ShoppingItemId.fromString('shopping-item-1'))).toBe(
-      false,
-    );
-  });
-
-  it('hasStockFromShoppingItem は由来 ID が一致しなければ false を返す', () => {
-    const stock = reconstructStock({
-      sourceShoppingItemId: ShoppingItemId.fromString('shopping-item-1'),
-    });
-    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
-
-    expect(pantry.hasStockFromShoppingItem(ShoppingItemId.fromString('shopping-item-2'))).toBe(
-      false,
-    );
-  });
-
   it('stocks getter は防御的コピーを返す', () => {
     const stock = reconstructStock();
     const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });

@@ -1,4 +1,4 @@
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
 import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
 import { ProductId } from '@cookpit/domain/src/product/product-id';
@@ -92,20 +92,22 @@ export class DrizzleProductRepository implements ProductRepository {
       await this.db.delete(priceRecords).where(eq(priceRecords.productId, product.id.value));
     }
 
-    for (const row of priceRecordRows) {
+    if (priceRecordRows.length > 0) {
+      // Batch upsert: with an array of values, `set` must reference the
+      // conflicting row via `excluded.*` so each row updates to its own values.
       await this.db
         .insert(priceRecords)
-        .values(row)
+        .values(priceRecordRows)
         .onConflictDoUpdate({
           target: priceRecords.id,
           set: {
-            productId: row.productId,
-            storeId: row.storeId,
-            priceAmount: row.priceAmount,
-            unitPriceAmount: row.unitPriceAmount,
-            packageSizeValue: row.packageSizeValue,
-            packageSizeUnit: row.packageSizeUnit,
-            observedAt: row.observedAt,
+            productId: sql`excluded.product_id`,
+            storeId: sql`excluded.store_id`,
+            priceAmount: sql`excluded.price_amount`,
+            unitPriceAmount: sql`excluded.unit_price_amount`,
+            packageSizeValue: sql`excluded.package_size_value`,
+            packageSizeUnit: sql`excluded.package_size_unit`,
+            observedAt: sql`excluded.observed_at`,
           },
         });
     }

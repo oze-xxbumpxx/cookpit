@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AddRecipeToMealPlanUseCase } from './add-recipe-to-meal-plan.use-case';
 import { CreateMealPlanUseCase } from './create-meal-plan.use-case';
 import { GetCurrentMealPlanUseCase } from './get-current-meal-plan.use-case';
+import { GetMealPlanByWeekUseCase } from './get-meal-plan-by-week.use-case';
 import { GetMealPlanHistoryUseCase } from './get-meal-plan-history.use-case';
 import { InvalidMealPlanStateError } from './invalid-meal-plan-state.error';
 import { MealPlanNotFoundError } from './meal-plan-not-found.error';
@@ -346,6 +347,34 @@ describe('GetCurrentMealPlanUseCase', () => {
     const dto = await new GetCurrentMealPlanUseCase(repository).execute(
       new Date('2026-07-11T10:00:00'),
     );
+
+    expect(dto).toBeNull();
+  });
+});
+
+describe('GetMealPlanByWeekUseCase', () => {
+  it('指定した週の MealPlan を DTO で返す', async () => {
+    repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
+    repository.seed(seededMealPlan('meal-plan-2', '2026-07-11'));
+
+    const dto = await new GetMealPlanByWeekUseCase(repository).execute('2026-07-11');
+
+    expect(dto?.id).toBe('meal-plan-2');
+    expect(dto?.weekIdentifier).toBe('2026-07-11');
+  });
+
+  it('非土曜の日付は直前の土曜週へスナップして取得する', async () => {
+    repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
+
+    const dto = await new GetMealPlanByWeekUseCase(repository).execute('2026-07-08');
+
+    expect(dto?.weekIdentifier).toBe('2026-07-04');
+  });
+
+  it('指定した週の MealPlan がなければ null を返す', async () => {
+    repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
+
+    const dto = await new GetMealPlanByWeekUseCase(repository).execute('2026-07-11');
 
     expect(dto).toBeNull();
   });
