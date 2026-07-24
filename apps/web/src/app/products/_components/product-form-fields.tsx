@@ -2,7 +2,8 @@
 
 import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { productCategorySchema, unitSchema, type CreateProductBody } from '@cookpit/api-contract';
+import { UnitField } from '@/components/ui/unit-field';
+import { productCategorySchema, UNIT_PRESETS, type CreateProductBody } from '@cookpit/api-contract';
 import { useId } from 'react';
 
 export type ProductCategory = CreateProductBody['category'];
@@ -33,7 +34,6 @@ interface Props {
 }
 
 export const PRODUCT_CATEGORY_OPTIONS = productCategorySchema.options;
-export const UNIT_OPTIONS = unitSchema.options;
 
 const PRODUCT_CATEGORY_SELECT_OPTIONS: SelectFieldOption[] = PRODUCT_CATEGORY_OPTIONS.map(
   (category) => ({
@@ -41,17 +41,9 @@ const PRODUCT_CATEGORY_SELECT_OPTIONS: SelectFieldOption[] = PRODUCT_CATEGORY_OP
     label: category,
   }),
 );
-const UNIT_SELECT_OPTIONS: SelectFieldOption[] = UNIT_OPTIONS.map((unit) => ({
-  value: unit,
-  label: unit,
-}));
 
 export function toProductCategory(value: string): ProductCategory {
   return PRODUCT_CATEGORY_OPTIONS.find((option) => option === value) ?? 'その他';
-}
-
-export function toProductUnit(value: string): ProductUnit {
-  return UNIT_OPTIONS.find((option) => option === value) ?? '個';
 }
 
 export function emptyProductFieldErrors(): ProductFieldErrors {
@@ -65,7 +57,7 @@ export function createInitialProductFormValue(): ProductFormValue {
     name: '',
     aliasesText: '',
     category: PRODUCT_CATEGORY_OPTIONS[0],
-    defaultUnit: UNIT_OPTIONS[0],
+    defaultUnit: UNIT_PRESETS[0],
   };
 }
 
@@ -166,11 +158,10 @@ export function ProductFormFields({ value, fieldErrors, onChange, autoFocusName 
           <label htmlFor={defaultUnitId} className="text-sm font-medium text-foreground">
             基本単位
           </label>
-          <SelectField
+          <UnitField
             id={defaultUnitId}
             value={value.defaultUnit}
-            onValueChange={(nextValue) => updateValue({ defaultUnit: toProductUnit(nextValue) })}
-            options={UNIT_SELECT_OPTIONS}
+            onValueChange={(nextValue) => updateValue({ defaultUnit: nextValue })}
           />
         </div>
       </section>

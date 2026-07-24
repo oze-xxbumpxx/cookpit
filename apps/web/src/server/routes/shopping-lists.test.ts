@@ -244,9 +244,9 @@ describe('shoppingListsRoute', () => {
       { ...addItemBody, requiredAmount: { value: -1, unit: '本' } },
     ],
     [
-      '不正な requiredAmount.unit',
+      '空の requiredAmount.unit',
       SHOPPING_LIST_ID,
-      { ...addItemBody, requiredAmount: { value: 1, unit: 'invalid' } },
+      { ...addItemBody, requiredAmount: { value: 1, unit: '' } },
     ],
     [
       'productId の欠落',

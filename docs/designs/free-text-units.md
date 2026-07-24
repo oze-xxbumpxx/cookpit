@@ -1,6 +1,6 @@
 # 設計書: free-text-units（単位の完全自由記述化）
 
-- ステータス: Proposed（レビュー待ち・2026-07-24）
+- ステータス: 確定（ユーザー承認・実装済み・2026-07-24。ADR-0008）
 - レベル: L3
 - 関連: Sprint1 確定方針「プリセット固定・カスタム単位なし（型安全性優先）」の**撤回**にあたる。
   `packages/domain/src/shared/unit.ts`（`Unit` 型・`isCountableUnit`）、

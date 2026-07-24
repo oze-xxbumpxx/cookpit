@@ -94,8 +94,9 @@ describe('consumeStockSchema', () => {
     expect(consumeStockSchema.parse({ amount: { value: 1, unit } }).amount.unit).toBe(unit);
   });
 
-  it('unitSchema の 17 値に含まれない単位を reject する', () => {
-    expect(() => consumeStockSchema.parse({ amount: { value: 1, unit: '箱' } })).toThrow();
+  it('プリセット外の自由入力単位も受け入れ、空文字は reject する（項目3）', () => {
+    expect(consumeStockSchema.parse({ amount: { value: 1, unit: '箱' } }).amount.unit).toBe('箱');
+    expect(() => consumeStockSchema.parse({ amount: { value: 1, unit: '' } })).toThrow();
   });
 
   it('amount キーの省略を reject する', () => {

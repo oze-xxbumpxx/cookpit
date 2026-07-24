@@ -3,18 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { storageLocationSchema, unitSchema } from '@cookpit/api-contract';
+import { UnitField } from '@/components/ui/unit-field';
+import { storageLocationSchema, UNIT_PRESETS } from '@cookpit/api-contract';
 import type { StorageLocation } from '@cookpit/application';
 import { useId, useState } from 'react';
 import { LOCATION_LABELS } from '../_utils/pantry-view';
-
-const UNIT_OPTIONS = unitSchema.options;
-type StockUnit = (typeof UNIT_OPTIONS)[number];
-
-const UNIT_SELECT_OPTIONS: SelectFieldOption[] = UNIT_OPTIONS.map((unit) => ({
-  value: unit,
-  label: unit,
-}));
 
 const UNSET_LOCATION_VALUE = '';
 
@@ -26,17 +19,13 @@ const LOCATION_SELECT_OPTIONS: SelectFieldOption[] = [
   })),
 ];
 
-function toStockUnit(value: string): StockUnit {
-  return UNIT_OPTIONS.find((option) => option === value) ?? UNIT_OPTIONS[0];
-}
-
 function toStorageLocation(value: string): StorageLocation | null {
   return value === UNSET_LOCATION_VALUE ? null : (value as StorageLocation);
 }
 
 export interface AddStockFormInput {
   displayName: string;
-  amount: { value: number; unit: StockUnit };
+  amount: { value: number; unit: string };
   storedLocation: StorageLocation | null;
   expiresAt: string | null;
 }
@@ -56,7 +45,7 @@ export function AddStockForm({ submitting, onAdd }: Props) {
 
   const [displayName, setDisplayName] = useState('');
   const [value, setValue] = useState('');
-  const [unit, setUnit] = useState<StockUnit>(UNIT_OPTIONS[0]);
+  const [unit, setUnit] = useState<string>(UNIT_PRESETS[0]);
   const [location, setLocation] = useState(UNSET_LOCATION_VALUE);
   const [expiresAt, setExpiresAt] = useState('');
 
@@ -124,12 +113,7 @@ export function AddStockForm({ submitting, onAdd }: Props) {
           <label htmlFor={unitId} className="text-sm font-medium text-foreground">
             単位
           </label>
-          <SelectField
-            id={unitId}
-            value={unit}
-            onValueChange={(nextValue) => setUnit(toStockUnit(nextValue))}
-            options={UNIT_SELECT_OPTIONS}
-          />
+          <UnitField id={unitId} value={unit} onValueChange={setUnit} />
         </div>
       </div>
 

@@ -1,5 +1,5 @@
-import { unitSchema } from '@cookpit/api-contract';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { UNIT_PRESETS } from '@cookpit/api-contract';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AddStockForm } from './add-stock-form';
@@ -104,13 +104,31 @@ describe('AddStockForm', () => {
     expect(screen.getByRole('button', { name: '追加' }).hasAttribute('disabled')).toBe(true);
   });
 
-  it('ASF-09: 単位選択肢は unitSchema.options 全件が描画される', async () => {
-    const user = userEvent.setup();
+  it('ASF-09: 単位は自由入力欄で、プリセット候補（datalist）を全件持つ（項目3）', () => {
     render(<AddStockForm submitting={false} onAdd={vi.fn()} />);
 
-    await user.click(screen.getByRole('combobox', { name: '単位' }));
-    const listbox = screen.getByRole('listbox');
+    const unitInput = screen.getByLabelText('単位') as HTMLInputElement;
+    expect(unitInput.tagName).toBe('INPUT');
+    const listId = unitInput.getAttribute('list');
+    expect(listId).not.toBeNull();
+    expect(document.getElementById(listId as string)?.querySelectorAll('option')).toHaveLength(
+      UNIT_PRESETS.length,
+    );
+  });
 
-    expect(within(listbox).getAllByRole('option')).toHaveLength(unitSchema.options.length);
+  it('ASF-10: プリセット外の単位を自由入力して送信できる（項目3）', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddStockForm submitting={false} onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText('品目名', { exact: false }), '納豆');
+    await user.type(screen.getByLabelText('数量', { exact: false }), '3');
+    await user.clear(screen.getByLabelText('単位'));
+    await user.type(screen.getByLabelText('単位'), 'パック');
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: { value: 3, unit: 'パック' } }),
+    );
   });
 });

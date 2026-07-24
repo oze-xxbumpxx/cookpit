@@ -1,18 +1,19 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { CreateRecipeBody } from '@cookpit/api-contract';
+import { UnitField } from '@/components/ui/unit-field';
 import { X } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
 
-export type IngredientUnit = NonNullable<CreateRecipeBody['ingredients'][number]['amountUnit']>;
+// 単位は自由記述（項目3）。空文字は「単位なし（分量メモ扱い）」を表す。
+export type IngredientUnit = string;
 
 export interface IngredientRowValue {
   id: string;
   displayName: string;
   amountText: string;
-  amountUnit: IngredientUnit | '';
+  amountUnit: string;
 }
 
 interface Props {
@@ -20,17 +21,9 @@ interface Props {
   errorMessage: string | null;
   onChange: (next: IngredientRowValue) => void;
   onRemove: () => void;
-  unitOptions: readonly IngredientUnit[];
 }
 
-function isIngredientUnit(
-  value: string,
-  unitOptions: readonly IngredientUnit[],
-): value is IngredientUnit {
-  return unitOptions.some((unit) => unit === value);
-}
-
-export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOptions }: Props) {
+export function IngredientRow({ value, errorMessage, onChange, onRemove }: Props) {
   const displayNameId = useId();
   const amountId = useId();
   const unitId = useId();
@@ -42,14 +35,6 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
 
   function handleAmountTextChange(event: ChangeEvent<HTMLInputElement>): void {
     onChange({ ...value, amountText: event.target.value });
-  }
-
-  function handleAmountUnitChange(event: ChangeEvent<HTMLSelectElement>): void {
-    const nextValue = event.target.value;
-    onChange({
-      ...value,
-      amountUnit: isIngredientUnit(nextValue, unitOptions) ? nextValue : '',
-    });
   }
   return (
     <div className="flex flex-col gap-1.5">
@@ -83,21 +68,13 @@ export function IngredientRow({ value, errorMessage, onChange, onRemove, unitOpt
         <label htmlFor={unitId} className="sr-only">
           単位
         </label>
-        <select
+        <UnitField
           id={unitId}
           value={value.amountUnit}
-          onChange={handleAmountUnitChange}
-          aria-invalid={errorMessage !== null}
-          aria-describedby={errorMessage === null ? undefined : errorId}
-          className="h-11 w-full rounded-lg border border-input bg-card px-2 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20"
-        >
-          <option value="">単位</option>
-          {unitOptions.map((unit) => (
-            <option key={unit} value={unit}>
-              {unit}
-            </option>
-          ))}
-        </select>
+          onValueChange={(next) => onChange({ ...value, amountUnit: next })}
+          placeholder="単位"
+          className="h-11 w-full rounded-lg bg-card px-2 text-sm"
+        />
 
         <Button
           type="button"

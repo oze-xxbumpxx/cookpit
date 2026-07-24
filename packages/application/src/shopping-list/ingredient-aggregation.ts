@@ -9,7 +9,7 @@ import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.reposit
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
 import type { StoreId } from '@cookpit/domain/src/shared/store';
 import type { Unit } from '@cookpit/domain/src/shared/unit';
-import { isCountableUnit } from '@cookpit/domain/src/shared/unit';
+import { isCountableUnit, normalizeUnit } from '@cookpit/domain/src/shared/unit';
 import type { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
 
 /**
@@ -87,7 +87,7 @@ function aggregateIngredients(
         continue;
       }
 
-      const key = `${productId === null ? ingredient.displayName.trim() : productId.value}|${ingredient.amount.unit}`;
+      const key = `${productId === null ? ingredient.displayName.trim() : productId.value}|${normalizeUnit(ingredient.amount.unit)}`;
       const existing = aggregated.get(key);
       if (existing === undefined) {
         aggregated.set(key, {
@@ -134,12 +134,13 @@ export function applyPantryDeduction(
     }
 
     const unit = required.unit;
+    const normalizedUnit = normalizeUnit(unit);
     const matching = pantry.stocks
       .filter(
         (stock) =>
           stock.productId !== null &&
           stock.productId.value === productId.value &&
-          stock.amount.unit === unit,
+          normalizeUnit(stock.amount.unit) === normalizedUnit,
       )
       .sort(compareStockForConsumption);
     const available = matching.reduce((sum, stock) => sum + stock.amount.value, 0);
@@ -209,7 +210,7 @@ export async function resolveTargetStores(
  */
 function matchKey(productId: ProductIdType | null, displayName: string, unit: Unit | null): string {
   const base = productId === null ? displayName.trim() : productId.value;
-  return `${base}|${unit ?? 'note'}`;
+  return `${base}|${unit === null ? 'note' : normalizeUnit(unit)}`;
 }
 
 export function ingredientMatchKey(ingredient: ResolvedIngredient): string {

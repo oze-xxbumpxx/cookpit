@@ -1,4 +1,4 @@
-import type { Unit } from './unit';
+import { normalizeUnit, type Unit } from './unit';
 
 export class Quantity {
   private constructor(
@@ -18,7 +18,8 @@ export class Quantity {
   }
 
   add(other: Quantity): Quantity {
-    if (this.quantityUnit !== other.quantityUnit) {
+    // 単位は正規化して比較する（表記ゆれを同一視）。結果の単位は自身の原文を保持する。
+    if (normalizeUnit(this.quantityUnit) !== normalizeUnit(other.quantityUnit)) {
       throw new Error('Cannot add different units');
     }
     return Quantity.of(this.quantityValue + other.quantityValue, this.quantityUnit);
@@ -26,7 +27,7 @@ export class Quantity {
 
   /** @throws Error 単位が一致しない、または結果が負値になる場合（`Quantity.of` の検証に委ねる） */
   subtract(other: Quantity): Quantity {
-    if (this.quantityUnit !== other.quantityUnit) {
+    if (normalizeUnit(this.quantityUnit) !== normalizeUnit(other.quantityUnit)) {
       throw new Error('Cannot subtract different units');
     }
     return Quantity.of(this.quantityValue - other.quantityValue, this.quantityUnit);

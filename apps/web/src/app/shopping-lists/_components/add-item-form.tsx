@@ -3,25 +3,14 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { unitSchema } from '@cookpit/api-contract';
+import { UnitField } from '@/components/ui/unit-field';
+import { UNIT_PRESETS } from '@cookpit/api-contract';
 import type { StoreDto } from '@cookpit/application';
 import { useId, useState } from 'react';
 
-export const UNIT_OPTIONS = unitSchema.options;
-type ShoppingUnit = (typeof UNIT_OPTIONS)[number];
-
-const UNIT_SELECT_OPTIONS: SelectFieldOption[] = UNIT_OPTIONS.map((unit) => ({
-  value: unit,
-  label: unit,
-}));
-
-function toShoppingUnit(value: string): ShoppingUnit {
-  return UNIT_OPTIONS.find((option) => option === value) ?? UNIT_OPTIONS[0];
-}
-
 export interface AddItemFormInput {
   displayName: string;
-  requiredAmount: { value: number; unit: ShoppingUnit };
+  requiredAmount: { value: number; unit: string };
   targetStoreId: string | null;
 }
 
@@ -42,7 +31,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
 
   const [displayName, setDisplayName] = useState('');
   const [value, setValue] = useState('');
-  const [unit, setUnit] = useState<ShoppingUnit>(UNIT_OPTIONS[0]);
+  const [unit, setUnit] = useState<string>(UNIT_PRESETS[0]);
   const [selectedStoreId, setSelectedStoreId] = useState(UNASSIGNED_STORE_VALUE);
 
   const storeOptions: SelectFieldOption[] = [
@@ -111,12 +100,7 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
           <label htmlFor={unitId} className="text-sm font-medium text-foreground">
             単位
           </label>
-          <SelectField
-            id={unitId}
-            value={unit}
-            onValueChange={(nextValue) => setUnit(toShoppingUnit(nextValue))}
-            options={UNIT_SELECT_OPTIONS}
-          />
+          <UnitField id={unitId} value={unit} onValueChange={setUnit} />
         </div>
       </div>
 

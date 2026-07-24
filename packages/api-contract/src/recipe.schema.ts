@@ -4,7 +4,8 @@ const nonBlankString = z.string().refine((value) => value.trim() !== '', {
   message: 'required',
 });
 
-export const unitSchema = z.enum([
+/** UI で候補として提示するプリセット単位。自由入力も許容する（項目3）。 */
+export const UNIT_PRESETS = [
   'g',
   'kg',
   'ml',
@@ -22,7 +23,11 @@ export const unitSchema = z.enum([
   '袋',
   '缶',
   '合',
-]);
+] as const;
+
+// 単位は自由記述を許容する（Sprint1 のプリセット固定・型安全優先方針を撤回。項目3）。
+// 空文字は拒否、前後空白は除去、最大 20 文字。
+export const unitSchema = z.string().trim().min(1).max(20);
 
 export const recipeTagSchema = z.enum(['主菜', '副菜', '汁物', '作り置き向き', '冷凍可']);
 

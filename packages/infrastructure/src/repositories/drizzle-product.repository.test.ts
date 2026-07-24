@@ -274,7 +274,8 @@ describe('toUnit', () => {
     }
   });
 
-  it('INFRA-M-02: 未知の unit 文字列は Error をスローする', () => {
-    expect(() => toUnit('ダース')).toThrow('Unknown unit: ダース');
+  it('INFRA-M-02: 自由入力の unit 文字列もそのまま返す（項目3）', () => {
+    expect(toUnit('ダース')).toBe('ダース');
+    expect(toUnit('房')).toBe('房');
   });
 });

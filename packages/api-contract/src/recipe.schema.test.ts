@@ -53,8 +53,14 @@ describe('unitSchema', () => {
     expect(unitSchema.parse(unit)).toBe(unit);
   });
 
-  it('未知の単位を reject する', () => {
-    expect(() => unitSchema.parse('箱')).toThrow();
+  it('プリセット外の自由入力単位も受け入れる（項目3）', () => {
+    expect(unitSchema.parse('箱')).toBe('箱');
+    expect(unitSchema.parse('ダース')).toBe('ダース');
+  });
+
+  it('空文字・空白のみの単位は reject する', () => {
+    expect(() => unitSchema.parse('')).toThrow();
+    expect(() => unitSchema.parse('   ')).toThrow();
   });
 });
 

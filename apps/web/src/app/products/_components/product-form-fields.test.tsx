@@ -7,7 +7,6 @@ import {
   createInitialProductFormValue,
   emptyProductFieldErrors,
   toProductCategory,
-  toProductUnit,
   type ProductFormValue,
 } from './product-form-fields';
 
@@ -41,12 +40,10 @@ describe('buildProductFormBody', () => {
   });
 });
 
-describe('toProductCategory / toProductUnit', () => {
-  it('PFF-03: 不明な値はフォールバックされる（その他 / 個）', () => {
+describe('toProductCategory', () => {
+  it('PFF-03: 不明なカテゴリはフォールバックされる（その他）', () => {
     expect(toProductCategory('野菜')).toBe('野菜');
     expect(toProductCategory('unknown')).toBe('その他');
-    expect(toProductUnit('g')).toBe('g');
-    expect(toProductUnit('unknown')).toBe('個');
   });
 });
 
