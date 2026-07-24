@@ -7,7 +7,7 @@ import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/applicati
 import { EmptyState } from '@/app/_components/empty-state';
 import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { MEAL_PLAN_STATUS_LABELS } from '@/app/_utils/dashboard-view';
-import { CalendarDays, Utensils } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -23,10 +23,28 @@ interface Props {
   mealPlan: MealPlanDto | null;
   recipes: RecipeDto[];
   currentWeekIdentifier: string;
+  /** 表示・作成対象の週。未指定時は現在週として扱う（後方互換）。 */
+  selectedWeekIdentifier?: string;
+  /** 週ナビ用。previous と next が揃うときのみ週送りリンクを描画する。 */
+  previousWeekIdentifier?: string;
+  nextWeekIdentifier?: string;
 }
 
-export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Props) {
+export function MealPlanClient({
+  mealPlan,
+  recipes,
+  currentWeekIdentifier,
+  selectedWeekIdentifier,
+  previousWeekIdentifier,
+  nextWeekIdentifier,
+}: Props) {
   const router = useRouter();
+  const selectedWeek = selectedWeekIdentifier ?? currentWeekIdentifier;
+  const isCurrentWeek = selectedWeek === currentWeekIdentifier;
+  const showWeekNav = previousWeekIdentifier !== undefined && nextWeekIdentifier !== undefined;
+  const weekNavLabel = isCurrentWeek
+    ? `今週 ${formatWeekRange(selectedWeek)}`
+    : formatWeekRange(selectedWeek);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -44,7 +62,7 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
     setErrorMessage(null);
     try {
       const response = await client.api['meal-plans'].$post({
-        json: { weekIdentifier: currentWeekIdentifier },
+        json: { weekIdentifier: selectedWeek },
       });
       if (!response.ok) {
         setErrorMessage('操作に失敗しました。');
@@ -129,17 +147,38 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-foreground">今週の献立</h1>
-          <Link
-            href="/meal-plans/history"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'h-9 px-2 text-foreground',
-            )}
-          >
-            履歴
-          </Link>
+        <header className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold text-foreground">献立</h1>
+            <Link
+              href="/meal-plans/history"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-9 px-2 text-foreground',
+              )}
+            >
+              履歴
+            </Link>
+          </div>
+          {showWeekNav && (
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                href={`/meal-plans?week=${previousWeekIdentifier}`}
+                aria-label="前の週"
+                className={cn(buttonVariants({ variant: 'outline', size: 'icon-sm' }))}
+              >
+                <ChevronLeft className="size-4" aria-hidden="true" />
+              </Link>
+              <span className="text-sm font-medium text-foreground">{weekNavLabel}</span>
+              <Link
+                href={`/meal-plans?week=${nextWeekIdentifier}`}
+                aria-label="次の週"
+                className={cn(buttonVariants({ variant: 'outline', size: 'icon-sm' }))}
+              >
+                <ChevronRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
+          )}
         </header>
 
         {errorMessage !== null && (
@@ -149,14 +188,21 @@ export function MealPlanClient({ mealPlan, recipes, currentWeekIdentifier }: Pro
         )}
 
         {mealPlan === null ? (
-          <EmptyState Icon={CalendarDays} message="今週の献立はまだありません">
+          <EmptyState
+            Icon={CalendarDays}
+            message={
+              isCurrentWeek
+                ? '今週の献立はまだありません'
+                : `${formatWeekRange(selectedWeek)}の献立はまだありません`
+            }
+          >
             <Button
               type="button"
               onClick={handleCreate}
               disabled={submitting}
               className="h-11 px-6"
             >
-              {submitting ? '作成中' : '今週の献立を作る'}
+              {submitting ? '作成中' : isCurrentWeek ? '今週の献立を作る' : 'この週の献立を作る'}
             </Button>
           </EmptyState>
         ) : (
