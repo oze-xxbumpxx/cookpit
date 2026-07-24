@@ -2,9 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import { UnitField } from '@/components/ui/unit-field';
-import { UNIT_PRESETS } from '@cookpit/api-contract';
+import { parseQuantity } from '@/lib/parse-quantity';
 import type { StoreDto } from '@cookpit/application';
 import { useId, useState } from 'react';
 
@@ -25,13 +25,11 @@ const UNASSIGNED_STORE_VALUE = '';
 /** 手動追加フォーム（展開パネル、recipe-picker 同型。D-5/D-6）。 */
 export function AddItemForm({ stores, submitting, onAdd }: Props) {
   const displayNameId = useId();
-  const valueId = useId();
-  const unitId = useId();
+  const amountId = useId();
   const targetStoreId = useId();
 
   const [displayName, setDisplayName] = useState('');
-  const [value, setValue] = useState('');
-  const [unit, setUnit] = useState<string>(UNIT_PRESETS[0]);
+  const [amountText, setAmountText] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState(UNASSIGNED_STORE_VALUE);
 
   const storeOptions: SelectFieldOption[] = [
@@ -40,26 +38,20 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
   ];
 
   const trimmedDisplayName = displayName.trim();
-  const trimmedValue = value.trim();
-  const parsedValue = Number(trimmedValue);
-  const canSubmit =
-    trimmedDisplayName !== '' &&
-    trimmedValue !== '' &&
-    Number.isFinite(parsedValue) &&
-    parsedValue >= 0 &&
-    !submitting;
+  const parsed = parseQuantity(amountText);
+  const canSubmit = trimmedDisplayName !== '' && parsed.kind === 'amount' && !submitting;
 
   function handleAdd(): void {
-    if (!canSubmit) {
+    if (!canSubmit || parsed.kind !== 'amount') {
       return;
     }
     onAdd({
       displayName: trimmedDisplayName,
-      requiredAmount: { value: parsedValue, unit },
+      requiredAmount: { value: parsed.value, unit: parsed.unit },
       targetStoreId: selectedStoreId === UNASSIGNED_STORE_VALUE ? null : selectedStoreId,
     });
     setDisplayName('');
-    setValue('');
+    setAmountText('');
   }
 
   return (
@@ -79,29 +71,11 @@ export function AddItemForm({ stores, submitting, onAdd }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2">
-          <label htmlFor={valueId} className="text-sm font-medium text-foreground">
-            数量
-          </label>
-          <Input
-            id={valueId}
-            type="number"
-            min={0}
-            inputMode="decimal"
-            value={value}
-            onChange={(event) => setValue(event.currentTarget.value)}
-            placeholder="1"
-            className="h-11 rounded-xl bg-background"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor={unitId} className="text-sm font-medium text-foreground">
-            単位
-          </label>
-          <UnitField id={unitId} value={unit} onValueChange={setUnit} />
-        </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor={amountId} className="text-sm font-medium text-foreground">
+          分量 <span className="text-xs font-normal text-muted-foreground">数量と単位</span>
+        </label>
+        <QuantityField id={amountId} value={amountText} onValueChange={setAmountText} />
       </div>
 
       <div className="flex flex-col gap-2">

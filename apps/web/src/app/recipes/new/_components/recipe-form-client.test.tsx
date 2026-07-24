@@ -44,8 +44,7 @@ describe('RecipeFormClient', () => {
     await user.type(screen.getByLabelText(/レシピ名/), '肉じゃが');
     await user.click(screen.getByRole('button', { name: '主菜' }));
     await user.type(screen.getByLabelText('食材名'), '玉ねぎ');
-    await user.type(screen.getByLabelText('量'), '2');
-    await user.type(screen.getByLabelText('単位'), '個');
+    await user.type(screen.getByLabelText('分量'), '2個');
     await user.type(screen.getByLabelText('手順 1'), '煮る');
     await user.click(screen.getByRole('button', { name: '保存' }));
 

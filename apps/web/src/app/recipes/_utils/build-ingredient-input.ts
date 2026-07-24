@@ -1,5 +1,6 @@
 import type { CreateRecipeBody } from '@cookpit/api-contract';
 import type { IngredientRowValue } from '@/app/recipes/_components/ingredient-row';
+import { parseQuantity } from '@/lib/parse-quantity';
 
 type RecipeIngredientBody = CreateRecipeBody['ingredients'][number];
 
@@ -13,7 +14,7 @@ export function buildIngredientInput(rows: IngredientRowValue[]): {
   for (const row of rows) {
     const displayName = row.displayName.trim();
     const amountText = row.amountText.trim();
-    const isEmptyRow = displayName === '' && amountText === '' && row.amountUnit === '';
+    const isEmptyRow = displayName === '' && amountText === '';
 
     if (isEmptyRow) {
       continue;
@@ -29,30 +30,25 @@ export function buildIngredientInput(rows: IngredientRowValue[]): {
       continue;
     }
 
-    const amountValue = Number(amountText);
-    const isNumericAmount = !Number.isNaN(amountValue);
+    const parsed = parseQuantity(amountText);
 
-    if (isNumericAmount) {
-      if (!Number.isFinite(amountValue) || amountValue < 0) {
-        errors[row.id] = '量は0以上の数値で入力してください。';
-        continue;
-      }
-
-      if (row.amountUnit === '') {
-        errors[row.id] = '数値の量には単位を選択してください。';
-        continue;
-      }
-
+    if (parsed.kind === 'amount') {
       ingredients.push({
         productRef: null,
         displayName,
-        amountValue,
-        amountUnit: row.amountUnit,
+        amountValue: parsed.value,
+        amountUnit: parsed.unit,
         amountNote: null,
       });
       continue;
     }
 
+    if (parsed.kind === 'valueOnly') {
+      errors[row.id] = '数値の量には単位も入力してください。';
+      continue;
+    }
+
+    // 数値で始まらない入力（例：少々）は分量メモとして扱う。
     ingredients.push({
       productRef: null,
       displayName,

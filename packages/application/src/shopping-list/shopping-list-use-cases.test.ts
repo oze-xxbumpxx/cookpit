@@ -431,12 +431,12 @@ describe('GenerateShoppingListUseCase', () => {
         seededPlannedRecipe('planned-2', RECIPE_ID),
       ]),
     );
-    recipeRepository.seed(seededRecipe(RECIPE_ID, [amountIngredient('塩', 10, 'g')]));
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [amountIngredient('豚肉', 10, 'g')]));
 
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
     expect(result.shoppingList.items).toHaveLength(1);
-    expect(result.shoppingList.items[0]?.displayName).toBe('塩');
+    expect(result.shoppingList.items[0]?.displayName).toBe('豚肉');
   });
 
   it('plannedRecipes が空でも items が空のリストを生成する', async () => {
@@ -455,8 +455,8 @@ describe('GenerateShoppingListUseCase', () => {
       seededRecipe(RECIPE_ID, [
         amountIngredient('小麦粉', 100, 'g'),
         amountIngredient('小麦粉', 0.1, 'kg'),
-        noteIngredient('塩', '少々'),
-        noteIngredient('塩', '適量'),
+        noteIngredient('豚肉', '少々'),
+        noteIngredient('豚肉', '適量'),
       ]),
     );
 
@@ -478,7 +478,7 @@ describe('GenerateShoppingListUseCase', () => {
     mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
     recipeRepository.seed(
       seededRecipe(RECIPE_ID, [
-        amountIngredient('塩', 10, 'g'),
+        amountIngredient('豚肉', 10, 'g'),
         amountIngredient('玉ねぎ', 1, '個', PRODUCT_ID),
       ]),
     );
@@ -563,8 +563,8 @@ describe('GenerateShoppingListUseCase', () => {
 
   it('productId を持たない食材は在庫と突合しない', async () => {
     mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
-    recipeRepository.seed(seededRecipe(RECIPE_ID, [amountIngredient('塩', 10, 'g')]));
-    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '塩' }));
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [amountIngredient('豚肉', 10, 'g')]));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '豚肉' }));
 
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
@@ -613,13 +613,30 @@ describe('GenerateShoppingListUseCase', () => {
 
   it('数値でない量（少々）の食材は在庫と突合しない', async () => {
     mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
-    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('塩', '少々')]));
-    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '塩' }));
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('豚肉', '少々')]));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, 'g', { displayName: '豚肉' }));
 
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
     expect(result.shoppingList.items[0]?.amountNote).toBe('少々');
     expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('調味料は買い物リストから除外し、非調味料だけを生成する（要望1）', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [
+        amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID),
+        amountIngredient('醤油', 30, 'g'),
+        noteIngredient('塩', '少々'),
+      ]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(1);
+    expect(result.shoppingList.items[0]?.displayName).toBe('玉ねぎ');
   });
 });
 
@@ -731,6 +748,34 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     await expect(syncUseCase().execute({ shoppingListId: 'missing-list' })).rejects.toEqual(
       new ShoppingListNotFoundError('missing-list'),
     );
+  });
+
+  it('同期でも調味料は追加せず、非調味料の新規材料だけ追加する（要望1）', async () => {
+    shoppingListRepository.seed(seededShoppingList('active', [seededItem({ status: 'bought' })]));
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [
+        seededPlannedRecipe('planned-1', RECIPE_ID),
+        seededPlannedRecipe('planned-2', 'recipe-2'),
+      ]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    // 新規材料として調味料（味噌）と非調味料（人参）を含める
+    recipeRepository.seed(
+      seededRecipe('recipe-2', [
+        amountIngredient('人参', 3, '個', 'product-2'),
+        amountIngredient('味噌', 50, 'g'),
+      ]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+    productRepository.seed(seededProduct('product-2'));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toHaveLength(2);
+    expect(dto.items.some((item) => item.displayName === '人参')).toBe(true);
+    expect(dto.items.some((item) => item.displayName === '味噌')).toBe(false);
   });
 });
 

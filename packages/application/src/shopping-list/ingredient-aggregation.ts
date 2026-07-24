@@ -7,6 +7,7 @@ import type { Recipe } from '@cookpit/domain/src/recipe/recipe';
 import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
 import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { isSeasoningName } from '@cookpit/domain/src/shared/seasoning';
 import type { StoreId } from '@cookpit/domain/src/shared/store';
 import type { Unit } from '@cookpit/domain/src/shared/unit';
 import { isCountableUnit, normalizeUnit } from '@cookpit/domain/src/shared/unit';
@@ -24,7 +25,10 @@ export interface ResolvedIngredient {
   amountNote: string | null;
 }
 
-/** MealPlan の各 PlannedRecipe をスケール適用のうえ材料へ展開し、集計する。 */
+/**
+ * MealPlan の各 PlannedRecipe をスケール適用のうえ材料へ展開し、集計する。
+ * 調味料（`isSeasoningName` に一致する材料名）は常備前提で集計から除外する（要望1）。
+ */
 export async function resolveMealPlanIngredients(
   mealPlan: MealPlan,
   recipeRepository: RecipeRepository,
@@ -74,6 +78,10 @@ function aggregateIngredients(
   for (const { plannedRecipe, recipe } of resolved) {
     const scaled = recipe.scaleIngredients(plannedRecipe.scaleFactor);
     for (const ingredient of scaled) {
+      // 調味料は家に常備されている前提で買い物リストから除外する（要望1）。
+      if (isSeasoningName(ingredient.displayName)) {
+        continue;
+      }
       const productId =
         ingredient.productRef === null ? null : ProductId.fromString(ingredient.productRef.value);
 

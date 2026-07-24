@@ -8,7 +8,6 @@ function createValue(overrides: Partial<IngredientRowValue> = {}): IngredientRow
     id: 'ingredient-0',
     displayName: '',
     amountText: '',
-    amountUnit: '',
     ...overrides,
   };
 }
@@ -19,7 +18,7 @@ describe('IngredientRow', () => {
     vi.clearAllMocks();
   });
 
-  it('IR-01: 食材名・量・単位の変更が onChange に反映される', async () => {
+  it('IR-01: 食材名・分量（数量+単位）の変更が onChange に反映される', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -34,15 +33,12 @@ describe('IngredientRow', () => {
     await user.type(screen.getByLabelText('食材名'), '玉');
     expect(onChange).toHaveBeenLastCalledWith(createValue({ displayName: '玉' }));
 
-    await user.type(screen.getByLabelText('量'), '2');
+    // 分量は数量と単位を 1 欄で入力する（要望2）。
+    await user.type(screen.getByLabelText('分量'), '2');
     expect(onChange).toHaveBeenLastCalledWith(createValue({ amountText: '2' }));
-
-    // 単位は自由入力（項目3）。プリセット外の文字列もそのまま反映される。
-    await user.type(screen.getByLabelText('単位'), '房');
-    expect(onChange).toHaveBeenLastCalledWith(createValue({ amountUnit: '房' }));
   });
 
-  it('IR-02: 単位はプリセット候補付きの自由入力欄（textbox）である', () => {
+  it('IR-02: 分量は数量と単位を統合した 1 つの入力欄（textbox）である', () => {
     render(
       <IngredientRow
         value={createValue()}
@@ -52,9 +48,9 @@ describe('IngredientRow', () => {
       />,
     );
 
-    const unitInput = screen.getByLabelText('単位') as HTMLInputElement;
-    expect(unitInput.tagName).toBe('INPUT');
-    expect(unitInput.getAttribute('list')).not.toBeNull();
+    const amountInput = screen.getByLabelText('分量') as HTMLInputElement;
+    expect(amountInput.tagName).toBe('INPUT');
+    expect(screen.queryByLabelText('単位')).toBeNull();
   });
 
   it('IR-03: 削除ボタンで onRemove が呼ばれ、エラーがあるときのみメッセージ表示される', async () => {
