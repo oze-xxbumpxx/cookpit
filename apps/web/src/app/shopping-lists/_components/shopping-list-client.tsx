@@ -155,6 +155,42 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     });
   }
 
+  function handleSetChecked(itemId: string, checked: boolean): void {
+    if (submittingItemId === itemId) {
+      return;
+    }
+    setSubmittingItemId(itemId);
+    setErrorMessage(null);
+    startTransition(async () => {
+      setOptimisticItems({
+        itemId,
+        patch: checked
+          ? { status: 'bought' }
+          : { status: 'pending', actualPrice: null, actualStoreId: null },
+      });
+      try {
+        const response = await client.api['shopping-lists'][':id'].items[':itemId'].checked.$post({
+          param: { id: shoppingList.id, itemId },
+          json: { checked },
+        });
+        if (!response.ok) {
+          setErrorMessage('操作に失敗しました。');
+          return;
+        }
+        const updated: ShoppingItemDto = await response.json();
+        setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        if (!checked) {
+          // チェックを外したら展開中の価格フォームも閉じる（誤操作防止。設計書 §フロントエンド設計）
+          setExpandedItemId((current) => (current === itemId ? null : current));
+        }
+      } catch {
+        setErrorMessage('通信エラーが発生しました。');
+      } finally {
+        setSubmittingItemId(null);
+      }
+    });
+  }
+
   async function handleAddItem(input: AddItemFormInput): Promise<void> {
     setAddSubmitting(true);
     setErrorMessage(null);
@@ -376,6 +412,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 expandedItemId={expandedItemId}
                 submittingItemId={submittingItemId}
                 onToggleExpand={handleToggleExpand}
+                onSetChecked={handleSetChecked}
                 onMarkAsBought={handleMarkAsBought}
                 onReassignStore={(itemId, targetStoreId) =>
                   void handleReassignStore(itemId, targetStoreId)

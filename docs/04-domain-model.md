@@ -483,6 +483,18 @@ export type ShoppingListStatus = 'active' | 'completed';
 - `shopping_items` は別テーブル（JSONB 不採用）・`shopping_lists.meal_plan_id` に UNIQUE 制約
   （S-1。生成冪等 S-6 の基盤）
 
+> 実装追記（2026-07-24, `docs/designs/shopping-list-item-check.md`）: `ShoppingItem` に
+> `check()`（価格・店舗に触れず `bought` へ遷移）/ `uncheck()`（`bought` からのみ許可し `pending` に
+> 戻すと同時に `actualPrice`/`actualStore` を `null` にクリア。`bought` 以外から呼ぶと `Error`）を
+> 追加した。`ShoppingList` にも `assertActive` ガード付きの薄いラッパー `check(itemId)` /
+> `uncheck(itemId)` を追加している。これにより **`ItemStatus.bought` は「価格記録済み」を含意
+> しなくなった**（`SetItemCheckedUseCase` 経由で価格・店舗なしの `bought` が生成されうる）。
+> 既存の `markAsBought(price, store)` / `markAsSkipped()` / `reassignStore()` は無変更。
+> `CompleteShoppingUseCase` は元々 `actualPrice === null || actualStore === null` のとき価格記録を
+> スキップする分岐を実装済みのため、追加改修は不要だった。正典は
+> `packages/domain/src/shopping-list/shopping-list.ts` と
+> `docs/designs/shopping-list-item-check.md`。
+
 ### Pantry 集約
 
 家にある食材を管理。買い物完了で自動追加、在庫画面から手動追加も可能、消費は手動。

@@ -172,6 +172,79 @@ describe('ShoppingItem', () => {
   it('isBought は pending で false を返す', () => {
     expect(createItem().isBought()).toBe(false);
   });
+
+  it('check は pending から bought にし、actualPrice/actualStore に触れない', () => {
+    const item = createItem();
+
+    item.check();
+
+    expect(item.status).toBe('bought');
+    expect(item.actualPrice).toBeNull();
+    expect(item.actualStore).toBeNull();
+  });
+
+  it('check は skipped からの呼び出しも許可し bought にする', () => {
+    const item = createItem();
+    item.markAsSkipped();
+
+    item.check();
+
+    expect(item.status).toBe('bought');
+  });
+
+  it('check は bought への再適用を冪等に許可する', () => {
+    const item = createItem();
+    item.check();
+
+    expect(() => item.check()).not.toThrow();
+    expect(item.status).toBe('bought');
+  });
+
+  it('check は markAsBought 済みの価格・店舗を破壊しない', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(200, 'JPY'), StoreId.fromString('store-1'));
+
+    item.check();
+
+    expect(item.status).toBe('bought');
+    expect(item.actualPrice?.amount).toBe(200);
+    expect(item.actualStore?.value).toBe('store-1');
+  });
+
+  it('uncheck は bought から pending に戻し actualPrice/actualStore を null にクリアする', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    item.uncheck();
+
+    expect(item.status).toBe('pending');
+    expect(item.actualPrice).toBeNull();
+    expect(item.actualStore).toBeNull();
+  });
+
+  it('uncheck は pending からの呼び出しを拒否する', () => {
+    const item = createItem();
+
+    expect(() => item.uncheck()).toThrow("Cannot uncheck a ShoppingItem with status 'pending'");
+  });
+
+  it('uncheck は skipped からの呼び出しを拒否する', () => {
+    const item = createItem();
+    item.markAsSkipped();
+
+    expect(() => item.uncheck()).toThrow("Cannot uncheck a ShoppingItem with status 'skipped'");
+  });
+
+  it('uncheck は価格未記録の check() のみの item にも安全に適用できる', () => {
+    const item = createItem();
+    item.check();
+
+    item.uncheck();
+
+    expect(item.status).toBe('pending');
+    expect(item.actualPrice).toBeNull();
+    expect(item.actualStore).toBeNull();
+  });
 });
 
 describe('ShoppingList', () => {
@@ -348,5 +421,71 @@ describe('ShoppingList', () => {
     createdAt.setFullYear(2099);
 
     expect(list.createdAt.getFullYear()).toBe(originalYear);
+  });
+
+  it('check は active 状態で対象 item を bought にする', () => {
+    const item = createItem();
+    const list = createList([item]);
+
+    list.check(item.id);
+
+    expect(list.items[0]?.status).toBe('bought');
+  });
+
+  it('check は completed 状態で拒否する', () => {
+    const item = createItem();
+    const list = reconstructCompletedList([item]);
+
+    expect(() => list.check(item.id)).toThrow(
+      "Cannot check a ShoppingList with status 'completed'",
+    );
+  });
+
+  it('check は存在しない itemId を拒否する', () => {
+    const list = createList();
+
+    expect(() => list.check(ShoppingItemId.fromString('missing'))).toThrow(
+      'ShoppingItem not found',
+    );
+  });
+
+  it('uncheck は active 状態で対象 item を pending に戻す', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+    const list = createList([item]);
+
+    list.uncheck(item.id);
+
+    expect(list.items[0]?.status).toBe('pending');
+    expect(list.items[0]?.actualPrice).toBeNull();
+  });
+
+  it('uncheck は completed 状態で拒否する', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+    const list = reconstructCompletedList([item]);
+
+    expect(() => list.uncheck(item.id)).toThrow(
+      "Cannot uncheck a ShoppingList with status 'completed'",
+    );
+    expect(item.status).toBe('bought');
+    expect(item.actualPrice?.amount).toBe(198);
+  });
+
+  it('uncheck は存在しない itemId を拒否する', () => {
+    const list = createList();
+
+    expect(() => list.uncheck(ShoppingItemId.fromString('missing'))).toThrow(
+      'ShoppingItem not found',
+    );
+  });
+
+  it('uncheck は pending item に対する ShoppingItem 側のエラーをそのまま伝播する', () => {
+    const item = createItem();
+    const list = createList([item]);
+
+    expect(() => list.uncheck(item.id)).toThrow(
+      "Cannot uncheck a ShoppingItem with status 'pending'",
+    );
   });
 });

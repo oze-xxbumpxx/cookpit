@@ -41,6 +41,7 @@ function renderRow(props: Partial<Parameters<typeof ShoppingItemRow>[0]> = {}) {
     expanded: false,
     submitting: false,
     onToggleExpand: vi.fn(),
+    onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
     onReassignStore: vi.fn(),
   };
@@ -99,17 +100,30 @@ describe('ShoppingItemRow', () => {
     expect(screen.getByText('適量')).toBeDefined();
   });
 
-  it('IR-06: チェックボタン click で onToggleExpand が呼ばれる', async () => {
+  it('IR-06a: pending item のチェックボタン click で onSetChecked(id, true) が呼ばれる', async () => {
     const user = userEvent.setup();
-    const onToggleExpand = vi.fn();
+    const onSetChecked = vi.fn();
     renderRow({
       item: createShoppingItemDto({ id: 'item-1', status: 'pending' }),
-      onToggleExpand,
+      onSetChecked,
     });
 
     await user.click(screen.getByRole('checkbox'));
 
-    expect(onToggleExpand).toHaveBeenCalledWith('item-1');
+    expect(onSetChecked).toHaveBeenCalledWith('item-1', true);
+  });
+
+  it('IR-06b: bought item のチェックボタン click で onSetChecked(id, false) が呼ばれる', async () => {
+    const user = userEvent.setup();
+    const onSetChecked = vi.fn();
+    renderRow({
+      item: createShoppingItemDto({ id: 'item-1', status: 'bought' }),
+      onSetChecked,
+    });
+
+    await user.click(screen.getByRole('checkbox'));
+
+    expect(onSetChecked).toHaveBeenCalledWith('item-1', false);
   });
 
   it('IR-07: 店舗バッジをタップして選択すると即座に onReassignStore が呼ばれる', async () => {
@@ -133,14 +147,20 @@ describe('ShoppingItemRow', () => {
     expect(screen.getByRole('button', { name: '店舗未定' })).toBeDefined();
   });
 
-  it('IR-09: expanded のとき PurchaseInputForm が表示される', () => {
-    renderRow({ expanded: true });
+  it('IR-09: bought かつ expanded のとき PurchaseInputForm が表示される', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }), expanded: true });
 
     expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
   });
 
   it('IR-10: expanded でないとき PurchaseInputForm は表示されない', () => {
-    renderRow({ expanded: false });
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }), expanded: false });
+
+    expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
+  });
+
+  it('IR-10b: pending かつ expanded のとき PurchaseInputForm は表示されない（bought ガード）', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'pending' }), expanded: true });
 
     expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
   });
@@ -152,16 +172,40 @@ describe('ShoppingItemRow', () => {
     expect(screen.getByRole('button', { name: '店舗A' }).hasAttribute('disabled')).toBe(true);
   });
 
-  it('IR-12: bought item でもチェック解除に相当する UI が存在しない（S-3）', () => {
+  it('IR-12: bought item は「金額を記録」ボタンが表示される', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }) });
+
+    expect(screen.getByRole('button', { name: '金額を記録' })).toBeDefined();
+  });
+
+  it('IR-13: pending item は「金額を記録」ボタンが表示されない', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'pending' }) });
+
+    expect(screen.queryByRole('button', { name: '金額を記録' })).toBeNull();
+  });
+
+  it('IR-14: 「金額を記録」ボタン click で onToggleExpand が呼ばれる', async () => {
+    const user = userEvent.setup();
+    const onToggleExpand = vi.fn();
     renderRow({
-      item: createShoppingItemDto({
-        status: 'bought',
-        actualStoreId: 'store-a',
-        actualPrice: { amount: 198, currency: 'JPY' },
-      }),
+      item: createShoppingItemDto({ id: 'item-1', status: 'bought' }),
+      onToggleExpand,
     });
 
-    expect(screen.queryByRole('button', { name: 'チェックを外す' })).toBeNull();
-    expect(screen.queryByText('チェックを外す')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
+
+    expect(onToggleExpand).toHaveBeenCalledWith('item-1');
+  });
+
+  it('IR-15: pending item の aria-label は「〜をチェックする」', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'pending', displayName: '醤油' }) });
+
+    expect(screen.getByRole('checkbox').getAttribute('aria-label')).toBe('醤油をチェックする');
+  });
+
+  it('IR-16: bought item の aria-label は「〜のチェックを外す」', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought', displayName: '醤油' }) });
+
+    expect(screen.getByRole('checkbox').getAttribute('aria-label')).toBe('醤油のチェックを外す');
   });
 });

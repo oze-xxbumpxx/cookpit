@@ -32,6 +32,10 @@ export const reassignStoreSchema = z.object({
   targetStoreId: z.uuid(),
 });
 
+export const setItemCheckedSchema = z.object({
+  checked: z.boolean(),
+});
+
 export const shoppingListIdParamSchema = idParamSchema;
 
 export const shoppingItemIdParamSchema = idParamSchema.extend({
@@ -79,6 +83,7 @@ export const shoppingListResponseSchema = z.object({
 export type GenerateShoppingListBody = z.infer<typeof generateShoppingListSchema>;
 export type AddItemBody = z.infer<typeof addItemSchema>;
 export type MarkAsBoughtBody = z.infer<typeof markAsBoughtSchema>;
+export type SetItemCheckedBody = z.infer<typeof setItemCheckedSchema>;
 export type ReassignStoreBody = z.infer<typeof reassignStoreSchema>;
 export type ShoppingListIdParam = z.infer<typeof shoppingListIdParamSchema>;
 export type ShoppingItemIdParam = z.infer<typeof shoppingItemIdParamSchema>;

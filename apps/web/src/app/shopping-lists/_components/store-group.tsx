@@ -9,6 +9,7 @@ interface Props {
   expandedItemId: string | null;
   submittingItemId: string | null;
   onToggleExpand: (itemId: string) => void;
+  onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
   onReassignStore: (itemId: string, targetStoreId: string) => void;
   stores: StoreDto[];
@@ -22,6 +23,7 @@ export function StoreGroup({
   expandedItemId,
   submittingItemId,
   onToggleExpand,
+  onSetChecked,
   onMarkAsBought,
   onReassignStore,
   stores,
@@ -48,6 +50,7 @@ export function StoreGroup({
             expanded={item.id === expandedItemId}
             submitting={item.id === submittingItemId}
             onToggleExpand={onToggleExpand}
+            onSetChecked={onSetChecked}
             onMarkAsBought={onMarkAsBought}
             onReassignStore={onReassignStore}
           />

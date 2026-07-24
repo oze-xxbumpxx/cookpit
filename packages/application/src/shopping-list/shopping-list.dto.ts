@@ -54,6 +54,12 @@ export interface MarkAsBoughtInputDto {
   actualStoreId: string;
 }
 
+export interface SetItemCheckedInputDto {
+  shoppingListId: string;
+  itemId: string;
+  checked: boolean;
+}
+
 export interface ReassignStoreInputDto {
   shoppingListId: string;
   itemId: string;

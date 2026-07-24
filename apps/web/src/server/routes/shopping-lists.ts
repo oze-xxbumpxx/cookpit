@@ -3,6 +3,7 @@ import {
   generateShoppingListSchema,
   markAsBoughtSchema,
   reassignStoreSchema,
+  setItemCheckedSchema,
   shoppingItemIdParamSchema,
   shoppingListIdParamSchema,
 } from '@cookpit/api-contract';
@@ -14,6 +15,7 @@ import {
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
   ReopenShoppingListUseCase,
+  SetItemCheckedUseCase,
   SyncShoppingListFromMealPlanUseCase,
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
@@ -66,6 +68,18 @@ export const shoppingListsRoute = new Hono()
       const { id, itemId } = c.req.valid('param');
       const body = c.req.valid('json');
       const usecase = new MarkAsBoughtUseCase(shoppingListRepository());
+      const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
+      return c.json(dto, 200);
+    },
+  )
+  .post(
+    '/:id/items/:itemId/checked',
+    zValidator('param', shoppingItemIdParamSchema),
+    zValidator('json', setItemCheckedSchema),
+    async (c) => {
+      const { id, itemId } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new SetItemCheckedUseCase(shoppingListRepository());
       const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
       return c.json(dto, 200);
     },
