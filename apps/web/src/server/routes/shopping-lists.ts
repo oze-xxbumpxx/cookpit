@@ -85,7 +85,6 @@ export const shoppingListsRoute = new Hono()
     const { id } = c.req.valid('param');
     const usecase = new CompleteShoppingUseCase(
       shoppingListRepository(),
-      pantryRepository(),
       productRepository(),
       mealPlanRepository(),
     );
