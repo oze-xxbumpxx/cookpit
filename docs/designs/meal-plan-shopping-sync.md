@@ -1,6 +1,6 @@
 # 設計書: meal-plan-shopping-sync（献立変更の買い物リストへの差分マージ）
 
-- ステータス: Proposed（レビュー待ち・2026-07-24）
+- ステータス: 確定（ユーザー承認・実装済み・2026-07-24）
 - レベル: L3
 - 関連: ADR-0007（差分マージの決定）、ADR-0006（冪等生成）、
   `docs/designs/shopping-list-core.md`、`packages/application/src/shopping-list/generate-shopping-list.use-case.ts`

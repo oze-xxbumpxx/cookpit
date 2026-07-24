@@ -13,6 +13,7 @@ import {
   ReopenShoppingListUseCase,
   ShoppingItemNotFoundError,
   ShoppingListNotFoundError,
+  SyncShoppingListFromMealPlanUseCase,
 } from '@cookpit/application';
 import type { ShoppingItemDto, ShoppingListDto } from '@cookpit/application';
 import type * as ApplicationModule from '@cookpit/application';
@@ -33,6 +34,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     MarkAsBoughtUseCase: vi.fn(),
     ReassignStoreUseCase: vi.fn(),
     ReopenShoppingListUseCase: vi.fn(),
+    SyncShoppingListFromMealPlanUseCase: vi.fn(),
   };
 });
 
@@ -639,5 +641,35 @@ describe('shoppingListsRoute', () => {
     expect(await res.json()).toEqual({
       error: "Cannot reopen a ShoppingList with status 'active'",
     });
+  });
+
+  it('POST /api/shopping-lists/:id/sync は 200 で更新後 ShoppingListDto を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(shoppingListDto);
+    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(
+      () => ({ execute }) as unknown as SyncShoppingListFromMealPlanUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/sync`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(shoppingListDto);
+    expect(execute).toHaveBeenCalledWith({ shoppingListId: SHOPPING_LIST_ID });
+  });
+
+  it('POST /api/shopping-lists/:id/sync は InvalidShoppingListStateError を 422 に変換する', async () => {
+    const execute = vi
+      .fn()
+      .mockRejectedValue(new InvalidShoppingListStateError('completed', 'sync'));
+    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(
+      () => ({ execute }) as unknown as SyncShoppingListFromMealPlanUseCase,
+    );
+
+    const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/sync`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(422);
   });
 });

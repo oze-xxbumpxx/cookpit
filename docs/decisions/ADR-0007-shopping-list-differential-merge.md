@@ -1,6 +1,6 @@
 # ADR-0007: 献立変更を買い物リストへ差分マージする（明示トリガの同期 UseCase を追加）
 
-- Status: Proposed（2026-07-24・レビュー待ち）
+- Status: Accepted（2026-07-24・ユーザー承認のうえ実装）
 - Date: 2026-07-24
 - 関連 feature: meal-plan-shopping-sync（改善要望 項目7）
 - 関連 ADR: ADR-0006（ShoppingList 生成の冪等化。本 ADR はその制約下の続き）
