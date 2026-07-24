@@ -6,6 +6,7 @@ import { ProductId } from '@cookpit/domain/src/product/product-id';
 import { Quantity } from '@cookpit/domain/src/shared/quantity';
 import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { AddStockUseCase } from './add-stock.use-case';
 import { ConsumeStockUseCase } from './consume-stock.use-case';
 import { DiscardStockUseCase } from './discard-stock.use-case';
 import { GetPantryUseCase } from './get-pantry.use-case';
@@ -141,6 +142,78 @@ describe('DiscardStockUseCase', () => {
     await expect(
       new DiscardStockUseCase(pantryRepository).execute({ stockId: 'missing-stock' }),
     ).rejects.toEqual(new StockNotFoundError('missing-stock'));
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+});
+
+describe('AddStockUseCase', () => {
+  it('在庫を 1 件追加し、productId は null・任意項目つきで更新後 PantryDto を返す', async () => {
+    const result = await new AddStockUseCase(pantryRepository).execute({
+      displayName: '玉ねぎ',
+      amount: { value: 3, unit: '個' },
+      storedLocation: 'fridge',
+      expiresAt: '2026-07-31',
+    });
+
+    expect(result.stocks).toHaveLength(1);
+    expect(result.stocks[0]).toMatchObject({
+      productId: null,
+      displayName: '玉ねぎ',
+      amount: { value: 3, unit: '個' },
+      storedLocation: 'fridge',
+      expiresAt: '2026-07-31',
+    });
+    expect(pantryRepository.saveCount).toBe(1);
+  });
+
+  it('既存在庫に加算せず新規 Stock として追加する（追加＝常に新規）', async () => {
+    pantryRepository.seed(seededPantry([seededStock({ value: 300, unit: 'g' })]));
+
+    const result = await new AddStockUseCase(pantryRepository).execute({
+      displayName: '玉ねぎ',
+      amount: { value: 2, unit: '個' },
+      storedLocation: null,
+      expiresAt: null,
+    });
+
+    expect(result.stocks).toHaveLength(2);
+  });
+
+  it('storedLocation / expiresAt が null でも追加できる', async () => {
+    const result = await new AddStockUseCase(pantryRepository).execute({
+      displayName: '塩',
+      amount: { value: 1, unit: '袋' },
+      storedLocation: null,
+      expiresAt: null,
+    });
+
+    expect(result.stocks[0]).toMatchObject({
+      storedLocation: null,
+      expiresAt: null,
+    });
+  });
+
+  it('displayName が空白のみの場合は InvalidStockOperationError を投げ save しない', async () => {
+    await expect(
+      new AddStockUseCase(pantryRepository).execute({
+        displayName: '   ',
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    ).rejects.toBeInstanceOf(InvalidStockOperationError);
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('amount が 0 以下の場合は InvalidStockOperationError を投げ save しない', async () => {
+    await expect(
+      new AddStockUseCase(pantryRepository).execute({
+        displayName: '玉ねぎ',
+        amount: { value: 0, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    ).rejects.toBeInstanceOf(InvalidStockOperationError);
     expect(pantryRepository.saveCount).toBe(0);
   });
 });

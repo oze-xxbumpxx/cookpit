@@ -1,3 +1,4 @@
+export * from './add-stock.use-case';
 export * from './consume-stock.use-case';
 export * from './discard-stock.use-case';
 export * from './get-pantry.use-case';

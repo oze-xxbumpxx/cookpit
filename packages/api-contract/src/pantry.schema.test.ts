@@ -2,6 +2,7 @@ import type { PantryDto, StockDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
 import { addItemSchema } from './shopping-list.schema';
 import {
+  addStockSchema,
   consumeStockSchema,
   pantryResponseSchema,
   stockIdParamSchema,
@@ -109,6 +110,42 @@ describe('storageLocationSchema', () => {
 
   it('未知の保存場所を reject する', () => {
     expect(() => storageLocationSchema.parse('counter')).toThrow();
+  });
+});
+
+describe('addStockSchema', () => {
+  const VALID_ADD_STOCK = {
+    displayName: '玉ねぎ',
+    amount: { value: 3, unit: '個' },
+    storedLocation: 'fridge',
+    expiresAt: '2026-07-31',
+  };
+
+  it('必須＋任意すべて埋めた入力を受け入れる', () => {
+    expect(addStockSchema.parse(VALID_ADD_STOCK)).toEqual(VALID_ADD_STOCK);
+  });
+
+  it('storedLocation / expiresAt が null の入力を受け入れる', () => {
+    const input = { ...VALID_ADD_STOCK, storedLocation: null, expiresAt: null };
+    expect(addStockSchema.parse(input)).toEqual(input);
+  });
+
+  it('displayName が空文字の入力を reject する', () => {
+    expect(() => addStockSchema.parse({ ...VALID_ADD_STOCK, displayName: '' })).toThrow();
+  });
+
+  it('amount.value が 0 の入力を reject する', () => {
+    expect(() =>
+      addStockSchema.parse({ ...VALID_ADD_STOCK, amount: { value: 0, unit: '個' } }),
+    ).toThrow();
+  });
+
+  it('未知の storedLocation を reject する', () => {
+    expect(() => addStockSchema.parse({ ...VALID_ADD_STOCK, storedLocation: 'counter' })).toThrow();
+  });
+
+  it('不正な expiresAt（ISO date でない）を reject する', () => {
+    expect(() => addStockSchema.parse({ ...VALID_ADD_STOCK, expiresAt: '2026/07/31' })).toThrow();
   });
 });
 
