@@ -171,6 +171,26 @@ E2E（Playwright spec）は既存の `recipe-crud.smoke.spec.ts` のみで、本
    `aria-describedby` をインスタンス連番で採番するため、SSR と CSR で値がずれる。
    `useId()` を `id` に渡して解消した。
 
+## 回帰試験の申し送り: E-1 は Next.js 更新のたびに再実行する
+
+**E-1（`pushState` 後もフォーム state が保持される）は、Next.js のバージョンを上げるたびに
+必ず再実行すること。** 離脱ガードは Next.js が `history.pushState` を patch している挙動に
+依存しており、これは公式に保証された仕様ではない。
+
+再実行の手順:
+
+1. `pnpm --filter @cookpit/web dev:pglite`
+2. `/recipes/new` を開き、`history.length` を記録する
+3. レシピ名に 1 文字入力する
+4. `history.length` が **1 増える**（sentinel が積まれた）ことと、
+   **入力値が残っている**ことの両方を確認する
+
+FAIL したときの意味は「ガードが効かない」ではなく **「ガードが入力を消す」**（設計書 §申し送り）。
+その場合はガードを外すか、設計書に記したフォールバック方式へ切り替える。
+
+**自動テストでは検出できない。** RTL は Next のルーターを介さず、`next/navigation` を
+モックしているため、patch された `pushState` の挙動そのものを再現しない。
+
 ## 完了条件
 
 - 上記すべての単体観点が実装され、`pnpm lint && pnpm type-check && pnpm test` が通る。
