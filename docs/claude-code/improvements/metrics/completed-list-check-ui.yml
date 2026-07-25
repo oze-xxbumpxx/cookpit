@@ -1,0 +1,99 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: completed-list-check-ui
+feature_name: completed-list-check-ui
+change_level: 2
+date: 2026-07-25
+
+agents:
+  # Subagent への委譲なし。再現・原因特定まで済んでおり、変更が apps/web の
+  # 3 コンポーネント + 共通フックに閉じるため Orchestrator が直接実装した。
+  calls: 0
+  retries: 0
+  unnecessary_calls: 0
+
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+codex:
+  model: unknown
+  reasoning_effort: unknown
+  notes: ''
+
+quality:
+  # IR-17〜21（5）+ CB-12〜16（5）+ SG-06（1）+ UAA-09（1）= 12 件追加。
+  # CB-11 は仕様変更に伴う書き換えのため「追加」に数えない。
+  tests_added: 12
+  # 型エラーは発生したが（readOnly を必須にした意図的な検出）、テストの FAIL は無し。
+  initial_test_failures: 0
+  reviewer_critical: 0
+  reviewer_major: 0
+  reviewer_minor: 0
+  reviewer_nits: 0
+  # 独立レビューは未実施（L2・変更が Presentation 層の 4 ファイルに閉じるため）。
+  user_corrections: 0
+  # 本タスクが対象としている不具合そのもの。ユーザーが実機で発見した escaped defect 1 件
+  # （混入は PR #109。本タスクで修正）。
+  escaped_defects: 1
+
+process:
+  requirement_rework: 0
+  design_rework: 0
+  # 実装計画ステップ 1 の完了条件「既存 8 件が無修正で通る」を満たせず、
+  # テストのレスポンス模擬に status を追加した（アサーションは無変更）。差分として計画に追記。
+  implementation_rework: 1
+  missing_documents: 0
+  # PR #112 の CI が未実行（GitHub Actions の課金停止。PR #110 / #111 と同じ）。
+  unresolved_items: 1
+
+machine:
+  # 注意: 本タスクは「1 セッション = 1 タスク」の前提から外れる。同一セッションで
+  # project-refactoring（PR #110）・ci-minutes-reduction（PR #111）・本タスク（PR #112）の
+  # 3 件を実施したため、以下の数値は 3 タスク合算であり本タスク単独の値ではない。
+  # 特に agent_calls の reviewer 1 件は project-refactoring のもので、本タスクでは 0 件
+  # （上の agents.calls を参照）。本タスク単独の切り出しには対応していない。
+  # collect-task-metrics.mjs による自動集計。手で編集しない（--write の再実行で更新）
+  collected_at: 2026-07-25
+  branch_filters: ['fix-completed-list-check-ui']
+  sessions: # session_id 単位でマージ・累積（1 行 = 1 セッション）
+    - {
+        'id': '65eedc1b-8ff6-54e3-a354-8928cd8c510b',
+        'date': '2026-07-25',
+        'branches':
+          [
+            'claude/ci-minutes-reduction',
+            'claude/fix-completed-list-check-ui',
+            'claude/project-refactoring-vc1pmz',
+          ],
+        'matched_by': 'branch',
+        'active_minutes': 241,
+        'tokens':
+          { 'input': 875, 'output': 365790, 'cache_creation': 2776787, 'cache_read': 138352847 },
+        'tool_uses': 467,
+        'user_prompts': 17,
+        'agent_calls': { 'reviewer': 1 },
+        'models': ['claude-opus-4-8', 'claude-opus-5'],
+      }
+  gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
+    []
+  totals:
+    sessions: 1
+    active_minutes: 241 # 約4時間1分（活動時間ベース・空白30分超は除外）
+    tokens_input: 875
+    tokens_output: 365790
+    tokens_cache_creation: 2776787
+    tokens_cache_read: 138352847
+    tokens_total: 141496299
+    tool_uses: 467
+    user_prompts: 17
+    agent_calls: 1
+    agent_calls_by_type: { 'reviewer': 1 }
+    agent_restarts: 0 # 同一 Subagent 種の再起動数（手戻りプロキシ）
+    gate_runs: 0
+    gate_fail_runs: 0
+    gate_rework_rate: unknown # ゲート実行記録なし
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }
