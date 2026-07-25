@@ -11,56 +11,158 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  format:
-    name: Format Check
+  # 品質ゲートを 1 ジョブに集約する。GitHub Actions はジョブ単位で分単位に切り上げ課金され、
+  # かつ各ジョブが checkout + pnpm install（約 20 秒）を繰り返すため、分割していると
+  # run あたり 2.5 分ほどが重複セットアップに消えていた。
+  #
+  # ステップは「安い順」に並べる。失敗すると後続はスキップされるため、lint の失敗で
+  # build / test の分を払わずに済む。
+  quality:
+    name: Quality Gates
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: pnpm format:check
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: pnpm lint
-
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: pnpm type-check
-
-  build:
-    name: Build
-    needs: type-check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: pnpm build
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  test:
-    name: Test
-    needs: build
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 変更範囲の判定に base との差分が要るため全履歴を取る
+          fetch-depth: 0
       - uses: ./.github/actions/setup
-      - run: pnpm test
+
+      - name: 変更範囲を判定
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # main への push は常に全ゲートを実行する（main は常にフル検証された状態に保つ）
+          if [ "${EVENT_NAME}" != "pull_request" ]; then
+            echo "event=${EVENT_NAME}: 全ゲートを実行します"
+            echo "docs_only=false" >> "${GITHUB_OUTPUT}"
+            echo "deps_changed=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "${BASE_SHA}" HEAD)"
+          echo "変更ファイル:"
+          printf '%s\n' "${changed}" | sed 's/^/  - /'
+
+          # ドキュメント・ログ・メモとルート直下の Markdown のみなら、コードは変わっていない。
+          # .claude/ 配下は Hook / Script を含むため、あえて「コード扱い」にして全ゲートを回す。
+          # docs/ logs/ notes/ 配下は前方一致、ルート直下の Markdown は完全一致で判定する
+          # （apps/web/README.md のような配下の md は「コード扱い」にして全ゲートを回す）。
+          if printf '%s\n' "${changed}" | grep -qvE '^(docs/|logs/|notes/)|^[^/]*\.md$'; then
+            docs_only=false
+          else
+            docs_only=true
+          fi
+
+          # 依存監査は依存定義が変わったときだけ実行する。依存を変えていない変更に対する
+          # 新規アドバイザリの検知は weekly-maintenance.yml（週次・main）が担う。
+          if printf '%s\n' "${changed}" | grep -qE '(^|/)(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$'; then
+            deps_changed=true
+          else
+            deps_changed=false
+          fi
+
+          echo "docs_only=${docs_only}" >> "${GITHUB_OUTPUT}"
+          echo "deps_changed=${deps_changed}" >> "${GITHUB_OUTPUT}"
+
+      # format:check は Markdown も対象のため、ドキュメントだけの変更でも必ず実行する
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm lint
+
+      - name: Type check
+        if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm type-check
+
+      - name: Build
+        if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm build
+
+      - name: Test
+        if: steps.scope.outputs.docs_only != 'true'
+        run: pnpm test
+
+      # --- 以下は依存監査。packageManager を書き換えるため必ずジョブの最後に置く ---
+      # npm が legacy audit API を 410 廃止したため、bulk advisory 対応の pnpm 11 で監査する
+      # （pnpm/pnpm#11265）。pnpm 11 は Node >= 22.13 が必要なため、ここだけ Node を上げる
+      # （.nvmrc は 20 のまま。リポジトリ本体の packageManager / .nvmrc は据え置き）。
+      - name: Set up Node 22 for audit (runner only)
+        if: steps.scope.outputs.deps_changed == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Switch to pnpm 11 for audit (runner only)
+        if: steps.scope.outputs.deps_changed == 'true'
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.packageManager = 'pnpm@11.13.0';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          corepack enable
+          corepack prepare pnpm@11.13.0 --activate
+          VERSION="$(pnpm --version)"
+          echo "audit pnpm version: ${VERSION}"
+          case "${VERSION}" in
+            11.*) ;;
+            *)
+              echo "Expected pnpm 11.x for audit, got ${VERSION}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Audit production dependencies (blocking, high+)
+        # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
+        # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
+        # package.json の pnpm.auditConfig.ignoreGhsas を使う
+        if: steps.scope.outputs.deps_changed == 'true'
+        run: pnpm audit --prod --audit-level=high
+
+      - name: Audit all dependencies (informational, critical+)
+        if: always() && steps.scope.outputs.deps_changed == 'true'
+        continue-on-error: true
+        run: pnpm audit --audit-level=critical
+
+      - name: 実行範囲のサマリ
+        if: always()
+        env:
+          DOCS_ONLY: ${{ steps.scope.outputs.docs_only }}
+          DEPS_CHANGED: ${{ steps.scope.outputs.deps_changed }}
+        run: |
+          {
+            echo "### CI 実行範囲"
+            echo ""
+            echo "| 判定 | 値 |"
+            echo "| --- | --- |"
+            echo "| ドキュメントのみの変更 | ${DOCS_ONLY:-unknown} |"
+            echo "| 依存定義の変更 | ${DEPS_CHANGED:-unknown} |"
+            echo ""
+            if [ "${DOCS_ONLY:-}" = "true" ]; then
+              echo "ドキュメントのみの変更のため lint / type-check / build / test / E2E をスキップしました。"
+              echo "Markdown も対象の \`format:check\` は実行しています。"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   e2e:
     name: E2E Smoke
     # PR 時のみ実行。smoke は自己完結型 CRUD だが実 DB（DATABASE_URL）に書き込むため、
     # secret 未設定なら明示的にスキップする。専用の Neon ブランチ DB の利用を推奨。
-    if: github.event_name == 'pull_request'
-    needs: build
+    # ドキュメントのみの変更では画面もサーバーも変わらないため、ジョブごとスキップする。
+    needs: quality
+    if: github.event_name == 'pull_request' && needs.quality.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -81,49 +183,3 @@ jobs:
       - name: Run E2E smoke
         if: env.DATABASE_URL != ''
         run: pnpm --filter @cookpit/web e2e
-
-  audit:
-    name: Dependency Audit
-    runs-on: ubuntu-latest
-    # npm が legacy audit API を 410 廃止したため、bulk advisory 対応の pnpm 11 で監査する
-    # （pnpm/pnpm#11265）。pnpm 11 は Node >= 22.13 が必要。
-    # package.json の packageManager=pnpm@10 だと dlx / Corepack 経由でも実行時に 10 へ戻り
-    # 旧 API で 410 になるため、監査中だけ packageManager を pnpm 11 に差し替える
-    # （ランナー上のみ。リポジトリ本体の packageManager / .nvmrc は据え置き）。
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Switch to pnpm 11 for audit (runner only)
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          pkg.packageManager = 'pnpm@11.13.0';
-          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          NODE
-          corepack enable
-          corepack prepare pnpm@11.13.0 --activate
-          VERSION="$(pnpm --version)"
-          echo "audit pnpm version: ${VERSION}"
-          case "${VERSION}" in
-            11.*) ;;
-            *)
-              echo "Expected pnpm 11.x for audit, got ${VERSION}" >&2
-              exit 1
-              ;;
-          esac
-      - name: Audit production dependencies (blocking, high+)
-        # devDependency の脆弱性（例: happy-dom GHSA-37j7-fg3j-429f）は本番非影響のため
-        # ここでは落とさない。解消不能な推移的脆弱性が出た場合の除外は
-        # package.json の pnpm.auditConfig.ignoreGhsas を使う
-        run: pnpm audit --prod --audit-level=high
-      - name: Audit all dependencies (informational, critical+)
-        if: always()
-        continue-on-error: true
-        run: pnpm audit --audit-level=critical
