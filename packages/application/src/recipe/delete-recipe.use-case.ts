@@ -1,5 +1,5 @@
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
+import { RecipeId } from '@cookpit/domain';
+import type { RecipeRepository } from '@cookpit/domain';
 import { RecipeNotFoundError } from './recipe-not-found.error';
 
 export class DeleteRecipeUseCase {

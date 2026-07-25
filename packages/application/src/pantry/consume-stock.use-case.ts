@@ -1,6 +1,5 @@
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { StockId } from '@cookpit/domain/src/pantry/stock-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { Quantity, StockId } from '@cookpit/domain';
+import type { PantryRepository } from '@cookpit/domain';
 import { InvalidStockOperationError } from './invalid-stock-operation.error';
 import type { ConsumeStockInputDto, PantryDto } from './pantry.dto';
 import { toPantryDto } from './pantry.mapper';

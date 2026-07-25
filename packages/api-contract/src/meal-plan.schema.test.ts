@@ -1,10 +1,13 @@
 import { toMealPlanDto, toPlannedRecipeDto } from '@cookpit/application';
 import type { MealPlanDto, PlannedRecipeDto } from '@cookpit/application';
-import { MealPlan, PlannedRecipe } from '@cookpit/domain/src/meal-plan/meal-plan';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+import {
+  MealPlan,
+  MealPlanId,
+  PlannedRecipe,
+  PlannedRecipeId,
+  RecipeId,
+  WeekIdentifier,
+} from '@cookpit/domain';
 import { describe, expect, it } from 'vitest';
 import {
   addRecipeToMealPlanSchema,

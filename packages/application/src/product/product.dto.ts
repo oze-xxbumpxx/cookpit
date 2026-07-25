@@ -1,5 +1,4 @@
-import type { ProductCategory } from '@cookpit/domain/src/product/product';
-import type { Unit } from '@cookpit/domain/src/shared/unit';
+import type { ProductCategory, Unit } from '@cookpit/domain';
 
 export interface PriceRecordDto {
   storeId: string;

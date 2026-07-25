@@ -1,11 +1,15 @@
 import type { Quantity } from '../shared/quantity';
 
-export interface ProductId {
+/**
+ * Recipe 集約が保持する商品への参照。`ProductId` 値オブジェクトそのものではなく
+ * 構造的な最小形とし、Recipe から Product 集約への型依存を作らない。
+ */
+export interface ProductRef {
   readonly value: string;
 }
 
 export interface RecipeIngredientCreateProps {
-  productRef: ProductId | null;
+  productRef: ProductRef | null;
   displayName: string;
   amount: Quantity | null;
   amountNote: string | null;
@@ -13,7 +17,7 @@ export interface RecipeIngredientCreateProps {
 
 export class RecipeIngredient {
   private constructor(
-    private readonly productReference: ProductId | null,
+    private readonly productReference: ProductRef | null,
     private readonly ingredientDisplayName: string,
     private readonly ingredientAmount: Quantity | null,
     private readonly ingredientAmountNote: string | null,
@@ -52,7 +56,7 @@ export class RecipeIngredient {
     );
   }
 
-  get productRef(): ProductId | null {
+  get productRef(): ProductRef | null {
     return this.productReference;
   }
 

@@ -1,9 +1,8 @@
 import { buttonVariants } from '@/components/ui/button';
-import { getDb } from '@/db/client';
 import { cn } from '@/lib/utils';
 import { GetMealPlanHistoryUseCase, GetRecipesUseCase } from '@cookpit/application';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
-import { DrizzleMealPlanRepository, DrizzleRecipeRepository } from '@cookpit/infrastructure';
+import { WeekIdentifier } from '@cookpit/domain';
+import { mealPlanRepository, recipeRepository } from '@/server/repositories';
 import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/app/_components/empty-state';
@@ -20,13 +19,9 @@ export default async function MealPlanHistoryPage({ searchParams }: Props) {
   const { limit: rawLimit } = await searchParams;
   const limit = resolveHistoryLimit(rawLimit);
 
-  const db = getDb();
-  const mealPlanRepository = new DrizzleMealPlanRepository(db);
-  const recipeRepository = new DrizzleRecipeRepository(db);
-
   const [mealPlans, recipes] = await Promise.all([
-    new GetMealPlanHistoryUseCase(mealPlanRepository).execute({ limit }),
-    new GetRecipesUseCase(recipeRepository).execute(),
+    new GetMealPlanHistoryUseCase(mealPlanRepository()).execute({ limit }),
+    new GetRecipesUseCase(recipeRepository()).execute(),
   ]);
 
   const recipeNameMap = buildRecipeNameMap(recipes);

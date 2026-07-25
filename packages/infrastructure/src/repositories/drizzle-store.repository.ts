@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { Store, StoreId } from '@cookpit/domain/src/shared/store';
-import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
+import { Store, StoreId } from '@cookpit/domain';
+import type { StoreRepository } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { stores, type StoreRow, type NewStoreRow } from '../db/schema';
 

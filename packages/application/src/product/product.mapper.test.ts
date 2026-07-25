@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { Store, StoreId } from '@cookpit/domain/src/shared/store';
+import {
+  Money,
+  PriceRecord,
+  PriceRecordId,
+  Product,
+  ProductId,
+  Quantity,
+  Store,
+  StoreId,
+} from '@cookpit/domain';
 import { normalizeAliases, toProductDto, toStoreNameMap } from './product.mapper';
 
 function buildStore(id: string, name: string): Store {

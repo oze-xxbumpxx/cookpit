@@ -1,11 +1,8 @@
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
-import { InvalidShoppingListStateError } from './invalid-shopping-list-state.error';
+import { ShoppingItemId } from '@cookpit/domain';
+import type { ShoppingListRepository } from '@cookpit/domain';
+import { findUpdatedItem, loadActiveShoppingList, requireItem } from './load-shopping-list';
 import type { SetItemCheckedInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';
-import { ShoppingItemNotFoundError } from './shopping-item-not-found.error';
-import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
 /**
  * 品目のチェック状態（購入予定に印を付ける／外す）を明示的にセットする。価格・店舗の記録は
@@ -23,21 +20,14 @@ export class SetItemCheckedUseCase {
   constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
 
   async execute(input: SetItemCheckedInputDto): Promise<ShoppingItemDto> {
-    const shoppingList = await this.shoppingListRepository.findById(
-      ShoppingListId.fromString(input.shoppingListId),
+    const shoppingList = await loadActiveShoppingList(
+      this.shoppingListRepository,
+      input.shoppingListId,
+      'setItemChecked',
     );
-    if (shoppingList === null) {
-      throw new ShoppingListNotFoundError(input.shoppingListId);
-    }
-    if (shoppingList.status !== 'active') {
-      throw new InvalidShoppingListStateError(shoppingList.status, 'setItemChecked');
-    }
 
     const itemId = ShoppingItemId.fromString(input.itemId);
-    const item = shoppingList.items.find((candidate) => candidate.id.equals(itemId));
-    if (item === undefined) {
-      throw new ShoppingItemNotFoundError(input.itemId);
-    }
+    const item = requireItem(shoppingList, itemId, input.itemId);
 
     const alreadyChecked = item.status === 'bought';
     if (input.checked && !alreadyChecked) {
@@ -47,10 +37,6 @@ export class SetItemCheckedUseCase {
     }
 
     await this.shoppingListRepository.save(shoppingList);
-    const updated = shoppingList.items.find((candidate) => candidate.id.equals(itemId));
-    if (updated === undefined) {
-      throw new Error('Updated ShoppingItem not found');
-    }
-    return toShoppingItemDto(updated);
+    return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
   }
 }

@@ -1,5 +1,4 @@
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
+import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import type { ProductDto } from './product.dto';
 import { toProductDto, toStoreNameMap } from './product.mapper';
 

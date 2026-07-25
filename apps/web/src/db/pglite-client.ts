@@ -1,7 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
-import type { DrizzleClient } from '@cookpit/infrastructure';
-import * as schema from '@cookpit/infrastructure/src/db/schema';
+import { schema, type DrizzleClient } from '@cookpit/infrastructure';
 
 // PGlite は単一接続。dev の HMR でモジュールが再評価されても同じインスタンスを
 // 使い回さないと同一 dataDir への多重オープンで壊れるため globalThis に保持する。

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Store, StoreId } from '@cookpit/domain/src/shared/store';
-import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
+import { Store, StoreId } from '@cookpit/domain';
+import type { StoreRepository } from '@cookpit/domain';
 import { CreateStoreUseCase } from './create-store.use-case';
 import { GetStoresUseCase } from './get-stores.use-case';
 

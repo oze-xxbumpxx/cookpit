@@ -1,5 +1,5 @@
-import { Product } from '@cookpit/domain/src/product/product';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
+import { Product } from '@cookpit/domain';
+import type { ProductRepository } from '@cookpit/domain';
 import type { CreateProductInputDto, ProductDto } from './product.dto';
 import { normalizeAliases, toProductDto } from './product.mapper';
 

@@ -1,4 +1,4 @@
-import type { Unit } from '@cookpit/domain/src/shared/unit';
+import type { Unit } from '@cookpit/domain';
 
 export type ShoppingListStatus = 'active' | 'completed';
 export type ItemStatus = 'pending' | 'bought' | 'skipped';

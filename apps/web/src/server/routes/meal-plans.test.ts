@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import app from '@/server/app';
+import { app } from '@/server/app';
 import {
   AddRecipeToMealPlanUseCase,
   CreateMealPlanUseCase,

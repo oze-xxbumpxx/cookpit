@@ -1,11 +1,14 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm';
-import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
+import {
+  Money,
+  PriceRecord,
+  PriceRecordId,
+  Product,
+  ProductId,
+  Quantity,
+  StoreId,
+} from '@cookpit/domain';
+import type { ProductRepository } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import {
   priceRecords,

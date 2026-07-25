@@ -1,5 +1,5 @@
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { StockId } from '@cookpit/domain/src/pantry/stock-id';
+import { StockId } from '@cookpit/domain';
+import type { PantryRepository } from '@cookpit/domain';
 import type { DiscardStockInputDto, PantryDto } from './pantry.dto';
 import { toPantryDto } from './pantry.mapper';
 import { StockNotFoundError } from './stock-not-found.error';

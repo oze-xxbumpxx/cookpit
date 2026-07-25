@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Store, StoreId } from '@cookpit/domain/src/shared/store';
+import { Store, StoreId } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { createTestDb } from '../testing/create-test-db';
 import { DrizzleStoreRepository } from './drizzle-store.repository';
