@@ -1,6 +1,5 @@
-import { getDb } from '@/db/client';
 import { GetProductUseCase, ProductNotFoundError, type ProductDto } from '@cookpit/application';
-import { DrizzleProductRepository, DrizzleStoreRepository } from '@cookpit/infrastructure';
+import { productRepository, storeRepository } from '@/server/repositories';
 import { notFound } from 'next/navigation';
 import { ProductEditFormClient } from './_components/product-edit-form-client';
 
@@ -12,9 +11,7 @@ interface Props {
 
 export default async function ProductEditPage({ params }: Props) {
   const { id } = await params;
-  const productRepository = new DrizzleProductRepository(getDb());
-  const storeRepository = new DrizzleStoreRepository(getDb());
-  const useCase = new GetProductUseCase(productRepository, storeRepository);
+  const useCase = new GetProductUseCase(productRepository(), storeRepository());
 
   let product: ProductDto;
   try {

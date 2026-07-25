@@ -1,7 +1,6 @@
-import { getDb } from '@/db/client';
 import { GetMealPlanByWeekUseCase, GetRecipesUseCase } from '@cookpit/application';
 import { WeekIdentifier } from '@cookpit/domain';
-import { DrizzleMealPlanRepository, DrizzleRecipeRepository } from '@cookpit/infrastructure';
+import { mealPlanRepository, recipeRepository } from '@/server/repositories';
 import { MealPlanClient } from './_components/meal-plan-client';
 
 export const dynamic = 'force-dynamic';
@@ -28,13 +27,9 @@ export default async function MealPlansPage({ searchParams }: Props) {
   const selectedWeek = resolveSelectedWeek(week);
   const selectedWeekIdentifier = selectedWeek.toString();
 
-  const db = getDb();
-  const mealPlanRepository = new DrizzleMealPlanRepository(db);
-  const recipeRepository = new DrizzleRecipeRepository(db);
-
   const [mealPlan, recipes] = await Promise.all([
-    new GetMealPlanByWeekUseCase(mealPlanRepository).execute(selectedWeekIdentifier),
-    new GetRecipesUseCase(recipeRepository).execute(),
+    new GetMealPlanByWeekUseCase(mealPlanRepository()).execute(selectedWeekIdentifier),
+    new GetRecipesUseCase(recipeRepository()).execute(),
   ]);
 
   return (
