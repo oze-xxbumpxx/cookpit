@@ -56,13 +56,13 @@ describe('StockRow', () => {
     expect(screen.queryByText(/〜.*まで/)).toBeNull();
   });
 
-  it('SR-04: 「使った」click で onConsume に stock.id が渡される', async () => {
+  it('SR-04: 「消費」click で onConsume に stock.id が渡される', async () => {
     const user = userEvent.setup();
     const onConsume = vi.fn();
     const stock = createStockDto({ id: '10000000-0000-4000-8000-000000000004' });
     renderRow({ stock, onConsume });
 
-    await user.click(screen.getByRole('button', { name: '使った' }));
+    await user.click(screen.getByRole('button', { name: '消費' }));
 
     expect(onConsume).toHaveBeenCalledWith(stock.id);
   });
@@ -81,7 +81,7 @@ describe('StockRow', () => {
   it('SR-06: submitting 中は両ボタンが disabled になる', () => {
     renderRow({ submitting: true });
 
-    expect(screen.getByRole('button', { name: '使った' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: '消費' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: '廃棄' }).hasAttribute('disabled')).toBe(true);
   });
 
@@ -91,7 +91,7 @@ describe('StockRow', () => {
     const onDiscard = vi.fn();
     renderRow({ onConsume, onDiscard });
 
-    await user.click(screen.getByRole('button', { name: '使った' }));
+    await user.click(screen.getByRole('button', { name: '消費' }));
     await user.click(screen.getByRole('button', { name: '廃棄' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
