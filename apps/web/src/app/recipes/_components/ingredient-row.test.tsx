@@ -24,6 +24,7 @@ describe('IngredientRow', () => {
     render(
       <IngredientRow
         value={createValue()}
+        index={0}
         errorMessage={null}
         onChange={onChange}
         onRemove={vi.fn()}
@@ -42,6 +43,7 @@ describe('IngredientRow', () => {
     render(
       <IngredientRow
         value={createValue()}
+        index={0}
         errorMessage={null}
         onChange={vi.fn()}
         onRemove={vi.fn()}
@@ -59,6 +61,7 @@ describe('IngredientRow', () => {
     const { rerender } = render(
       <IngredientRow
         value={createValue()}
+        index={0}
         errorMessage={null}
         onChange={vi.fn()}
         onRemove={onRemove}
@@ -73,6 +76,7 @@ describe('IngredientRow', () => {
     rerender(
       <IngredientRow
         value={createValue()}
+        index={0}
         errorMessage="食材名を入力してください。"
         onChange={vi.fn()}
         onRemove={onRemove}

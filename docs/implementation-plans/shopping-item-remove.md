@@ -7,22 +7,21 @@
 
 ## 変更対象ファイル
 
-| path                                                                                | なぜ変えるか                                                              |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `packages/domain/src/shopping-list/shopping-list.ts`                                | 集約に `removeItem` を追加。クラス JSDoc の更新操作の列挙も更新           |
-| `packages/domain/src/shopping-list/shopping-list.test.ts`                           | `removeItem` の観点を追加                                                 |
-| `packages/application/src/shopping-list/shopping-list.dto.ts`                       | `RemoveItemInputDto` を追加                                               |
-| `packages/application/src/shopping-list/index.ts`                                   | `remove-item.use-case` を re-export                                       |
-| `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.test.ts` | `removeItem` 経由で行が消えることを PGlite で固定                         |
-| `apps/web/src/server/routes/shopping-lists.ts`                                      | `DELETE /:id/items/:itemId` を追加                                        |
-| `apps/web/src/app/shopping-lists/_utils/shopping-list-view.ts`                      | `describeRemoveConfirmation` を追加                                       |
-| `apps/web/src/app/shopping-lists/_utils/shopping-list-view.node.test.ts`            | 同関数の観点を追加                                                        |
-| `apps/web/src/app/shopping-lists/_components/shopping-item-row.tsx`                 | 削除ボタンを追加（`onRemove` prop）                                       |
-| `apps/web/src/app/shopping-lists/_components/shopping-item-row.test.tsx`            | 削除ボタンの観点を追加。既存 `renderRow` の defaults に `onRemove` を足す |
-| `apps/web/src/app/shopping-lists/_components/store-group.tsx`                       | `onRemoveItem` を中継（**必須 prop**）                                    |
-| `apps/web/src/app/shopping-lists/_components/store-group.test.tsx`                  | defaults に `onRemoveItem` を追加                                         |
-| `apps/web/src/app/shopping-lists/_components/shopping-list-client.tsx`              | `OptimisticAction` ユニオン化・`handleRemoveItem`・確認ダイアログ         |
-| `apps/web/src/app/shopping-lists/_components/shopping-list-test-fixtures.ts`        | RPC モックに `$delete` を追加                                             |
+| path                                                                                | なぜ変えるか                                                                     |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `packages/domain/src/shopping-list/shopping-list.ts`                                | 集約に `removeItem` を追加。クラス JSDoc の更新操作の列挙も更新                  |
+| `packages/domain/src/shopping-list/shopping-list.test.ts`                           | `removeItem` の観点を追加                                                        |
+| `packages/application/src/shopping-list/shopping-list.dto.ts`                       | `RemoveItemInputDto` を追加                                                      |
+| `packages/application/src/shopping-list/index.ts`                                   | `remove-item.use-case` を re-export                                              |
+| `packages/infrastructure/src/repositories/drizzle-shopping-list.repository.test.ts` | `removeItem` 経由で行が消えることを PGlite で固定                                |
+| `apps/web/src/server/routes/shopping-lists.ts`                                      | `DELETE /:id/items/:itemId` を追加                                               |
+| `apps/web/src/app/shopping-lists/_utils/shopping-list-view.ts`                      | `describeRemoveConfirmation` を追加                                              |
+| `apps/web/src/app/shopping-lists/_utils/shopping-list-view.node.test.ts`            | 同関数の観点を追加                                                               |
+| `apps/web/src/app/shopping-lists/_components/shopping-item-row.tsx`                 | 削除ボタンを追加（`onRequestRemove` prop）                                       |
+| `apps/web/src/app/shopping-lists/_components/shopping-item-row.test.tsx`            | 削除ボタンの観点を追加。既存 `renderRow` の defaults に `onRequestRemove` を足す |
+| `apps/web/src/app/shopping-lists/_components/store-group.tsx`                       | `onRequestRemove` を中継（**必須 prop**）                                        |
+| `apps/web/src/app/shopping-lists/_components/store-group.test.tsx`                  | defaults に `onRequestRemove` を追加                                             |
+| `apps/web/src/app/shopping-lists/_components/shopping-list-client.tsx`              | `OptimisticAction` ユニオン化・`handleRemoveItem`・確認ダイアログ                |
 
 ## 新規作成ファイル
 
@@ -80,34 +79,29 @@ shoppingItemIdParamSchema), ...)` をチェーンで追加し `c.body(null, 204)
 
 ### `apps/web/src/app/shopping-lists/_components/shopping-item-row.tsx`
 
-- 変更内容: props に `onRemove: (itemId: string) => void` を**必須**で追加。店舗チップの右に
+- 変更内容: props に `onRequestRemove: (itemId: string) => void` を**必須**で追加。店舗チップの右に
   `Trash2` の ghost ボタンを追加し、`readOnly` のときは描画しない。`disabled={locked}`。
   `aria-label={`${item.displayName}を削除`}`。
 - 完了条件: `readOnly` で削除ボタンが DOM に出ない。既存のチェック・店舗チップの挙動が不変。
 
 ### `apps/web/src/app/shopping-lists/_components/store-group.tsx`
 
-- 変更内容: props に `onRemoveItem: (itemId: string) => void` を**必須**で追加し
-  `ShoppingItemRow` の `onRemove` へ渡す。
+- 変更内容: props に `onRequestRemove: (itemId: string) => void` を**必須**で追加し
+  `ShoppingItemRow` へそのまま渡す。
 - 完了条件: 任意 prop にしない（中継漏れを型エラーで検出させる。2026-07-25 の教訓）。
 
 ### `apps/web/src/app/shopping-lists/_components/shopping-list-client.tsx`
 
 - 変更内容:
   1. `OptimisticAction` を判別可能ユニオンに変更し、`applyOptimisticPatch` を
-     `applyOptimisticItems` にリネーム（`remove` 分岐を追加）。既存 3 箇所に `type: 'patch'` を付与。
+     `applyOptimisticAction` にリネーム（`remove` 分岐を追加）。既存 3 箇所に `type: 'patch'` を付与。
   2. `pendingRemoveItem: ShoppingItemDto | null` state を追加。
   3. `handleRemoveItem(itemId)` を `handleSetChecked` と同型で追加（`setSubmittingItemId` は
      `startTransition` の外、404 は成功扱い、`response.json()` を呼ばない、
      `expandedItemId` のクリア）。
-  4. `StoreGroup` に `onRemoveItem` を渡す（`items` から `pendingRemoveItem` を引く）。
+  4. `StoreGroup` に `onRequestRemove` を渡す（`items` から `pendingRemoveItem` を引く）。
   5. JSX 末尾に制御モードの `AlertDialog` を 1 つ追加。
 - 完了条件: 既存の 4 テストファイルが `$delete` モック追加のみで通る。
-
-### `apps/web/src/app/shopping-lists/_components/shopping-list-test-fixtures.ts`
-
-- 変更内容: RPC クライアントのモックに `$delete` を追加する。
-- 完了条件: 既存 4 テストのアサーションを 1 行も変更せずに通る。
 
 ## 実装手順
 
@@ -121,8 +115,10 @@ shoppingItemIdParamSchema), ...)` をチェーンで追加し `c.body(null, 204)
    完了条件: 同上。既存ルートの解決が壊れていないこと
 5. **UI（純関数）** … `describeRemoveConfirmation` と `.node.test.ts` /
    完了条件: 同上
-6. **UI（コンポーネント）** … row → store-group → client の順。fixtures に `$delete` 追加 /
-   完了条件: 同上。**既存 4 テストが無修正で通る**
+6. **UI（コンポーネント）** … row → store-group → client の順。RPC モックはテストファイル
+   ごとに定義する既存方式のため、共有 fixtures の変更は不要だった /
+   完了条件: 同上。**既存 4 テストがアサーション無変更で通る**（必須 prop 追加に伴う
+   defaults への 1 行追加のみ）
 7. **実画面確認** … `manual-browser-verify`（PGlite dev + Playwright）
 
 ## テスト計画
