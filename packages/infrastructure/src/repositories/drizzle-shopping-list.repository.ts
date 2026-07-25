@@ -25,7 +25,7 @@ import {
   type ShoppingItemRow,
   type ShoppingListRow,
 } from '../db/schema';
-import { toUnit } from './mappers';
+import { toLocalDate, toLocalDateString, toUnit } from './mappers';
 
 interface ShoppingListWithItemRow {
   shoppingList: ShoppingListRow;
@@ -134,7 +134,7 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
     return ShoppingList.reconstruct({
       id: ShoppingListId.fromString(listRow.id),
       mealPlanId: MealPlanId.fromString(listRow.mealPlanId),
-      shoppingDate: toDate(listRow.shoppingDate),
+      shoppingDate: toLocalDate(listRow.shoppingDate),
       status: toShoppingListStatus(listRow.status),
       createdAt: listRow.createdAt,
       items: itemRows.map((row) =>
@@ -162,7 +162,7 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
     return {
       id: shoppingList.id.value,
       mealPlanId: shoppingList.mealPlanId.value,
-      shoppingDate: toDateString(shoppingList.shoppingDate),
+      shoppingDate: toLocalDateString(shoppingList.shoppingDate),
       status: shoppingList.status,
       createdAt: shoppingList.createdAt,
     };
@@ -184,17 +184,6 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       source: item.source,
     }));
   }
-}
-
-function toDate(value: string): Date {
-  return new Date(value + 'T00:00:00');
-}
-
-function toDateString(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const date = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${date}`;
 }
 
 function toShoppingListStatus(value: string): ShoppingListStatus {

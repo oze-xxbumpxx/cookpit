@@ -9,6 +9,7 @@ import {
 import type { MealPlanRepository, MealPlanStatus } from '@cookpit/domain';
 import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
+import { toLocalDate, toLocalDateString } from './mappers';
 import {
   mealPlans,
   plannedRecipes,
@@ -178,7 +179,7 @@ export class DrizzleMealPlanRepository implements MealPlanRepository {
           id: PlannedRecipeId.fromString(row.id),
           recipeId: RecipeId.fromString(row.recipeId),
           scaleFactor: Number(row.scaleFactor),
-          scheduledDate: toDate(row.scheduledDate),
+          scheduledDate: row.scheduledDate === null ? null : toLocalDate(row.scheduledDate),
           cookedAt: row.cookedAt ?? null,
           notes: row.notes,
         }),
@@ -205,7 +206,10 @@ export class DrizzleMealPlanRepository implements MealPlanRepository {
       mealPlanId: mealPlan.id.value,
       recipeId: plannedRecipe.recipeId.value,
       scaleFactor: plannedRecipe.scaleFactor.toString(),
-      scheduledDate: toDateString(plannedRecipe.scheduledDate),
+      scheduledDate:
+        plannedRecipe.scheduledDate === null
+          ? null
+          : toLocalDateString(plannedRecipe.scheduledDate),
       cookedAt: plannedRecipe.cookedAt,
       notes: plannedRecipe.notes,
     }));
@@ -223,20 +227,4 @@ function toMealPlanStatus(value: string): MealPlanStatus {
     default:
       throw new Error(`Unknown meal plan status: ${value}`);
   }
-}
-
-function toDate(value: string | null): Date | null {
-  return value === null ? null : new Date(value + 'T00:00:00');
-}
-
-function toDateString(value: Date | null): string | null {
-  if (value === null) {
-    return null;
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const date = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${date}`;
 }

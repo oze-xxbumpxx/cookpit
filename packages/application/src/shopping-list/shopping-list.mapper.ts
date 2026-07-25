@@ -1,4 +1,5 @@
 import type { ShoppingItem, ShoppingList } from '@cookpit/domain';
+import { toLocalDateString } from '../shared/date';
 import type { ShoppingItemDto, ShoppingListDto } from './shopping-list.dto';
 
 export function toShoppingItemDto(item: ShoppingItem): ShoppingItemDto {
@@ -31,12 +32,4 @@ export function toShoppingListDto(shoppingList: ShoppingList): ShoppingListDto {
     items: shoppingList.items.map(toShoppingItemDto),
     createdAt: shoppingList.createdAt.toISOString(),
   };
-}
-
-// UTC 変換による日付ずれを避け、買い物日をローカル日付のまま境界外へ渡す。
-function toLocalDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
