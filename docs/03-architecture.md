@@ -43,97 +43,65 @@ Clean Architecture + DDD を、個人開発のスケールに合わせて適用�
 
 ## モノレポ構成
 
+> 2026-07-25 時点の実装に合わせて更新（project-refactoring / ADR-0010）。
+> ソースは `apps/web/src/` 配下（Next.js の `src/` ディレクトリ構成）。
+
 ```
-recipe-app/
+cookpit/
 ├── apps/
-│   └── web/                          # Next.js + Hono 一体
-│       ├── app/
-│       │   ├── api/
-│       │   │   └── [[...route]]/
-│       │   │       └── route.ts      # Hono ルーター
-│       │   ├── (app)/                # メインアプリ画面
-│       │   │   ├── page.tsx          # ダッシュボード
+│   └── web/                             # Next.js + Hono 一体（@cookpit/web）
+│       ├── src/
+│       │   ├── app/
+│       │   │   ├── api/[[...route]]/
+│       │   │   │   └── route.ts         # Hono をマウント
+│       │   │   ├── page.tsx             # ダッシュボード
 │       │   │   ├── recipes/
 │       │   │   ├── meal-plans/
-│       │   │   ├── shopping/
+│       │   │   ├── shopping-lists/
 │       │   │   ├── pantry/
-│       │   │   └── products/
-│       │   ├── layout.tsx
-│       │   └── manifest.ts           # PWA マニフェスト
-│       ├── server/                   # Hono のサーバー実装
-│       │   ├── routes/
-│       │   │   ├── recipes.ts
-│       │   │   ├── meal-plans.ts
-│       │   │   ├── shopping-lists.ts
-│       │   │   ├── pantry.ts
-│       │   │   └── products.ts
-│       │   ├── middleware/
-│       │   └── app.ts                # Hono アプリ本体
-│       ├── components/               # ページ固有コンポーネント
-│       ├── lib/
-│       │   └── api-client.ts         # Hono RPC クライアント
-│       ├── public/
+│       │   │   ├── products/
+│       │   │   ├── layout.tsx
+│       │   │   └── manifest.ts          # PWA マニフェスト
+│       │   ├── server/                  # Hono のサーバー実装
+│       │   │   ├── routes/              # recipes / meal-plans / shopping-lists 等
+│       │   │   ├── repositories.ts      # Repository ファクトリ（DI の入口）
+│       │   │   └── app.ts               # Hono アプリ本体（named export）
+│       │   ├── db/                      # Neon / PGlite 接続
+│       │   ├── components/              # 共有 UI（shadcn 等）
+│       │   └── lib/
+│       │       ├── api-client.ts        # Hono RPC クライアント
+│       │       └── use-api-action.ts    # Client の mutation 共通ヘルパ
 │       └── package.json
 │
 ├── packages/
-│   ├── domain/                       # ドメイン層
-│   │   ├── src/
-│   │   │   ├── recipe/
-│   │   │   │   ├── recipe.ts         # Recipe Aggregate
-│   │   │   │   ├── recipe-id.ts
-│   │   │   │   ├── recipe-ingredient.ts
-│   │   │   │   ├── cooking-step.ts
-│   │   │   │   └── recipe.repository.ts  # Interface
-│   │   │   ├── meal-plan/
-│   │   │   ├── shopping-list/
-│   │   │   ├── pantry/
-│   │   │   ├── product/
-│   │   │   └── shared/               # 共有値オブジェクト
-│   │   │       ├── money.ts
-│   │   │       ├── quantity.ts
-│   │   │       ├── unit.ts
-│   │   │       ├── week-identifier.ts
-│   │   │       └── store.ts
-│   │   └── package.json
+│   ├── domain/                          # ドメイン層（@cookpit/domain）
+│   │   └── src/
+│   │       ├── index.ts                 # 公開境界バレル（ADR-0010）
+│   │       ├── recipe/                  # 集約 + Repository IF
+│   │       ├── meal-plan/
+│   │       ├── shopping-list/
+│   │       ├── pantry/
+│   │       ├── product/
+│   │       └── shared/                  # Money / Quantity / Unit / Store 等
 │   │
-│   ├── application/                  # ユースケース層
-│   │   ├── src/
-│   │   │   ├── recipe/
-│   │   │   │   ├── create-recipe.use-case.ts
-│   │   │   │   ├── get-recipes.use-case.ts
-│   │   │   │   ├── update-recipe.use-case.ts
-│   │   │   │   └── delete-recipe.use-case.ts
-│   │   │   ├── meal-plan/
-│   │   │   ├── shopping-list/
-│   │   │   ├── pantry/
-│   │   │   └── product/
-│   │   └── package.json
+│   ├── application/                     # ユースケース層（@cookpit/application）
+│   │   └── src/
+│   │       ├── recipe/                  # *UseCase + DTO + mapper
+│   │       ├── meal-plan/
+│   │       ├── shopping-list/
+│   │       ├── pantry/
+│   │       ├── product/
+│   │       ├── store/
+│   │       └── shared/                  # NotFoundError 等の基底・日付ヘルパ
 │   │
-│   ├── infrastructure/               # 永続化層
-│   │   ├── src/
-│   │   │   ├── db/
-│   │   │   │   ├── schema.ts         # Drizzle スキーマ全体
-│   │   │   │   ├── client.ts         # DB クライアント
-│   │   │   │   └── migrations/
-│   │   │   └── repositories/
-│   │   │       ├── drizzle-recipe.repository.ts
-│   │   │       ├── drizzle-meal-plan.repository.ts
-│   │   │       ├── drizzle-shopping-list.repository.ts
-│   │   │       ├── drizzle-pantry.repository.ts
-│   │   │       └── drizzle-product.repository.ts
-│   │   └── package.json
+│   ├── infrastructure/                  # 永続化層（@cookpit/infrastructure）
+│   │   └── src/
+│   │       ├── db/                      # schema / client
+│   │       ├── repositories/            # Drizzle*Repository
+│   │       └── index.ts                 # バレル（schema を namespace export）
 │   │
-│   ├── api-contract/                 # API 契約（Zod）
-│   │   ├── src/
-│   │   │   ├── recipe.schema.ts
-│   │   │   ├── meal-plan.schema.ts
-│   │   │   └── ...
-│   │   └── package.json
-│   │
-│   └── config/                       # 共通設定
-│       ├── eslint/
-│       ├── typescript/
-│       └── tailwind/
+│   ├── api-contract/                    # API 契約（Zod / @cookpit/api-contract）
+│   └── config/                          # eslint / typescript / tailwind
 │
 ├── turbo.json
 ├── pnpm-workspace.yaml
@@ -169,89 +137,115 @@ packages/domain
 
 ### 方法A: Server Component から直接ユースケース呼び出し
 
+初期表示（一覧・詳細の SSR）で使う。Repository は `@/server/repositories` のファクトリ経由で組み立てる（Presentation から `@cookpit/infrastructure` を直接 `new` しない）。
+
 ```typescript
-// app/(app)/recipes/page.tsx
-import { GetRecipesUseCase } from '@recipe-app/application/recipe'
-import { DrizzleRecipeRepository } from '@recipe-app/infrastructure/repositories'
-import { db } from '@/lib/db'
+// apps/web/src/app/recipes/page.tsx
+import { GetRecipesUseCase } from '@cookpit/application';
+import { recipeRepository } from '@/server/repositories';
+import { RecipeListClient } from './_components/recipe-list-client';
 
 export default async function RecipesPage() {
-  const repo = new DrizzleRecipeRepository(db)
-  const useCase = new GetRecipesUseCase(repo)
-  const recipes = await useCase.execute()
+  const useCase = new GetRecipesUseCase(recipeRepository());
+  const recipes = await useCase.execute();
 
-  return <RecipeList initialRecipes={recipes} />
+  return <RecipeListClient initialRecipes={recipes} />;
 }
 ```
 
 ### 方法B: Client Component から Hono RPC 経由
 
+操作（追加・更新・完了・再取得など）で使う。型安全な `hc<AppType>` クライアントと、
+mutation 定型処理用の `useApiAction`（`apps/web/src/lib/use-api-action.ts`）を組み合わせる。
+
 ```typescript
-// app/(app)/recipes/recipe-list.tsx
-'use client'
-import { useQuery } from '@tanstack/react-query'
-import { client } from '@/lib/api-client'
+// apps/web/src/app/recipes/_components/recipe-list-client.tsx（概念）
+'use client';
 
-export function RecipeList({ initialRecipes }) {
-  const { data } = useQuery({
-    queryKey: ['recipes'],
-    queryFn: () => client.recipes.$get().then(r => r.json()),
-    initialData: initialRecipes,
-  })
+import { useState } from 'react';
+import { client } from '@/lib/api-client';
+import { useApiAction } from '@/lib/use-api-action';
 
-  return <ul>{data.map(r => <li key={r.id}>{r.name}</li>)}</ul>
+export function RecipeListClient({ initialRecipes }) {
+  const [recipes, setRecipes] = useState(initialRecipes);
+  const action = useApiAction();
+
+  const handleRefetch = () =>
+    action.run(() => client.api.recipes.$get(), {
+      key: 'refresh',
+      onSuccess: (body) => setRecipes(body),
+    });
+
+  // ...
 }
 ```
 
+> MVP1 では TanStack Query / Zustand は**未導入**。サーバー状態は「Server Component の
+> initial props + Client の `useState` / `useOptimistic` + 必要時の再取得」で足りている。
+> キャッシュ戦略が複雑になった段階で再検討する。
+
 ### 使い分けの方針
 
-| ユースケース                       | 採用する方法                 |
-| ---------------------------------- | ---------------------------- |
-| 初期表示（SEO、初回ロード高速化）  | A: Server Component 直接     |
-| 一覧の再フェッチ・ページネーション | B: Hono RPC + TanStack Query |
-| フォーム送信（楽観的更新したい）   | B: Hono RPC + TanStack Query |
-| ステータス変更などのアクション     | B: Hono RPC + TanStack Query |
-| Server Component から直接書き込み  | A: Server Action として      |
+| ユースケース                      | 採用する方法                                      |
+| --------------------------------- | ------------------------------------------------- |
+| 初期表示（初回ロード）            | A: Server Component 直接                          |
+| 一覧の再フェッチ                  | B: Hono RPC + `useApiAction` / ローカル state     |
+| フォーム送信・単発 mutation       | B: Hono RPC + `useApiAction`                      |
+| 楽観的更新が必要な行操作          | B: Hono RPC + `useOptimistic` / `startTransition` |
+| Server Component から直接書き込み | 原則使わない（書き込みは Hono RPC に寄せる）      |
 
 **基本方針**：
 
 - **読み取り**は初期表示を Server Component で、その後の操作は Hono RPC に切り替え
-- **書き込み**は基本 Hono RPC（楽観的更新を効かせやすい）
+- **書き込み**は基本 Hono RPC（楽観的更新やエラーバナーを効かせやすい）
 - 認証なし MVP1 では「ログインユーザー」を意識する必要がないため、A も B もシンプル
+
+## パッケージ公開境界（ADR-0010）
+
+消費側は必ずパッケージ名のバレルから import する。
+
+| パッケージ                 | 正規 import                                  | 禁止例                         |
+| -------------------------- | -------------------------------------------- | ------------------------------ |
+| domain                     | `@cookpit/domain`                            | `@cookpit/domain/src/...`      |
+| application                | `@cookpit/application`                       | deep path                      |
+| infrastructure（web から） | `@/server/repositories` と `@/db/*` に閉じる | page からの直接 `new Drizzle*` |
+| api-contract               | `@cookpit/api-contract`                      | deep path                      |
+
+`packages/domain` 内部の相互参照は相対パスのまま（バレル自己参照で循環を作らない）。
 
 ## ユースケース層の DI（依存性注入）
 
 個人開発のスケールでは DI コンテナ（tsyringe など）を使わず、**手動 DI** で十分。
+組み立ては `apps/web/src/server/repositories.ts` のファクトリに集約済み。
 
 ```typescript
-// packages/application/recipe/create-recipe.use-case.ts
+// packages/application の UseCase（概念）
 export class CreateRecipeUseCase {
-  constructor(private recipeRepo: RecipeRepository) {}
+  constructor(private readonly recipeRepo: RecipeRepository) {}
 
   async execute(input: CreateRecipeInput): Promise<RecipeId> {
-    const recipe = Recipe.create(input)
-    await this.recipeRepo.save(recipe)
-    return recipe.id
+    const recipe = Recipe.create(input);
+    await this.recipeRepo.save(recipe);
+    return recipe.id;
   }
 }
 
-// 呼び出し側で組み立てる
-const repo = new DrizzleRecipeRepository(db)
-const useCase = new CreateRecipeUseCase(repo)
-await useCase.execute({ name: 'カレー', ... })
+// Hono route / Server Component 側
+import { recipeRepository } from '@/server/repositories';
+
+const useCase = new CreateRecipeUseCase(recipeRepository());
+await useCase.execute({ name: 'カレー' /* ... */ });
 ```
 
-ユースケースの組み立てが煩雑になってきたら、以下のいずれかを検討：
-
-- ファクトリ関数で組み立てを集約
-- DI コンテナ導入
+ユースケースの組み立てがさらに煩雑になってきたら、DI コンテナ導入を検討する
+（現状のファクトリ集約で足りている間は導入しない）。
 
 ## ドメインモデルと DB スキーマの責務分離
 
 業務でも実践している `static create()` / `static reconstruct()` パターンを踏襲する。
 
 ```typescript
-// packages/domain/recipe/recipe.ts
+// packages/domain/src/recipe/recipe.ts（消費側は import { Recipe } from '@cookpit/domain'）
 export class Recipe {
   private constructor(
     private readonly _id: RecipeId,
@@ -281,7 +275,7 @@ export class Recipe {
   }
 }
 
-// packages/infrastructure/repositories/drizzle-recipe.repository.ts
+// packages/infrastructure/src/repositories/drizzle-recipe.repository.ts
 export class DrizzleRecipeRepository implements RecipeRepository {
   async findById(id: RecipeId): Promise<Recipe | null> {
     const row = await this.db.select().from(recipes).where(eq(recipes.id, id.value)).limit(1);
