@@ -66,9 +66,7 @@ Clean Architecture の依存方向（`Presentation → Application → Domain �
 却下。「domain だけ例外」という規約は覚えられず、レビューでも指摘が漏れる。
 実際に api-contract のテストが domain を deep import しており、既に規約が混ざっている。
 
-### 案 D: `ProductId` の衝突を、`RecipeIngredient` 側を `ProductId` 値オブジェクトに
-
-置き換えることで解消する
+### 案 D: `RecipeIngredient` 側を `ProductId` 値オブジェクトに置き換えて衝突を解消する
 
 今回は不採用（先送り）。衝突解消としては最も筋が良く、集約をまたぐ ID 参照の
 型安全性（`Identifier` のファントムブランドによる公称型付け）も回復する。

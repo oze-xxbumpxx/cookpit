@@ -233,3 +233,39 @@ const action = useApiAction();
 ## 未決事項
 
 なし（対象観点・UI 共通化方針・コミット粒度・新規ファイルはユーザー確定済み）。
+
+## 実施結果（2026-07-25）
+
+全 7 観点を実施済み。観点ごとに 1 コミット。
+
+| 観点 | コミット  | 主な差分                                                          |
+| ---- | --------- | ----------------------------------------------------------------- |
+| A    | `f529b52` | deep import 285 → 0。70 ファイル。`ProductId` → `ProductRef` 改名 |
+| C    | `671802a` | onError 11 分岐 → 3 分岐。`export default app` を解消             |
+| F    | `75f1ad6` | 日付ヘルパ 5 重複 → infrastructure 1 / application 1              |
+| E    | `ebbf896` | 3 UseCase の重複ブロックを `load-shopping-list.ts` へ             |
+| B    | `b355c0f` | Server Component 10 ページを Repository ファクトリへ統一          |
+| D    | `4eb9ec2` | `use-api-action.ts` 新設。shopping-list-client 446 → 393 行       |
+| G    | `5c247ed` | 1000 行超 2 件・814 行 1 件 → 18 ファイルへ分割                   |
+
+### 設計との差分（実装時に判明した点）
+
+- **観点 C**: 設計では「現行の 11 具象クラスはすべて 2 基底のいずれかを継承している」と
+  記載したが、実際は `InvalidStockOperationError` のみ素の `Error` を継承していた。
+  メッセージ書式を固定しない中間基底 `InvalidOperationError` を新設して吸収し、
+  メッセージ・`name`・HTTP 変換結果はいずれも現行のまま維持した。
+- **観点 D**: 「`onSuccess` を指定したときだけ `json()` を呼ぶ」設計では、
+  本文を使わない成功時（`router.refresh()` のみ）にも `json()` が走ってしまうため、
+  `onSuccessWithoutBody` を分けた。テストモックが `json()` を持たないケースで顕在化した。
+- **観点 D**: `reassign-store` は当初「per-item pending グループを維持する」ために
+  対象外としていたが、エラーバナーを `useApiAction` と共有する形で移行できた。
+  楽観的更新の 2 ハンドラ（`markAsBought` / `setItemChecked`）は設計どおり対象外。
+- **観点 G**: `shopping-list-client.checked.test.tsx` が 574 行で「概ね 400 行以下」に
+  届いていない。楽観的更新のロールバック検証が本質的に長いため、これ以上の分割は
+  凝集を損なうと判断して現状とした。
+
+### 最終品質ゲート
+
+- type-check 5/5 PASS / lint 0 error（既存 warning 1 件のみ）
+- テスト: domain 352 / application 205 / infrastructure 53 / api-contract 220 / web 446 =
+  **1276 PASS**（ベースライン 1269 + 観点 D のフック単体テスト 7 件）
