@@ -2,35 +2,63 @@ import {
   PriceRecord,
   PriceRecordId,
   ProductId,
+  Quantity,
+  ShoppingItemId,
   ShoppingListId,
   UnitPriceCalculator,
 } from '@cookpit/domain';
 import type {
+  CreateStockInput,
   MealPlanId,
   MealPlanRepository,
+  Pantry,
+  PantryRepository,
   ProductRepository,
   ShoppingItem,
+  ShoppingList,
   ShoppingListRepository,
 } from '@cookpit/domain';
-import type { CompleteShoppingInputDto, ShoppingListDto } from './shopping-list.dto';
+import { InvalidStockOperationError } from '../pantry/invalid-stock-operation.error';
+import { requireItem } from './load-shopping-list';
+import type {
+  CompleteShoppingInputDto,
+  ShoppingListDto,
+  StockAdditionInputDto,
+} from './shopping-list.dto';
 import { toShoppingListDto } from './shopping-list.mapper';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
+/** 検証済みの在庫追加指定と、その対象となる買い物品目の組。 */
+interface ResolvedStockAddition {
+  item: ShoppingItem;
+  addition: StockAdditionInputDto;
+}
+
 /**
- * 買い物完了を確定し、Product への価格記録・MealPlan の shopping→cooking 遷移を行う。
- * 在庫（Pantry）への自動追加は行わない（在庫は在庫画面から手動で追加する。項目6）。
+ * 買い物完了を確定し、選択された品目の Pantry への在庫追加・Product への価格記録・
+ * MealPlan の shopping→cooking 遷移を行う。
  *
- * 冪等: 既に completed の場合は価格記録を再実行せず、MealPlan 遷移の修復のみ行って現状の
- * ShoppingListDto を返す。reopen（買い物再開）→買い足し→再 complete しても、価格レコード ID を
- * 買い物品目 ID から決定的に導出し、対象 Product に同 ID が既に存在すればスキップするため、
- * 前回記録済みの品目は二重に価格記録されない。数量不明・0 以下や価格未設定の bought 品目は
- * 価格記録をスキップする。保存順序は Product → ShoppingList → MealPlan。
+ * 在庫化する品目は呼び出し側が `stockAdditions` で明示する（購入した品目が自動で在庫になることはない）。
+ * 価格記録は `stockAdditions` と独立に bought 品目の全件を対象とする。
+ *
+ * 冪等: 既に completed の場合は在庫追加・価格記録を再実行せず、`stockAdditions` を無視して
+ * MealPlan 遷移の修復のみ行い、現状の ShoppingListDto を返す。reopen（買い物再開）→買い足し→
+ * 再 complete しても、在庫は同一買い物品目由来の Stock があればスキップし、価格はレコード ID を
+ * 買い物品目 ID から決定的に導出して既存ならスキップするため、前回処理済みの品目は二重に
+ * 在庫化・価格記録されない。数量不明・0 以下や価格未設定の bought 品目は価格記録をスキップする。
+ *
+ * 保存順序は Pantry → Product → ShoppingList → MealPlan。ShoppingList の保存が
+ * 「これより前は再実行対象・これより後は修復のみ」の境界になる。単一トランザクションではないため、
+ * 途中失敗時は再実行による前方回復で整合させる（上記の冪等ガードが二重処理を防ぐ）。
  *
  * @throws ShoppingListNotFoundError shoppingListId の ShoppingList が存在しない
+ * @throws ShoppingItemNotFoundError stockAdditions の itemId がリストに存在しない
+ * @throws InvalidStockOperationError stockAdditions の itemId が bought でない、または数量が不正
  */
 export class CompleteShoppingUseCase {
   constructor(
     private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly pantryRepository: PantryRepository,
     private readonly productRepository: ProductRepository,
     private readonly mealPlanRepository: MealPlanRepository,
   ) {}
@@ -50,6 +78,10 @@ export class CompleteShoppingUseCase {
     const boughtItems = shoppingList.items.filter((item) => item.isBought());
     const now = new Date();
 
+    // 検証は書き込みより前にまとめて行い、不正な指定が 1 件でもあれば何も保存しないようにする。
+    const resolved = this.resolveStockAdditions(shoppingList, input.stockAdditions);
+    await this.addStocks(resolved, now);
+
     await this.recordPrices(boughtItems, now);
 
     shoppingList.complete();
@@ -58,6 +90,85 @@ export class CompleteShoppingUseCase {
     await this.repairMealPlanTransition(shoppingList.mealPlanId);
 
     return toShoppingListDto(shoppingList);
+  }
+
+  private resolveStockAdditions(
+    shoppingList: ShoppingList,
+    additions: StockAdditionInputDto[],
+  ): ResolvedStockAddition[] {
+    const resolved: ResolvedStockAddition[] = [];
+    const seen = new Set<string>();
+
+    for (const addition of additions) {
+      // 同一品目の重複指定は先勝ちで 1 件だけ採用する。UI からは作れないが、DB の
+      // source_shopping_item_id UNIQUE に当てて 500 にするより穏当（D-4）。
+      if (seen.has(addition.itemId)) {
+        continue;
+      }
+      seen.add(addition.itemId);
+
+      const item = requireItem(
+        shoppingList,
+        ShoppingItemId.fromString(addition.itemId),
+        addition.itemId,
+      );
+      if (!item.isBought()) {
+        throw new InvalidStockOperationError(
+          `ShoppingItem ${addition.itemId} is not bought, cannot add to pantry`,
+        );
+      }
+      resolved.push({ item, addition });
+    }
+
+    return resolved;
+  }
+
+  private async addStocks(resolved: ResolvedStockAddition[], now: Date): Promise<void> {
+    if (resolved.length === 0) {
+      return;
+    }
+
+    const pantry = await this.pantryRepository.find();
+    let changed = false;
+    for (const { item, addition } of resolved) {
+      // 前回の完了で在庫化済みの品目はスキップする。reopen→再完了での二重在庫を防ぐ
+      // （Application 側の事前スキップ。DB の source_shopping_item_id UNIQUE が二段目）。
+      if (pantry.hasStockFromShoppingItem(item.id)) {
+        continue;
+      }
+      this.addStock(pantry, item, addition, now);
+      changed = true;
+    }
+
+    if (changed) {
+      await this.pantryRepository.save(pantry);
+    }
+  }
+
+  private addStock(
+    pantry: Pantry,
+    item: ShoppingItem,
+    addition: StockAdditionInputDto,
+    now: Date,
+  ): void {
+    const stockInput: CreateStockInput = {
+      productId: item.productId,
+      displayName: item.displayName,
+      amount: Quantity.of(addition.amount.value, addition.amount.unit),
+      purchasedAt: now,
+      // ローカル 0 時で構築し、mapper の toLocalDateString と往復整合させる（AddStockUseCase と同じ）。
+      expiresAt: addition.expiresAt === null ? null : new Date(`${addition.expiresAt}T00:00:00`),
+      storedLocation: addition.storedLocation,
+      sourceShoppingItemId: item.id,
+    };
+
+    try {
+      pantry.addStock(stockInput);
+    } catch (error) {
+      throw new InvalidStockOperationError(
+        error instanceof Error ? error.message : 'Failed to add stock',
+      );
+    }
   }
 
   private async recordPrices(boughtItems: ShoppingItem[], now: Date): Promise<void> {

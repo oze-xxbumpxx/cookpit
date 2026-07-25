@@ -1,4 +1,5 @@
 import z from 'zod';
+import { storageLocationSchema } from './pantry.schema';
 import { unitSchema } from './recipe.schema';
 import { idParamSchema } from './shared.schema';
 
@@ -34,6 +35,26 @@ export const reassignStoreSchema = z.object({
 
 export const setItemCheckedSchema = z.object({
   checked: z.boolean(),
+});
+
+/**
+ * 買い物完了時に在庫へ追加する 1 品目の指定。`itemId` はそのリストの bought 品目でなければならない。
+ * `amount` は買い物リストの数量を初期値に UI で修正できるため、リスト側の値とは一致しない。
+ */
+export const stockAdditionSchema = z.object({
+  itemId: z.uuid(),
+  // Stock.create が 0 以下を拒否する不変条件に合わせ、契約段階で落とす。
+  amount: z.object({
+    value: z.number().positive(),
+    unit: unitSchema,
+  }),
+  storedLocation: storageLocationSchema.nullable(),
+  expiresAt: z.iso.date().nullable(),
+});
+
+/** `stockAdditions` は必須。在庫へ追加しない場合も空配列を明示的に送る。 */
+export const completeShoppingSchema = z.object({
+  stockAdditions: z.array(stockAdditionSchema),
 });
 
 export const shoppingListIdParamSchema = idParamSchema;
@@ -84,6 +105,8 @@ export type GenerateShoppingListBody = z.infer<typeof generateShoppingListSchema
 export type AddItemBody = z.infer<typeof addItemSchema>;
 export type MarkAsBoughtBody = z.infer<typeof markAsBoughtSchema>;
 export type SetItemCheckedBody = z.infer<typeof setItemCheckedSchema>;
+export type StockAdditionBody = z.infer<typeof stockAdditionSchema>;
+export type CompleteShoppingBody = z.infer<typeof completeShoppingSchema>;
 export type ReassignStoreBody = z.infer<typeof reassignStoreSchema>;
 export type ShoppingListIdParam = z.infer<typeof shoppingListIdParamSchema>;
 export type ShoppingItemIdParam = z.infer<typeof shoppingItemIdParamSchema>;
