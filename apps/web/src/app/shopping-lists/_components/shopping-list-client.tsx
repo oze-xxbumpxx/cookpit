@@ -3,6 +3,7 @@
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, useApiAction } from '@/lib/use-api-action';
 import type { ShoppingItemDto, ShoppingListDto, StoreDto } from '@cookpit/application';
 import { EmptyState } from '@/app/_components/empty-state';
 import { ShoppingCart } from 'lucide-react';
@@ -16,6 +17,10 @@ interface Props {
   shoppingList: ShoppingListDto;
   stores: StoreDto[];
 }
+
+/** 品目追加・再取得を表す pendingKey（品目行の操作は itemId をキーにする）。 */
+const ADD_KEY = 'add';
+const REFRESH_KEY = 'refresh';
 
 interface OptimisticAction {
   itemId: string;
@@ -33,77 +38,53 @@ function applyOptimisticPatch(
 export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [items, setItems] = useState<ShoppingItemDto[]>(shoppingList.items);
   const [optimisticItems, setOptimisticItems] = useOptimistic(items, applyOptimisticPatch);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [addFormOpen, setAddFormOpen] = useState(false);
+  // 品目の楽観的更新（check / markAsBought）は状態更新の順序自体が挙動になるため
+  // useApiAction に寄せず、この state と startTransition のまま維持する。
   const [submittingItemId, setSubmittingItemId] = useState<string | null>(null);
-  const [addSubmitting, setAddSubmitting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState(shoppingList.status);
-  const [completeSubmitting, setCompleteSubmitting] = useState(false);
   const [completeSuccess, setCompleteSuccess] = useState(false);
-  const [completeErrorMessage, setCompleteErrorMessage] = useState<string | null>(null);
-  const [reopenSubmitting, setReopenSubmitting] = useState(false);
-  const [reopenErrorMessage, setReopenErrorMessage] = useState<string | null>(null);
-  const [syncSubmitting, setSyncSubmitting] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [syncErrorMessage, setSyncErrorMessage] = useState<string | null>(null);
+
+  // 品目の追加・再取得は同じエラーバナーを共有する。完了・再開・同期はそれぞれ独立した
+  // バナーを持つため別インスタンスにする。
+  const itemsAction = useApiAction();
+  const completeAction = useApiAction();
+  const reopenAction = useApiAction();
+  const syncAction = useApiAction();
 
   async function handleSync(): Promise<void> {
-    if (syncSubmitting) {
-      return;
-    }
-    setSyncSubmitting(true);
     setSyncMessage(null);
-    setSyncErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'][':id'].sync.$post({
-        param: { id: shoppingList.id },
-      });
-      if (!response.ok) {
-        setSyncErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const dto = await response.json();
-      const addedCount = dto.items.length - items.length;
-      setItems(dto.items);
-      setSyncMessage(
-        addedCount > 0 ? `${addedCount}件の材料を追加しました` : '追加する材料はありませんでした',
-      );
-    } catch {
-      setSyncErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setSyncSubmitting(false);
-    }
+    await syncAction.run(
+      () => client.api['shopping-lists'][':id'].sync.$post({ param: { id: shoppingList.id } }),
+      {
+        onSuccess: (dto) => {
+          const addedCount = dto.items.length - items.length;
+          setItems(dto.items);
+          setSyncMessage(
+            addedCount > 0
+              ? `${addedCount}件の材料を追加しました`
+              : '追加する材料はありませんでした',
+          );
+        },
+      },
+    );
   }
 
   async function handleRefetch({ silent }: { silent: boolean }): Promise<void> {
-    if (!silent) {
-      setRefreshing(true);
-    }
-    try {
-      const response = await client.api['shopping-lists'][':id'].$get({
-        param: { id: shoppingList.id },
-      });
-      if (!response.ok) {
-        if (!silent) {
-          setErrorMessage('操作に失敗しました。');
-        }
-        return;
-      }
-      const dto = await response.json();
-      setItems(dto.items);
-      // 再同期に成功したら過去の書き込み失敗のバナーは古い情報になるため消す
-      setErrorMessage(null);
-    } catch {
-      if (!silent) {
-        setErrorMessage('通信エラーが発生しました。');
-      }
-    } finally {
-      if (!silent) {
-        setRefreshing(false);
-      }
-    }
+    await itemsAction.run(
+      () => client.api['shopping-lists'][':id'].$get({ param: { id: shoppingList.id } }),
+      {
+        key: REFRESH_KEY,
+        silent,
+        onSuccess: (dto) => {
+          setItems(dto.items);
+          // 再同期に成功したら過去の書き込み失敗のバナーは古い情報になるため消す
+          itemsAction.setErrorMessage(null);
+        },
+      },
+    );
   }
 
   useEffect(() => {
@@ -125,7 +106,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     // 通常の setState は非同期処理が完了するまで反映が保留されるため（useOptimistic のみが
     // 即時反映される）、ここで先に更新しないと「操作中 item のみ disable」が機能しない。
     setSubmittingItemId(itemId);
-    setErrorMessage(null);
+    itemsAction.setErrorMessage(null);
     startTransition(async () => {
       setOptimisticItems({
         itemId,
@@ -141,14 +122,14 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           json: { actualPrice: { amount: actualPrice, currency: 'JPY' }, actualStoreId },
         });
         if (!response.ok) {
-          setErrorMessage('操作に失敗しました。');
+          itemsAction.setErrorMessage(API_FAILURE_MESSAGE);
           return;
         }
         const updated: ShoppingItemDto = await response.json();
         setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
         setExpandedItemId(null);
       } catch {
-        setErrorMessage('通信エラーが発生しました。');
+        itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
       } finally {
         setSubmittingItemId(null);
       }
@@ -160,7 +141,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
       return;
     }
     setSubmittingItemId(itemId);
-    setErrorMessage(null);
+    itemsAction.setErrorMessage(null);
     startTransition(async () => {
       setOptimisticItems({
         itemId,
@@ -174,7 +155,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           json: { checked },
         });
         if (!response.ok) {
-          setErrorMessage('操作に失敗しました。');
+          itemsAction.setErrorMessage(API_FAILURE_MESSAGE);
           return;
         }
         const updated: ShoppingItemDto = await response.json();
@@ -184,7 +165,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           setExpandedItemId((current) => (current === itemId ? null : current));
         }
       } catch {
-        setErrorMessage('通信エラーが発生しました。');
+        itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
       } finally {
         setSubmittingItemId(null);
       }
@@ -192,24 +173,17 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   }
 
   async function handleAddItem(input: AddItemFormInput): Promise<void> {
-    setAddSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'][':id'].items.$post({
-        param: { id: shoppingList.id },
-        json: { ...input, productId: null },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const created: ShoppingItemDto = await response.json();
-      setItems((current) => [...current, created]);
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setAddSubmitting(false);
-    }
+    await itemsAction.run(
+      () =>
+        client.api['shopping-lists'][':id'].items.$post({
+          param: { id: shoppingList.id },
+          json: { ...input, productId: null },
+        }),
+      {
+        key: ADD_KEY,
+        onSuccess: (created) => setItems((current) => [...current, created]),
+      },
+    );
   }
 
   async function handleReassignStore(itemId: string, targetStoreId: string): Promise<void> {
@@ -217,22 +191,19 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
       return;
     }
     setSubmittingItemId(itemId);
-    setErrorMessage(null);
     try {
-      const response = await client.api['shopping-lists'][':id'].items[':itemId'][
-        'target-store'
-      ].$post({
-        param: { id: shoppingList.id, itemId },
-        json: { targetStoreId },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const updated: ShoppingItemDto = await response.json();
-      setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
+      await itemsAction.run(
+        () =>
+          client.api['shopping-lists'][':id'].items[':itemId']['target-store'].$post({
+            param: { id: shoppingList.id, itemId },
+            json: { targetStoreId },
+          }),
+        {
+          key: itemId,
+          onSuccess: (updated) =>
+            setItems((current) => current.map((item) => (item.id === updated.id ? updated : item))),
+        },
+      );
     } finally {
       setSubmittingItemId(null);
     }
@@ -243,52 +214,28 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   }
 
   async function handleComplete(): Promise<void> {
-    if (completeSubmitting) {
-      return;
-    }
-    setCompleteSubmitting(true);
-    setCompleteErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'][':id'].complete.$post({
-        param: { id: shoppingList.id },
-      });
-      if (!response.ok) {
-        setCompleteErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const dto = await response.json();
-      setStatus(dto.status);
-      setCompleteSuccess(true);
-    } catch {
-      setCompleteErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setCompleteSubmitting(false);
-    }
+    await completeAction.run(
+      () => client.api['shopping-lists'][':id'].complete.$post({ param: { id: shoppingList.id } }),
+      {
+        onSuccess: (dto) => {
+          setStatus(dto.status);
+          setCompleteSuccess(true);
+        },
+      },
+    );
   }
 
   async function handleReopen(): Promise<void> {
-    if (reopenSubmitting) {
-      return;
-    }
-    setReopenSubmitting(true);
-    setReopenErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'][':id'].reopen.$post({
-        param: { id: shoppingList.id },
-      });
-      if (!response.ok) {
-        setReopenErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const dto = await response.json();
-      setStatus(dto.status);
-      // 再開したので「完了しました」バナーは消す。以降は追加・チェックが再び可能になる。
-      setCompleteSuccess(false);
-    } catch {
-      setReopenErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setReopenSubmitting(false);
-    }
+    await reopenAction.run(
+      () => client.api['shopping-lists'][':id'].reopen.$post({ param: { id: shoppingList.id } }),
+      {
+        onSuccess: (dto) => {
+          setStatus(dto.status);
+          // 再開したので「完了しました」バナーは消す。以降は追加・チェックが再び可能になる。
+          setCompleteSuccess(false);
+        },
+      },
+    );
   }
 
   const groupedItems = groupItemsByStore(optimisticItems, stores);
@@ -314,7 +261,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
               variant="ghost"
               size="sm"
               onClick={() => void handleRefetch({ silent: false })}
-              disabled={refreshing}
+              disabled={itemsAction.isPending(REFRESH_KEY)}
               className="h-9 px-2 text-foreground"
             >
               更新
@@ -322,9 +269,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           </div>
         </header>
 
-        {errorMessage !== null && (
+        {itemsAction.errorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {errorMessage}
+            {itemsAction.errorMessage}
           </p>
         )}
 
@@ -334,7 +281,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
               type="button"
               variant="outline"
               onClick={() => void handleSync()}
-              disabled={syncSubmitting}
+              disabled={syncAction.pending}
               className="h-11 w-full"
             >
               献立の変更を反映
@@ -344,15 +291,15 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 {syncMessage}
               </p>
             )}
-            {syncErrorMessage !== null && (
+            {syncAction.errorMessage !== null && (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {syncErrorMessage}
+                {syncAction.errorMessage}
               </p>
             )}
             <Button
               type="button"
               onClick={() => void handleComplete()}
-              disabled={completeSubmitting}
+              disabled={completeAction.pending}
               className="h-11 w-full"
             >
               買い物完了
@@ -360,9 +307,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           </>
         )}
 
-        {completeErrorMessage !== null && (
+        {completeAction.errorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {completeErrorMessage}
+            {completeAction.errorMessage}
           </p>
         )}
 
@@ -371,16 +318,16 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
             type="button"
             variant="outline"
             onClick={() => void handleReopen()}
-            disabled={reopenSubmitting}
+            disabled={reopenAction.pending}
             className="h-11 w-full"
           >
             買い物を再開
           </Button>
         )}
 
-        {reopenErrorMessage !== null && (
+        {reopenAction.errorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {reopenErrorMessage}
+            {reopenAction.errorMessage}
           </p>
         )}
 
@@ -427,7 +374,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           (addFormOpen ? (
             <AddItemForm
               stores={stores}
-              submitting={addSubmitting}
+              submitting={itemsAction.isPending(ADD_KEY)}
               onAdd={(input) => void handleAddItem(input)}
             />
           ) : (
