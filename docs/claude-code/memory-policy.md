@@ -24,13 +24,15 @@
 
 ### 各 Agent の Memory スコープ
 
-- **orchestrator**: 委譲・統合で繰り返す判断の癖（どの順で委譲すると手戻りが減るか等）。
-- **requirements-analyst**: 既存仕様の所在・調査の入口・要確認になりやすい論点。
-- **architecture-designer**: このプロジェクトで繰り返す設計判断・既出の設計上の落とし穴。
+- **orchestrator**: 委譲・統合で繰り返す判断の癖、既存仕様の所在・調査の入口・要確認論点
+  （旧 requirements-analyst の Memory スコープを含む。IMP-2026-030）。
+- **architecture-designer**: このプロジェクトで繰り返す設計判断・既出の設計上の落とし穴・
+  パフォーマンス設計の定番注意。
 - **implementation-planner**: 分解の粒度・見落としがちな依存・ロールバック観点。
 - **implementer**: ビルド/型/lint の詰まりどころ・Drizzle/Hono 周りの定番注意点。
-- **test-designer**: 漏れやすい境界・整合性・冪等性の観点。
-- **reviewer**: 頻出指摘の型（タイポ・無限ループ・依存方向違反など）。
+- **test-designer**: 漏れやすい境界・整合性・冪等性の観点・E2E 基盤の有無。
+- **reviewer**: 頻出指摘の型（タイポ・無限ループ・依存方向違反など）・文書の事実/鮮度欠陥。
+- **security-reviewer**: 認証/認可・秘密情報・依存脆弱性の定番チェック。
 - **reflection-agent / manager / evaluator**: 改善メタ知見（昇格判断の精度・評価の限界）。
 
 > Subagent 固有 Memory は「その Agent の担当領域に閉じた知見」だけを置く。全 Agent に効く

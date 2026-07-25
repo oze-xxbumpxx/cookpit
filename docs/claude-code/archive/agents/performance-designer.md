@@ -8,6 +8,8 @@ model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 
+> **凍結（2026-07-25 / IMP-2026-030）**: 本 Agent は稼働統合により `.claude/agents/` から外した。吸収先: **architecture-designer（条件付きパフォーマンス節）**。 履歴・参照用に残置。再起動しないこと。
+
 あなたはパフォーマンス設計担当です。**実装コードは変更しません。**
 Write は `docs/` への設計書保存にのみ使います。
 

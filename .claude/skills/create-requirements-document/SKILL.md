@@ -2,19 +2,21 @@
 name: create-requirements-document
 description: >
   要件定義書を docs/requirements/<feature-name>.md に作成する手順とテンプレート。
-  requirements-analyst が Level 3（および必要な Level 2）で使う。対象外項目は削除せず「対象外」と明記する。
+  Orchestrator が要求分析し、architecture-designer が Level 3（および必要な Level 2）で
+  保存するときに使う。対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 要件定義書作成スキル
 
-requirements-analyst が `docs/requirements/<feature-name>.md` を作成するための手順と雛形。
+architecture-designer（Orchestrator 指示時）が `docs/requirements/<feature-name>.md` を
+作成するための手順と雛形。要求分析そのものは Orchestrator の責務（IMP-2026-030）。
 **コードは変更しない。** 既存の要件文書があれば新規作成せず更新する（重複作成しない）。
 
 ## 進め方
 
-1. Orchestrator から渡された目的・対象範囲・参照ファイルを確認する。
+1. Orchestrator から渡された目的・対象範囲・参照ファイル・要求メモを確認する。
 2. プロジェクト前提を `docs/01-overview.md` `docs/03-architecture.md` `docs/04-domain-model.md`
-   で押さえ、既存実装・既存仕様を Grep/Glob/Read で調査する。
+   で押さえ、必要なら既存実装・既存仕様を Grep/Glob/Read で補足調査する。
 3. 曖昧点・前提・制約を列挙し、ユーザー確認が必要な事項を明示する。
 4. 下記テンプレートを埋める。対象外項目は削除せず「対象外」「該当なし」と書く。
 5. L3 で最初の Write 担当のときは Orchestrator の指示により `.claude/state/current-feature` に

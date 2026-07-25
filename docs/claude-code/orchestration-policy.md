@@ -3,14 +3,17 @@
 Orchestrator（`claude-opus-4-8`）は**指揮役**であり、自分で詳細設計や大量の実装を
 完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-5`）へ委譲する。
 
-`Agent` ツールを持つのは orchestrator・reviewer・agent-improvement-manager の 3 つのみ。
-orchestrator は全実務 Agent を起動できる。reviewer は検証目的で requirements-analyst
-のみ（後述）、agent-improvement-manager は回帰評価目的で agent-evaluator のみ起動できる。
-他の Subagent は `Agent` を持たず、互いを起動しない。
+`Agent` ツールを持つのは orchestrator・agent-improvement-manager の 2 つのみ。
+orchestrator は全実務 Agent を起動できる。agent-improvement-manager は回帰評価目的で
+agent-evaluator のみ起動できる。他の Subagent は `Agent` を持たず、互いを起動しない。
+
+> **2026-07-25 / IMP-2026-030**: 15 → **11 Agent**。requirements-analyst /
+> performance-designer / e2e-test-implementer / document-reviewer を統合先へ吸収し凍結。
+> security-reviewer は単独維持。凍結定義: [archive/agents/](./archive/agents/)。
 
 ## Orchestrator の責務
 
-1. ユーザー要求の分析
+1. ユーザー要求の分析（旧 requirements-analyst。L3 / 影響が読めない L2）
 2. 変更レベルの判定（[document-policy.md](./document-policy.md)）
 3. タスクの分解
 4. 必要な Subagent の選定
@@ -47,8 +50,8 @@ Subagent へ依頼する際、最低限これらを明示する。
 ### Level 2
 
 ```
-requirements-analyst（任意・影響が読めない時）
-  → architecture-designer        → docs/designs/<feature>.md
+orchestrator（要求分析・影響が読めない時のみ）
+  → architecture-designer        → docs/designs/<feature>.md（+ current-feature）
   →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
   → implementation-planner       → docs/implementation-plans/<feature>.md
   → test-designer（計画と並行可） → docs/tests/<feature>.md
@@ -61,15 +64,16 @@ requirements-analyst（任意・影響が読めない時）
 ### Level 3
 
 ```
-requirements-analyst  → docs/requirements/<feature>.md
-  → architecture-designer      → docs/designs/<feature>.md（+ ADR は docs/decisions/）
+orchestrator（要求分析）
+  → architecture-designer      → docs/requirements/<feature>.md
+                               → docs/designs/<feature>.md（+ ADR は docs/decisions/）
+                               →〔外部I/O/大量データあればパフォーマンス節〕
   →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
-  →〔外部I/O/大量データあれば performance-designer（planner と並行可）〕
   → implementation-planner     → docs/implementation-plans/<feature>.md
   → test-designer              → docs/tests/<feature>.md
   → implementer                → 実装 + 単体テスト + lint/型チェック/テスト
-  →〔E2E基盤整備済みなら e2e-test-implementer〕→ E2E テスト
-  → reviewer                   → docs/reviews/<feature>.md
+  →〔E2E基盤整備済みなら test-designer に E2E 実装を再委譲〕→ E2E テスト
+  → reviewer                   → docs/reviews/<feature>.md（文書観点含む）
   → security-reviewer          → セキュリティ指摘
   → reflection-agent           → improvements/candidates/<task-id>.md
 ```
@@ -103,7 +107,7 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
 
 ## 並列実行の指針
 
-- `requirements-analyst` の調査結果が前提になるため、まず先行させる。
+- Orchestrator 自身の要求分析が前提になるため、まず先行させる（L3 / 影響が読めない L2）。
 - `architecture-designer` 完了後、`implementation-planner` と `test-designer` は
   並列に進められる（どちらも設計書を入力にするため）。
 - `contract-designer` は、契約の骨子（既存 `schema.ts` / `packages/api-contract` から確定
@@ -114,8 +118,8 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
     orchestrator が `contract-designer` へ追送し、契約を再確認させる（差し戻しでなく追補）。
   - 整合チェックは orchestrator の統合フェーズで行う。
   - **集約構造が未確定で契約の骨子が立てられない L3（新規ドメイン中心）では並列化せず直列**にする。
-- `performance-designer` は起動条件を満たすとき、`implementation-planner` / `test-designer` と
-  並列に進められる（§performance-designer の起動条件を参照）。
+- パフォーマンス設計（architecture-designer の条件付き節）は、設計フェーズ内で完結させるか、
+  骨子確定後に planner / test-designer と並行で追記させる（§パフォーマンス設計の起動条件）。
 - `implementer` は実装計画の確定後に着手する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
 
@@ -190,37 +194,39 @@ L2/L3 共通で省略してよいケース:
 - `reviewer`: 品質・整合性・責務分離・エラー処理・テスト不足を見る。
 - `security-reviewer`: OWASP Top 10・認証/認可・秘密情報漏洩・依存脆弱性を見る。
 
-## performance-designer の起動条件
+## パフォーマンス設計の起動条件（architecture-designer 内）
 
-**L3 のみ**、かつ次のいずれかを含む場合に起動する。それ以外では起動しない（過剰工程の禁止）。
+**L3 のみ**、かつ次のいずれかを含む場合に architecture-designer へパフォーマンス節の作成を
+指示する。それ以外では指示しない（過剰工程の禁止）。
 
 1. Infrastructure 経由の外部 API / 外部ストレージへの I/O を新設・変更する。
 2. 一覧取得・集計など大量データを扱う DB クエリを新設・変更する。
 3. 性能要件が明示された改善タスク。
 
-起動タイミング: `architecture-designer` 完了後、`implementation-planner` / `test-designer` と**並列**に進められる。
+タイミング: 設計フェーズ内、または設計骨子確定後に planner / test-designer と並行追記。
 
-## e2e-test-implementer の起動条件
+## E2E テスト実装の起動条件（test-designer 再委譲）
 
-**L3 のみ**、かつ次のいずれかを満たす場合に起動する。
+**L3 のみ**、かつ次のいずれかを満たす場合に、implementer 完了後に test-designer へ
+結合/E2E 実装を再委譲する。
 
 1. `apps/web/playwright.config.ts` が存在する（Playwright 基盤整備済み）。
 2. 対象 Hono ルートにテストクライアント用のセットアップが存在する。
 
-テスト基盤が整備されていない場合は起動しない。観点は `docs/tests/<feature>.md` の
+テスト基盤が整備されていない場合は再委譲しない。観点は `docs/tests/<feature>.md` の
 「未実装観点（基盤待ち）」セクションに記録するにとどめる。
 
 起動タイミング: `implementer` 完了後、`reviewer` の前。
 
-## reviewer からの例外的な Subagent 起動
+## reviewer の事実確認
 
-reviewer は原則コードを変更せず指摘に徹する。ただし「仕様の事実確認」が必要な場合に
-限り、検証目的で `requirements-analyst` を起動してよい（読み取り専用調査）。
+reviewer は原則コード・文書を変更せず指摘に徹する。「仕様の事実確認」が必要な場合は
+自身の Read/Grep/Glob（必要なら Orchestrator 経由の Explore）で調査する。
 設計・実装の変更を伴う再依頼は reviewer が行わず、Orchestrator へ差し戻す。
 
 ## モデル割り当て
 
-正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は全 15 Agent の早見）。
+正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は全 11 Agent の早見）。
 モデルは「作業量」ではなく「判断の重さ」で選ぶ。采配基準は次の 4 層。
 
 ### 采配基準（4 層）
@@ -247,7 +253,6 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 | Agent                     | model                                                     |
 | ------------------------- | --------------------------------------------------------- |
 | orchestrator              | `claude-opus-4-8`                                         |
-| requirements-analyst      | `claude-sonnet-5`                                         |
 | architecture-designer     | `claude-sonnet-5`（L3 は Fable オーバーライド。下記参照） |
 | contract-designer         | `claude-sonnet-5`                                         |
 | implementation-planner    | `claude-sonnet-5`                                         |
@@ -255,9 +260,6 @@ reviewer は原則コードを変更せず指摘に徹する。ただし「仕�
 | test-designer             | `claude-sonnet-5`                                         |
 | reviewer                  | `claude-opus-4-8`                                         |
 | security-reviewer         | `claude-opus-4-8`                                         |
-| e2e-test-implementer      | `claude-sonnet-5`                                         |
-| performance-designer      | `claude-sonnet-5`                                         |
-| document-reviewer         | `claude-opus-4-8`                                         |
 | reflection-agent          | `claude-sonnet-5`                                         |
 | agent-evaluator           | `claude-sonnet-5`                                         |
 | agent-improvement-manager | `claude-opus-4-8`                                         |

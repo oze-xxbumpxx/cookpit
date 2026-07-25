@@ -58,14 +58,15 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 
 | Level | 必要 Agent                                                                                                                                                           | 必須成果物                                                                                  |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0     | （調査のみ。requirements-analyst 等を読み取りで）                                                                                                                    | なし（必要なら提案書）                                                                      |
+| 0     | （調査のみ。Orchestrator / Explore で読み取り）                                                                                                                      | なし（必要なら提案書）                                                                      |
 | 1     | implementer（必要なら reviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
 | 2     | architecture-designer →〔契約あれば contract-designer〕→ (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→ reflection-agent | designs / implementation-plans / tests                                                      |
-| 3     | requirements-analyst → 上記 + ADR                                                                                                                                    | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
+| 3     | Orchestrator 要求分析 → 上記（architecture-designer が要件書 Write）+〔E2E 基盤あれば test-designer 再委譲〕+ ADR                                                     | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
 
 ## 注意
 
 - 小規模変更に Level 3 相当の工程を当てない（実施指示書
   `docs/claude-code/archive/claude-code-multi-agent-implementation-instructions.md` §22.6 / §5）。
-- 判定後、L2/L3 では最初の Write 担当 Subagent が `.claude/state/current-feature` に
-  feature-name を書く。L0/L1 では設定しない（Hook 誤検知防止）。
+- 判定後、L2/L3 では最初の Write 担当 Subagent（通常 architecture-designer）が
+  `.claude/state/current-feature` に feature-name を書く。L0/L1 では設定しない
+  （Hook 誤検知防止）。
