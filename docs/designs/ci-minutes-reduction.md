@@ -2,11 +2,9 @@
 
 - ステータス: confirmed
 - レベル: L2
-- 関連: `.github/workflows/ci.yml` / `.github/workflows/weekly-maintenance.yml` /
+- 関連: docs/implementation-plans/ci-minutes-reduction.md / docs/tests/ci-minutes-reduction.md /
+  `.github/workflows/ci.yml` / `.github/workflows/weekly-maintenance.yml` /
   docs/01-overview.md（技術制約「継続費用なし・無料枠で完結」）
-
-> 変更対象が CI ワークフロー 1 ファイルのため、実装計画・試験計画は本書に内包する
-> （`docs/claude-code/document-policy.md` の成果物規約に対し、規模に見合わせた判断）。
 
 ## 背景
 
@@ -174,34 +172,15 @@ CI の実時間（wall-clock）は次のとおり変化する。
 
 ## テスト方針
 
-CI 自身の変更のため、検証は次の 3 段で行う。
+CI ワークフロー自身の変更であり、アプリケーションのコードは変わらないため Vitest の
+追加対象は無い。また Actions が課金停止中で CI を回して確かめられないため、
+ローカルで完結する 3 段の検証（静的検証 / 判定ロジックの単体検証 / 実履歴による検証）を行う。
 
-1. **YAML 構文**: `yaml.safe_load` で `ci.yml` / `weekly-maintenance.yml` をパースし、
-   ジョブ構成を確認する（実施済み: `jobs=['quality', 'e2e']`）。
-2. **判定ロジックの単体検証**: 判定部分を切り出したスクリプトに 10 パターンを与えて
-   期待どおりか確認する（実施済み。下表）。
-3. **実履歴での検証**: `main` への直近 25 マージを PR 単位（`base` と `head` の差分）で
-   判定にかけ、分布を実測する（実施済み: docs のみ 3 / 依存変更 6）。
+確認項目と結果、およびマージ後に実地で確認する項目は
+**docs/tests/ci-minutes-reduction.md** を正とする。
 
-| 入力                                              | 期待                      | 結果 |
-| ------------------------------------------------- | ------------------------- | ---- |
-| `docs/` 配下のみ                                  | docs_only=true            | 一致 |
-| `docs/` + `logs/` + `notes/` + ルート `README.md` | docs_only=true            | 一致 |
-| `docs/` + `apps/web/src/**.ts`                    | docs_only=false           | 一致 |
-| `packages/**` のみ                                | docs_only=false           | 一致 |
-| `apps/web/README.md`                              | docs_only=false           | 一致 |
-| `pnpm-lock.yaml` + `package.json`                 | deps_changed=true         | 一致 |
-| `docs/` + `apps/web/package.json`                 | deps_changed=true         | 一致 |
-| `.claude/hooks/*.mjs`                             | docs_only=false           | 一致 |
-| `.github/workflows/ci.yml`                        | docs_only=false           | 一致 |
-| 差分が空                                          | docs_only=false（安全側） | 一致 |
-
-> 判定ロジックには実装中に 1 件バグがあった。当初 `^(docs/|logs/|notes/|[^/]*\.md)$` と
-> 末尾を `$` で閉じており、`docs/` という文字列そのものにしかマッチしなかった。
-> 上記 2 のパターン検証で検出し、前方一致と完全一致を分けて修正した。
-
-この PR 自体は `.github/` と `docs/` を変更するため `docs_only=false` と判定され、
-新しいワークフローで全ゲートが実行される（＝変更後のワークフローが自分自身で検証される）。
+なおこの PR 自体は `.github/` と `docs/` を変更するため `docs_only=false` と判定され、
+新しいワークフローで全ゲートが実行される（変更後のワークフローが自分自身を検証する）。
 
 ## 移行とリリース
 
