@@ -64,9 +64,16 @@
   ShoppingList(active→completed) → Pantry へ在庫反映、の順序で前段完了が後段の前提になる（I-03/I-07/I-08）。
   買い物完了前に在庫は生成されない。在庫化は購入済み品目の**自動反映ではなく完了時の選択**であり、
   選ばなかった品目は在庫に入らない（`docs/designs/shopping-complete-stock-selection.md`）。
-- **冪等性**: 通しシナリオでは重複押下の主対象は「購入記録」「買い物完了」「消費」。各ハンドラは
-  `submittingItemId`/`completeSubmitting`/`submittingStockId` で多重実行を抑止する（画面ガード）。
+- **冪等性**: 通しシナリオでは重複押下の主対象は「購入記録」「買い物完了」「消費」。多重実行の
+  抑止（画面ガード）の実装は 2 系統ある:
+  - **購入記録**: `submittingItemId`（`useState`）。楽観的更新（`useOptimistic` + `startTransition`）を
+    伴い状態更新の順序自体が挙動になるため、意図的に `useApiAction` へ寄せず据え置いている。
+  - **買い物完了・消費・廃棄ほか**: `useApiAction` が実行中キーの集合を持ち、同一キーの再実行を
+    `run()` の入口で弾く。完了はキー省略（`'default'`）で `completeAction.pending`、在庫の行操作は
+    `key: stockId` で `isPending(stockId)`（行へは `submittingStockId` として渡る）。
+
   UseCase レベルの冪等性は各集約の単体/結合試験で担保済みのため本計画では**画面ガードの確認のみ**。
+
 - **障害系（外部 I/O）**: 対象外に近い — DB 以外の外部 API 連携は MVP1 に無い。ネットワーク断は
   E-04/E-05 とオフライン（下記 FE）でカバー。
 - **フロントエンド（apps/web）**:
