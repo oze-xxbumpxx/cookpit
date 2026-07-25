@@ -506,6 +506,13 @@ export type ShoppingListStatus = 'active' | 'completed';
 > ある（`storedLocation`/`productId` は null 許容、`ConsumptionReason` は撤廃、消費はクランプ方式）。
 > 正典は `packages/domain/src/pantry/pantry.ts` と `docs/designs/pantry-core.md`。
 
+> 実装追記（2026-07-25, `docs/designs/shopping-complete-stock-selection.md`）: Stock の生成経路は
+> 2 系統ある。**在庫画面からの手動追加**（`sourceShoppingItemId: null`）と、**買い物完了時の選択追加**
+> （`sourceShoppingItemId` に買い物品目 ID を設定）。後者は購入した品目のうち画面で選んだものだけを
+> 在庫化する（購入＝自動在庫化ではない）。`sourceShoppingItemId` は
+> `Pantry.hasStockFromShoppingItem()`（Application 側の事前スキップ）と DB の UNIQUE 制約の二段で
+> 「1 買い物品目 : 最大 1 Stock」を守り、買い物再開 → 再完了での二重在庫を防ぐ。
+
 ```typescript
 export class Pantry {
   private constructor(
