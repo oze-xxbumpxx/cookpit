@@ -5,6 +5,7 @@ import {
   generateShoppingListSchema,
   markAsBoughtSchema,
   reassignStoreSchema,
+  setItemCheckedSchema,
   shoppingItemIdParamSchema,
   shoppingItemResponseSchema,
   shoppingListIdParamSchema,
@@ -196,6 +197,32 @@ describe('markAsBoughtSchema', () => {
 describe('reassignStoreSchema', () => {
   it('不正な targetStoreId を reject する', () => {
     expect(() => reassignStoreSchema.parse({ targetStoreId: 'not-a-uuid' })).toThrow();
+  });
+});
+
+describe('setItemCheckedSchema', () => {
+  it('{ checked: true } を受理する', () => {
+    expect(setItemCheckedSchema.parse({ checked: true })).toEqual({ checked: true });
+  });
+
+  it('{ checked: false } を受理する', () => {
+    expect(setItemCheckedSchema.parse({ checked: false })).toEqual({ checked: false });
+  });
+
+  it('checked が文字列のとき reject する', () => {
+    expect(() => setItemCheckedSchema.parse({ checked: 'true' })).toThrow();
+  });
+
+  it.each([1, 0])('checked が数値 %j のとき reject する', (checked) => {
+    expect(() => setItemCheckedSchema.parse({ checked })).toThrow();
+  });
+
+  it('checked が null のとき reject する', () => {
+    expect(() => setItemCheckedSchema.parse({ checked: null })).toThrow();
+  });
+
+  it('checked キーの省略を reject する', () => {
+    expect(() => setItemCheckedSchema.parse({})).toThrow();
   });
 });
 

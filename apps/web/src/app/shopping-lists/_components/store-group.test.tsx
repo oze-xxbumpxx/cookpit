@@ -1,5 +1,6 @@
 import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StoreGroup } from './store-group';
 
@@ -38,6 +39,7 @@ function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {})
     expandedItemId: null,
     submittingItemId: null,
     onToggleExpand: vi.fn(),
+    onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
     onReassignStore: vi.fn(),
     stores: STORES,
@@ -79,5 +81,18 @@ describe('StoreGroup', () => {
     renderStoreGroup();
 
     expect(screen.queryByText(/円安い/)).toBeNull();
+  });
+
+  it('SG-05: チェックボタン click で onSetChecked が呼ばれる（プロップ中継の確認）', async () => {
+    const user = userEvent.setup();
+    const onSetChecked = vi.fn();
+    renderStoreGroup({
+      items: [createShoppingItemDto({ id: 'item-1', status: 'pending' })],
+      onSetChecked,
+    });
+
+    await user.click(screen.getByRole('checkbox'));
+
+    expect(onSetChecked).toHaveBeenCalledWith('item-1', true);
   });
 });

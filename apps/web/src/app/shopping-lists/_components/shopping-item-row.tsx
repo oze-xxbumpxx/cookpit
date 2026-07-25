@@ -13,6 +13,7 @@ interface Props {
   expanded: boolean;
   submitting: boolean;
   onToggleExpand: (itemId: string) => void;
+  onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
   onReassignStore: (itemId: string, targetStoreId: string) => void;
 }
@@ -31,6 +32,7 @@ export function ShoppingItemRow({
   expanded,
   submitting,
   onToggleExpand,
+  onSetChecked,
   onMarkAsBought,
   onReassignStore,
 }: Props) {
@@ -63,11 +65,13 @@ export function ShoppingItemRow({
           type="button"
           role="checkbox"
           aria-checked={bought}
-          aria-label={`${item.displayName}を購入済みにする`}
-          onClick={() => onToggleExpand(item.id)}
+          aria-label={
+            bought ? `${item.displayName}のチェックを外す` : `${item.displayName}をチェックする`
+          }
+          onClick={() => onSetChecked(item.id, !bought)}
           disabled={submitting}
           className={cn(
-            'flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors',
+            'flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors active:scale-[0.98]',
             bought
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-input bg-background',
@@ -94,6 +98,16 @@ export function ShoppingItemRow({
             <p className="text-xs text-muted-foreground">
               ✓ {resolveStoreName(item.actualStoreId, stores)} で ¥{item.actualPrice.amount} 購入
             </p>
+          )}
+          {bought && (
+            <button
+              type="button"
+              onClick={() => onToggleExpand(item.id)}
+              disabled={submitting}
+              className="self-start text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              金額を記録
+            </button>
           )}
         </div>
 
@@ -123,7 +137,7 @@ export function ShoppingItemRow({
         )}
       </div>
 
-      {expanded && (
+      {bought && expanded && (
         <PurchaseInputForm
           item={item}
           stores={stores}

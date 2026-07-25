@@ -358,6 +358,11 @@ describe('CompleteShoppingUseCase', () => {
       seedProduct: true,
     },
     {
+      label: 'actualPrice が null（チェックのみで金額未記録）',
+      options: { actualPrice: null } satisfies SeededItemOptions,
+      seedProduct: true,
+    },
+    {
       label: 'requiredAmount が null',
       options: { requiredAmount: null } satisfies SeededItemOptions,
       seedProduct: true,

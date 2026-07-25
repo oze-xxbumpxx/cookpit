@@ -118,6 +118,30 @@ export class ShoppingItem {
     this.itemTargetStore = newStore;
   }
 
+  /**
+   * 価格・店舗を記録せずに購入済み（チェック済み）にする軽量操作。現状態を問わず 'bought' へ
+   * 遷移する（markAsBought と同様、S-11 の「最新状態で上書き」思想を踏襲）。actualPrice /
+   * actualStore には触れない。
+   */
+  check(): void {
+    this.itemStatus = 'bought';
+  }
+
+  /**
+   * チェックを外し 'pending' に戻す。actualPrice / actualStore も同時に null へ戻す
+   * （チェックを外した後に再チェックしたとき、無関係になった古い価格が黙って買い物完了時の
+   * 価格記録に使われてしまう事故を防ぐため）。
+   * @throws Error status が 'bought' 以外の場合
+   */
+  uncheck(): void {
+    if (this.itemStatus !== 'bought') {
+      throw new Error(`Cannot uncheck a ShoppingItem with status '${this.itemStatus}'`);
+    }
+    this.itemStatus = 'pending';
+    this.itemActualPrice = null;
+    this.itemActualStore = null;
+  }
+
   isBought(): boolean {
     return this.itemStatus === 'bought';
   }
@@ -236,6 +260,18 @@ export class ShoppingList {
   markAsSkipped(itemId: ShoppingItemId): void {
     this.assertActive('markAsSkipped');
     this.findItem(itemId).markAsSkipped();
+  }
+
+  /** @throws Error active でない、または itemId の品目が存在しない場合 */
+  check(itemId: ShoppingItemId): void {
+    this.assertActive('check');
+    this.findItem(itemId).check();
+  }
+
+  /** @throws Error active でない、itemId の品目が存在しない、または品目が bought 以外の場合 */
+  uncheck(itemId: ShoppingItemId): void {
+    this.assertActive('uncheck');
+    this.findItem(itemId).uncheck();
   }
 
   complete(): void {

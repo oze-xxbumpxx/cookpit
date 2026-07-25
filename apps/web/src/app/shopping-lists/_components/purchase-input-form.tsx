@@ -51,7 +51,7 @@ export function PurchaseInputForm({ item, stores, submitting, onSubmit, onCancel
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
       {item.status === 'bought' && (
         <p className="text-xs text-muted-foreground">
-          購入済みの品目です。金額・店舗は訂正できますが、未購入には戻せません。
+          金額・店舗はあとから何度でも訂正できます。チェックを外すとこの記録も消えます。
         </p>
       )}
 

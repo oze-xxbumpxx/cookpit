@@ -186,7 +186,7 @@ describe('PurchaseInputForm', () => {
     expect(screen.getByRole('button', { name: '購入を記録' }).hasAttribute('disabled')).toBe(true);
   });
 
-  it('bought item のとき訂正の制約説明文が表示される（S-3）', () => {
+  it('bought item のとき訂正の制約説明文が表示される', () => {
     const item = createShoppingItemDto({
       status: 'bought',
       actualPrice: { amount: 298, currency: 'JPY' },
@@ -203,7 +203,9 @@ describe('PurchaseInputForm', () => {
     );
 
     expect(
-      screen.getByText('購入済みの品目です。金額・店舗は訂正できますが、未購入には戻せません。'),
+      screen.getByText(
+        '金額・店舗はあとから何度でも訂正できます。チェックを外すとこの記録も消えます。',
+      ),
     ).toBeDefined();
   });
 
@@ -220,7 +222,9 @@ describe('PurchaseInputForm', () => {
     );
 
     expect(
-      screen.queryByText('購入済みの品目です。金額・店舗は訂正できますが、未購入には戻せません。'),
+      screen.queryByText(
+        '金額・店舗はあとから何度でも訂正できます。チェックを外すとこの記録も消えます。',
+      ),
     ).toBeNull();
   });
 });

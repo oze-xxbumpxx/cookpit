@@ -7,6 +7,7 @@ const {
   getShoppingList,
   postItem,
   postBought,
+  postChecked,
   postTargetStore,
   postComplete,
   postReopen,
@@ -17,6 +18,7 @@ const {
   getShoppingList: vi.fn(),
   postItem: vi.fn(),
   postBought: vi.fn(),
+  postChecked: vi.fn(),
   postTargetStore: vi.fn(),
   postComplete: vi.fn(),
   postReopen: vi.fn(),
@@ -49,6 +51,9 @@ vi.mock('@/lib/api-client', () => ({
             ':itemId': {
               bought: {
                 $post: (...args: unknown[]) => postBought(...args),
+              },
+              checked: {
+                $post: (...args: unknown[]) => postChecked(...args),
               },
               'target-store': {
                 $post: (...args: unknown[]) => postTargetStore(...args),
@@ -155,8 +160,13 @@ describe('ShoppingListClient', () => {
     expect(screen.getByRole('button', { name: '手動で追加' }).hasAttribute('disabled')).toBe(false);
   });
 
-  it('LC-04: チェックでフォームが展開される', async () => {
+  it('LC-04: チェックをタップすると即座に bought になる（handleSetChecked 成功）', async () => {
     const user = userEvent.setup();
+    postChecked.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' }),
+    });
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
@@ -164,7 +174,15 @@ describe('ShoppingListClient', () => {
 
     await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
 
-    expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'true',
+      );
+    });
+    expect(postChecked).toHaveBeenCalledWith({
+      param: { id: shoppingList.id, itemId: 'item-1' },
+      json: { checked: true },
+    });
   });
 
   it('LC-05: 購入実績入力が成功すると該当 item のみ更新される', async () => {
@@ -186,7 +204,7 @@ describe('ShoppingListClient', () => {
           id: 'item-1',
           displayName: '醤油',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
         createShoppingItemDto({
           id: 'item-2',
@@ -198,7 +216,7 @@ describe('ShoppingListClient', () => {
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
     await user.click(screen.getByRole('button', { name: '購入を記録' }));
 
@@ -227,20 +245,18 @@ describe('ShoppingListClient', () => {
           id: 'item-1',
           displayName: '醤油',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
       ],
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
     await user.click(screen.getByRole('button', { name: '購入を記録' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
-        'true',
-      );
+      expect(screen.getByText('✓ 店舗A で ¥198 購入')).toBeDefined();
     });
 
     await act(async () => {
@@ -248,9 +264,7 @@ describe('ShoppingListClient', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
-        'false',
-      );
+      expect(screen.queryByText('✓ 店舗A で ¥198 購入')).toBeNull();
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
     });
   });
@@ -269,20 +283,18 @@ describe('ShoppingListClient', () => {
           id: 'item-1',
           displayName: '醤油',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
       ],
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
     await user.click(screen.getByRole('button', { name: '購入を記録' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
-        'true',
-      );
+      expect(screen.getByText('✓ 店舗A で ¥198 購入')).toBeDefined();
     });
 
     await act(async () => {
@@ -290,9 +302,7 @@ describe('ShoppingListClient', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
-        'false',
-      );
+      expect(screen.queryByText('✓ 店舗A で ¥198 購入')).toBeNull();
       expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
     });
   });
@@ -323,7 +333,7 @@ describe('ShoppingListClient', () => {
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     const priceInput = screen.getByLabelText('価格') as HTMLInputElement;
     expect(priceInput.value).toBe('298');
     await user.clear(priceInput);
@@ -563,26 +573,31 @@ describe('ShoppingListClient', () => {
 
   it('LC-17: 操作中 item のみ disable され、他 item は操作可能なまま', async () => {
     const user = userEvent.setup();
-    postBought.mockReturnValue(new Promise(() => {}));
+    let resolveBought: (value: { ok: boolean }) => void = () => {};
+    postBought.mockReturnValue(
+      new Promise((resolve) => {
+        resolveBought = resolve;
+      }),
+    );
     const shoppingList = createShoppingListDto({
       items: [
         createShoppingItemDto({
           id: 'item-1',
           displayName: '醤油',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
         createShoppingItemDto({
           id: 'item-2',
           displayName: '味噌',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
       ],
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getAllByRole('button', { name: '金額を記録' })[0]);
     await fillPurchaseInputForm('醤油', '198');
     await user.click(screen.getByRole('button', { name: '購入を記録' }));
 
@@ -590,30 +605,45 @@ describe('ShoppingListClient', () => {
       expect(screen.getByRole('checkbox', { name: /醤油/ }).hasAttribute('disabled')).toBe(true);
     });
     expect(screen.getByRole('checkbox', { name: /味噌/ }).hasAttribute('disabled')).toBe(false);
+
+    // 保留中の Promise を解決し、他テストの startTransition/useOptimistic に影響を残さない
+    await act(async () => {
+      resolveBought({ ok: false });
+    });
   });
 
   it('LC-18: 連打しても bought.$post は 1 回のみ呼ばれる（O-05）', async () => {
     const user = userEvent.setup();
-    postBought.mockReturnValue(new Promise(() => {}));
+    let resolveBought: (value: { ok: boolean }) => void = () => {};
+    postBought.mockReturnValue(
+      new Promise((resolve) => {
+        resolveBought = resolve;
+      }),
+    );
     const shoppingList = createShoppingListDto({
       items: [
         createShoppingItemDto({
           id: 'item-1',
           displayName: '醤油',
           targetStoreId: 'store-a',
-          status: 'pending',
+          status: 'bought',
         }),
       ],
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
     const submitButton = screen.getByRole('button', { name: '購入を記録' });
     await user.click(submitButton);
     await user.click(submitButton);
 
     expect(postBought).toHaveBeenCalledTimes(1);
+
+    // 保留中の Promise を解決し、他テストの startTransition/useOptimistic に影響を残さない
+    await act(async () => {
+      resolveBought({ ok: false });
+    });
   });
 
   it('LC-19: ヘッダーに戻る導線と買い物日が表示される', () => {
@@ -647,15 +677,15 @@ describe('ShoppingListClient', () => {
       ok: true,
       json: async () =>
         createShoppingListDto({
-          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' })],
         }),
     });
     const shoppingList = createShoppingListDto({
-      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' })],
     });
     render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
 
-    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
     await user.click(screen.getByRole('button', { name: '購入を記録' }));
     await waitFor(() => {
@@ -683,6 +713,172 @@ describe('ShoppingListClient', () => {
     expect(getShoppingList).toHaveBeenCalledTimes(1);
     const refreshButton = screen.getByRole('button', { name: '更新' }) as HTMLButtonElement;
     expect(refreshButton.disabled).toBe(false);
+  });
+
+  it('LC-24: bought item を再タップするとチェックが外れ pending に戻る', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          status: 'pending',
+          actualPrice: null,
+          actualStoreId: null,
+        }),
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          status: 'bought',
+          actualPrice: { amount: 198, currency: 'JPY' },
+          actualStoreId: 'store-a',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'false',
+      );
+    });
+    expect(postChecked).toHaveBeenCalledWith({
+      param: { id: shoppingList.id, itemId: 'item-1' },
+      json: { checked: false },
+    });
+  });
+
+  it('LC-25: チェック操作の失敗レスポンスでロールバックされる', async () => {
+    const user = userEvent.setup();
+    let resolveChecked: (value: { ok: boolean }) => void = () => {};
+    postChecked.mockReturnValue(
+      new Promise((resolve) => {
+        resolveChecked = resolve;
+      }),
+    );
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'true',
+      );
+    });
+
+    await act(async () => {
+      resolveChecked({ ok: false });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'false',
+      );
+      expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
+  });
+
+  it('LC-28: チェック操作中のネットワークエラーでロールバックされる', async () => {
+    const user = userEvent.setup();
+    let rejectChecked: (reason: unknown) => void = () => {};
+    postChecked.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectChecked = reject;
+      }),
+    );
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'true',
+      );
+    });
+
+    await act(async () => {
+      rejectChecked(new Error('network'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'false',
+      );
+      expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
+    });
+  });
+
+  it('LC-26: チェックを外すと展開中の金額フォームが閉じる', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          status: 'pending',
+          actualPrice: null,
+          actualStoreId: null,
+        }),
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          status: 'bought',
+          actualPrice: { amount: 198, currency: 'JPY' },
+          actualStoreId: 'store-a',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
+    expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
+    });
+  });
+
+  it('LC-27: チェック操作の連打は checked.$post を 1 回のみ呼ぶ', async () => {
+    const user = userEvent.setup();
+    let resolveChecked: (value: { ok: boolean }) => void = () => {};
+    postChecked.mockReturnValue(
+      new Promise((resolve) => {
+        resolveChecked = resolve;
+      }),
+    );
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+
+    const checkbox = screen.getByRole('checkbox', { name: /醤油/ });
+    await user.click(checkbox);
+    await user.click(checkbox);
+
+    expect(postChecked).toHaveBeenCalledTimes(1);
+
+    // 保留中の Promise を解決し、他テストの startTransition/useOptimistic に影響を残さない
+    await act(async () => {
+      resolveChecked({ ok: false });
+    });
   });
 
   it('CB-01: active のとき「買い物完了」ボタンを表示する', () => {
