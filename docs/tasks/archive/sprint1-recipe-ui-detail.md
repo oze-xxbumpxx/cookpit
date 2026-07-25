@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`docs/tasks/sprint1-recipe-ui-list.md`（一覧）・`docs/tasks/sprint1-recipe-ui-form.md`（作成フォーム）が完了していること。`/recipes` 一覧のカードから `/recipes/[id]` へのリンクは実装済み（`recipe-card.tsx` の `href={`/recipes/${recipe.id}`}`）。`GET /api/recipes/:id`（`GetRecipeUseCase`）・`DELETE /api/recipes/:id`（`DeleteRecipeUseCase`）はサーバー側で実装済み。
+**前提**：`docs/tasks/archive/sprint1-recipe-ui-list.md`（一覧）・`docs/tasks/archive/sprint1-recipe-ui-form.md`（作成フォーム）が完了していること。`/recipes` 一覧のカードから `/recipes/[id]` へのリンクは実装済み（`recipe-card.tsx` の `href={`/recipes/${recipe.id}`}`）。`GET /api/recipes/:id`（`GetRecipeUseCase`）・`DELETE /api/recipes/:id`（`DeleteRecipeUseCase`）はサーバー側で実装済み。
 
 ---
 

@@ -142,7 +142,7 @@
    - 設定画面・カスタム追加機能は持たない
 
 8. **ビジュアルデザイン「温かいキッチン」** ✅
-   - 実装指針 `docs/tasks/sprint1-visual-design-system.md`
+   - 実装指針 `docs/tasks/archive/sprint1-visual-design-system.md`
    - `globals.css` の `:root` を温かいトークン（クリーム背景・テラコッタ朱の primary・温かいベージュ境界）へ張り替え
    - 全画面の `zinc-*` / `bg-white` / `amber-*` をセマンティックトークンへ移行（一覧・作成・詳細・alert-dialog）
    - `@theme inline` / `.dark` / shadcn コンポーネントは不変（トークン自動追従）

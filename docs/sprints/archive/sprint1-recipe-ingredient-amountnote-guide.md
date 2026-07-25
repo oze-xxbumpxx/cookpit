@@ -248,7 +248,7 @@ classDiagram
 
 ### 指示書のバリデーション例との差分
 
-`docs/tasks/sprint1-recipe-ingredient-amountnote.md` のバリデーション例は、両方 `null` の禁止に寄っている。
+`docs/tasks/archive/sprint1-recipe-ingredient-amountnote.md` のバリデーション例は、両方 `null` の禁止に寄っている。
 
 ただし仕様本文では「amount と amountNote はどちらか一方のみ設定する」とあるため、このガイドでは両方設定も禁止する。
 
