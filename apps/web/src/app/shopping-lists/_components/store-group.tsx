@@ -8,6 +8,8 @@ interface Props {
   items: ShoppingItemDto[];
   expandedItemId: string | null;
   submittingItemId: string | null;
+  /** 買い物リストが completed のとき true。各行を読み取り専用にする。 */
+  readOnly: boolean;
   onToggleExpand: (itemId: string) => void;
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
@@ -22,6 +24,7 @@ export function StoreGroup({
   items,
   expandedItemId,
   submittingItemId,
+  readOnly,
   onToggleExpand,
   onSetChecked,
   onMarkAsBought,
@@ -49,6 +52,7 @@ export function StoreGroup({
             stores={stores}
             expanded={item.id === expandedItemId}
             submitting={item.id === submittingItemId}
+            readOnly={readOnly}
             onToggleExpand={onToggleExpand}
             onSetChecked={onSetChecked}
             onMarkAsBought={onMarkAsBought}

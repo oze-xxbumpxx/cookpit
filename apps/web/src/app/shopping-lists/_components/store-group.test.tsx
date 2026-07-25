@@ -38,6 +38,7 @@ function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {})
     items: [createShoppingItemDto()],
     expandedItemId: null,
     submittingItemId: null,
+    readOnly: false,
     onToggleExpand: vi.fn(),
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
@@ -94,5 +95,19 @@ describe('StoreGroup', () => {
     await user.click(screen.getByRole('checkbox'));
 
     expect(onSetChecked).toHaveBeenCalledWith('item-1', true);
+  });
+
+  it('SG-06: readOnly を全 item 行へ中継する', () => {
+    renderStoreGroup({
+      items: [
+        createShoppingItemDto({ id: 'item-1', displayName: '醤油' }),
+        createShoppingItemDto({ id: 'item-2', displayName: '味噌' }),
+      ],
+      readOnly: true,
+    });
+
+    for (const checkbox of screen.getAllByRole('checkbox')) {
+      expect(checkbox.hasAttribute('disabled')).toBe(true);
+    }
   });
 });
