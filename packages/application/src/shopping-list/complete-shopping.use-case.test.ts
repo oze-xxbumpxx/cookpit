@@ -2,6 +2,8 @@ import {
   MealPlan,
   MealPlanId,
   Money,
+  Pantry,
+  PantryId,
   PriceRecord,
   PriceRecordId,
   Product,
@@ -11,19 +13,25 @@ import {
   ShoppingItemId,
   ShoppingList,
   ShoppingListId,
+  Stock,
+  StockId,
   StoreId,
   WeekIdentifier,
 } from '@cookpit/domain';
 import type {
   MealPlanRepository,
   MealPlanStatus,
+  PantryRepository,
   ProductRepository,
   ShoppingListRepository,
   ShoppingListStatus,
 } from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { InvalidStockOperationError } from '../pantry/invalid-stock-operation.error';
 import { CompleteShoppingUseCase } from './complete-shopping.use-case';
+import type { StockAdditionInputDto } from './shopping-list.dto';
 import { toShoppingListDto } from './shopping-list.mapper';
+import { ShoppingItemNotFoundError } from './shopping-item-not-found.error';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 
 const SHOPPING_LIST_ID = 'shopping-list-1';
@@ -86,6 +94,27 @@ class InMemoryProductRepository implements ProductRepository {
 
   seed(product: Product): void {
     this.map.set(product.id.value, product);
+  }
+}
+
+class InMemoryPantryRepository implements PantryRepository {
+  private pantry = Pantry.create();
+  public saveCount = 0;
+
+  constructor(private readonly saveEvents: string[]) {}
+
+  async find(): Promise<Pantry> {
+    return this.pantry;
+  }
+
+  async save(pantry: Pantry): Promise<void> {
+    this.saveCount += 1;
+    this.saveEvents.push('pantry');
+    this.pantry = pantry;
+  }
+
+  seed(stocks: Stock[]): void {
+    this.pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks });
   }
 }
 
@@ -225,24 +254,55 @@ function priceRecordForItem(itemId: string): PriceRecord {
   });
 }
 
+// 前回完了で在庫化済みの品目を模す（sourceShoppingItemId が冪等マーカー）。
+function stockFromItem(itemId: string): Stock {
+  return Stock.reconstruct({
+    id: StockId.fromString(`stock-for-${itemId}`),
+    productId: ProductId.fromString(PRODUCT_ID),
+    displayName: '玉ねぎ',
+    amount: Quantity.of(2, '個'),
+    purchasedAt: new Date('2026-07-11T09:00:00.000Z'),
+    expiresAt: null,
+    storedLocation: null,
+    sourceShoppingItemId: ShoppingItemId.fromString(itemId),
+  });
+}
+
+function stockAddition(overrides: Partial<StockAdditionInputDto> = {}): StockAdditionInputDto {
+  return {
+    itemId: SHOPPING_ITEM_ID_1,
+    amount: { value: 2, unit: '個' },
+    storedLocation: null,
+    expiresAt: null,
+    ...overrides,
+  };
+}
+
 let saveEvents: string[];
 let shoppingListRepository: InMemoryShoppingListRepository;
+let pantryRepository: InMemoryPantryRepository;
 let productRepository: InMemoryProductRepository;
 let mealPlanRepository: InMemoryMealPlanRepository;
 
 beforeEach(() => {
   saveEvents = [];
   shoppingListRepository = new InMemoryShoppingListRepository(saveEvents);
+  pantryRepository = new InMemoryPantryRepository(saveEvents);
   productRepository = new InMemoryProductRepository(saveEvents);
   mealPlanRepository = new InMemoryMealPlanRepository(saveEvents);
 });
 
 function completeShoppingUseCase(): CompleteShoppingUseCase {
-  return new CompleteShoppingUseCase(shoppingListRepository, productRepository, mealPlanRepository);
+  return new CompleteShoppingUseCase(
+    shoppingListRepository,
+    pantryRepository,
+    productRepository,
+    mealPlanRepository,
+  );
 }
 
 describe('CompleteShoppingUseCase', () => {
-  it('bought 品目の価格を記録し、在庫は追加せず3段の保存順序で完了する', async () => {
+  it('stockAdditions が空なら在庫を追加せず、価格記録と3段の保存順序で完了する', async () => {
     const boughtWithProduct = seededItem();
     const boughtWithoutProduct = seededItem({
       id: SHOPPING_ITEM_ID_2,
@@ -263,16 +323,195 @@ describe('CompleteShoppingUseCase', () => {
     productRepository.seed(product);
     mealPlanRepository.seed(mealPlan);
 
-    const result = await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(result.status).toBe('completed');
     // 価格記録は productId を持つ bought 品目のみ。ID は品目 ID から決定的に導出される。
     expect(product.priceHistory).toHaveLength(1);
     expect(product.priceHistory[0]?.id.value).toBe(SHOPPING_ITEM_ID_1);
     expect(mealPlan.status).toBe('cooking');
-    // Pantry への保存は発生しない（在庫加算の削除）。
+    // 在庫化する品目を 1 つも選ばなければ Pantry への保存は発生しない。
+    expect(pantryRepository.saveCount).toBe(0);
     expect(saveEvents).toEqual(['product', 'shopping-list', 'meal-plan']);
   });
+
+  it('選択された品目だけを在庫化し、Pantry を先頭とする4段の保存順序で完了する', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList([
+        seededItem(),
+        seededItem({ id: SHOPPING_ITEM_ID_2, displayName: '人参' }),
+      ]),
+    );
+    productRepository.seed(seededProduct());
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [stockAddition({ itemId: SHOPPING_ITEM_ID_2 })],
+    });
+
+    expect(result.status).toBe('completed');
+    const stocks = (await pantryRepository.find()).stocks;
+    expect(stocks).toHaveLength(1);
+    expect(stocks[0]?.sourceShoppingItemId?.value).toBe(SHOPPING_ITEM_ID_2);
+    expect(saveEvents).toEqual(['pantry', 'product', 'shopping-list', 'meal-plan']);
+  });
+
+  it('在庫化した Stock に買い物品目と入力値の内容を引き継ぐ', async () => {
+    shoppingListRepository.seed(seededShoppingList([seededItem({ displayName: 'じゃがいも' })]));
+    productRepository.seed(seededProduct());
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [
+        stockAddition({
+          amount: { value: 500, unit: 'g' },
+          storedLocation: 'fridge',
+          expiresAt: '2026-08-01',
+        }),
+      ],
+    });
+
+    const stock = (await pantryRepository.find()).stocks[0];
+    expect(stock?.displayName).toBe('じゃがいも');
+    expect(stock?.productId?.value).toBe(PRODUCT_ID);
+    // 数量は買い物リストの requiredAmount（2 個）ではなく、画面で入力された値を使う。
+    expect(stock?.amount.value).toBe(500);
+    expect(stock?.amount.unit).toBe('g');
+    expect(stock?.storedLocation).toBe('fridge');
+    // ローカル 0 時で構築され、mapper の toLocalDateString と往復整合する。
+    expect(stock?.expiresAt).toEqual(new Date('2026-08-01T00:00:00'));
+    expect(stock?.sourceShoppingItemId?.value).toBe(SHOPPING_ITEM_ID_1);
+  });
+
+  it('reopen→再 complete でも在庫化済みの品目は二重に在庫追加しない', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList([seededItem(), seededItem({ id: SHOPPING_ITEM_ID_2 })]),
+    );
+    productRepository.seed(seededProduct());
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+    // item1 は前回の完了で在庫化済み。
+    pantryRepository.seed([stockFromItem(SHOPPING_ITEM_ID_1)]);
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [
+        stockAddition({ itemId: SHOPPING_ITEM_ID_1 }),
+        stockAddition({ itemId: SHOPPING_ITEM_ID_2 }),
+      ],
+    });
+
+    const stocks = (await pantryRepository.find()).stocks;
+    expect(stocks).toHaveLength(2);
+    expect(stocks.map((stock) => stock.sourceShoppingItemId?.value).sort()).toEqual([
+      SHOPPING_ITEM_ID_1,
+      SHOPPING_ITEM_ID_2,
+    ]);
+  });
+
+  it('指定が全て在庫化済みなら Pantry を保存しない', async () => {
+    shoppingListRepository.seed(seededShoppingList([seededItem()]));
+    productRepository.seed(seededProduct([priceRecordForItem(SHOPPING_ITEM_ID_1)]));
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+    pantryRepository.seed([stockFromItem(SHOPPING_ITEM_ID_1)]);
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [stockAddition()],
+    });
+
+    expect(pantryRepository.saveCount).toBe(0);
+    expect(saveEvents).toEqual(['shopping-list', 'meal-plan']);
+  });
+
+  it('同一品目の重複指定は先勝ちで1件だけ在庫化する', async () => {
+    shoppingListRepository.seed(seededShoppingList([seededItem()]));
+    productRepository.seed(seededProduct());
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [
+        stockAddition({ amount: { value: 3, unit: '個' } }),
+        stockAddition({ amount: { value: 9, unit: '個' } }),
+      ],
+    });
+
+    const stocks = (await pantryRepository.find()).stocks;
+    expect(stocks).toHaveLength(1);
+    expect(stocks[0]?.amount.value).toBe(3);
+  });
+
+  it('在庫化しなかった bought 品目の価格も記録する', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList([seededItem(), seededItem({ id: SHOPPING_ITEM_ID_2 })]),
+    );
+    const product = seededProduct();
+    productRepository.seed(product);
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [stockAddition({ itemId: SHOPPING_ITEM_ID_1 })],
+    });
+
+    // 価格記録は在庫の選択と独立して bought 品目の全件が対象。
+    expect(product.priceHistory.map((record) => record.id.value).sort()).toEqual([
+      SHOPPING_ITEM_ID_1,
+      SHOPPING_ITEM_ID_2,
+    ]);
+  });
+
+  it('completed のリストへの再実行では stockAdditions を無視する', async () => {
+    shoppingListRepository.seed(seededShoppingList([seededItem()], 'completed'));
+    mealPlanRepository.seed(seededMealPlan('cooking'));
+
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [stockAddition()],
+    });
+
+    expect((await pantryRepository.find()).stocks).toHaveLength(0);
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('リストに存在しない itemId の指定は ShoppingItemNotFoundError を投げ、何も保存しない', async () => {
+    shoppingListRepository.seed(seededShoppingList([seededItem()]));
+    productRepository.seed(seededProduct());
+    mealPlanRepository.seed(seededMealPlan('shopping'));
+
+    await expect(
+      completeShoppingUseCase().execute({
+        shoppingListId: SHOPPING_LIST_ID,
+        stockAdditions: [stockAddition({ itemId: 'missing-item' })],
+      }),
+    ).rejects.toEqual(new ShoppingItemNotFoundError('missing-item'));
+    expect(saveEvents).toEqual([]);
+  });
+
+  it.each([
+    { status: 'pending' as const, label: 'pending' },
+    { status: 'skipped' as const, label: 'skipped' },
+  ])(
+    '$label 品目の指定は InvalidStockOperationError を投げ、何も保存しない',
+    async ({ status }) => {
+      shoppingListRepository.seed(seededShoppingList([seededItem({ status })]));
+      productRepository.seed(seededProduct());
+      mealPlanRepository.seed(seededMealPlan('shopping'));
+
+      await expect(
+        completeShoppingUseCase().execute({
+          shoppingListId: SHOPPING_LIST_ID,
+          stockAdditions: [stockAddition()],
+        }),
+      ).rejects.toBeInstanceOf(InvalidStockOperationError);
+      expect(saveEvents).toEqual([]);
+    },
+  );
 
   it('completed の再実行では Product を更新せず同じ DTO を返す', async () => {
     const item = seededItem();
@@ -282,7 +521,10 @@ describe('CompleteShoppingUseCase', () => {
     productRepository.seed(seededProduct([priceRecordForItem(SHOPPING_ITEM_ID_1)]));
     mealPlanRepository.seed(seededMealPlan('cooking'));
 
-    const result = await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(result).toEqual(expected);
     expect(productRepository.findCounts.size).toBe(0);
@@ -302,7 +544,10 @@ describe('CompleteShoppingUseCase', () => {
     productRepository.seed(product);
     mealPlanRepository.seed(mealPlan);
 
-    await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     // 既記録の item1 はスキップ、新規 item2 のみ追加 → 合計 2 件（重複なし）。
     expect(product.priceHistory).toHaveLength(2);
@@ -324,7 +569,10 @@ describe('CompleteShoppingUseCase', () => {
     const mealPlan = seededMealPlan(initialStatus);
     mealPlanRepository.seed(mealPlan);
 
-    const result = await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(result.status).toBe('completed');
     expect(mealPlan.status).toBe('cooking');
@@ -342,7 +590,10 @@ describe('CompleteShoppingUseCase', () => {
     const mealPlan = seededMealPlan('shopping');
     mealPlanRepository.seed(mealPlan);
 
-    const result = await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(result.status).toBe('completed');
     expect(productRepository.findCounts.size).toBe(0);
@@ -402,6 +653,7 @@ describe('CompleteShoppingUseCase', () => {
 
       const result = await completeShoppingUseCase().execute({
         shoppingListId: SHOPPING_LIST_ID,
+        stockAdditions: [],
       });
 
       expect(result.status).toBe('completed');
@@ -422,7 +674,10 @@ describe('CompleteShoppingUseCase', () => {
     productRepository.seed(product);
     mealPlanRepository.seed(seededMealPlan('shopping'));
 
-    await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(productRepository.findCounts.get(PRODUCT_ID)).toBe(1);
     expect(productRepository.saveCount).toBe(1);
@@ -432,7 +687,10 @@ describe('CompleteShoppingUseCase', () => {
   it('対応する MealPlan が存在しなくても買い物完了を成功させる', async () => {
     shoppingListRepository.seed(seededShoppingList([seededItem({ productId: null })]));
 
-    const result = await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const result = await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(result.status).toBe('completed');
     expect(shoppingListRepository.saveCount).toBe(1);
@@ -444,7 +702,10 @@ describe('CompleteShoppingUseCase', () => {
     const mealPlan = seededMealPlan('consuming');
     mealPlanRepository.seed(mealPlan);
 
-    await completeShoppingUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    await completeShoppingUseCase().execute({
+      shoppingListId: SHOPPING_LIST_ID,
+      stockAdditions: [],
+    });
 
     expect(mealPlan.status).toBe('consuming');
     expect(mealPlanRepository.saveCount).toBe(0);
@@ -452,7 +713,7 @@ describe('CompleteShoppingUseCase', () => {
 
   it('ShoppingList が存在しない場合は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      completeShoppingUseCase().execute({ shoppingListId: 'missing-list' }),
+      completeShoppingUseCase().execute({ shoppingListId: 'missing-list', stockAdditions: [] }),
     ).rejects.toEqual(new ShoppingListNotFoundError('missing-list'));
     expect(productRepository.findCounts.size).toBe(0);
   });

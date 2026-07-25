@@ -2,6 +2,7 @@ import type { ShoppingListDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
 import {
   addItemSchema,
+  completeShoppingSchema,
   generateShoppingListSchema,
   markAsBoughtSchema,
   reassignStoreSchema,
@@ -223,6 +224,67 @@ describe('setItemCheckedSchema', () => {
 
   it('checked キーの省略を reject する', () => {
     expect(() => setItemCheckedSchema.parse({})).toThrow();
+  });
+});
+
+describe('completeShoppingSchema', () => {
+  const validAddition = {
+    itemId: VALID_ITEM_ID,
+    amount: { value: 2, unit: '個' },
+    storedLocation: 'fridge',
+    expiresAt: '2026-07-25',
+  };
+
+  it('stockAdditions が空配列のとき受理する', () => {
+    expect(completeShoppingSchema.parse({ stockAdditions: [] })).toEqual({ stockAdditions: [] });
+  });
+
+  it('保存場所と賞味期限を含む 1 件を受理する', () => {
+    expect(completeShoppingSchema.parse({ stockAdditions: [validAddition] })).toEqual({
+      stockAdditions: [validAddition],
+    });
+  });
+
+  it('storedLocation と expiresAt が null の 1 件を受理する', () => {
+    const addition = { ...validAddition, storedLocation: null, expiresAt: null };
+
+    expect(completeShoppingSchema.parse({ stockAdditions: [addition] })).toEqual({
+      stockAdditions: [addition],
+    });
+  });
+
+  it.each([0, -1])('amount.value が %j のとき reject する', (value) => {
+    expect(() =>
+      completeShoppingSchema.parse({
+        stockAdditions: [{ ...validAddition, amount: { value, unit: '個' } }],
+      }),
+    ).toThrow();
+  });
+
+  it('itemId が UUID でないとき reject する', () => {
+    expect(() =>
+      completeShoppingSchema.parse({ stockAdditions: [{ ...validAddition, itemId: 'item-1' }] }),
+    ).toThrow();
+  });
+
+  it('storedLocation が未知の値のとき reject する', () => {
+    expect(() =>
+      completeShoppingSchema.parse({
+        stockAdditions: [{ ...validAddition, storedLocation: 'shelf' }],
+      }),
+    ).toThrow();
+  });
+
+  it('expiresAt が日付形式でないとき reject する', () => {
+    expect(() =>
+      completeShoppingSchema.parse({
+        stockAdditions: [{ ...validAddition, expiresAt: '2026/07/25' }],
+      }),
+    ).toThrow();
+  });
+
+  it('stockAdditions キーの省略を reject する', () => {
+    expect(() => completeShoppingSchema.parse({})).toThrow();
   });
 });
 

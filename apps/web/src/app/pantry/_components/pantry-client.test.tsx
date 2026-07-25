@@ -153,7 +153,7 @@ describe('PantryClient', () => {
     });
     render(<PantryClient pantry={createPantryDto([milk, egg])} />);
 
-    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '使った' }));
+    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(screen.queryByText('牛乳')).toBeNull();
@@ -173,7 +173,7 @@ describe('PantryClient', () => {
     });
     render(<PantryClient pantry={createPantryDto([stock])} />);
 
-    await user.click(screen.getByRole('button', { name: '使った' }));
+    await user.click(screen.getByRole('button', { name: '消費' }));
 
     expect(postConsume).toHaveBeenCalledWith({
       param: { stockId: stock.id },
@@ -211,7 +211,7 @@ describe('PantryClient', () => {
     postConsume.mockResolvedValue({ ok: false });
     render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
 
-    await user.click(screen.getByRole('button', { name: '使った' }));
+    await user.click(screen.getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
@@ -237,7 +237,7 @@ describe('PantryClient', () => {
     postConsume.mockRejectedValue(new Error('network error'));
     render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
 
-    await user.click(screen.getByRole('button', { name: '使った' }));
+    await user.click(screen.getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
@@ -258,20 +258,18 @@ describe('PantryClient', () => {
     });
     render(<PantryClient pantry={createPantryDto([milk, egg])} />);
 
-    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '使った' }));
+    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(
-        within(getStockRow('牛乳'))
-          .getByRole('button', { name: '使った' })
-          .hasAttribute('disabled'),
+        within(getStockRow('牛乳')).getByRole('button', { name: '消費' }).hasAttribute('disabled'),
       ).toBe(true);
     });
     expect(
       within(getStockRow('牛乳')).getByRole('button', { name: '廃棄' }).hasAttribute('disabled'),
     ).toBe(true);
     expect(
-      within(getStockRow('卵')).getByRole('button', { name: '使った' }).hasAttribute('disabled'),
+      within(getStockRow('卵')).getByRole('button', { name: '消費' }).hasAttribute('disabled'),
     ).toBe(false);
     expect(
       within(getStockRow('卵')).getByRole('button', { name: '廃棄' }).hasAttribute('disabled'),
@@ -282,7 +280,7 @@ describe('PantryClient', () => {
     const user = userEvent.setup();
     postConsume.mockReturnValue(new Promise(() => {}));
     render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
-    const consumeButton = screen.getByRole('button', { name: '使った' });
+    const consumeButton = screen.getByRole('button', { name: '消費' });
 
     await user.click(consumeButton);
     await user.click(consumeButton);
@@ -369,7 +367,7 @@ describe('PantryClient', () => {
     });
     render(<PantryClient pantry={createPantryDto([milk, juice])} />);
 
-    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '使った' }));
+    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(screen.queryByText('牛乳')).toBeNull();
@@ -442,12 +440,12 @@ describe('PantryClient', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => createPantryDto([milk]) });
     render(<PantryClient pantry={createPantryDto([milk, egg])} />);
 
-    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '使った' }));
+    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
     });
 
-    await user.click(within(getStockRow('卵')).getByRole('button', { name: '使った' }));
+    await user.click(within(getStockRow('卵')).getByRole('button', { name: '消費' }));
 
     await waitFor(() => {
       expect(screen.queryByText('操作に失敗しました。')).toBeNull();

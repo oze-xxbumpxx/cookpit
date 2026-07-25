@@ -82,7 +82,10 @@ describe('ShoppingListClient（完了・再開）', () => {
 
     await user.click(screen.getByRole('button', { name: '買い物完了' }));
 
-    expect(postComplete).toHaveBeenCalledWith({ param: { id: shoppingList.id } });
+    expect(postComplete).toHaveBeenCalledWith({
+      param: { id: shoppingList.id },
+      json: { stockAdditions: [] },
+    });
   });
 
   it('CB-04: 完了成功で成功バナーと在庫リンクを表示し完了ボタンを隠す', async () => {
@@ -164,12 +167,16 @@ describe('ShoppingListClient（完了・再開）', () => {
     });
   });
 
-  it('CB-08: 確認 UI を挟まず complete API を即座に呼ぶ', async () => {
+  // 在庫化の候補（bought 品目）が無ければ選ぶものが無いため、パネルを挟まず即 POST する。
+  it('CB-08: bought 品目が無ければ在庫選択パネルを挟まず complete API を即座に呼ぶ', async () => {
     const user = userEvent.setup();
     postComplete.mockReturnValue(new Promise(() => {}));
     render(
       <ShoppingListClient
-        shoppingList={createShoppingListDto({ status: 'active' })}
+        shoppingList={createShoppingListDto({
+          status: 'active',
+          items: [createShoppingItemDto({ id: 'item-1', status: 'pending' })],
+        })}
         stores={STORES}
       />,
     );
@@ -177,6 +184,7 @@ describe('ShoppingListClient（完了・再開）', () => {
     await user.click(screen.getByRole('button', { name: '買い物完了' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByText('在庫に追加する品目')).toBeNull();
     expect(postComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -367,6 +375,142 @@ describe('ShoppingListClient（完了・再開）', () => {
 
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
+  });
+
+  describe('在庫選択パネル', () => {
+    const boughtItem = createShoppingItemDto({
+      id: 'item-1',
+      displayName: '玉ねぎ',
+      status: 'bought',
+      requiredAmount: { value: 3, unit: '個' },
+    });
+
+    function renderWithBoughtItems(items = [boughtItem]) {
+      return render(
+        <ShoppingListClient
+          shoppingList={createShoppingListDto({ status: 'active', items })}
+          stores={STORES}
+        />,
+      );
+    }
+
+    it('CB-17: bought 品目があるとき完了ボタンはパネルを開くだけで POST しない', async () => {
+      const user = userEvent.setup();
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+
+      expect(screen.getByText('在庫に追加する品目')).toBeDefined();
+      expect(postComplete).not.toHaveBeenCalled();
+    });
+
+    it('CB-18: 「完了する」で選択品目を stockAdditions に載せて POST する', async () => {
+      const user = userEvent.setup();
+      postComplete.mockResolvedValue({
+        ok: true,
+        json: async () => createShoppingListDto({ status: 'completed' }),
+      });
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('button', { name: '完了する' }));
+
+      expect(postComplete).toHaveBeenCalledWith({
+        param: { id: 'shopping-list-1' },
+        json: {
+          stockAdditions: [
+            {
+              itemId: 'item-1',
+              amount: { value: 3, unit: '個' },
+              storedLocation: null,
+              // 賞味期限はパネルで入力させないため常に null（Q-1）。
+              expiresAt: null,
+            },
+          ],
+        },
+      });
+    });
+
+    it('CB-19: 選択を外した品目は stockAdditions に含めない', async () => {
+      const user = userEvent.setup();
+      postComplete.mockResolvedValue({
+        ok: true,
+        json: async () => createShoppingListDto({ status: 'completed' }),
+      });
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('checkbox', { name: '玉ねぎを在庫に追加しない' }));
+      await user.click(screen.getByRole('button', { name: '完了する' }));
+
+      expect(postComplete).toHaveBeenCalledWith({
+        param: { id: 'shopping-list-1' },
+        json: { stockAdditions: [] },
+      });
+    });
+
+    it('CB-20: 完了成功で在庫追加件数を成功バナーに表示する', async () => {
+      const user = userEvent.setup();
+      postComplete.mockResolvedValue({
+        ok: true,
+        json: async () => createShoppingListDto({ status: 'completed' }),
+      });
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('button', { name: '完了する' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('買い物を完了しました')).toBeDefined();
+        expect(screen.getByText('1件を在庫に追加しました')).toBeDefined();
+      });
+      expect(screen.queryByText('在庫に追加する品目')).toBeNull();
+    });
+
+    it('CB-21: 在庫追加 0 件のときは件数バナーを出さない', async () => {
+      const user = userEvent.setup();
+      postComplete.mockResolvedValue({
+        ok: true,
+        json: async () => createShoppingListDto({ status: 'completed' }),
+      });
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('checkbox', { name: '玉ねぎを在庫に追加しない' }));
+      await user.click(screen.getByRole('button', { name: '完了する' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('買い物を完了しました')).toBeDefined();
+      });
+      expect(screen.queryByText('0件を在庫に追加しました')).toBeNull();
+      expect(screen.getByRole('link', { name: '在庫を見る' })).toBeDefined();
+    });
+
+    it('CB-22: 完了が失敗したらパネルを開いたままにする（入力を失わない）', async () => {
+      const user = userEvent.setup();
+      postComplete.mockResolvedValue({ ok: false, status: 422 });
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('button', { name: '完了する' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+      });
+      expect(screen.getByText('在庫に追加する品目')).toBeDefined();
+    });
+
+    it('CB-23: 「キャンセル」でパネルを閉じ POST しない', async () => {
+      const user = userEvent.setup();
+      renderWithBoughtItems();
+
+      await user.click(screen.getByRole('button', { name: '買い物完了' }));
+      await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+      expect(screen.queryByText('在庫に追加する品目')).toBeNull();
+      expect(screen.getByRole('button', { name: '買い物完了' })).toBeDefined();
+      expect(postComplete).not.toHaveBeenCalled();
     });
   });
 

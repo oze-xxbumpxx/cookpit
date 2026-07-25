@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import type { StockDto } from '@cookpit/application';
+import { Trash2, Utensils } from 'lucide-react';
 import { formatExpiresAt } from '../_utils/pantry-view';
 
 interface Props {
@@ -30,14 +31,21 @@ export function StockRow({ stock, submitting, onConsume, onDiscard }: Props) {
           onClick={() => onConsume(stock.id)}
           disabled={submitting}
         >
-          使った
+          <Utensils aria-hidden="true" />
+          消費
         </Button>
+        {/*
+          取り消せない操作のため色の手がかりは残すが、塗りの赤（destructive）はやめて
+          文字色だけに弱める。赤の塗りはこのアプリでは本当に危険な操作のために取っておく。
+        */}
         <Button
           type="button"
-          variant="destructive"
+          variant="outline"
           onClick={() => onDiscard(stock.id)}
           disabled={submitting}
+          className="text-destructive/80 hover:text-destructive"
         >
+          <Trash2 aria-hidden="true" />
           廃棄
         </Button>
       </div>
