@@ -1,6 +1,5 @@
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
+import { ProductId } from '@cookpit/domain';
+import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import type { ProductDto } from './product.dto';
 import { ProductNotFoundError } from './product-not-found.error';
 import { toProductDto, toStoreNameMap } from './product.mapper';

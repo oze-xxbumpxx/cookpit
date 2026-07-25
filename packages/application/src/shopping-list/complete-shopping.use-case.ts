@@ -1,13 +1,17 @@
-import type { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { PriceRecord } from '@cookpit/domain/src/product/product';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import { UnitPriceCalculator } from '@cookpit/domain/src/product/unit-price-calculator';
-import type { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+import {
+  PriceRecord,
+  PriceRecordId,
+  ProductId,
+  ShoppingListId,
+  UnitPriceCalculator,
+} from '@cookpit/domain';
+import type {
+  MealPlanId,
+  MealPlanRepository,
+  ProductRepository,
+  ShoppingItem,
+  ShoppingListRepository,
+} from '@cookpit/domain';
 import type { CompleteShoppingInputDto, ShoppingListDto } from './shopping-list.dto';
 import { toShoppingListDto } from './shopping-list.mapper';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';

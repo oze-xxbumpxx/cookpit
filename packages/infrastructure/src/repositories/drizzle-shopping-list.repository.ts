@@ -1,18 +1,20 @@
 import {
+  MealPlanId,
+  Money,
+  ProductId,
+  Quantity,
   ShoppingItem,
+  ShoppingItemId,
   ShoppingList,
-  type ItemSource,
-  type ItemStatus,
-  type ShoppingListStatus,
-} from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
+  ShoppingListId,
+  StoreId,
+} from '@cookpit/domain';
+import type {
+  ItemSource,
+  ItemStatus,
+  ShoppingListRepository,
+  ShoppingListStatus,
+} from '@cookpit/domain';
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {

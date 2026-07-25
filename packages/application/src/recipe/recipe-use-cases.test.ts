@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Recipe } from '@cookpit/domain/src/recipe/recipe';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
+import { Recipe, RecipeId } from '@cookpit/domain';
+import type { RecipeRepository } from '@cookpit/domain';
 import { CreateRecipeUseCase } from './create-recipe.use-case';
 import { GetRecipeUseCase } from './get-recipe.use-case';
 import { GetRecipesUseCase } from './get-recipes.use-case';

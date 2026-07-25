@@ -1,6 +1,6 @@
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
+import { RecipeId } from '@cookpit/domain';
+import type { RecipeRepository } from '@cookpit/domain';
 import type { RecipeDto, UpdateRecipeInputDto } from './recipe.dto';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
 import { RecipeNotFoundError } from './recipe-not-found.error';
 import { toIngredient, toRecipeDto, toStep } from './recipe.mapper';
 

@@ -1,12 +1,13 @@
-import { Money } from '@cookpit/domain/src/shared/money';
-import { PriceRecord } from '@cookpit/domain/src/product/product';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
-import { UnitPriceCalculator } from '@cookpit/domain/src/product/unit-price-calculator';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import type { StoreRepository } from '@cookpit/domain/src/shared/store.repository';
+import {
+  Money,
+  PriceRecord,
+  PriceRecordId,
+  ProductId,
+  Quantity,
+  StoreId,
+  UnitPriceCalculator,
+} from '@cookpit/domain';
+import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import type { RecordPriceInputDto } from './product.dto';
 import { ProductNotFoundError } from './product-not-found.error';
 import { StoreNotFoundError } from '../store/store-not-found.error';

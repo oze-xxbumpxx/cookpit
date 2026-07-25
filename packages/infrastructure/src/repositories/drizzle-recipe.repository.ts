@@ -1,10 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { CookingStep } from '@cookpit/domain/src/recipe/cooking-step';
-import { Recipe, type RecipeTag } from '@cookpit/domain/src/recipe/recipe';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { RecipeIngredient } from '@cookpit/domain/src/recipe/recipe-ingredient';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { CookingStep, Quantity, Recipe, RecipeId, RecipeIngredient } from '@cookpit/domain';
+import type { RecipeRepository, RecipeTag } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { recipes, type NewRecipeRow, type RecipeRow } from '../db/schema';
 import { toUnit } from './mappers';

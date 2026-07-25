@@ -1,9 +1,5 @@
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
-import { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+import { ProductId, Quantity, ShoppingItem, ShoppingListId, StoreId } from '@cookpit/domain';
+import type { ShoppingListRepository } from '@cookpit/domain';
 import { InvalidShoppingListStateError } from './invalid-shopping-list-state.error';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 import type { AddItemInputDto, ShoppingItemDto } from './shopping-list.dto';

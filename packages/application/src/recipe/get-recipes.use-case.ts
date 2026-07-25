@@ -1,4 +1,4 @@
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
+import type { RecipeRepository } from '@cookpit/domain';
 import type { RecipeDto } from './recipe.dto';
 import { toRecipeDto } from './recipe.mapper';
 

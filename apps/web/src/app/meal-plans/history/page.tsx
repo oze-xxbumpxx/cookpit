@@ -2,7 +2,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { getDb } from '@/db/client';
 import { cn } from '@/lib/utils';
 import { GetMealPlanHistoryUseCase, GetRecipesUseCase } from '@cookpit/application';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+import { WeekIdentifier } from '@cookpit/domain';
 import { DrizzleMealPlanRepository, DrizzleRecipeRepository } from '@cookpit/infrastructure';
 import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';

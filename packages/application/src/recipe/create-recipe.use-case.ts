@@ -1,5 +1,5 @@
-import { Recipe } from '@cookpit/domain/src/recipe/recipe';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
+import { Recipe } from '@cookpit/domain';
+import type { RecipeRepository } from '@cookpit/domain';
 import type { CreateRecipeInputDto, RecipeDto } from './recipe.dto';
 import { toIngredient, toRecipeDto, toStep } from './recipe.mapper';
 

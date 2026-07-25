@@ -1,17 +1,24 @@
-import type { MealPlan, PlannedRecipe } from '@cookpit/domain/src/meal-plan/meal-plan';
-import type { Pantry, Stock } from '@cookpit/domain/src/pantry/pantry';
-import type { ProductId as ProductIdType } from '@cookpit/domain/src/product/product-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import type { Recipe } from '@cookpit/domain/src/recipe/recipe';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { isSeasoningName } from '@cookpit/domain/src/shared/seasoning';
-import type { StoreId } from '@cookpit/domain/src/shared/store';
-import type { Unit } from '@cookpit/domain/src/shared/unit';
-import { isCountableUnit, normalizeUnit } from '@cookpit/domain/src/shared/unit';
-import type { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
+import {
+  isCountableUnit,
+  isSeasoningName,
+  normalizeUnit,
+  ProductId,
+  Quantity,
+  RecipeId,
+} from '@cookpit/domain';
+import type {
+  MealPlan,
+  Pantry,
+  PlannedRecipe,
+  ProductId as ProductIdType,
+  ProductRepository,
+  Recipe,
+  RecipeRepository,
+  ShoppingItem,
+  Stock,
+  StoreId,
+  Unit,
+} from '@cookpit/domain';
 
 /**
  * MealPlan の材料を集計・在庫引き算・店舗解決する共通ロジック。

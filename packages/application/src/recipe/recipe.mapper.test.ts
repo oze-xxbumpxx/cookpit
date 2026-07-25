@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { Recipe } from '@cookpit/domain/src/recipe/recipe';
-import { CookingStep } from '@cookpit/domain/src/recipe/cooking-step';
-import { RecipeIngredient } from '@cookpit/domain/src/recipe/recipe-ingredient';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { CookingStep, Quantity, Recipe, RecipeId, RecipeIngredient } from '@cookpit/domain';
 import { toIngredient, toStep, toRecipeDto } from './recipe.mapper';
 import type { RecipeIngredientDto, CookingStepDto } from './recipe.dto';
 

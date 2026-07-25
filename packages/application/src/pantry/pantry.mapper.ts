@@ -1,4 +1,4 @@
-import type { Pantry, Stock } from '@cookpit/domain/src/pantry/pantry';
+import type { Pantry, Stock } from '@cookpit/domain';
 import type { PantryDto, StockDto } from './pantry.dto';
 
 export function toStockDto(stock: Stock): StockDto {

@@ -1,31 +1,35 @@
 import {
   MealPlan,
-  type MealPlanStatus,
+  MealPlanId,
+  Money,
+  Pantry,
   PlannedRecipe,
-} from '@cookpit/domain/src/meal-plan/meal-plan';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
-import type { CreateStockInput } from '@cookpit/domain/src/pantry/pantry';
-import { Pantry } from '@cookpit/domain/src/pantry/pantry';
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import { Recipe } from '@cookpit/domain/src/recipe/recipe';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { RecipeIngredient } from '@cookpit/domain/src/recipe/recipe-ingredient';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
-import type { Unit } from '@cookpit/domain/src/shared/unit';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { ShoppingItem, ShoppingList } from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+  PlannedRecipeId,
+  PriceRecord,
+  PriceRecordId,
+  Product,
+  ProductId,
+  Quantity,
+  Recipe,
+  RecipeId,
+  RecipeIngredient,
+  ShoppingItem,
+  ShoppingItemId,
+  ShoppingList,
+  ShoppingListId,
+  StoreId,
+  WeekIdentifier,
+} from '@cookpit/domain';
+import type {
+  CreateStockInput,
+  MealPlanRepository,
+  MealPlanStatus,
+  PantryRepository,
+  ProductRepository,
+  RecipeRepository,
+  ShoppingListRepository,
+  Unit,
+} from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { InvalidMealPlanStateError } from '../meal-plan/invalid-meal-plan-state.error';
 import { MealPlanNotFoundError } from '../meal-plan/meal-plan-not-found.error';

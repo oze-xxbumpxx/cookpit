@@ -1,10 +1,13 @@
-import { Pantry, Stock } from '@cookpit/domain/src/pantry/pantry';
-import { PantryId } from '@cookpit/domain/src/pantry/pantry-id';
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { StockId } from '@cookpit/domain/src/pantry/stock-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
+import {
+  Pantry,
+  PantryId,
+  ProductId,
+  Quantity,
+  ShoppingItemId,
+  Stock,
+  StockId,
+} from '@cookpit/domain';
+import type { PantryRepository } from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AddStockUseCase } from './add-stock.use-case';
 import { ConsumeStockUseCase } from './consume-stock.use-case';

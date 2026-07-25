@@ -1,4 +1,4 @@
-import type { ShoppingItem, ShoppingList } from '@cookpit/domain/src/shopping-list/shopping-list';
+import type { ShoppingItem, ShoppingList } from '@cookpit/domain';
 import type { ShoppingItemDto, ShoppingListDto } from './shopping-list.dto';
 
 export function toShoppingItemDto(item: ShoppingItem): ShoppingItemDto {

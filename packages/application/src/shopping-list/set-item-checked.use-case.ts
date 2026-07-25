@@ -1,6 +1,5 @@
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+import { ShoppingItemId, ShoppingListId } from '@cookpit/domain';
+import type { ShoppingListRepository } from '@cookpit/domain';
 import { InvalidShoppingListStateError } from './invalid-shopping-list-state.error';
 import type { SetItemCheckedInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';

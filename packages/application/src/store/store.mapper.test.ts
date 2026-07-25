@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Store, StoreId } from '@cookpit/domain/src/shared/store';
+import { Store, StoreId } from '@cookpit/domain';
 import { toStoreDto } from './store.mapper';
 
 describe('toStoreDto', () => {

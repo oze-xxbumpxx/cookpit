@@ -1,13 +1,12 @@
 import {
   MealPlan,
+  MealPlanId,
   PlannedRecipe,
-  type MealPlanStatus,
-} from '@cookpit/domain/src/meal-plan/meal-plan';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { PlannedRecipeId } from '@cookpit/domain/src/meal-plan/planned-recipe-id';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+  PlannedRecipeId,
+  RecipeId,
+  WeekIdentifier,
+} from '@cookpit/domain';
+import type { MealPlanRepository, MealPlanStatus } from '@cookpit/domain';
 import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {

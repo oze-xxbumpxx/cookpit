@@ -1,22 +1,26 @@
-import { MealPlan, type MealPlanStatus } from '@cookpit/domain/src/meal-plan/meal-plan';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { PriceRecordId } from '@cookpit/domain/src/product/price-record-id';
-import { PriceRecord, Product } from '@cookpit/domain/src/product/product';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
 import {
+  MealPlan,
+  MealPlanId,
+  Money,
+  PriceRecord,
+  PriceRecordId,
+  Product,
+  ProductId,
+  Quantity,
   ShoppingItem,
+  ShoppingItemId,
   ShoppingList,
-  type ShoppingListStatus,
-} from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+  ShoppingListId,
+  StoreId,
+  WeekIdentifier,
+} from '@cookpit/domain';
+import type {
+  MealPlanRepository,
+  MealPlanStatus,
+  ProductRepository,
+  ShoppingListRepository,
+  ShoppingListStatus,
+} from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CompleteShoppingUseCase } from './complete-shopping.use-case';
 import { toShoppingListDto } from './shopping-list.mapper';

@@ -1,6 +1,5 @@
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
+import { MealPlanId, RecipeId } from '@cookpit/domain';
+import type { MealPlanRepository } from '@cookpit/domain';
 import { InvalidMealPlanStateError } from './invalid-meal-plan-state.error';
 import type { AddRecipeToMealPlanInputDto, PlannedRecipeDto } from './meal-plan.dto';
 import { toPlannedRecipeDto } from './meal-plan.mapper';

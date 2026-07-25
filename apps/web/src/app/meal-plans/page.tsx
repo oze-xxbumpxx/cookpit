@@ -1,6 +1,6 @@
 import { getDb } from '@/db/client';
 import { GetMealPlanByWeekUseCase, GetRecipesUseCase } from '@cookpit/application';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+import { WeekIdentifier } from '@cookpit/domain';
 import { DrizzleMealPlanRepository, DrizzleRecipeRepository } from '@cookpit/infrastructure';
 import { MealPlanClient } from './_components/meal-plan-client';
 

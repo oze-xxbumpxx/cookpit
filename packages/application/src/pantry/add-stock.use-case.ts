@@ -1,6 +1,5 @@
-import { type CreateStockInput } from '@cookpit/domain/src/pantry/pantry';
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
+import { Quantity } from '@cookpit/domain';
+import type { CreateStockInput, PantryRepository } from '@cookpit/domain';
 import { InvalidStockOperationError } from './invalid-stock-operation.error';
 import type { AddStockInputDto, PantryDto } from './pantry.dto';
 import { toPantryDto } from './pantry.mapper';

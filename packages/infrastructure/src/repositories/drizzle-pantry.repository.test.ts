@@ -1,9 +1,13 @@
-import { Pantry, Stock, type StockProps } from '@cookpit/domain/src/pantry/pantry';
-import { PantryId } from '@cookpit/domain/src/pantry/pantry-id';
-import { StockId } from '@cookpit/domain/src/pantry/stock-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
+import {
+  Pantry,
+  PantryId,
+  ProductId,
+  Quantity,
+  ShoppingItemId,
+  Stock,
+  StockId,
+} from '@cookpit/domain';
+import type { StockProps } from '@cookpit/domain';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { DrizzleClient } from '../db/client';

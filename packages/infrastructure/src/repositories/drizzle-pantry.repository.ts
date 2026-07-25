@@ -1,10 +1,13 @@
-import { Pantry, Stock, type StorageLocation } from '@cookpit/domain/src/pantry/pantry';
-import { PantryId } from '@cookpit/domain/src/pantry/pantry-id';
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import { StockId } from '@cookpit/domain/src/pantry/stock-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
+import {
+  Pantry,
+  PantryId,
+  ProductId,
+  Quantity,
+  ShoppingItemId,
+  Stock,
+  StockId,
+} from '@cookpit/domain';
+import type { PantryRepository, StorageLocation } from '@cookpit/domain';
 import { notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import { stocks, type NewStockRow, type StockRow } from '../db/schema';
