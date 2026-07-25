@@ -80,7 +80,7 @@ describe('useApiAction', () => {
     expect(result.current.pending).toBe(false);
   });
 
-  it('UAA-05: 実行中は pendingKey が立ち、同じキーの二重実行は無視される', async () => {
+  it('UAA-05: 実行中は isPending が立ち、同じキーの二重実行は無視される', async () => {
     const { result } = renderHook(() => useApiAction());
     let release: (() => void) | null = null;
     const request = vi.fn(
@@ -111,10 +111,11 @@ describe('useApiAction', () => {
       await firstRun;
     });
 
-    expect(result.current.pendingKey).toBeNull();
+    expect(result.current.isPending('sync')).toBe(false);
+    expect(result.current.pending).toBe(false);
   });
 
-  it('UAA-06: silent 指定では pendingKey もエラー文言も更新しない', async () => {
+  it('UAA-06: silent 指定では実行中フラグもエラー文言も更新しない', async () => {
     const { result } = renderHook(() => useApiAction());
 
     await runAction(result, (action) =>
@@ -122,7 +123,51 @@ describe('useApiAction', () => {
     );
 
     expect(result.current.errorMessage).toBeNull();
-    expect(result.current.pendingKey).toBeNull();
+    expect(result.current.pending).toBe(false);
+  });
+
+  it('UAA-08: 別キーの操作は並行しても実行中フラグを奪い合わない（S1 回帰）', async () => {
+    const { result } = renderHook(() => useApiAction());
+    const release: Record<string, (() => void) | null> = { refresh: null, add: null };
+    const request = (key: string) => () =>
+      new Promise<ReturnType<typeof okResponse<{ id: string }>>>((resolve) => {
+        release[key] = () => resolve(okResponse({ id: key }));
+      });
+
+    let refreshRun: Promise<void> | null = null;
+    let addRun: Promise<void> | null = null;
+
+    await act(async () => {
+      refreshRun = result.current.run(request('refresh'), { key: 'refresh' });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(result.current.isPending('refresh')).toBe(true);
+    });
+
+    // refresh が in-flight のまま add を開始しても refresh の実行中フラグは維持される
+    await act(async () => {
+      addRun = result.current.run(request('add'), { key: 'add' });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(result.current.isPending('add')).toBe(true);
+    });
+    expect(result.current.isPending('refresh')).toBe(true);
+
+    // add だけ完了しても refresh の実行中フラグは落ちない
+    await act(async () => {
+      release.add?.();
+      await addRun;
+    });
+    expect(result.current.isPending('add')).toBe(false);
+    expect(result.current.isPending('refresh')).toBe(true);
+
+    await act(async () => {
+      release.refresh?.();
+      await refreshRun;
+    });
+    expect(result.current.pending).toBe(false);
   });
 
   it('UAA-07: onSuccessWithoutBody のときは json() を呼ばない', async () => {

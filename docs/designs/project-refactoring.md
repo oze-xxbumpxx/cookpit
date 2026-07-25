@@ -266,8 +266,21 @@ const action = useApiAction();
   届いていない。楽観的更新のロールバック検証が本質的に長いため、これ以上の分割は
   凝集を損なうと判断して現状とした。
 
+### レビュー後の修正（2026-07-25）
+
+`docs/reviews/project-refactoring.md` の S1 指摘に対応した。
+
+- `useApiAction` の実行中フラグを単一キー（`pendingKey: string | null`）から集合
+  （`ReadonlySet<string>`）へ変更。同一インスタンスを共有する別操作（在庫行の消費と
+  在庫追加など）が並行しても実行中フラグを奪い合わなくなり、変更前の「独立した
+  `refreshing` / `addSubmitting` / `submittingStockId`」と等価になった。
+- 公開 API から `pendingKey` を削除し、`pending`（いずれか実行中）と `isPending(key)` に統一。
+  `pantry-client` は行の disable をグループ内の `isPending` 解決に変更（N1 も解消）。
+- 回帰テスト UAA-08 を追加。単一キー実装に戻すと落ちることを確認済み。
+- S2（非 silent 再取得でエラーバナーが開始時に消える）はユーザー判断で受容。
+
 ### 最終品質ゲート
 
 - type-check 5/5 PASS / lint 0 error（既存 warning 1 件のみ）
-- テスト: domain 352 / application 205 / infrastructure 53 / api-contract 220 / web 446 =
-  **1276 PASS**（ベースライン 1269 + 観点 D のフック単体テスト 7 件）
+- テスト: domain 352 / application 205 / infrastructure 53 / api-contract 220 / web 447 =
+  **1277 PASS**（ベースライン 1269 + 観点 D のフック単体テスト 7 件 + S1 の回帰テスト 1 件）

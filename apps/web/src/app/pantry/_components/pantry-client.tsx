@@ -15,7 +15,7 @@ interface Props {
   pantry: PantryDto;
 }
 
-/** 在庫追加・再取得を表す pendingKey。在庫行の操作は stockId をキーにする。 */
+/** 在庫追加・再取得を表す実行中キー。在庫行の操作は stockId をキーにする。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
@@ -23,7 +23,7 @@ export function PantryClient({ pantry }: Props) {
   const [stocks, setStocks] = useState<StockDto[]>(pantry.stocks);
   const [addFormOpen, setAddFormOpen] = useState(false);
   // 在庫行の操作・追加・再取得はエラーバナーを共有するため 1 インスタンスにまとめ、
-  // 「どれが実行中か」は pendingKey で区別する。
+  // 「どれが実行中か」は キーごとの isPending で区別する。
   const action = useApiAction();
 
   async function handleConsume(stockId: string): Promise<void> {
@@ -122,7 +122,9 @@ export function PantryClient({ pantry }: Props) {
                 key={group.location ?? 'unset'}
                 location={group.location}
                 stocks={group.stocks}
-                submittingStockId={action.pendingKey}
+                submittingStockId={
+                  group.stocks.find((stock) => action.isPending(stock.id))?.id ?? null
+                }
                 onConsume={(stockId) => void handleConsume(stockId)}
                 onDiscard={(stockId) => void handleDiscard(stockId)}
               />

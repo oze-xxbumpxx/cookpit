@@ -18,7 +18,7 @@ interface Props {
   stores: StoreDto[];
 }
 
-/** 品目追加・再取得を表す pendingKey（品目行の操作は itemId をキーにする）。 */
+/** 品目追加・再取得を表す実行中キー（品目行の操作は itemId をキーにする）。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 

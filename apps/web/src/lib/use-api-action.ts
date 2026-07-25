@@ -30,14 +30,14 @@ type SuccessBodyOf<TResponse> =
 
 interface RunOptions<T> {
   /**
-   * 実行中であることを表す識別子。行単位の操作では行 ID を渡し、`pendingKey` と
+   * 実行中であることを表す識別子。行単位の操作では行 ID を渡し、`isPending` と
    * 突き合わせて「操作中の行だけを disable」する。省略時は `'default'`。
    */
   key?: string;
   /** `!response.ok` のときの文言。省略時は {@link API_FAILURE_MESSAGE}。 */
   failureMessage?: string;
   /**
-   * true のとき、`pendingKey` もエラー文言も更新しない。画面にフィードバックを出さない
+   * true のとき、実行中フラグもエラー文言も更新しない。画面にフィードバックを出さない
    * バックグラウンド再取得（focus 時の同期など）で使う。
    */
   silent?: boolean;
@@ -55,9 +55,7 @@ interface RunOptions<T> {
 }
 
 export interface ApiAction {
-  /** 実行中の操作のキー。何も実行していなければ null。 */
-  pendingKey: string | null;
-  /** 何らかの操作が実行中か。 */
+  /** いずれかの操作が実行中か。 */
   pending: boolean;
   /** 直近の失敗の文言。成功・未実行なら null。 */
   errorMessage: string | null;
@@ -80,8 +78,23 @@ export interface ApiAction {
  * それらは状態更新の順序自体が挙動になるため、コンポーネント側に残す。
  */
 export function useApiAction(): ApiAction {
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  // 実行中のキーは集合で持つ。単一スロットにすると、同じインスタンスを共有する別操作
+  // （行の消費と在庫追加など）が並行したときに実行中フラグを奪い合い、応答到着前に
+  // ボタンが再活性化してしまう。
+  const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function addPendingKey(key: string): void {
+    setPendingKeys((current) => new Set(current).add(key));
+  }
+
+  function removePendingKey(key: string): void {
+    setPendingKeys((current) => {
+      const next = new Set(current);
+      next.delete(key);
+      return next;
+    });
+  }
 
   async function run<TResponse extends ApiResponseLike>(
     request: () => Promise<TResponse>,
@@ -91,12 +104,12 @@ export function useApiAction(): ApiAction {
     const silent = options.silent ?? false;
 
     // 同じ操作の二重実行を防ぐ。別キーの操作（別の行など）は並行して実行できる。
-    if (pendingKey === key) {
+    if (pendingKeys.has(key)) {
       return;
     }
 
     if (!silent) {
-      setPendingKey(key);
+      addPendingKey(key);
       setErrorMessage(null);
     }
 
@@ -123,17 +136,16 @@ export function useApiAction(): ApiAction {
       }
     } finally {
       if (!silent) {
-        setPendingKey(null);
+        removePendingKey(key);
       }
     }
   }
 
   return {
-    pendingKey,
-    pending: pendingKey !== null,
+    pending: pendingKeys.size > 0,
     errorMessage,
     setErrorMessage,
-    isPending: (key: string) => pendingKey === key,
+    isPending: (key: string) => pendingKeys.has(key),
     run,
   };
 }
