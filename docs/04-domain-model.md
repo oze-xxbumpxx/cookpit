@@ -477,11 +477,21 @@ export type ShoppingListStatus = 'active' | 'completed';
   `status === 'active'` ガード（D-2）
 - `markAsSkipped` / `complete()` は Domain 実装のみで API 非公開（S-8 / S-9）
 - `getBoughtItemsForPantry()` は実装しない。Pantry 連携（CompleteShoppingUseCase）とともに Sprint 5 で設計（S-8）
-- `removeItem` は未実装（削除 API とともに Sprint 4 スコープ外）
+- `removeItem`（品目の物理削除）は 2026-07-25 に実装（下記の実装追記を参照）
 - `shoppingDate = mealPlan.weekOf.startDate()`（週開始土曜固定）。DB は `date` 型・ローカル日付整形で
   JST 前日ずれを回避（S-10）
 - `shopping_items` は別テーブル（JSONB 不採用）・`shopping_lists.meal_plan_id` に UNIQUE 制約
   （S-1。生成冪等 S-6 の基盤）
+
+> 実装追記（2026-07-25, `docs/designs/shopping-item-remove.md` / ADR-0011）: `ShoppingList` に
+> `removeItem(itemId)` を追加した。`assertActive('removeItem')` を通し、存在しない itemId は
+> `Error('ShoppingItem not found')`。**status / source を問わず削除できる**（`bought` の品目を
+> 削除すると購入実績 `actualPrice` / `actualStore` も一緒に失われる）。永続化は
+> `DrizzleShoppingListRepository.save()` の既存の `notInArray` 差分削除がそのまま追随するため、
+> リポジトリ実装と DB スキーマは無変更。既存の `markAsSkipped()` は引き続き API 非公開のまま残す
+> （物理削除と skipped の使い分けの根拠は ADR-0011）。なお献立由来の品目を削除しても、
+> `SyncShoppingListFromMealPlanUseCase`（ADR-0007 の差分マージ）は削除を記憶しないため
+> 再同期で再び追加される。
 
 > 実装追記（2026-07-24, `docs/designs/shopping-list-item-check.md`）: `ShoppingItem` に
 > `check()`（価格・店舗に触れず `bought` へ遷移）/ `uncheck()`（`bought` からのみ許可し `pending` に

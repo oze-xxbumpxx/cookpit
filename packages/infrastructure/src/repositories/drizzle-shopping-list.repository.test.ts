@@ -215,6 +215,41 @@ describe('DrizzleShoppingListRepository', () => {
     expect(rows).toHaveLength(0);
   });
 
+  it('removeItem() で取り除いた item は save() 後に行ごと消える', async () => {
+    const firstItem = createItem();
+    const secondItem = createItem({ id: ShoppingItemId.fromString('shopping-item-2') });
+    await repository.save(createList({ items: [firstItem, secondItem] }));
+
+    const loaded = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    loaded.removeItem(ShoppingItemId.fromString('shopping-item-1'));
+    await repository.save(loaded);
+
+    const found = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    expect(found.items.map((item) => item.id.value)).toEqual(['shopping-item-2']);
+  });
+
+  it('removeItem() で全件を取り除くと item 行が 0 件になりリスト本体は残る', async () => {
+    const firstItem = createItem();
+    const secondItem = createItem({ id: ShoppingItemId.fromString('shopping-item-2') });
+    await repository.save(createList({ items: [firstItem, secondItem] }));
+
+    const loaded = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    loaded.removeItem(ShoppingItemId.fromString('shopping-item-1'));
+    loaded.removeItem(ShoppingItemId.fromString('shopping-item-2'));
+    await repository.save(loaded);
+
+    const found = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    expect(found.items).toHaveLength(0);
+  });
+
   it('numeric カラムは number 型として復元される', async () => {
     const shoppingList = createList();
     await repository.save(shoppingList);

@@ -43,6 +43,7 @@ function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {})
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
     onReassignStore: vi.fn(),
+    onRequestRemove: vi.fn(),
     stores: STORES,
   };
   render(<StoreGroup {...defaults} {...props} />);
@@ -109,5 +110,21 @@ describe('StoreGroup', () => {
     for (const checkbox of screen.getAllByRole('checkbox')) {
       expect(checkbox.hasAttribute('disabled')).toBe(true);
     }
+  });
+
+  it('SG-07: onRequestRemove を対象 item 行へ中継する', async () => {
+    const user = userEvent.setup();
+    const onRequestRemove = vi.fn();
+    renderStoreGroup({
+      items: [
+        createShoppingItemDto({ id: 'item-1', displayName: '醤油' }),
+        createShoppingItemDto({ id: 'item-2', displayName: '味噌' }),
+      ],
+      onRequestRemove,
+    });
+
+    await user.click(screen.getByRole('button', { name: '味噌を削除' }));
+
+    expect(onRequestRemove).toHaveBeenCalledWith('item-2');
   });
 });

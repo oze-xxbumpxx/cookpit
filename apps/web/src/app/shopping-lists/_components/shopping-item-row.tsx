@@ -1,9 +1,10 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
 import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
-import { Check } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { PurchaseInputForm } from './purchase-input-form';
 
@@ -21,6 +22,8 @@ interface Props {
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
   onReassignStore: (itemId: string, targetStoreId: string) => void;
+  /** 削除の確認を親に要求する（削除そのものは親が確認ダイアログを挟んで実行する）。 */
+  onRequestRemove: (itemId: string) => void;
 }
 
 function resolveStoreName(storeId: string | null, stores: StoreDto[]): string {
@@ -41,6 +44,7 @@ export function ShoppingItemRow({
   onSetChecked,
   onMarkAsBought,
   onReassignStore,
+  onRequestRemove,
 }: Props) {
   const storeSelectId = useId();
   const [storeEditing, setStoreEditing] = useState(false);
@@ -141,6 +145,21 @@ export function ShoppingItemRow({
           >
             {resolveStoreName(item.targetStoreId, stores)}
           </button>
+        )}
+
+        {!readOnly && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onRequestRemove(item.id)}
+            disabled={locked}
+            aria-label={`${item.displayName}を削除`}
+            title="この品目を削除"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+          </Button>
         )}
       </div>
 

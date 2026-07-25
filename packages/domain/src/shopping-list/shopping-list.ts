@@ -203,7 +203,7 @@ export interface CreateShoppingListInput {
 }
 
 /**
- * 買い物リスト集約。すべての更新操作（addItem / markAsBought / reassignStore /
+ * 買い物リスト集約。すべての更新操作（addItem / removeItem / markAsBought / reassignStore /
  * markAsSkipped / complete）は active 状態でのみ可能で、completed では Error を投げる。
  * 例外として reopen() のみ completed 状態で呼べ、active に戻す（買い物の再開）。
  */
@@ -272,6 +272,20 @@ export class ShoppingList {
   uncheck(itemId: ShoppingItemId): void {
     this.assertActive('uncheck');
     this.findItem(itemId).uncheck();
+  }
+
+  /**
+   * 品目をリストから取り除く（物理削除。ADR-0011）。誤って追加した品目を消すための操作で、
+   * status / source を問わず削除できる。bought の品目を削除すると、その購入実績
+   * （actualPrice / actualStore）も一緒に失われる。
+   *
+   * @throws Error active でない、または itemId の品目が存在しない場合
+   */
+  removeItem(itemId: ShoppingItemId): void {
+    this.assertActive('removeItem');
+    // 存在しない ID の削除を黙って成功させない（呼び出し側の取り違えを検出する）。
+    this.findItem(itemId);
+    this.listItems = this.listItems.filter((candidate) => !candidate.id.equals(itemId));
   }
 
   complete(): void {

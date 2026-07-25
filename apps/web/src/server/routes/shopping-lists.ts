@@ -15,6 +15,7 @@ import {
   GetShoppingListUseCase,
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
+  RemoveItemUseCase,
   ReopenShoppingListUseCase,
   SetItemCheckedUseCase,
   SyncShoppingListFromMealPlanUseCase,
@@ -97,6 +98,12 @@ export const shoppingListsRoute = new Hono()
       return c.json(dto, 200);
     },
   )
+  .delete('/:id/items/:itemId', zValidator('param', shoppingItemIdParamSchema), async (c) => {
+    const { id, itemId } = c.req.valid('param');
+    const usecase = new RemoveItemUseCase(shoppingListRepository());
+    await usecase.execute({ shoppingListId: id, itemId });
+    return c.body(null, 204);
+  })
   .post(
     '/:id/complete',
     zValidator('param', shoppingListIdParamSchema),
