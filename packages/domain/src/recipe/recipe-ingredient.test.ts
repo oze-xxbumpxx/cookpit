@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ProductId } from '../product/product-id';
 import { Quantity } from '../shared/quantity';
 import { RecipeIngredient } from './recipe-ingredient';
 
@@ -81,14 +82,26 @@ describe('RecipeIngredient.create', () => {
     ).toThrow('Either amount or amountNote is required');
   });
 
-  it('productRef が非 null のとき値を保持する (I-GAP-3)', () => {
+  it('productRef が非 null のとき値を保持する (I-GAP-3 / D-01)', () => {
+    const productId = ProductId.fromString('prod-1');
     const ingredient = RecipeIngredient.create({
-      productRef: { value: 'prod-1' },
+      productRef: productId,
       displayName: '玉ねぎ',
       amount: Quantity.of(100, 'g'),
       amountNote: null,
     });
     expect(ingredient.productRef?.value).toBe('prod-1');
+  });
+
+  it('productRef は ProductId インスタンスとして保持される (D-02)', () => {
+    const productId = ProductId.fromString('prod-1');
+    const ingredient = RecipeIngredient.create({
+      productRef: productId,
+      displayName: '玉ねぎ',
+      amount: Quantity.of(100, 'g'),
+      amountNote: null,
+    });
+    expect(ingredient.productRef?.equals(productId)).toBe(true);
   });
 });
 
@@ -116,15 +129,16 @@ describe('RecipeIngredient.scale', () => {
     expect(scaled.amountNote).toBe('適量');
   });
 
-  it('scale 後も productRef が引き継がれる (I-GAP-1)', () => {
+  it('scale 後も productRef が引き継がれる (I-GAP-1 / D-04)', () => {
+    const productId = ProductId.fromString('prod-1');
     const ingredient = RecipeIngredient.create({
-      productRef: { value: 'prod-1' },
+      productRef: productId,
       displayName: '玉ねぎ',
       amount: Quantity.of(100, 'g'),
       amountNote: null,
     });
     const scaled = ingredient.scale(3);
-    expect(scaled.productRef?.value).toBe('prod-1');
+    expect(scaled.productRef?.equals(productId)).toBe(true);
     expect(scaled.displayName).toBe('玉ねぎ');
     expect(scaled.amount?.value).toBe(300);
   });

@@ -68,12 +68,13 @@ Clean Architecture の依存方向（`Presentation → Application → Domain �
 
 ### 案 D: `RecipeIngredient` 側を `ProductId` 値オブジェクトに置き換えて衝突を解消する
 
-今回は不採用（先送り）。衝突解消としては最も筋が良く、集約をまたぐ ID 参照の
+本 ADR 時点では不採用（先送り）。衝突解消としては最も筋が良く、集約をまたぐ ID 参照の
 型安全性（`Identifier` のファントムブランドによる公称型付け）も回復する。
 ただしドメインモデルの意味を変える変更であり、mapper・repository・テストの
-`{ value: 'prod-1' }` リテラルすべてに波及する。挙動不変を要件とする今回の
-リファクタリングのスコープを超えるため、**別タスクとして提案**する。
-今回は改名（`ProductRef`）にとどめる。
+`{ value: 'prod-1' }` リテラルすべてに波及する。挙動不変を要件とする本 ADR の
+リファクタリングのスコープを超えるため、改名（`ProductRef`）にとどめた。
+
+**追記（2026-07-25）**: 案 D は [ADR-0011](./ADR-0011-recipe-ingredient-product-id.md) で採用済み。
 
 ## Consequences（良い影響・悪い影響・残るリスク）
 
@@ -96,8 +97,8 @@ Clean Architecture の依存方向（`Presentation → Application → Domain �
 
 残るリスク：
 
-- `RecipeIngredient.productRef` が構造的型のままであり、`ProductId` の公称型付けを
-  回避できてしまう点は未解決（案 D 参照）。
+- （解消済み・2026-07-25）`RecipeIngredient.productRef` の構造的型問題は
+  [ADR-0011](./ADR-0011-recipe-ingredient-product-id.md) で `ProductId` へ置換して解消。
 
 ## Migration（移行手順）
 

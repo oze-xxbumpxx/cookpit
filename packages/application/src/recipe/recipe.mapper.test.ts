@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { CookingStep, Quantity, Recipe, RecipeId, RecipeIngredient } from '@cookpit/domain';
+import {
+  CookingStep,
+  ProductId,
+  Quantity,
+  Recipe,
+  RecipeId,
+  RecipeIngredient,
+} from '@cookpit/domain';
 import { toIngredient, toStep, toRecipeDto } from './recipe.mapper';
 import type { RecipeIngredientDto, CookingStepDto } from './recipe.dto';
 
@@ -100,7 +107,7 @@ describe('toRecipeDto', () => {
       name: '肉じゃが',
       ingredients: [
         RecipeIngredient.create({
-          productRef: { value: 'prod-1' },
+          productRef: ProductId.fromString('prod-1'),
           displayName: '玉ねぎ',
           amount: Quantity.of(200, 'g'),
           amountNote: null,
