@@ -81,13 +81,11 @@ export class CompleteShoppingUseCase {
       ),
     );
 
-    for (let index = 0; index < groupEntries.length; index += 1) {
-      const product = products[index];
-      const entry = groupEntries[index];
-      if (product === null || product === undefined || entry === undefined) {
+    for (const [index, [, items]] of groupEntries.entries()) {
+      const product = products[index] ?? null;
+      if (product === null) {
         continue;
       }
-      const items = entry[1];
       let changed = false;
       for (const item of items) {
         // 価格レコード ID を品目 ID から決定的に導出し、既に記録済みならスキップする。
