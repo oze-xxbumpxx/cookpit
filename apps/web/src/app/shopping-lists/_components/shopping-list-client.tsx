@@ -4,13 +4,19 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, useApiAction } from '@/lib/use-api-action';
-import type { ShoppingItemDto, ShoppingListDto, StoreDto } from '@cookpit/application';
+import type {
+  ShoppingItemDto,
+  ShoppingListDto,
+  StockAdditionInputDto,
+  StoreDto,
+} from '@cookpit/application';
 import { EmptyState } from '@/app/_components/empty-state';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { startTransition, useEffect, useOptimistic, useState } from 'react';
 import { formatShoppingDate, groupItemsByStore } from '../_utils/shopping-list-view';
 import { AddItemForm, type AddItemFormInput } from './add-item-form';
+import { CompleteShoppingPanel } from './complete-shopping-panel';
 import { StoreGroup } from './store-group';
 
 interface Props {
@@ -61,6 +67,8 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [submittingItemId, setSubmittingItemId] = useState<string | null>(null);
   const [status, setStatus] = useState(shoppingList.status);
   const [completeSuccess, setCompleteSuccess] = useState(false);
+  const [completePanelOpen, setCompletePanelOpen] = useState(false);
+  const [addedStockCount, setAddedStockCount] = useState(0);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // 品目の追加・再取得は同じエラーバナーを共有する。完了・再開・同期はそれぞれ独立した
@@ -69,6 +77,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const completeAction = useApiAction();
   const reopenAction = useApiAction();
   const syncAction = useApiAction();
+
+  // 在庫化の候補は購入済みの品目のみ。楽観的更新中の値ではなく確定済みの items から取る。
+  const boughtItems = items.filter((item) => item.status === 'bought');
 
   async function handleSync(): Promise<void> {
     setSyncMessage(null);
@@ -230,16 +241,32 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     setExpandedItemId((current) => (current === itemId ? null : itemId));
   }
 
-  async function handleComplete(): Promise<void> {
+  async function handleComplete(stockAdditions: StockAdditionInputDto[]): Promise<void> {
     await completeAction.run(
-      () => client.api['shopping-lists'][':id'].complete.$post({ param: { id: shoppingList.id } }),
+      () =>
+        client.api['shopping-lists'][':id'].complete.$post({
+          param: { id: shoppingList.id },
+          json: { stockAdditions },
+        }),
       {
         onSuccess: (dto) => {
           setStatus(dto.status);
           setCompleteSuccess(true);
+          setAddedStockCount(stockAdditions.length);
+          setCompletePanelOpen(false);
         },
       },
     );
+    // 失敗時はパネルを開いたままにする（入力を失わず再送できる）。
+  }
+
+  /** 在庫化の候補が無ければ選択パネルを挟まず完了する。 */
+  function handleCompleteRequest(): void {
+    if (boughtItems.length === 0) {
+      void handleComplete([]);
+      return;
+    }
+    setCompletePanelOpen(true);
   }
 
   async function handleReopen(): Promise<void> {
@@ -250,6 +277,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           setStatus(dto.status);
           // 再開したので「完了しました」バナーは消す。以降は追加・チェックが再び可能になる。
           setCompleteSuccess(false);
+          setAddedStockCount(0);
         },
       },
     );
@@ -316,14 +344,24 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 {syncAction.errorMessage}
               </p>
             )}
-            <Button
-              type="button"
-              onClick={() => void handleComplete()}
-              disabled={completeAction.pending}
-              className="h-11 w-full"
-            >
-              買い物完了
-            </Button>
+            {!completePanelOpen && (
+              <Button
+                type="button"
+                onClick={handleCompleteRequest}
+                disabled={completeAction.pending}
+                className="h-11 w-full"
+              >
+                買い物完了
+              </Button>
+            )}
+            {completePanelOpen && (
+              <CompleteShoppingPanel
+                items={boughtItems}
+                submitting={completeAction.pending}
+                onCancel={() => setCompletePanelOpen(false)}
+                onComplete={(stockAdditions) => void handleComplete(stockAdditions)}
+              />
+            )}
           </>
         )}
 
@@ -359,6 +397,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         {completeSuccess && (
           <div className="rounded-lg border bg-secondary px-3 py-2 text-sm text-foreground">
             <p>買い物を完了しました</p>
+            {addedStockCount > 0 && <p>{addedStockCount}件を在庫に追加しました</p>}
             <Link
               href="/pantry"
               className={cn(
