@@ -8,12 +8,12 @@ import {
 } from './use-api-action';
 
 /** Hono の ClientResponse のうち、フックが参照する部分だけを模した成功レスポンス。 */
-function okResponse<T>(body: T): { ok: true; json: () => Promise<T> } {
-  return { ok: true, json: () => Promise.resolve(body) };
+function okResponse<T>(body: T): { ok: true; status: number; json: () => Promise<T> } {
+  return { ok: true, status: 200, json: () => Promise.resolve(body) };
 }
 
-function errorResponse(): { ok: false; json: () => Promise<never> } {
-  return { ok: false, json: () => Promise.reject(new Error('should not be parsed')) };
+function errorResponse(status = 500): { ok: false; status: number; json: () => Promise<never> } {
+  return { ok: false, status, json: () => Promise.reject(new Error('should not be parsed')) };
 }
 
 /** `run` を await しつつ、その中の state 更新を act でまとめる。 */
@@ -67,6 +67,22 @@ describe('useApiAction', () => {
     );
 
     expect(result.current.errorMessage).toBe('在庫の追加に失敗しました。');
+  });
+
+  it('UAA-09: failureMessage に関数を渡すと HTTP ステータスで文言を出し分けられる', async () => {
+    const { result } = renderHook(() => useApiAction());
+    const failureMessage = (status: number): string =>
+      status === 422 ? '完了後は変更できません。' : API_FAILURE_MESSAGE;
+
+    await runAction(result, (action) =>
+      action.run(() => Promise.resolve(errorResponse(422)), { failureMessage }),
+    );
+    expect(result.current.errorMessage).toBe('完了後は変更できません。');
+
+    await runAction(result, (action) =>
+      action.run(() => Promise.resolve(errorResponse(500)), { failureMessage }),
+    );
+    expect(result.current.errorMessage).toBe(API_FAILURE_MESSAGE);
   });
 
   it('UAA-04: 例外時は通信エラー文言を出す', async () => {
@@ -176,7 +192,9 @@ describe('useApiAction', () => {
     const onSuccessWithoutBody = vi.fn();
 
     await runAction(result, (action) =>
-      action.run(() => Promise.resolve({ ok: true as const, json }), { onSuccessWithoutBody }),
+      action.run(() => Promise.resolve({ ok: true as const, status: 200, json }), {
+        onSuccessWithoutBody,
+      }),
     );
 
     expect(json).not.toHaveBeenCalled();

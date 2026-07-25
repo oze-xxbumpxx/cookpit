@@ -216,7 +216,10 @@ describe('ShoppingListClient（完了・再開）', () => {
     expect(postComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('CB-11: 完了後も item のチェックと店舗再割当 UI を残す', async () => {
+  // 仕様変更（docs/designs/completed-list-check-ui.md）: 旧 CB-11 は「完了後も item のチェックと
+  // 店舗再割当 UI を残す」を固定していたが、サーバーは completed のリストへの変更を 422 で拒否する
+  // （ADR-0009 決定 3）。押せるのに必ず失敗する UI だったため、「表示は残すが操作できない」へ改める。
+  it('CB-11: 完了後は item のチェックと店舗再割当が操作できない（表示は残す）', async () => {
     const user = userEvent.setup();
     const item = createShoppingItemDto({
       id: 'item-1',
@@ -226,6 +229,7 @@ describe('ShoppingListClient（完了・再開）', () => {
     });
     postComplete.mockResolvedValue({
       ok: true,
+      status: 200,
       json: async () => createShoppingListDto({ status: 'completed', items: [item] }),
     });
     render(
@@ -240,9 +244,130 @@ describe('ShoppingListClient（完了・再開）', () => {
     await waitFor(() => {
       expect(screen.getByText('買い物を完了しました')).toBeDefined();
     });
+    // 表示は残る
     expect(screen.getByRole('checkbox', { name: /醤油/ })).toBeDefined();
     expect(screen.getByRole('button', { name: '店舗A' })).toBeDefined();
+    // ただし操作はできない
+    expect(screen.getByRole('checkbox', { name: /醤油/ }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: '店舗A' }).hasAttribute('disabled')).toBe(true);
     expect(screen.queryByRole('button', { name: '手動で追加' })).toBeNull();
+  });
+
+  it('CB-12: completed のリストは操作要素が無効化され、回復導線が表示される', () => {
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({
+          status: 'completed',
+          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' })],
+        })}
+        stores={STORES}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: /醤油/ }).hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('button', { name: '金額を記録' })).toBeNull();
+    expect(
+      screen.getByText(
+        '完了済みのリストは編集できません。変更するには「買い物を再開」してください。',
+      ),
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: '買い物を再開' })).toBeDefined();
+  });
+
+  it('CB-13: 「買い物を再開」後は再び item を操作できる', async () => {
+    const user = userEvent.setup();
+    const item = createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' });
+    postReopen.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => createShoppingListDto({ status: 'active', items: [item] }),
+    });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'completed', items: [item] })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '買い物を再開' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).hasAttribute('disabled')).toBe(false);
+    });
+    expect(
+      screen.queryByText(
+        '完了済みのリストは編集できません。変更するには「買い物を再開」してください。',
+      ),
+    ).toBeNull();
+  });
+
+  // 2 人利用で相手が先に完了した直後は、自分の画面がまだ active のままで 422 が返り得る。
+  it('CB-14: チェック操作が 422 を返したときは回復手段を示す文言を出す', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({ ok: false, status: 422, json: async () => ({}) });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({
+          status: 'active',
+          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
+        })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('買い物完了後は変更できません。「買い物を再開」してください。'),
+      ).toBeDefined();
+    });
+  });
+
+  it('CB-15: 店舗再割当が 422 を返したときも同じ文言を出す', async () => {
+    const user = userEvent.setup();
+    postTargetStore.mockResolvedValue({ ok: false, status: 422, json: async () => ({}) });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({
+          status: 'active',
+          items: [
+            createShoppingItemDto({ id: 'item-1', displayName: '醤油', targetStoreId: 'store-a' }),
+          ],
+        })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '店舗A' }));
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '店舗B' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('買い物完了後は変更できません。「買い物を再開」してください。'),
+      ).toBeDefined();
+    });
+  });
+
+  it('CB-16: 422 以外の失敗は従来どおり汎用文言を出す', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({
+          status: 'active',
+          items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
+        })}
+        stores={STORES}
+      />,
+    );
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
   });
 
   it('completed のリストは「買い物を再開」を表示し、押すと active に戻り「手動で追加」が再表示される', async () => {

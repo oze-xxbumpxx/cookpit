@@ -40,6 +40,7 @@ function renderRow(props: Partial<Parameters<typeof ShoppingItemRow>[0]> = {}) {
     stores: STORES,
     expanded: false,
     submitting: false,
+    readOnly: false,
     onToggleExpand: vi.fn(),
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
@@ -195,6 +196,53 @@ describe('ShoppingItemRow', () => {
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
 
     expect(onToggleExpand).toHaveBeenCalledWith('item-1');
+  });
+
+  // 完了済みリスト（readOnly）では、サーバーが 422 で拒否する操作を UI からも実行できないようにする。
+  // 表示（品目名・数量・記録済み価格）は残す。詳細は docs/designs/completed-list-check-ui.md。
+  it('IR-17: readOnly のときチェックボタンは disabled で、aria-checked は現状を保つ', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }), readOnly: true });
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox.hasAttribute('disabled')).toBe(true);
+    expect(checkbox.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('IR-18: readOnly のとき「金額を記録」ボタンは表示されない', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }), readOnly: true });
+
+    expect(screen.queryByRole('button', { name: '金額を記録' })).toBeNull();
+  });
+
+  it('IR-19: readOnly のとき店舗バッジは disabled', () => {
+    renderRow({ item: createShoppingItemDto({ targetStoreId: 'store-a' }), readOnly: true });
+
+    expect(screen.getByRole('button', { name: '店舗A' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('IR-20: readOnly でも品目名・数量・記録済み価格は読める', () => {
+    renderRow({
+      item: createShoppingItemDto({
+        status: 'bought',
+        displayName: '醤油',
+        requiredAmount: { value: 1, unit: '本' },
+        actualStoreId: 'store-a',
+        actualPrice: { amount: 198, currency: 'JPY' },
+      }),
+      readOnly: true,
+    });
+
+    expect(screen.getByText('醤油')).toBeDefined();
+    expect(screen.getByText('1本')).toBeDefined();
+    expect(screen.getByText('✓ 店舗A で ¥198 購入')).toBeDefined();
+  });
+
+  it('IR-21: readOnly でないときは従来どおり操作できる', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }), readOnly: false });
+
+    expect(screen.getByRole('checkbox').hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: '店舗A' }).hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: '金額を記録' })).toBeDefined();
   });
 
   it('IR-15: pending item の aria-label は「〜をチェックする」', () => {

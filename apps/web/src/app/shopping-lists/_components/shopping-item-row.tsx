@@ -12,6 +12,11 @@ interface Props {
   stores: StoreDto[];
   expanded: boolean;
   submitting: boolean;
+  /**
+   * 買い物リストが completed のとき true。サーバーは completed のリストへの
+   * チェック・金額記録・店舗再割当をすべて 422 で拒否するため、UI 側でも操作させない。
+   */
+  readOnly: boolean;
   onToggleExpand: (itemId: string) => void;
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
@@ -31,6 +36,7 @@ export function ShoppingItemRow({
   stores,
   expanded,
   submitting,
+  readOnly,
   onToggleExpand,
   onSetChecked,
   onMarkAsBought,
@@ -40,6 +46,7 @@ export function ShoppingItemRow({
   const [storeEditing, setStoreEditing] = useState(false);
 
   const bought = item.status === 'bought';
+  const locked = submitting || readOnly;
   const storeOptions: SelectFieldOption[] = stores.map((store) => ({
     value: store.id,
     label: store.name,
@@ -69,7 +76,7 @@ export function ShoppingItemRow({
             bought ? `${item.displayName}のチェックを外す` : `${item.displayName}をチェックする`
           }
           onClick={() => onSetChecked(item.id, !bought)}
-          disabled={submitting}
+          disabled={locked}
           className={cn(
             'flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors active:scale-[0.98]',
             bought
@@ -99,7 +106,7 @@ export function ShoppingItemRow({
               ✓ {resolveStoreName(item.actualStoreId, stores)} で ¥{item.actualPrice.amount} 購入
             </p>
           )}
-          {bought && (
+          {bought && !readOnly && (
             <button
               type="button"
               onClick={() => onToggleExpand(item.id)}
@@ -121,7 +128,7 @@ export function ShoppingItemRow({
               value={item.targetStoreId ?? ''}
               onValueChange={handleReassign}
               options={storeOptions}
-              disabled={submitting}
+              disabled={locked}
               className="h-9"
             />
           </div>
@@ -129,7 +136,7 @@ export function ShoppingItemRow({
           <button
             type="button"
             onClick={() => setStoreEditing(true)}
-            disabled={submitting}
+            disabled={locked}
             className="shrink-0 rounded-full border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
           >
             {resolveStoreName(item.targetStoreId, stores)}

@@ -22,6 +22,22 @@ interface Props {
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
+/** 完了済みリストは編集できない旨の案内（画面上で操作を無効化していることの説明）。 */
+const COMPLETED_GUIDANCE =
+  '完了済みのリストは編集できません。変更するには「買い物を再開」してください。';
+
+/** 完了済みリストへの変更をサーバーが拒否したとき（422）の文言。 */
+const COMPLETED_REJECTED_MESSAGE = '買い物完了後は変更できません。「買い物を再開」してください。';
+
+/**
+ * 品目操作の失敗文言。完了済みリストでは UI 側でも操作を止めているが、2 人で使っていて
+ * 相手が先に「買い物完了」した直後は自分の画面がまだ active のままで 422 が返り得るため、
+ * そのときだけ回復手段を示す。
+ */
+function resolveItemFailureMessage(status: number): string {
+  return status === 422 ? COMPLETED_REJECTED_MESSAGE : API_FAILURE_MESSAGE;
+}
+
 interface OptimisticAction {
   itemId: string;
   patch: Partial<ShoppingItemDto>;
@@ -122,7 +138,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           json: { actualPrice: { amount: actualPrice, currency: 'JPY' }, actualStoreId },
         });
         if (!response.ok) {
-          itemsAction.setErrorMessage(API_FAILURE_MESSAGE);
+          itemsAction.setErrorMessage(resolveItemFailureMessage(response.status));
           return;
         }
         const updated: ShoppingItemDto = await response.json();
@@ -155,7 +171,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           json: { checked },
         });
         if (!response.ok) {
-          itemsAction.setErrorMessage(API_FAILURE_MESSAGE);
+          itemsAction.setErrorMessage(resolveItemFailureMessage(response.status));
           return;
         }
         const updated: ShoppingItemDto = await response.json();
@@ -200,6 +216,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           }),
         {
           key: itemId,
+          failureMessage: resolveItemFailureMessage,
           onSuccess: (updated) =>
             setItems((current) => current.map((item) => (item.id === updated.id ? updated : item))),
         },
@@ -239,6 +256,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   }
 
   const groupedItems = groupItemsByStore(optimisticItems, stores);
+  // 完了済みリストへの品目操作はサーバーが 422 で拒否する（ADR-0009 決定 3）。
+  // UI 側でも操作できないようにし、ルールと表示を一致させる。
+  const readOnly = status !== 'active';
 
   return (
     <main className="min-h-dvh bg-background">
@@ -314,15 +334,20 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         )}
 
         {status === 'completed' && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void handleReopen()}
-            disabled={reopenAction.pending}
-            className="h-11 w-full"
-          >
-            買い物を再開
-          </Button>
+          <>
+            <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {COMPLETED_GUIDANCE}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleReopen()}
+              disabled={reopenAction.pending}
+              className="h-11 w-full"
+            >
+              買い物を再開
+            </Button>
+          </>
         )}
 
         {reopenAction.errorMessage !== null && (
@@ -358,6 +383,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 items={group.items}
                 expandedItemId={expandedItemId}
                 submittingItemId={submittingItemId}
+                readOnly={readOnly}
                 onToggleExpand={handleToggleExpand}
                 onSetChecked={handleSetChecked}
                 onMarkAsBought={handleMarkAsBought}

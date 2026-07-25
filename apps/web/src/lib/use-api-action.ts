@@ -11,12 +11,23 @@ export const NETWORK_ERROR_MESSAGE = '通信エラーが発生しました。';
 /** `key` を指定しない操作に割り当てるキー。 */
 const DEFAULT_KEY = 'default';
 
+function resolveFailureMessage(
+  failureMessage: string | ((status: number) => string) | undefined,
+  status: number,
+): string {
+  if (failureMessage === undefined) {
+    return API_FAILURE_MESSAGE;
+  }
+  return typeof failureMessage === 'function' ? failureMessage(status) : failureMessage;
+}
+
 /**
  * Hono RPC のレスポンスのうち、このフックが必要とする部分だけを表す。
  * `client.api...$post()` の戻り値はこの形に構造的に適合する。
  */
 interface ApiResponseLike {
   ok: boolean;
+  status: number;
   json: () => Promise<unknown>;
 }
 
@@ -34,8 +45,12 @@ interface RunOptions<T> {
    * 突き合わせて「操作中の行だけを disable」する。省略時は `'default'`。
    */
   key?: string;
-  /** `!response.ok` のときの文言。省略時は {@link API_FAILURE_MESSAGE}。 */
-  failureMessage?: string;
+  /**
+   * `!response.ok` のときの文言。省略時は {@link API_FAILURE_MESSAGE}。
+   * 関数を渡すと HTTP ステータスを受け取り、状態に応じた文言を返せる
+   * （例: 422 のときだけ理由と回復手段を示す）。
+   */
+  failureMessage?: string | ((status: number) => string);
   /**
    * true のとき、実行中フラグもエラー文言も更新しない。画面にフィードバックを出さない
    * バックグラウンド再取得（focus 時の同期など）で使う。
@@ -117,7 +132,7 @@ export function useApiAction(): ApiAction {
       const response = await request();
       if (!response.ok) {
         if (!silent) {
-          setErrorMessage(options.failureMessage ?? API_FAILURE_MESSAGE);
+          setErrorMessage(resolveFailureMessage(options.failureMessage, response.status));
         }
         return;
       }
