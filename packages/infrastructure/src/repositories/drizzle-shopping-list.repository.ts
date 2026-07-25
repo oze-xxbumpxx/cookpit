@@ -1,18 +1,20 @@
 import {
+  MealPlanId,
+  Money,
+  ProductId,
+  Quantity,
   ShoppingItem,
+  ShoppingItemId,
   ShoppingList,
-  type ItemSource,
-  type ItemStatus,
-  type ShoppingListStatus,
-} from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingItemId } from '@cookpit/domain/src/shopping-list/shopping-item-id';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import { Money } from '@cookpit/domain/src/shared/money';
-import { Quantity } from '@cookpit/domain/src/shared/quantity';
-import { StoreId } from '@cookpit/domain/src/shared/store';
+  ShoppingListId,
+  StoreId,
+} from '@cookpit/domain';
+import type {
+  ItemSource,
+  ItemStatus,
+  ShoppingListRepository,
+  ShoppingListStatus,
+} from '@cookpit/domain';
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
@@ -23,7 +25,7 @@ import {
   type ShoppingItemRow,
   type ShoppingListRow,
 } from '../db/schema';
-import { toUnit } from './mappers';
+import { toLocalDate, toLocalDateString, toUnit } from './mappers';
 
 interface ShoppingListWithItemRow {
   shoppingList: ShoppingListRow;
@@ -132,7 +134,7 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
     return ShoppingList.reconstruct({
       id: ShoppingListId.fromString(listRow.id),
       mealPlanId: MealPlanId.fromString(listRow.mealPlanId),
-      shoppingDate: toDate(listRow.shoppingDate),
+      shoppingDate: toLocalDate(listRow.shoppingDate),
       status: toShoppingListStatus(listRow.status),
       createdAt: listRow.createdAt,
       items: itemRows.map((row) =>
@@ -160,7 +162,7 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
     return {
       id: shoppingList.id.value,
       mealPlanId: shoppingList.mealPlanId.value,
-      shoppingDate: toDateString(shoppingList.shoppingDate),
+      shoppingDate: toLocalDateString(shoppingList.shoppingDate),
       status: shoppingList.status,
       createdAt: shoppingList.createdAt,
     };
@@ -182,17 +184,6 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       source: item.source,
     }));
   }
-}
-
-function toDate(value: string): Date {
-  return new Date(value + 'T00:00:00');
-}
-
-function toDateString(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const date = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${date}`;
 }
 
 function toShoppingListStatus(value: string): ShoppingListStatus {

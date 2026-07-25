@@ -1,6 +1,5 @@
-import { getDb } from '@/db/client';
 import { GetRecipeUseCase, type RecipeDto, RecipeNotFoundError } from '@cookpit/application';
-import { DrizzleRecipeRepository } from '@cookpit/infrastructure';
+import { recipeRepository } from '@/server/repositories';
 import { notFound } from 'next/navigation';
 import { RecipeEditFormClient } from './_components/recipe-edit-form-client';
 
@@ -12,8 +11,7 @@ interface Props {
 
 export default async function RecipeEditPage({ params }: Props) {
   const { id } = await params;
-  const repository = new DrizzleRecipeRepository(getDb());
-  const useCase = new GetRecipeUseCase(repository);
+  const useCase = new GetRecipeUseCase(recipeRepository());
 
   let recipe: RecipeDto;
   try {

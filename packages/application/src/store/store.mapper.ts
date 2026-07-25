@@ -1,4 +1,4 @@
-import type { Store } from '@cookpit/domain/src/shared/store';
+import type { Store } from '@cookpit/domain';
 import type { StoreDto } from './store.dto';
 
 export function toStoreDto(store: Store): StoreDto {

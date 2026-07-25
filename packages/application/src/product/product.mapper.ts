@@ -1,5 +1,4 @@
-import type { PriceRecord, Product } from '@cookpit/domain/src/product/product';
-import type { Store } from '@cookpit/domain/src/shared/store';
+import type { PriceRecord, Product, Store } from '@cookpit/domain';
 import type { PriceRecordDto, ProductDto } from './product.dto';
 
 export type StoreNameMap = Map<string, string>;

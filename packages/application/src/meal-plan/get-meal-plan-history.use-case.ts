@@ -1,4 +1,4 @@
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
+import type { MealPlanRepository } from '@cookpit/domain';
 import type { GetMealPlanHistoryInputDto, MealPlanDto } from './meal-plan.dto';
 import { toMealPlanDto } from './meal-plan.mapper';
 

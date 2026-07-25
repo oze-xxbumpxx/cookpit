@@ -1,5 +1,5 @@
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+import { WeekIdentifier } from '@cookpit/domain';
+import type { MealPlanRepository } from '@cookpit/domain';
 import type { MealPlanDto } from './meal-plan.dto';
 import { toMealPlanDto } from './meal-plan.mapper';
 

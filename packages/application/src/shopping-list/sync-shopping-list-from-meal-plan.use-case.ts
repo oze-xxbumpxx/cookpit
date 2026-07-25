@@ -1,10 +1,11 @@
-import type { MealPlanRepository } from '@cookpit/domain/src/meal-plan/meal-plan.repository';
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
-import type { RecipeRepository } from '@cookpit/domain/src/recipe/recipe.repository';
-import { ShoppingItem } from '@cookpit/domain/src/shopping-list/shopping-list';
-import { ShoppingListId } from '@cookpit/domain/src/shopping-list/shopping-list-id';
-import type { ShoppingListRepository } from '@cookpit/domain/src/shopping-list/shopping-list.repository';
+import { ShoppingItem, ShoppingListId } from '@cookpit/domain';
+import type {
+  MealPlanRepository,
+  PantryRepository,
+  ProductRepository,
+  RecipeRepository,
+  ShoppingListRepository,
+} from '@cookpit/domain';
 import { InvalidMealPlanStateError } from '../meal-plan/invalid-meal-plan-state.error';
 import { MealPlanNotFoundError } from '../meal-plan/meal-plan-not-found.error';
 import {

@@ -1,4 +1,4 @@
-import type { MealPlan, PlannedRecipe } from '@cookpit/domain/src/meal-plan/meal-plan';
+import type { MealPlan, PlannedRecipe } from '@cookpit/domain';
 import type { MealPlanDto, PlannedRecipeDto } from './meal-plan.dto';
 
 export function toMealPlanDto(mealPlan: MealPlan): MealPlanDto {

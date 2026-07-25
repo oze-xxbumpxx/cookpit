@@ -1,3 +1,4 @@
+import { InvalidOperationError, NotFoundError } from '@cookpit/application';
 import { Hono } from 'hono';
 import { healthRoute } from './routes/health';
 import { mealPlansRoute } from './routes/meal-plans';
@@ -6,20 +7,8 @@ import { productsRoute } from './routes/products';
 import { recipesRoute } from './routes/recipes';
 import { shoppingListsRoute } from './routes/shopping-lists';
 import { storesRoute } from './routes/stores';
-import {
-  InvalidMealPlanStateError,
-  InvalidShoppingListStateError,
-  InvalidStockOperationError,
-  MealPlanNotFoundError,
-  PlannedRecipeNotFoundError,
-  ProductNotFoundError,
-  RecipeNotFoundError,
-  ShoppingItemNotFoundError,
-  ShoppingListNotFoundError,
-  StockNotFoundError,
-  StoreNotFoundError,
-} from '@cookpit/application';
-const app = new Hono().basePath('/api');
+
+export const app = new Hono().basePath('/api');
 
 export const routes = app
   .route('/health', healthRoute)
@@ -30,42 +19,17 @@ export const routes = app
   .route('/shopping-lists', shoppingListsRoute)
   .route('/pantry', pantryRoute);
 
+// Application 層のエラー基底 2 種だけで HTTP へ変換する。具象エラーを列挙しないため、
+// 新しいエラークラスを追加してもここへの追従は不要（基底を継承させることが条件）。
 app.onError((err, c) => {
-  if (err instanceof RecipeNotFoundError) {
+  if (err instanceof NotFoundError) {
     return c.json({ error: err.message }, 404);
   }
-  if (err instanceof ProductNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof StoreNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof MealPlanNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof PlannedRecipeNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof InvalidMealPlanStateError) {
-    return c.json({ error: err.message }, 422);
-  }
-  if (err instanceof ShoppingListNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof ShoppingItemNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof InvalidShoppingListStateError) {
-    return c.json({ error: err.message }, 422);
-  }
-  if (err instanceof StockNotFoundError) {
-    return c.json({ error: err.message }, 404);
-  }
-  if (err instanceof InvalidStockOperationError) {
+  if (err instanceof InvalidOperationError) {
     return c.json({ error: err.message }, 422);
   }
   console.error(err);
   return c.json({ error: 'Internal Server Error' }, 500);
 });
+
 export type AppType = typeof routes;
-export default app;

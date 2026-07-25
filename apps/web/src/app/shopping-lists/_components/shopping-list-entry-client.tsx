@@ -4,11 +4,11 @@ import { EmptyState } from '@/app/_components/empty-state';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { MealPlanDto, ShoppingListDto } from '@cookpit/application';
+import { useApiAction } from '@/lib/use-api-action';
+import type { MealPlanDto } from '@cookpit/application';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 interface Props {
   mealPlan: MealPlanDto | null;
@@ -17,30 +17,18 @@ interface Props {
 /** エントリ画面のボタン・空状態（Client。S-1/S-2）。 */
 export function ShoppingListEntryClient({ mealPlan }: Props) {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const action = useApiAction();
 
   async function handleGenerate(): Promise<void> {
     if (mealPlan === null) {
       return;
     }
-    setSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'].$post({
-        json: { mealPlanId: mealPlan.id },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const result: ShoppingListDto = await response.json();
-      router.push(`/shopping-lists/${result.id}`);
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setSubmitting(false);
-    }
+    await action.run(
+      () => client.api['shopping-lists'].$post({ json: { mealPlanId: mealPlan.id } }),
+      {
+        onSuccess: (result) => router.push(`/shopping-lists/${result.id}`),
+      },
+    );
   }
 
   return (
@@ -50,9 +38,9 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
           <h1 className="text-xl font-semibold text-foreground">買い物リスト</h1>
         </header>
 
-        {errorMessage !== null && (
+        {action.errorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {errorMessage}
+            {action.errorMessage}
           </p>
         )}
 
@@ -77,7 +65,7 @@ export function ShoppingListEntryClient({ mealPlan }: Props) {
             <Button
               type="button"
               onClick={() => void handleGenerate()}
-              disabled={submitting}
+              disabled={action.pending}
               className="h-11 px-6"
             >
               {mealPlan.status === 'draft' ? '買い物リストを作る' : '買い物リストを開く'}

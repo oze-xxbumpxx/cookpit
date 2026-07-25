@@ -1,5 +1,5 @@
-import { ProductId } from '@cookpit/domain/src/product/product-id';
-import type { ProductRepository } from '@cookpit/domain/src/product/product.repository';
+import { ProductId } from '@cookpit/domain';
+import type { ProductRepository } from '@cookpit/domain';
 import { ProductNotFoundError } from './product-not-found.error';
 
 export class DeleteProductUseCase {

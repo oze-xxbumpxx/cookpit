@@ -1,9 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MealPlan, type PlannedRecipe } from '@cookpit/domain/src/meal-plan/meal-plan';
-import { MealPlanId } from '@cookpit/domain/src/meal-plan/meal-plan-id';
-import { RecipeId } from '@cookpit/domain/src/recipe/recipe-id';
-import { WeekIdentifier } from '@cookpit/domain/src/shared/week-identifier';
+import { MealPlan, MealPlanId, RecipeId, WeekIdentifier } from '@cookpit/domain';
+import type { PlannedRecipe } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { mealPlans, plannedRecipes } from '../db/schema';
 import { createTestDb } from '../testing/create-test-db';

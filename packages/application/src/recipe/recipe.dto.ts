@@ -1,5 +1,4 @@
-import type { RecipeTag } from '@cookpit/domain/src/recipe/recipe';
-import type { Unit } from '@cookpit/domain/src/shared/unit';
+import type { RecipeTag, Unit } from '@cookpit/domain';
 export interface RecipeIngredientDto {
   productRef: string | null;
   displayName: string;

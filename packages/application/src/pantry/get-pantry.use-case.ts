@@ -1,4 +1,4 @@
-import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';
+import type { PantryRepository } from '@cookpit/domain';
 import type { PantryDto } from './pantry.dto';
 import { toPantryDto } from './pantry.mapper';
 

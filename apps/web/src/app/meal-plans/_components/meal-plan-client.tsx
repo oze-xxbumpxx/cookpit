@@ -3,7 +3,8 @@
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { MealPlanDto, RecipeDto, ShoppingListDto } from '@cookpit/application';
+import { useApiAction } from '@/lib/use-api-action';
+import type { MealPlanDto, RecipeDto } from '@cookpit/application';
 import { EmptyState } from '@/app/_components/empty-state';
 import { mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { MEAL_PLAN_STATUS_LABELS } from '@/app/_utils/dashboard-view';
@@ -45,12 +46,11 @@ export function MealPlanClient({
   const weekNavLabel = isCurrentWeek
     ? `今週 ${formatWeekRange(selectedWeek)}`
     : formatWeekRange(selectedWeek);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // 既存の作成・追加・削除フロー（submitting/errorMessage）とは独立させる（S-1）。
-  const [shoppingListSubmitting, setShoppingListSubmitting] = useState(false);
-  const [shoppingListErrorMessage, setShoppingListErrorMessage] = useState<string | null>(null);
+  // 献立の作成・レシピ追加・削除は実行中フラグとエラーバナーを共有する。
+  const planAction = useApiAction();
+  // 買い物リスト作成は上記とは独立させる（S-1）。
+  const shoppingListAction = useApiAction();
 
   const recipeNameMap = buildRecipeNameMap(recipes);
   // 買い物完了後（cooking 以降）はサーバーがレシピの追加・削除を 422 で拒否するため、
@@ -58,90 +58,47 @@ export function MealPlanClient({
   const canEditRecipes = mealPlan !== null && canEditPlannedRecipes(mealPlan.status);
 
   async function handleCreate(): Promise<void> {
-    setSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await client.api['meal-plans'].$post({
-        json: { weekIdentifier: selectedWeek },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setSubmitting(false);
-    }
+    await planAction.run(
+      () => client.api['meal-plans'].$post({ json: { weekIdentifier: selectedWeek } }),
+      { onSuccessWithoutBody: () => router.refresh() },
+    );
   }
 
   async function handleAdd(recipeId: string, scaleFactor: number): Promise<void> {
     if (mealPlan === null) {
       return;
     }
-    setSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await client.api['meal-plans'][':id'].recipes.$post({
-        param: { id: mealPlan.id },
-        json: { recipeId, scaleFactor },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setSubmitting(false);
-    }
+    await planAction.run(
+      () =>
+        client.api['meal-plans'][':id'].recipes.$post({
+          param: { id: mealPlan.id },
+          json: { recipeId, scaleFactor },
+        }),
+      { onSuccessWithoutBody: () => router.refresh() },
+    );
   }
 
   async function handleRemove(plannedRecipeId: string): Promise<void> {
     if (mealPlan === null) {
       return;
     }
-    setSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await client.api['meal-plans'][':id'].recipes[':plannedRecipeId'].$delete({
-        param: { id: mealPlan.id, plannedRecipeId },
-      });
-      if (!response.ok) {
-        setErrorMessage('操作に失敗しました。');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setSubmitting(false);
-    }
+    await planAction.run(
+      () =>
+        client.api['meal-plans'][':id'].recipes[':plannedRecipeId'].$delete({
+          param: { id: mealPlan.id, plannedRecipeId },
+        }),
+      { onSuccessWithoutBody: () => router.refresh() },
+    );
   }
 
   async function handleShoppingList(): Promise<void> {
     if (mealPlan === null) {
       return;
     }
-    setShoppingListSubmitting(true);
-    setShoppingListErrorMessage(null);
-    try {
-      const response = await client.api['shopping-lists'].$post({
-        json: { mealPlanId: mealPlan.id },
-      });
-      if (!response.ok) {
-        setShoppingListErrorMessage('操作に失敗しました。');
-        return;
-      }
-      const result: ShoppingListDto = await response.json();
-      router.push(`/shopping-lists/${result.id}`);
-    } catch {
-      setShoppingListErrorMessage('通信エラーが発生しました。');
-    } finally {
-      setShoppingListSubmitting(false);
-    }
+    await shoppingListAction.run(
+      () => client.api['shopping-lists'].$post({ json: { mealPlanId: mealPlan.id } }),
+      { onSuccess: (result) => router.push(`/shopping-lists/${result.id}`) },
+    );
   }
 
   return (
@@ -181,9 +138,9 @@ export function MealPlanClient({
           )}
         </header>
 
-        {errorMessage !== null && (
+        {planAction.errorMessage !== null && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {errorMessage}
+            {planAction.errorMessage}
           </p>
         )}
 
@@ -199,10 +156,14 @@ export function MealPlanClient({
             <Button
               type="button"
               onClick={handleCreate}
-              disabled={submitting}
+              disabled={planAction.pending}
               className="h-11 px-6"
             >
-              {submitting ? '作成中' : isCurrentWeek ? '今週の献立を作る' : 'この週の献立を作る'}
+              {planAction.pending
+                ? '作成中'
+                : isCurrentWeek
+                  ? '今週の献立を作る'
+                  : 'この週の献立を作る'}
             </Button>
           </EmptyState>
         ) : (
@@ -224,15 +185,15 @@ export function MealPlanClient({
             <Button
               type="button"
               onClick={() => void handleShoppingList()}
-              disabled={shoppingListSubmitting}
+              disabled={shoppingListAction.pending}
               className="h-11 w-full"
             >
               {mealPlan.status === 'draft' ? '買い物リストを作る' : '買い物リストを開く'}
             </Button>
 
-            {shoppingListErrorMessage !== null && (
+            {shoppingListAction.errorMessage !== null && (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {shoppingListErrorMessage}
+                {shoppingListAction.errorMessage}
               </p>
             )}
 
@@ -247,7 +208,7 @@ export function MealPlanClient({
                         plannedRecipe={plannedRecipe}
                         recipeName={recipeNameMap.get(plannedRecipe.recipeId) ?? null}
                         onRemove={handleRemove}
-                        submitting={submitting}
+                        submitting={planAction.pending}
                         canEdit={canEditRecipes}
                       />
                     </li>
@@ -258,7 +219,7 @@ export function MealPlanClient({
 
             {canEditRecipes ? (
               pickerOpen ? (
-                <RecipePicker recipes={recipes} onAdd={handleAdd} submitting={submitting} />
+                <RecipePicker recipes={recipes} onAdd={handleAdd} submitting={planAction.pending} />
               ) : (
                 <Button
                   type="button"
