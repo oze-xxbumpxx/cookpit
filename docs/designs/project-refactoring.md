@@ -89,6 +89,8 @@ app.onError((err, c) => {
 ```
 
 - 現行の 11 具象クラスはすべて 2 基底のいずれかを継承しているため、**変換結果は同一**。
+  <br>※ この前提は実装時に 1 件外れた（`InvalidStockOperationError` のみ素の `Error` 継承）。
+  対応は「実施結果 › 設計との差分」を参照。実際の変換結果は同一に保っている。
 - `export default app` → `export const app`。`app/api/[[...route]]/route.ts` を named import に追随。
   `AppType`（Hono RPC の型）は現状どおり `routes` から導出し、フロントの型は不変。
 
