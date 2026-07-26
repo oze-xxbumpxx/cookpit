@@ -16,8 +16,8 @@ L3（金銭・個人情報・権限に関わる変更は常に Level 3）。
 ## 期待される進め方（導入時）
 
 - 変更レベルを **L3** と判定し、**必ずユーザー確認**を取る（権限・個人情報に関わるため）。
-- requirements-analyst → architecture-designer →（contract-designer）→ test-designer →
-  planner → implementer → reviewer（+ セキュリティレビュー）→ ADR → reflection-agent。
+- architecture-designer（requirements + design）→（contract-designer）→ test-designer →
+  planner → implementer → reviewer（+ security-reviewer）→ ADR → reflection-agent。
 - 認可ロジックの責務配置（ドメイン不変条件か、アプリ層のポリシーか）を設計で明確化。
 - reviewer は権限バイパス・縦/横の権限昇格・既定値（fail-closed）を重点確認。
 - セキュリティルール・本番影響設定の変更は**人間承認必須**（improvement-cycle §承認境界）。

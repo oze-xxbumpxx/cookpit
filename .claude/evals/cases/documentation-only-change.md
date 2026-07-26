@@ -15,7 +15,7 @@ L0〜L1（ドキュメント修正のみ。プロダクションコードを変�
 
 - 変更レベルを **L0/L1** と判定。設計書・実装計画・ADR・試験計画を**作らない**。
 - `.claude/state/current-feature` を設定しない（Hook 誤検知防止）。
-- requirements-analyst / architecture-designer / contract-designer / test-designer などの
+- architecture-designer / contract-designer / test-designer などの
   重い Agent を**起動しない**。
 - 必要なら lint/format（Markdown は prettier 対象）程度の確認。
 - 最終報告に変更理由を簡潔に記す。
