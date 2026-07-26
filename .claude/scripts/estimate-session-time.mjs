@@ -18,6 +18,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { resolveReadablePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const TZ = process.env.COOKPIT_TZ || 'Asia/Tokyo';
@@ -46,9 +47,9 @@ const timestamps = [];
 let activityCount = 0;
 let commitCount = 0;
 
-// 1. 活動ログ（Hook）
-const activityLog = join(ROOT, '.claude/state/activity-log.jsonl');
-if (existsSync(activityLog)) {
+// 1. 活動ログ（Hook）。永続領域を優先し、旧 .claude/state/ もフォールバックで読む
+const activityLog = resolveReadablePath('activity-log.jsonl') ?? '';
+if (activityLog !== '' && existsSync(activityLog)) {
   for (const line of readFileSync(activityLog, 'utf8').split('\n')) {
     if (!line.trim()) continue;
     try {
