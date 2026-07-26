@@ -145,17 +145,21 @@ node .claude/scripts/harness-approve.mjs --revoke
 | ---------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | lefthook（pre-commit / pre-push）  | 早期フィードバック（format / lint / type-check / harness テスト / main 直コミット防止） | `--no-verify` / `LEFTHOOK=0` で外せる（**人間の明示操作**として許容） |
 | PreToolUse Hook（guard-dangerous） | AI の操作に対する即時ガード（危険操作・秘密情報・保護対象・回避コマンド）               | 同一 OS ユーザーの難読化には限界あり（§7）                            |
-| GitHub Actions                     | 最終ゲート（**現状は強制力なし** — §7-4）                                               | 実行自体は迂回不能。ただしマージは止まらない                          |
+| GitHub Actions                     | 最終ゲート（**2026-08 まで不動作** — §7-4 / §7-5）                                      | 復旧・protection 設定後は迂回不能                                     |
 
 `guard-dangerous.mjs` は次の回避コマンドを deny する: `git commit/push --no-verify`、
 `LEFTHOOK=0` / `HUSKY=0` / `SKIP=` の前置、`git config core.hooksPath` の変更。
 
-CI 側は `Harness tests`（`pnpm test:harness`）を必ず実行するため、保護機構やそのテストを
-骨抜きにする変更はサーバ側で**検出される**。ローカル Hook を外しても実行自体は避けられない。
+CI 側は `Harness tests`（`pnpm test:harness`）を実行する設計のため、保護機構やそのテストを
+骨抜きにする変更はサーバ側で検出される **— ただしそれは Actions が動いていればの話**。
 
-ただし「検出される」と「阻止される」は別である。branch protection が未設定の現状では、
-CI が赤でもマージできてしまう（§7-4）。**この設定を入れるまで、本節の役割分担は
-設計上の意図であって実効的な強制ではない。**
+2026-07 時点では次の 2 段階で強制力が欠けている。
+
+1. **Actions がジョブを実行していない**（§7-4。2026-08 に解消見込み）→ 検出すらされない
+2. **branch protection が未設定**（§7-5）→ 検出されてもマージは止まらない
+
+**この 2 つが揃うまで、本節の役割分担は設計上の意図であって実効的な強制ではない。**
+待機期間中の実質的な安全境界はローカルの `guard-dangerous.mjs` 1 層のみである。
 
 ## 7. 残存リスク（隠さず記録する）
 
@@ -167,23 +171,46 @@ CI が赤でもマージできてしまう（§7-4）。**この設定を入れ�
    実効的な緩和は「発行を別 OS ユーザー / 別ホストへ移す」ことだけ。
 3. **`HARNESS_STATE_DIR` の実行時差し替え**: 環境変数の設定コマンドは deny するが、
    親プロセス側で設定された値は検出できない。
-4. **CI が強制力を持っていない（2026-07-26 確認済み・最優先の未解消リスク）**:
-   ローカル Hook は迂回前提で設計しており、最終ゲートは CI が担う設計になっている。
-   しかし GitHub API で確認したところ **`main` に branch protection が設定されていない**
-   （`protected: false`）。この状態では次が成立しない。
-   - 赤い CI のまま PR をマージできる（`Quality Gates` が required check でない）。
-   - `main` への直 push を止めるのは lefthook の `branch-guard` だけで、これはローカル層。
-     `--no-verify` や別クローンからの push はサーバ側で止まらない。
+4. **GitHub Actions が実行されていない（期限付きの既知リスク・2026-08 に解消予定）**:
+   2026-07-26 時点で、直近 32 実行がすべて 3〜5 秒で failure し、`runner_id` は 0。
+   `main` ブランチの実行も同様で、本ハーネス改修**以前から**同じ状態。
+   つまり `Harness tests` も `assert-e2e-results.mjs` も**一度も動作していない**。
+
+   これは環境側の一時的な制約であり、2026-08 に解消見込み（ユーザー確認済み）。
+   **代替 CI は構築しない方針**（`.github/workflows/ci.yml` を唯一の CI として扱う）。
+
+   **待機期間中のリスク姿勢（重要）**: この間、安全境界は**ローカルの
+   `guard-dangerous.mjs` 1 層だけ**になる。サーバ側のバックストップが無いため、
+   - 保護機構やそのテストを壊す変更を検出する手段が無い。
+   - 「ローカル Hook を回避しても CI で止まる」という前提が成立しない。
+
+   したがって **[pending/](./pending/) の修正パッチ適用は Actions の復旧を待たずに行う**。
+   待機期間中こそローカル層の健全性が唯一の防御になる。
+
+   復旧の確認手順は [harness-owner-setup.md](./harness-owner-setup.md) §1-A。
+   **「緑になった」ことだけで復旧と判断しない** — 実行時間とログの実体を確認する
+   （何も実行せず success になる状態と区別できないため）。
+
+5. **branch protection が未設定（2026-07-26 確認済み）**:
+   GitHub API で `main` が `protected: false`。required check が 1 件も無いため、
+   Actions が復旧しても**赤い CI のままマージできる**。`main` への直 push を止めるのは
+   lefthook の `branch-guard` だけで、これはローカル層であり別クローンからの push は
+   サーバ側で止まらない。
 
    **対応（リポジトリ所有者のみ実施可能。コードでは解決できない）**:
-   手順は [harness-owner-setup.md](./harness-owner-setup.md) §1。要点は
-   Settings → Branches → `main` のルールで次を有効にすること。
-   - Require a pull request before merging
-   - Require status checks to pass — `Quality Gates` と `E2E Smoke` を必須に指定
-   - Do not allow bypassing the above settings
+   手順は [harness-owner-setup.md](./harness-owner-setup.md) §1-B。Actions 復旧後に
+   `Quality Gates` / `E2E Smoke` を required check として設定する。
 
-   これが未設定である限り、本文書が「迂回できない最終ゲート」と書く CI は
-   **実際には見える化に留まる**。設定後に本項を更新すること。
+6. **保護境界を修復する手段が環境内に存在しない（2026-07-26 の再監査で発見）**:
+   承認発行（`harness-approve.mjs`）は TTY か out-of-band トークンを要求するが、
+   リモートの Claude Code セッションでは人間が同一環境に端末を持たない。
+   結果として、**保護対象に Critical な欠陥が見つかっても、その場で塞げない**
+   （実際に 2026-07-26 の再監査でロックアウトが発生し、修正はパッチとして
+   [pending/](./pending/) に保全するしかなかった）。
+
+   fail-closed 設計自体は正しいが、「安全側に倒れたあと誰がどう戻すか」が設計されて
+   いなかった。恒久対応は [harness-owner-setup.md](./harness-owner-setup.md) §4 案 B
+   （GitHub Environment の required reviewers）を推奨。
 
 ## 8. 関連ファイル
 
