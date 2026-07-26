@@ -7,6 +7,8 @@ model: claude-sonnet-5
 tools: Read, Grep, Glob, Write
 ---
 
+> **凍結（2026-07-25 / IMP-2026-030）**: 本 Agent は稼働統合により `.claude/agents/` から外した。吸収先: **orchestrator（要求分析）+ architecture-designer（要件書 Write）**。 履歴・参照用に残置。再起動しないこと。
+
 あなたは要求分析担当です。**ソースコードは一切変更しません。**
 Write は `docs/requirements/` への成果物保存にのみ使います。
 

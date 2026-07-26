@@ -38,7 +38,7 @@
 | docs/claude-code/improvements/proposals/IMP-2026-030.md | 事象 5 proposal |
 | docs/claude-code/improvements/proposals/IMP-2026-031.md | 事象 4 proposal |
 | docs/claude-code/improvements/candidates/archive/README.md | archive 運用説明 |
-| .claude/agents/archive/README.md | 吸収済み Agent の置き場説明 |
+| docs/claude-code/archive/agents/README.md | 吸収済み Agent の置き場説明 |
 
 ## 実装手順
 
@@ -98,7 +98,7 @@ docs/tests/harness-personal-light-mode.md 参照
 ## ロールバック方法
 
 - git revert（本 feature のコミット単位）
-- 吸収元 Agent は `.claude/agents/archive/` から復元可能
+- 吸収元 Agent は `docs/claude-code/archive/agents/` から復元可能
 
 ## ドキュメント更新対象
 

@@ -9,7 +9,7 @@ Orchestrator（`claude-opus-4-8`）は**指揮役**であり、自分で詳細�
 他の Subagent は `Agent` を持たず、互いを起動しない。
 
 > 吸収済み（起動禁止）: requirements-analyst / performance-designer /
-> e2e-test-implementer / document-reviewer。定義は APPLY 後 `.claude/agents/archive/`。
+> e2e-test-implementer / document-reviewer。定義は `docs/claude-code/archive/agents/` に凍結。
 
 ## Orchestrator の責務
 

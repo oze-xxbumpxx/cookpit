@@ -75,7 +75,7 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 | agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                |
 
 > 吸収済み（起動しない）: requirements-analyst / performance-designer /
-> e2e-test-implementer / document-reviewer → `.claude/agents/archive/`（APPLY 後）
+> e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。

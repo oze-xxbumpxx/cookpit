@@ -58,10 +58,10 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 
 | Level | 必要 Agent                                                                                                                                                           | 必須成果物                                                                                  |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0     | （調査のみ。requirements-analyst 等を読み取りで）                                                                                                                    | なし（必要なら提案書）                                                                      |
+| 0     | （調査のみ。読み取りで完結）                                                                                                                                         | なし（必要なら提案書）                                                                      |
 | 1     | implementer（必要なら reviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
 | 2     | architecture-designer →〔契約あれば contract-designer〕→ (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→ reflection-agent | designs / implementation-plans / tests                                                      |
-| 3     | requirements-analyst → 上記 + ADR                                                                                                                                    | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
+| 3     | architecture-designer（requirements + design）→ 上記 + ADR。E2E は implementer が条件付きで担当                                                                      | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
 
 ## 注意
 

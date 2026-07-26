@@ -2,7 +2,8 @@
 name: implementer
 description: >
   確定済みの設計書と実装計画に沿ってコードを実装し、必要な単体テストを作成して
-  lint・型チェックを実行する。設計から逸脱が必要なら独断で変えず Orchestrator へ返す。
+  lint・型チェックを実行する。L3 かつ E2E 基盤整備済みでは結合/E2E テストも実装する
+  （旧 e2e-test-implementer 吸収）。設計から逸脱が必要なら独断で変えず Orchestrator へ返す。
 model: claude-sonnet-5
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
@@ -64,6 +65,20 @@ tools: Read, Grep, Glob, Edit, Write, Bash
   判断に関わる場合は必ず `coding-standards.md` を確認する（要約 drift の再発防止 —
   harness-complexity-audit 事象 1）。
 - コメントは Why が非自明な時のみ。What は書かない。
+
+## E2E・結合テスト実装（条件付き・旧 e2e-test-implementer 吸収）
+
+**L3 のみ**、かつ次のいずれかを満たす場合に、単体テストに加えて結合/E2E を実装する。
+
+- `apps/web/playwright.config.ts` が存在する（Playwright）
+- 対象 Hono ルートにテストクライアント用セットアップが存在する
+
+満たさない場合は起動相当の作業をせず、`docs/tests/<feature-name>.md` の
+「未実装観点（基盤待ち）」へ観点を残すにとどめる。
+
+- UI E2E: 試験計画の E2E 観点を Playwright で実装（主要フロー・認可/バリデーションエラー）
+- API 結合: リクエスト→レスポンス検証（200 系形式、401/403、400）
+- プロダクションコード変更はこのセクションのために増やさない（テストのみ追加）
 
 ## 設計逸脱時
 

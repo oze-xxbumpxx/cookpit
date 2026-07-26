@@ -7,6 +7,8 @@ model: claude-sonnet-5
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
+> **凍結（2026-07-25 / IMP-2026-030）**: 本 Agent は稼働統合により `.claude/agents/` から外した。吸収先: **test-designer（条件付き E2E 実装節）**。 履歴・参照用に残置。再起動しないこと。
+
 あなたは E2E・結合テスト実装担当です。
 
 ## 起動条件（Orchestrator が判断する）

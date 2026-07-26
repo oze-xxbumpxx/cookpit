@@ -132,11 +132,10 @@ reflection は feature 完了時、を正典化。
 ## 移行とリリース
 
 1. docs（ライトモード + 事象 5 + 正典の 11 Agent 記述）を本 PR で適用
-2. Agent/Skill の実ファイルは
-   `docs/claude-code/improvements/patches/IMP-2026-031/APPLY.md` を人間が
-   `harness-approve` 後に適用（リモート AI は保護対象へ Write 不可）
-3. 同期文書は本 PR で更新済み
-4. PR マージ + APPLY 完了をもって本適用完了
+2. Agent/Skill 実ファイルも本 PR で適用済み（旧 4 Agent は
+   `docs/claude-code/archive/agents/` へ凍結。PR #116 の移設先に合わせた）
+3. 対応済み candidate は `improvements/candidates/archive/` へ移動（IMP-030）
+4. PR マージをもって本適用完了。旧 PR #116 は本 PR に吸収・supersede 想定
 
 ## リスク
 

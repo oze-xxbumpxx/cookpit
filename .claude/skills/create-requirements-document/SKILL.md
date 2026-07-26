@@ -2,12 +2,14 @@
 name: create-requirements-document
 description: >
   要件定義書を docs/requirements/<feature-name>.md に作成する手順とテンプレート。
-  requirements-analyst が Level 3（および必要な Level 2）で使う。対象外項目は削除せず「対象外」と明記する。
+  architecture-designer が Level 3（および必要な Level 2）で使う（IMP-2026-031）。
+  対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 要件定義書作成スキル
 
-requirements-analyst が `docs/requirements/<feature-name>.md` を作成するための手順と雛形。
+architecture-designer が `docs/requirements/<feature-name>.md` を作成するための手順と雛形
+（旧 requirements-analyst の責務を吸収。IMP-2026-031）。
 **コードは変更しない。** 既存の要件文書があれば新規作成せず更新する（重複作成しない）。
 
 ## 進め方

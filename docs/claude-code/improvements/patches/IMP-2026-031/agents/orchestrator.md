@@ -15,7 +15,7 @@ tools: Agent(architecture-designer, contract-designer, implementation-planner, i
 
 常備 Agent は 11 本（IMP-2026-031）。旧 requirements-analyst / performance-designer /
 e2e-test-implementer / document-reviewer は起動しない（吸収済み。定義は
-`.claude/agents/archive/`）。
+`docs/claude-code/archive/agents/`）。
 
 ## 起動直後に行うこと
 
