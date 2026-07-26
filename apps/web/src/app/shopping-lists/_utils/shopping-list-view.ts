@@ -69,6 +69,19 @@ export function groupItemsByStore(
   return groups;
 }
 
+// 削除確認ダイアログの説明文。献立由来かどうかを最優先で伝える（削除しても「献立の変更を
+// 反映」で復活するため、この事実を知らないと「削除が効かない」と誤解される）。次に、購入時に
+// 記録した金額も失われることを伝える。
+export function describeRemoveConfirmation(item: ShoppingItemDto): string {
+  if (item.source === 'from_meal_plan') {
+    return 'この品目は献立から作られています。削除しても「献立の変更を反映」を押すと再び追加されます。';
+  }
+  if (item.status === 'bought' && item.actualPrice !== null) {
+    return '記録した金額も一緒に削除されます。元に戻せません。';
+  }
+  return '削除すると元に戻せません。';
+}
+
 // shoppingDate "2026-07-11" → 「7/11（土）の買い物リスト」。
 // Date 構築は meal-plan-view.ts の formatWeekRange と同一のローカルタイム規約（'T00:00:00' 付与）。
 export function formatShoppingDate(shoppingDate: string): string {

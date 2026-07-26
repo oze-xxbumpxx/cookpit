@@ -1,6 +1,11 @@
 import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
-import { buildStoreNameMap, formatShoppingDate, groupItemsByStore } from './shopping-list-view';
+import {
+  buildStoreNameMap,
+  describeRemoveConfirmation,
+  formatShoppingDate,
+  groupItemsByStore,
+} from './shopping-list-view';
 
 function createStoreDto(overrides: Partial<StoreDto> = {}): StoreDto {
   return {
@@ -141,5 +146,57 @@ describe('formatShoppingDate', () => {
     expect(formatShoppingDate('2026-07-09')).toBe('7/9（木）の買い物リスト');
     expect(formatShoppingDate('2026-07-10')).toBe('7/10（金）の買い物リスト');
     expect(formatShoppingDate('2026-07-11')).toBe('7/11（土）の買い物リスト');
+  });
+});
+
+describe('describeRemoveConfirmation', () => {
+  it('DRC-01: 献立由来は同期で復活する旨を伝える', () => {
+    const message = describeRemoveConfirmation(createShoppingItemDto({ source: 'from_meal_plan' }));
+
+    expect(message).toContain('献立の変更を反映');
+  });
+
+  it('DRC-02: 手動追加の購入済み（金額あり）は金額も消える旨を伝える', () => {
+    const message = describeRemoveConfirmation(
+      createShoppingItemDto({
+        source: 'manually_added',
+        status: 'bought',
+        actualPrice: { amount: 198, currency: 'JPY' },
+      }),
+    );
+
+    expect(message).toBe('記録した金額も一緒に削除されます。元に戻せません。');
+  });
+
+  it('DRC-03: 手動追加の pending は既定の文言を返す', () => {
+    const message = describeRemoveConfirmation(
+      createShoppingItemDto({ source: 'manually_added', status: 'pending' }),
+    );
+
+    expect(message).toBe('削除すると元に戻せません。');
+  });
+
+  it('DRC-04: 献立由来かつ金額記録済みでは献立由来の文言を優先する', () => {
+    const message = describeRemoveConfirmation(
+      createShoppingItemDto({
+        source: 'from_meal_plan',
+        status: 'bought',
+        actualPrice: { amount: 198, currency: 'JPY' },
+      }),
+    );
+
+    expect(message).toContain('献立の変更を反映');
+  });
+
+  it('DRC-05: 購入済みでも金額未記録なら既定の文言を返す', () => {
+    const message = describeRemoveConfirmation(
+      createShoppingItemDto({
+        source: 'manually_added',
+        status: 'bought',
+        actualPrice: null,
+      }),
+    );
+
+    expect(message).toBe('削除すると元に戻せません。');
   });
 });

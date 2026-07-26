@@ -2,7 +2,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
-import { X } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, X } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
 
@@ -15,23 +17,59 @@ export interface IngredientRowValue {
 
 interface Props {
   value: IngredientRowValue;
+  /** 0 始まりの表示位置。ドラッグハンドルの読み上げに使う。 */
+  index: number;
   errorMessage: string | null;
   onChange: (next: IngredientRowValue) => void;
   onRemove: () => void;
 }
 
-export function IngredientRow({ value, errorMessage, onChange, onRemove }: Props) {
+/** 食材名が空の行でも並べ替えハンドルを特定できるよう、位置で代替する。 */
+function resolveHandleLabel(displayName: string, index: number): string {
+  const trimmed = displayName.trim();
+  return trimmed === '' ? `${index + 1}番目の材料を並べ替え` : `「${trimmed}」を並べ替え`;
+}
+
+export function IngredientRow({ value, index, errorMessage, onChange, onRemove }: Props) {
   const displayNameId = useId();
   const amountId = useId();
   const errorId = useId();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: value.id,
+  });
 
   function handleDisplayNameChange(event: ChangeEvent<HTMLInputElement>): void {
     onChange({ ...value, displayName: event.target.value });
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_36px] gap-2">
+    <div
+      ref={setNodeRef}
+      // 横方向の追従を捨てて縦 1 次元に固定する（@dnd-kit/modifiers を足さずに済ませる）。
+      style={{
+        transform:
+          transform === null
+            ? undefined
+            : CSS.Transform.toString({ ...transform, x: 0, scaleX: 1, scaleY: 1 }),
+        transition,
+      }}
+      className={
+        isDragging ? 'relative z-10 flex flex-col gap-1.5 opacity-90' : 'flex flex-col gap-1.5'
+      }
+    >
+      <div className="grid grid-cols-[28px_minmax(0,1.4fr)_minmax(0,1fr)_36px] gap-2">
+        {/* touch-none はハンドルにだけ当てる。行全体に当てるとリストの縦スクロールが死ぬ。 */}
+        <button
+          type="button"
+          aria-label={resolveHandleLabel(value.displayName, index)}
+          title="ドラッグまたは Space キーで並べ替え"
+          className="flex h-11 w-7 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" aria-hidden="true" />
+        </button>
+
         <label htmlFor={displayNameId} className="sr-only">
           食材名
         </label>

@@ -45,6 +45,7 @@ function renderRow(props: Partial<Parameters<typeof ShoppingItemRow>[0]> = {}) {
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
     onReassignStore: vi.fn(),
+    onRequestRemove: vi.fn(),
   };
   const merged = { ...defaults, ...props };
   render(<ul>{<ShoppingItemRow {...merged} />}</ul>);
@@ -243,6 +244,31 @@ describe('ShoppingItemRow', () => {
     expect(screen.getByRole('checkbox').hasAttribute('disabled')).toBe(false);
     expect(screen.getByRole('button', { name: '店舗A' }).hasAttribute('disabled')).toBe(false);
     expect(screen.getByRole('button', { name: '金額を記録' })).toBeDefined();
+  });
+
+  it('IR-22: 削除ボタン click で onRequestRemove が item の id で呼ばれる', async () => {
+    const user = userEvent.setup();
+    const onRequestRemove = vi.fn();
+    renderRow({
+      item: createShoppingItemDto({ id: 'item-1', displayName: '醤油' }),
+      onRequestRemove,
+    });
+
+    await user.click(screen.getByRole('button', { name: '醤油を削除' }));
+
+    expect(onRequestRemove).toHaveBeenCalledWith('item-1');
+  });
+
+  it('IR-23: readOnly のとき削除ボタンは表示されない', () => {
+    renderRow({ item: createShoppingItemDto({ displayName: '醤油' }), readOnly: true });
+
+    expect(screen.queryByRole('button', { name: '醤油を削除' })).toBeNull();
+  });
+
+  it('IR-24: submitting のとき削除ボタンは disabled', () => {
+    renderRow({ item: createShoppingItemDto({ displayName: '醤油' }), submitting: true });
+
+    expect(screen.getByRole('button', { name: '醤油を削除' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('IR-15: pending item の aria-label は「〜をチェックする」', () => {

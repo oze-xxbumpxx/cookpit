@@ -2,7 +2,7 @@ import type { RecipeDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   RecipeFormFields,
   buildRecipeFormBody,
@@ -51,6 +51,7 @@ function Harness({
 describe('RecipeFormFields', () => {
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('RFF-01: タグチップのクリックで選択され、再クリックで解除される', async () => {
@@ -108,6 +109,125 @@ describe('RecipeFormFields', () => {
     render(<Harness initialValue={value} fieldErrors={fieldErrors} />);
 
     expect(screen.getAllByText('食材名を入力してください。')).toHaveLength(1);
+  });
+
+  // happy-dom は getBoundingClientRect() が常に 0 を返すため、dnd-kit が要素の位置を測れず
+  // 並べ替え先を決定できない（ポインタ・キーボードとも）。兄弟内の位置から縦に積んだ矩形を
+  // 返すスタブを入れて計測だけを成立させ、並べ替えの結線をキーボード操作で検証する。
+  const STUB_ROW_HEIGHT = 60;
+
+  function stubVerticalRects(): void {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const parent = this.parentElement;
+      const index = parent === null ? 0 : Array.prototype.indexOf.call(parent.children, this);
+      const top = index * STUB_ROW_HEIGHT;
+      return {
+        x: 0,
+        y: top,
+        top,
+        left: 0,
+        right: 300,
+        bottom: top + STUB_ROW_HEIGHT,
+        width: 300,
+        height: STUB_ROW_HEIGHT,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+  }
+
+  // Space でつかむ → 矢印で移動 → Space で確定（dnd-kit の KeyboardSensor）。
+  // dnd-kit は `event.key` ではなく `event.code` を見るため、user-event の物理キーコード記法
+  // （角括弧）で送る必要がある。
+  async function reorderWithKeyboard(handleName: string, key: '[ArrowDown]' | '[ArrowUp]') {
+    const user = userEvent.setup();
+    const handle = screen.getByRole('button', { name: handleName });
+    handle.focus();
+    await user.keyboard('[Space]');
+    await user.keyboard(key);
+    await user.keyboard('[Space]');
+  }
+
+  it('RFF-09: 材料行ごとに並べ替えハンドルが描画される', () => {
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          ingredients: [
+            { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+            { id: 'ingredient-1', displayName: '', amountText: '' },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '「玉ねぎ」を並べ替え' })).toBeDefined();
+    // 食材名が空の行は位置で特定できる
+    expect(screen.getByRole('button', { name: '2番目の材料を並べ替え' })).toBeDefined();
+  });
+
+  it('RFF-10: キーボード操作で材料を 1 つ下へ移動でき、入力値も一緒に移動する', async () => {
+    stubVerticalRects();
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          ingredients: [
+            { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+            { id: 'ingredient-1', displayName: '人参', amountText: '1本' },
+          ],
+        }}
+      />,
+    );
+
+    await reorderWithKeyboard('「玉ねぎ」を並べ替え', '[ArrowDown]');
+
+    const names = screen
+      .getAllByLabelText('食材名')
+      .map((input) => (input as HTMLInputElement).value);
+    const amounts = screen
+      .getAllByLabelText('分量')
+      .map((input) => (input as HTMLInputElement).value);
+    expect(names).toEqual(['人参', '玉ねぎ']);
+    expect(amounts).toEqual(['1本', '2個']);
+  });
+
+  it('RFF-11: 先頭の材料を上へ移動しても順序は変わらない', async () => {
+    stubVerticalRects();
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          ingredients: [
+            { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+            { id: 'ingredient-1', displayName: '人参', amountText: '1本' },
+          ],
+        }}
+      />,
+    );
+
+    await reorderWithKeyboard('「玉ねぎ」を並べ替え', '[ArrowUp]');
+
+    const names = screen
+      .getAllByLabelText('食材名')
+      .map((input) => (input as HTMLInputElement).value);
+    expect(names).toEqual(['玉ねぎ', '人参']);
+  });
+
+  it('RFF-12: 並べ替え後の順序がそのまま送信ボディの ingredients 順になる', () => {
+    const value: RecipeFormValue = {
+      ...createInitialRecipeFormValue(),
+      name: '肉じゃが',
+      ingredients: [
+        { id: 'ingredient-1', displayName: '人参', amountText: '1本' },
+        { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+      ],
+    };
+
+    const result = buildRecipeFormBody(value);
+
+    expect(result.input?.ingredients.map((row) => row.displayName)).toEqual(['人参', '玉ねぎ']);
   });
 
   it('RFF-05: baseServingsSlot に渡した要素が描画される', () => {

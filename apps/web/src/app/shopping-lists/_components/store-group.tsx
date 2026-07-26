@@ -14,6 +14,8 @@ interface Props {
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
   onReassignStore: (itemId: string, targetStoreId: string) => void;
+  /** 削除の確認を親に要求する。中継漏れを型で検出するため必須にする。 */
+  onRequestRemove: (itemId: string) => void;
   stores: StoreDto[];
 }
 
@@ -29,6 +31,7 @@ export function StoreGroup({
   onSetChecked,
   onMarkAsBought,
   onReassignStore,
+  onRequestRemove,
   stores,
 }: Props) {
   const boughtCount = items.filter((item) => item.status === 'bought').length;
@@ -57,6 +60,7 @@ export function StoreGroup({
             onSetChecked={onSetChecked}
             onMarkAsBought={onMarkAsBought}
             onReassignStore={onReassignStore}
+            onRequestRemove={onRequestRemove}
           />
         ))}
       </ul>

@@ -358,6 +358,114 @@ describe('ShoppingList', () => {
     );
   });
 
+  it('removeItem は active 状態で対象 item を取り除く', () => {
+    const target = createItem();
+    const other = createItem();
+    const list = createList([target, other]);
+
+    list.removeItem(target.id);
+
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0]?.id.equals(other.id)).toBe(true);
+  });
+
+  it('removeItem は bought の item も購入実績ごと取り除く', () => {
+    const item = createItem();
+    const list = createList([item]);
+    list.markAsBought(item.id, Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    list.removeItem(item.id);
+
+    expect(list.items).toHaveLength(0);
+  });
+
+  it('removeItem は manually_added の item も取り除く', () => {
+    const manual = ShoppingItem.create({
+      productId: null,
+      displayName: '牛乳',
+      requiredAmount: Quantity.of(1, '本'),
+      amountNote: null,
+      targetStore: null,
+      source: 'manually_added',
+    });
+    const list = createList([createItem(), manual]);
+
+    list.removeItem(manual.id);
+
+    expect(list.items.some((item) => item.id.equals(manual.id))).toBe(false);
+  });
+
+  it('removeItem は他の item の状態に影響しない', () => {
+    const first = createItem();
+    const middle = createItem();
+    const last = createItem();
+    const list = createList([first, middle, last]);
+    list.markAsBought(last.id, Money.of(298, 'JPY'), StoreId.fromString('store-2'));
+
+    list.removeItem(middle.id);
+
+    expect(list.items.map((item) => item.id.value)).toEqual([first.id.value, last.id.value]);
+    expect(list.items[1]?.status).toBe('bought');
+    expect(list.items[1]?.actualPrice?.amount).toBe(298);
+  });
+
+  it('removeItem は最後の 1 件を取り除いて空にできる', () => {
+    const item = createItem();
+    const list = createList([item]);
+
+    list.removeItem(item.id);
+
+    expect(list.items).toHaveLength(0);
+  });
+
+  it('removeItem は全件を順に取り除ける', () => {
+    const first = createItem();
+    const second = createItem();
+    const list = createList([first, second]);
+
+    list.removeItem(first.id);
+    list.removeItem(second.id);
+
+    expect(list.items).toHaveLength(0);
+  });
+
+  it('removeItem は存在しない itemId を拒否する', () => {
+    const list = createList();
+
+    expect(() => list.removeItem(ShoppingItemId.fromString('missing'))).toThrow(
+      'ShoppingItem not found',
+    );
+    expect(list.items).toHaveLength(1);
+  });
+
+  it('removeItem は削除済み itemId の再削除を拒否する', () => {
+    const item = createItem();
+    const list = createList([item]);
+    list.removeItem(item.id);
+
+    expect(() => list.removeItem(item.id)).toThrow('ShoppingItem not found');
+  });
+
+  it('removeItem は completed 状態で拒否する', () => {
+    const item = createItem();
+    const list = reconstructCompletedList([item]);
+
+    expect(() => list.removeItem(item.id)).toThrow(
+      "Cannot removeItem a ShoppingList with status 'completed'",
+    );
+    expect(list.items).toHaveLength(1);
+  });
+
+  it('removeItem は reopen 後に再び可能になる', () => {
+    const item = createItem();
+    const list = reconstructCompletedList([item]);
+    list.reopen();
+
+    list.removeItem(item.id);
+
+    expect(list.items).toHaveLength(0);
+  });
+
   it('complete は active から completed に変更する', () => {
     const list = createList();
 

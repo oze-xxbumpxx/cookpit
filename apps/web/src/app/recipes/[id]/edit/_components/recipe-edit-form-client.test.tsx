@@ -3,14 +3,15 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { putRecipe, refresh, push } = vi.hoisted(() => ({
+const { putRecipe, refresh, push, replace } = vi.hoisted(() => ({
   putRecipe: vi.fn(),
   refresh: vi.fn(),
   push: vi.fn(),
+  replace: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh, push }),
+  useRouter: () => ({ refresh, push, replace }),
 }));
 
 vi.mock('@/lib/api-client', () => ({
@@ -107,7 +108,8 @@ describe('RecipeEditFormClient', () => {
         steps: [{ description: '煮る' }],
       },
     });
-    expect(push).toHaveBeenCalledWith(`/recipes/${recipe.id}`);
+    // 未保存ガードの sentinel を遷移先で置き換えるため、保存成功時は replace になる
+    expect(replace).toHaveBeenCalledWith(`/recipes/${recipe.id}`);
     expect(refresh).toHaveBeenCalled();
   });
 
@@ -120,5 +122,6 @@ describe('RecipeEditFormClient', () => {
 
     expect(screen.getByText('保存に失敗しました。')).toBeDefined();
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 });
