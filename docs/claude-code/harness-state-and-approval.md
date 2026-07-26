@@ -145,13 +145,17 @@ node .claude/scripts/harness-approve.mjs --revoke
 | ---------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | lefthook（pre-commit / pre-push）  | 早期フィードバック（format / lint / type-check / harness テスト / main 直コミット防止） | `--no-verify` / `LEFTHOOK=0` で外せる（**人間の明示操作**として許容） |
 | PreToolUse Hook（guard-dangerous） | AI の操作に対する即時ガード（危険操作・秘密情報・保護対象・回避コマンド）               | 同一 OS ユーザーの難読化には限界あり（§7）                            |
-| GitHub Actions                     | **迂回できない最終ゲート**                                                              | ローカル操作では迂回不能                                              |
+| GitHub Actions                     | 最終ゲート（**現状は強制力なし** — §7-4）                                               | 実行自体は迂回不能。ただしマージは止まらない                          |
 
 `guard-dangerous.mjs` は次の回避コマンドを deny する: `git commit/push --no-verify`、
 `LEFTHOOK=0` / `HUSKY=0` / `SKIP=` の前置、`git config core.hooksPath` の変更。
 
 CI 側は `Harness tests`（`pnpm test:harness`）を必ず実行するため、保護機構やそのテストを
-骨抜きにする変更はサーバ側で検出される。ローカル Hook を外してもここは通らない。
+骨抜きにする変更はサーバ側で**検出される**。ローカル Hook を外しても実行自体は避けられない。
+
+ただし「検出される」と「阻止される」は別である。branch protection が未設定の現状では、
+CI が赤でもマージできてしまう（§7-4）。**この設定を入れるまで、本節の役割分担は
+設計上の意図であって実効的な強制ではない。**
 
 ## 7. 残存リスク（隠さず記録する）
 
@@ -163,9 +167,22 @@ CI 側は `Harness tests`（`pnpm test:harness`）を必ず実行するため、
    実効的な緩和は「発行を別 OS ユーザー / 別ホストへ移す」ことだけ。
 3. **`HARNESS_STATE_DIR` の実行時差し替え**: 環境変数の設定コマンドは deny するが、
    親プロセス側で設定された値は検出できない。
-4. **CI の最終防波堤依存**: ローカル Hook は迂回前提で設計している。branch protection で
-   `Quality Gates` を required check にしていない場合、CI は「見える化」に留まる。
-   本リポジトリの branch protection 設定は未確認（設定はリポジトリ内から検証できない）。
+4. **CI が強制力を持っていない（2026-07-26 確認済み・最優先の未解消リスク）**:
+   ローカル Hook は迂回前提で設計しており、最終ゲートは CI が担う設計になっている。
+   しかし GitHub API で確認したところ **`main` に branch protection が設定されていない**
+   （`protected: false`）。この状態では次が成立しない。
+   - 赤い CI のまま PR をマージできる（`Quality Gates` が required check でない）。
+   - `main` への直 push を止めるのは lefthook の `branch-guard` だけで、これはローカル層。
+     `--no-verify` や別クローンからの push はサーバ側で止まらない。
+
+   **対応（リポジトリ所有者のみ実施可能。コードでは解決できない）**:
+   Settings → Branches → `main` のルールで、少なくとも次を有効にする。
+   - Require a pull request before merging
+   - Require status checks to pass — `Quality Gates` と `E2E Smoke` を必須に指定
+   - Do not allow bypassing the above settings
+
+   これが未設定である限り、本文書が「迂回できない最終ゲート」と書く CI は
+   **実際には見える化に留まる**。設定後に本項を更新すること。
 
 ## 8. 関連ファイル
 
