@@ -6,13 +6,15 @@
 //   会話内容・プロンプト本文・秘密情報は一切保存しない（ts / event / session_id のみ）。
 // - 用途: estimate-session-time.mjs が logs/ の「所要時間」欄を自動推定するための入力。
 //   record-subagent.mjs と同じ設計（append-only / 失敗しても常に exit 0）。
-// - 記録先: .claude/state/activity-log.jsonl（gitignore 済み・エフェメラル環境ではセッション限り）。
+// - 記録先: <永続領域>/activity-log.jsonl（harness-paths.mjs が解決。既定は
+//   ~/.local/state/cookpit-harness/。リポジトリ外のためコンテナ回収でも失われない）。
 
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname } from 'node:path';
+import { safeStatePath } from '../lib/harness-paths.mjs';
 
-const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const LOG = join(ROOT, '.claude/state/activity-log.jsonl');
+// 保存先はリポジトリ外の永続領域（解決できないときだけ旧 .claude/state/ へフォールバック）
+const LOG = safeStatePath('activity-log.jsonl');
 
 function readStdin() {
   try {

@@ -339,6 +339,65 @@ test('不正な入力は保護対象に触れる場合のみ拒否する（リ�
   }
 });
 
+// ── Bash 経由の保護対象書き込み（誤検知させないこと） ──────
+
+test('保護対象スクリプトの実行・読み取りは妨げない（リダイレクト誤検知の回帰）', () => {
+  const sb = sandbox();
+  try {
+    // 2>&1 は fd 複製であって書き込みではない。これを write と誤判定すると
+    // ハーネススクリプトを実行できなくなる（実際に発生した誤検知）
+    assert.equal(runHook(sb, bash('bash .claude/scripts/run-quality-gates.sh --all 2>&1')).code, ALLOW);
+    assert.equal(runHook(sb, bash('node .claude/scripts/harness-run.mjs show')).code, ALLOW);
+    assert.equal(runHook(sb, bash('cat .claude/settings.json')).code, ALLOW);
+    assert.equal(runHook(sb, bash('rg "deny" .claude/hooks/guard-dangerous.mjs')).code, ALLOW);
+    assert.equal(runHook(sb, bash('pnpm test:harness')).code, ALLOW);
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('Bash 経由で保護対象へ書き込む経路を拒否する', () => {
+  const sb = sandbox();
+  try {
+    for (const command of [
+      'echo "x" > .claude/hooks/guard-dangerous.mjs',
+      'echo "x" >> CLAUDE.md',
+      'cat /tmp/x | tee .claude/settings.json',
+      'cp /tmp/x .claude/settings.json',
+      'mv /tmp/x .claude/rules/coding-standards.md',
+      'install -m 644 /tmp/x .claude/agents/implementer.md',
+      'sed -i "s/a/b/" CLAUDE.md',
+      'touch .claude/tests/new.test.mjs',
+      'rm .claude/scripts/run-quality-gates.sh',
+      'chmod 777 .github/workflows/ci.yml',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, DENY, `許可されています: ${command}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('パッチ適用・stash 復元は内容を検証できないため拒否する', () => {
+  const sb = sandbox();
+  try {
+    for (const command of [
+      'git apply /tmp/changes.patch',
+      'git apply --3way fix.diff',
+      'git am /tmp/0001.patch',
+      'git stash pop',
+      'git stash apply',
+      'git checkout main -- .claude/hooks/guard-dangerous.mjs',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, DENY, `許可されています: ${command}`);
+    }
+    // 非保護パスへの明示的な restore は妨げない
+    assert.equal(runHook(sb, bash('git restore packages/domain/src/recipe/recipe.ts')).code, ALLOW);
+  } finally {
+    sb.cleanup();
+  }
+});
+
 // ── 目的E: Hook 回避の検出 ────────────────────────────────
 
 test('ローカル Hook を回避するコマンドを拒否する', () => {

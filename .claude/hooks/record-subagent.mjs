@@ -5,13 +5,12 @@
 // - Command Hook は「いつ・どの作業単位で・どの Subagent 実行が終わったか」という機械的事実
 //   だけを記録する。成果/失敗/未解決/Memory候補などの意味的な抽出は reflection-agent が
 //   transcript と成果物を読んで行う（LLM 判断が必要なため Command Hook では決めない）。
-// - 記録先: .claude/state/subagent-log.jsonl（1 行 1 JSON、追記のみ）。
+// - 記録先: <永続領域>/subagent-log.jsonl（1 行 1 JSON、追記のみ。リポジトリ外の永続領域）。
 // - 失敗しても処理はブロックしない（常に exit 0）。
 
 import { appendFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-
-const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+import { dirname } from 'node:path';
+import { resolveReadablePath, safeStatePath } from '../lib/harness-paths.mjs';
 
 function readStdin() {
   try {
@@ -23,8 +22,8 @@ function readStdin() {
 
 function readFeatureName() {
   try {
-    const p = join(ROOT, '.claude/state/current-feature');
-    if (!existsSync(p)) return null;
+    const p = resolveReadablePath('current-feature');
+    if (p === null || !existsSync(p)) return null;
     const v = readFileSync(p, 'utf8').trim().split('\n')[0]?.trim();
     return v || null;
   } catch {
@@ -52,7 +51,7 @@ function main() {
   };
 
   try {
-    const logPath = join(ROOT, '.claude/state/subagent-log.jsonl');
+    const logPath = safeStatePath('subagent-log.jsonl');
     mkdirSync(dirname(logPath), { recursive: true });
     appendFileSync(logPath, JSON.stringify(record) + '\n');
   } catch {
