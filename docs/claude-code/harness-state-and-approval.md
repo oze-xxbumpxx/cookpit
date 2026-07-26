@@ -176,7 +176,8 @@ CI が赤でもマージできてしまう（§7-4）。**この設定を入れ�
      `--no-verify` や別クローンからの push はサーバ側で止まらない。
 
    **対応（リポジトリ所有者のみ実施可能。コードでは解決できない）**:
-   Settings → Branches → `main` のルールで、少なくとも次を有効にする。
+   手順は [harness-owner-setup.md](./harness-owner-setup.md) §1。要点は
+   Settings → Branches → `main` のルールで次を有効にすること。
    - Require a pull request before merging
    - Require status checks to pass — `Quality Gates` と `E2E Smoke` を必須に指定
    - Do not allow bypassing the above settings
