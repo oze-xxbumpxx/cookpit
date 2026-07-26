@@ -33,24 +33,42 @@ Claude Code セッションからは発行できない**。人間がこの環境
 - 並行更新 6 プロセス: **失われた更新なし**
 - project root 不在での状態解決: **成功**
 
-### 適用手順（人間が実行）
+### 適用手順（人間が自分の端末で実行）
+
+**承認の発行は不要。** `guard-dangerous.mjs` は Claude Code の PreToolUse Hook であり、
+**人間が自分の端末で叩くコマンドは一切傍受しない**。承認が要るのは AI に書き込ませる
+場合だけである。
 
 ```bash
 git fetch origin
 git checkout claude/ai-harness-maturity-diagnosis-hgfkk3
 git pull
 
-# 承認を発行してから適用する（手順書 §2）
-node .claude/scripts/harness-run.mjs start
-node .claude/scripts/harness-approve.mjs --target .claude/ --ttl-minutes 30
-
 git apply docs/claude-code/pending/2026-07-26-harness-audit-fixes.patch
-pnpm test:harness          # 86/86 になること
+pnpm test:harness          # 86/86 になること（適用前は 75/75）
 bash .claude/scripts/run-quality-gates.sh --all
 
-node .claude/scripts/harness-approve.mjs --revoke
 git rm -r docs/claude-code/pending
 git commit -am "fix(harness): 再監査で発見した保護境界の欠陥を修正する"
+git push
 ```
 
-> `git apply` は `guard-dangerous.mjs` が deny する。上記は**人間の端末**で実行する前提。
+lefthook の pre-commit / pre-push は通常どおり動作する（format / lint / harness / type-check）。
+
+### AI に適用させたい場合
+
+リモートセッションの Claude に適用させるには、**そのコンテナ内**で承認を発行する必要がある。
+承認は状態ディレクトリ（`~/.local/state/cookpit-harness/`）に置かれ、コンテナごとに独立
+しているため、**手元の端末で発行した承認はリモートのコンテナには届かない**。
+
+```bash
+# リモートコンテナ内のシェルで実行する場合のみ有効
+node .claude/scripts/harness-run.mjs start
+node .claude/scripts/harness-approve.mjs --target .claude/ --ttl-minutes 30
+```
+
+発行後、Claude は Write ツールで各ファイルを更新できる（`git apply` は承認の有無に
+関わらず deny されるため、ファイル単位の書き込みになる）。
+
+このコンテナ越境の問題が [harness-owner-setup.md](../harness-owner-setup.md) §4 の
+ロックアウト（R-007）の実体であり、恒久対応は案 B（GitHub Environment）を推奨する。
