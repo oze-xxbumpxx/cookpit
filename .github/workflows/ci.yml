@@ -28,7 +28,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # 変更範囲の判定に base との差分が要るため全履歴を取る
           fetch-depth: 0
@@ -185,7 +185,7 @@ jobs:
       # Playwright の JSON レポート出力先（apps/web からの相対）
       PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-report.json
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       - name: DB 経路を決定
