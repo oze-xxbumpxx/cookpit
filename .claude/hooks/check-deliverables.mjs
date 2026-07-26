@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { resolveReadablePath, safeStatePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -21,7 +22,7 @@ const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲し�
 // 警告セットが変化したか、クールダウンを過ぎたときだけ true（= emit すべき）。
 // state 読み書き失敗時は fail-open（true を返し従来どおり警告する。沈黙して隠さない）。
 function shouldEmitNotice(key, feature, warnings) {
-  const statePath = join(ROOT, '.claude/state/hook-notice-state.json');
+  const statePath = safeStatePath('hook-notice-state.json');
   const hash = createHash('sha1')
     .update(feature)
     .digest('hex');
@@ -36,7 +37,6 @@ function shouldEmitNotice(key, feature, warnings) {
   if (prev && prev.hash === hash && now - prev.ts < NOTICE_COOLDOWN_MS) return false;
   state[key] = { hash, ts: now, feature };
   try {
-    mkdirSync(join(ROOT, '.claude/state'), { recursive: true });
     writeFileSync(statePath, JSON.stringify(state, null, 2));
   } catch {
     /* 書き込み失敗は致命でない。今回は出し、次回も出る（fail-open） */
@@ -53,8 +53,8 @@ function readStdin() {
 }
 
 function readFeatureName() {
-  const p = join(ROOT, '.claude/state/current-feature');
-  if (!existsSync(p)) return null;
+  const p = resolveReadablePath('current-feature');
+  if (p === null || !existsSync(p)) return null;
   const v = readFileSync(p, 'utf8').trim().split('\n')[0]?.trim();
   return v || null;
 }

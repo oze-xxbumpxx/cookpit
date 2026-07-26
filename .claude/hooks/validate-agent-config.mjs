@@ -18,6 +18,12 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import {
+  OPERATION_CONFIG_CHANGE,
+  describeRejection,
+  verifyApproval,
+} from '../lib/harness-approval.mjs';
+import { loadRunState } from '../lib/harness-state.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -223,11 +229,19 @@ function main() {
     }
   }
 
-  // 保護ファイルの未承認変更（承認マーカーが無ければ警告）
+  // 保護ファイルの未承認変更（承認検証は harness-approval.mjs が正典）。
+  // 実際のブロックは PreToolUse の guard-dangerous.mjs が行う。ここは事後の可視化のみ。
   if (isProtected(rel)) {
-    const approved = existsSync(join(ROOT, '.claude/state/config-change-approved'));
-    if (!approved) {
-      warns.push(`保護ファイルを変更しました: ${rel}（人間承認が必要な変更対象です）`);
+    const run = loadRunState();
+    const approval = verifyApproval({
+      operation: OPERATION_CONFIG_CHANGE,
+      target: rel,
+      runId: run.ok ? run.state.runId : null,
+    });
+    if (!approval.ok) {
+      warns.push(
+        `保護ファイルを変更しました: ${rel}（人間承認が必要です — ${describeRejection(approval)}）`,
+      );
     }
   }
 

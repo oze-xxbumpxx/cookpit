@@ -14,8 +14,11 @@
       "Bash(git log:*)",
       "Bash(git branch)",
       "Bash(git show:*)",
-      "Bash(touch .claude/state/config-change-approved)",
-      "Bash(rm .claude/state/config-change-approved)"
+      "Bash(pnpm test:harness)",
+      "Bash(node .claude/scripts/harness-run.mjs show)",
+      "Bash(node .claude/scripts/harness-run.mjs run-id)",
+      "Bash(node .claude/scripts/harness-run.mjs where)",
+      "Bash(node .claude/scripts/harness-run.mjs approval-status:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -38,7 +41,14 @@
       "Bash(terraform apply:*)",
       "Bash(terraform destroy:*)",
       "Bash(serverless deploy:*)",
-      "Bash(sst deploy:*)"
+      "Bash(sst deploy:*)",
+      "Bash(node .claude/scripts/harness-approve.mjs:*)",
+      "Bash(touch .claude/state/config-change-approved)",
+      "Bash(rm .claude/state/config-change-approved)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(git push --no-verify:*)",
+      "Write(**/.claude/state/**)",
+      "Edit(**/.claude/state/**)"
     ]
   },
   "hooks": {
@@ -68,7 +78,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Read|Edit|Write|MultiEdit",
+        "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [
           {
             "type": "command",

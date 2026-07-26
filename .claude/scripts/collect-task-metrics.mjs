@@ -38,6 +38,8 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+// 状態ファイルは永続領域（リポジトリ外）を優先し、旧 .claude/state/ もフォールバックで読む
+import { resolveReadablePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const TZ = process.env.COOKPIT_TZ || 'Asia/Tokyo';
@@ -130,7 +132,7 @@ function parseJsonl(path) {
 
 // subagent-log の feature 一致でセッションを直接紐付け（current-feature 運用時）
 const featureSessionIds = new Set();
-for (const rec of parseJsonl(join(ROOT, '.claude/state/subagent-log.jsonl'))) {
+for (const rec of parseJsonl(resolveReadablePath('subagent-log.jsonl') ?? '')) {
   if (rec.feature === args.feature && rec.session_id) featureSessionIds.add(rec.session_id);
 }
 
@@ -243,7 +245,7 @@ sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id.local
 // ---- 2. 品質ゲート実行結果（手戻りプロキシ） ---------------------------------
 
 const gateHistory = [];
-for (const rec of parseJsonl(join(ROOT, '.claude/state/quality-gates-log.jsonl'))) {
+for (const rec of parseJsonl(resolveReadablePath('quality-gates-log.jsonl') ?? '')) {
   if (!rec.ts || !inRange(rec.ts)) continue;
   const branchOk = rec.branch && branchFilters.some((f) => rec.branch.includes(f));
   if (!branchOk) continue;

@@ -52,7 +52,11 @@ echo "created: $OUT"
 # （2026-07-11 に unbound variable 障害の報告あり・IMP-2026-024 の防御的修正）
 AGENT_CALLS="0"
 # node へは環境変数で渡し、シェル展開を node -e 文字列に埋め込まない（set -u / 特殊文字対策）
-SUBAGENT_LOG="$ROOT/.claude/state/subagent-log.jsonl"
+# 保存先は永続領域（リポジトリ外）を優先し、旧 .claude/state/ もフォールバックで見る
+SUBAGENT_LOG="$(node --input-type=module -e '
+import { resolveReadablePath } from "./.claude/lib/harness-paths.mjs";
+process.stdout.write(resolveReadablePath("subagent-log.jsonl") ?? "");
+' 2>/dev/null || echo "")"
 if [ -f "$SUBAGENT_LOG" ]; then
   AGENT_CALLS="$(
     COOKPIT_METRICS_OUT="$OUT" \
