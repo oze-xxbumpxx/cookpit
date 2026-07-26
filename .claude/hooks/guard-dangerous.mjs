@@ -184,6 +184,25 @@ function bashWritesProtected(cmd) {
   return hits.length > 0 ? `保護対象への書き込み（${hits[0]}）` : null;
 }
 
+// インタープリタのインライン実行（node -e / python -c 等）は、書き込み先を静的に
+// 特定できない。保護対象パスに言及していたら書き込みとみなして拒否する
+// （2026-07-26 の再監査で、リテラルの保護対象パスを含む node -e が素通りしていた）。
+const INLINE_INTERPRETER =
+  /\b(node|nodejs|deno|bun|python|python3|ruby|perl|php|osascript)\b[^|;&]*?\s(-e|-c|-p|--eval|--exec)\b/;
+
+function bashInlineInterpreterTouchesProtected(cmd) {
+  if (!INLINE_INTERPRETER.test(cmd)) return null;
+  for (const token of cmd.split(/[\s"';|&()`,]+/)) {
+    const cleaned = normalizeToken(token);
+    if (!cleaned) continue;
+    const rel = toRepoRelative(cleaned, ROOT);
+    if (rel && isProtectedPath(rel, ROOT)) {
+      return `インタープリタ経由の保護対象操作（${rel}）`;
+    }
+  }
+  return null;
+}
+
 // パッチ適用・チェックアウトによる保護対象の書き換え。
 // パッチや stash は内容を安価に検証できないため、保護対象を含みうるものとして拒否する
 // （fail-closed）。明示パスがすべて非保護の restore / checkout は妨げない。
@@ -237,6 +256,10 @@ function checkBash(cmd) {
   const protectedWrite = bashWritesProtected(cmd);
   if (protectedWrite) {
     deny(protectedWrite, '保護対象の変更には人間承認が必要です（§保護対象）。');
+  }
+  const inlineRisk = bashInlineInterpreterTouchesProtected(cmd);
+  if (inlineRisk) {
+    deny(inlineRisk, '保護対象の変更には人間承認が必要です（§保護対象）。');
   }
   const patchRisk = bashPatchApplyRisk(cmd);
   if (patchRisk) {

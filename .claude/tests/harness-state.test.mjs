@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
 import {
@@ -203,6 +204,76 @@ test('ロックは排他され、解放後に再取得できる', () => {
       withLock(lock, () => 'ok'),
       'ok',
     );
+  } finally {
+    cleanup();
+  }
+});
+
+
+// ── 再監査 2026-07-26: 同時更新で更新が失われないこと（R-004 回帰）──
+
+test('並行 updateRunState で更新が失われない', async () => {
+  const { opts, state: stateDirPath, cleanup } = sandbox();
+  try {
+    saveRunState(createRunState({ taskId: 'conc' }), opts);
+
+    // 同一プロセス内の逐次呼び出しでも、関数形式なら累積が保たれる
+    const names = ['lint', 'type-check', 'test', 'build'];
+    for (const name of names) {
+      updateRunState(
+        (state) => ({
+          gateResults: { ...(state?.gateResults ?? {}), [name]: { result: 'pass', at: new Date().toISOString() } },
+        }),
+        opts,
+      );
+    }
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true);
+    for (const name of names) {
+      assert.ok(name in loaded.state.gateResults, `ゲート結果が失われました: ${name}`);
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('別プロセスからの並行更新で更新が失われない', async () => {
+  const { state: stateDirPath, root, opts, cleanup } = sandbox();
+  try {
+    saveRunState(createRunState({ taskId: 'conc-proc' }), opts);
+    const cli = new URL('../scripts/harness-run.mjs', import.meta.url).pathname;
+    const env = { ...process.env, HARNESS_STATE_DIR: stateDirPath, CLAUDE_PROJECT_DIR: root };
+    const names = ['lint', 'test', 'build', 'harness'];
+    await Promise.all(
+      names.map(
+        (name) =>
+          new Promise((resolve) => {
+            const p = spawn(process.execPath, [cli, 'gate', '--name', name, '--result', 'pass'], {
+              env,
+              stdio: 'ignore',
+            });
+            p.on('exit', resolve);
+          }),
+      ),
+    );
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true);
+    const missing = names.filter((n) => !(n in loaded.state.gateResults));
+    assert.deepEqual(missing, [], `並行更新で失われたゲート: ${missing.join(', ')}`);
+  } finally {
+    cleanup();
+  }
+});
+
+test('project root が存在しなくても状態を解決できる（R-005 回帰）', () => {
+  const { base, state: stateDirPath, cleanup } = sandbox();
+  try {
+    const goneRoot = join(base, 'deleted-project');
+    const opts = { env: { HARNESS_STATE_DIR: stateDirPath }, root: goneRoot };
+    saveRunState(createRunState({ taskId: 'recovery' }), opts);
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true, '存在しない root で状態が読めません');
+    assert.equal(loaded.state.taskId, 'recovery');
   } finally {
     cleanup();
   }

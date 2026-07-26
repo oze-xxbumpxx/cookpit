@@ -15,7 +15,7 @@
 // - 検証不能（不在・破損・スキーマ不一致・信頼できない保存先）はすべて**拒否**（fail-closed）。
 
 import { existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { resolveStateDir, repoRoot } from './harness-paths.mjs';
 import { appendJsonl, isIsoTimestamp, readJsonl, readJsonStrict } from './harness-state.mjs';
 
@@ -65,24 +65,38 @@ const PROTECTED_PREFIXES = Object.freeze([
 
 export const PROTECTED_TARGETS = Object.freeze([...PROTECTED_EXACT, ...PROTECTED_PREFIXES]);
 
-/** 絶対パス・相対パスの両方を、リポジトリ相対の POSIX 形式へ正規化する。 */
+/**
+ * 絶対パス・相対パスの両方を、リポジトリ相対の POSIX 形式へ**正規化して**返す。
+ *
+ * path.resolve による正規化を必ず通す。文字列の前置一致だけで判定すると
+ * `.claude/./hooks/x` `.claude//hooks/x` `.claude/../.claude/hooks/x` が
+ * すべて保護対象から漏れる（2026-07-26 の再監査で実証。OS はこれらを同一ファイルへ解決する）。
+ */
 export function toRepoRelative(filePath, root = repoRoot()) {
-  if (typeof filePath !== 'string' || filePath === '') return null;
-  const normalizedRoot = root.replace(/\/+$/, '');
-  let rel = filePath;
-  if (rel.startsWith(`${normalizedRoot}/`)) rel = rel.slice(normalizedRoot.length + 1);
-  rel = rel.replace(/\\/g, '/').replace(/^\.\//, '');
-  return rel;
+  if (typeof filePath !== 'string' || filePath.trim() === '') return null;
+  const absRoot = resolve(root);
+  // 相対パスはリポジトリ root 基準で解決する（ハーネスの cwd は常に root）
+  const abs = isAbsolute(filePath) ? resolve(filePath) : resolve(absRoot, filePath);
+  const rel = relative(absRoot, abs);
+  if (rel === '') return null; // root 自身
+  return rel.split(sep).join('/');
 }
 
-/** 保護対象かどうか（リポジトリ相対パスで判定）。 */
+/**
+ * 保護対象かどうか（正規化済みのリポジトリ相対パスで判定）。
+ * 大文字小文字を区別しない照合も行う（macOS 等の case-insensitive FS で
+ * `CLAUDE.MD` が同一ファイルを指すため）。
+ */
 export function isProtectedPath(filePath, root = repoRoot()) {
   const rel = toRepoRelative(filePath, root);
   if (rel === null) return false;
-  // 親ディレクトリ参照でリポジトリ外へ出るパスは保護判定の対象外（別ルールで扱う）
-  if (rel.startsWith('../')) return false;
-  if (PROTECTED_EXACT.includes(rel)) return true;
-  return PROTECTED_PREFIXES.some((prefix) => rel.startsWith(prefix));
+  // リポジトリ外へ出るパスは保護判定の対象外（別ルールで扱う）
+  if (rel === '..' || rel.startsWith('../')) return false;
+  const lower = rel.toLowerCase();
+  if (PROTECTED_EXACT.some((p) => p === rel || p.toLowerCase() === lower)) return true;
+  return PROTECTED_PREFIXES.some(
+    (prefix) => rel.startsWith(prefix) || lower.startsWith(prefix.toLowerCase()),
+  );
 }
 
 /**

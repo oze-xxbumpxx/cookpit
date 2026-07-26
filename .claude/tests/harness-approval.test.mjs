@@ -320,3 +320,41 @@ test('HARNESS_STATE_DIR がリポジトリ配下なら承認解決を拒否す�
     sb.cleanup();
   }
 });
+
+
+// ── 再監査 2026-07-26: 正規化を経た保護判定（R-001 回帰）──
+
+test('正規化を経ても保護対象と判定する', () => {
+  const root = '/repo';
+  for (const path of [
+    '.claude/hooks/x.mjs',
+    '.claude/./hooks/x.mjs',
+    '.claude//hooks/x.mjs',
+    '.claude/../.claude/hooks/x.mjs',
+    '.claude/agents/../hooks/x.mjs',
+    './.claude/lib/harness-approval.mjs',
+    '/repo/.claude/./tests/a.test.mjs',
+    '/repo/.claude/../.claude/settings.json',
+    '.github/./workflows/ci.yml',
+  ]) {
+    assert.equal(isProtectedPath(path, root), true, `保護されていません: ${path}`);
+  }
+});
+
+test('正規化後にリポジトリ外へ出るパスは保護対象にしない', () => {
+  const root = '/repo';
+  for (const path of [
+    '../other/.claude/hooks/x.mjs',
+    '/elsewhere/.claude/hooks/x.mjs',
+    '.claude/../../outside/.claude/settings.json',
+  ]) {
+    assert.equal(isProtectedPath(path, root), false, `過剰に保護されています: ${path}`);
+  }
+});
+
+test('toRepoRelative が正規化済みの相対パスを返す', () => {
+  assert.equal(toRepoRelative('/repo/.claude/./hooks/x.mjs', '/repo'), '.claude/hooks/x.mjs');
+  assert.equal(toRepoRelative('.claude//hooks//x.mjs', '/repo'), '.claude/hooks/x.mjs');
+  assert.equal(toRepoRelative('.claude/../.claude/hooks/x.mjs', '/repo'), '.claude/hooks/x.mjs');
+  assert.equal(toRepoRelative('/repo', '/repo'), null);
+});

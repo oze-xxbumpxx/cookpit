@@ -446,3 +446,90 @@ test('拒否メッセージに秘密情報を含めない', () => {
     sb.cleanup();
   }
 });
+
+
+// ── 再監査 2026-07-26 で発見した突破経路の回帰テスト ──────────
+
+test('パス正規化を経ても保護対象と判定する（R-001 回帰）', () => {
+  const sb = sandbox();
+  try {
+    // OS が同一ファイルへ解決する表記はすべて拒否されること
+    for (const path of [
+      '.claude/hooks/guard-dangerous.mjs',
+      '.claude/./hooks/guard-dangerous.mjs',
+      '.claude//hooks/guard-dangerous.mjs',
+      '.claude/hooks/../hooks/guard-dangerous.mjs',
+      '.claude/../.claude/hooks/guard-dangerous.mjs',
+      '.claude/agents/../hooks/guard-dangerous.mjs',
+      './.claude/hooks/guard-dangerous.mjs',
+      '.claude/./lib/harness-approval.mjs',
+      '.claude/./tests/guard-dangerous.test.mjs',
+      '.github/./workflows/ci.yml',
+      '.github/../.github/workflows/ci.yml',
+      './CLAUDE.md',
+      '.claude/../CLAUDE.md',
+    ]) {
+      assert.equal(runHook(sb, write(path)).code, DENY, `素通りしています: ${path}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('絶対パスの正規化回避も拒否する（R-001 回帰）', () => {
+  const sb = sandbox();
+  try {
+    for (const path of [
+      `${sb.root}/.claude/hooks/x.mjs`,
+      `${sb.root}/.claude/./hooks/x.mjs`,
+      `${sb.root}/.claude/../.claude/hooks/x.mjs`,
+      `${sb.root}//.claude//hooks//x.mjs`,
+    ]) {
+      assert.equal(runHook(sb, write(path)).code, DENY, `素通りしています: ${path}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('リポジトリ外のパスは保護対象にしない（過剰検知の防止）', () => {
+  const sb = sandbox();
+  try {
+    assert.equal(runHook(sb, write('/tmp/scratch/.claude/hooks/x.mjs')).code, ALLOW);
+    assert.equal(runHook(sb, write('../other-repo/.claude/hooks/x.mjs')).code, ALLOW);
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('インタープリタのインライン実行で保護対象へ触れるのを拒否する（R-003 回帰）', () => {
+  const sb = sandbox();
+  try {
+    for (const command of [
+      `node -e "require('fs').writeFileSync('.claude/hooks/guard-dangerous.mjs','')"`,
+      `node -e "require('fs').writeFileSync('.claude/./lib/harness-approval.mjs','')"`,
+      `python3 -c "open('.claude/settings.json','w').write('{}')"`,
+      `ruby -e "File.write('CLAUDE.md','')"`,
+      `perl -e "open(F,'>','.claude/rules/coding-standards.md')"`,
+      `node --eval "require('fs').rmSync('.claude/tests/guard-dangerous.test.mjs')"`,
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, DENY, `許可されています: ${command}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('インタープリタでも非保護パスなら妨げない（過剰検知の防止）', () => {
+  const sb = sandbox();
+  try {
+    assert.equal(runHook(sb, bash(`node -e "console.log(1+1)"`)).code, ALLOW);
+    assert.equal(
+      runHook(sb, bash(`node -e "require('fs').writeFileSync('/tmp/x.json','{}')"`)).code,
+      ALLOW,
+    );
+    assert.equal(runHook(sb, bash('node --test .claude/tests/harness-state.test.mjs')).code, ALLOW);
+  } finally {
+    sb.cleanup();
+  }
+});

@@ -98,10 +98,13 @@ stateDir();
 appendJsonl(statePath("quality-gates-log.jsonl"), entry);
 // run 状態がある場合だけゲート結果を反映する（無くてもゲート実行は妨げない）
 if (loadRunState().ok) {
-  const gateResults = {};
-  for (const name of passed) gateResults[name] = { result: "pass", at: entry.ts };
-  for (const name of failed) gateResults[name] = { result: "fail", at: entry.ts };
-  updateRunState({ phase: "gates", gateResults });
+  // 関数形式で既存のゲート結果へマージする（上書きすると別実行の結果が消える）
+  updateRunState((state) => {
+    const gateResults = { ...(state?.gateResults ?? {}) };
+    for (const name of passed) gateResults[name] = { result: "pass", at: entry.ts };
+    for (const name of failed) gateResults[name] = { result: "fail", at: entry.ts };
+    return { phase: "gates", gateResults };
+  });
 }
 ' "$BRANCH" "$LEVEL" \
   "$(IFS=$'\001'; echo "${PASS[*]:-}")" \

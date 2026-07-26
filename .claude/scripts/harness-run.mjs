@@ -116,10 +116,13 @@ switch (command) {
       fail('--name <gate> --result <pass|fail|skip> を指定してください');
     }
     if (!['pass', 'fail', 'skip'].includes(result)) fail('--result は pass | fail | skip です');
-    const current = loadRunState();
-    const gateResults = current.ok ? { ...current.state.gateResults } : {};
-    gateResults[name] = { result, at: new Date().toISOString() };
-    const next = updateRunState({ gateResults });
+    // 読み取りから書き込みまでを updateRunState のロック内で行う（lost update 防止）
+    const next = updateRunState((state) => ({
+      gateResults: {
+        ...(state?.gateResults ?? {}),
+        [name]: { result, at: new Date().toISOString() },
+      },
+    }));
     process.stdout.write(`ゲート結果を記録: ${name}=${result}（run ${next.runId}）\n`);
     break;
   }

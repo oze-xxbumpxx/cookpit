@@ -63,7 +63,11 @@ function assertOutsideRepo(candidate, root, source, raw = candidate) {
     );
   }
   const real = realpathOfNearestExisting(candidate);
-  if (isInside(realpathOfNearestExisting(root), real)) {
+  // root 側は実在するときだけ realpath を取る。存在しない root で祖先まで遡ると、
+  // 同じ祖先を共有する正当な state ディレクトリを誤って「リポジトリ内」と判定し、
+  // コンテナ破棄後の復旧そのものを壊す（2026-07-26 の再監査で実証）。
+  const rootReal = existsSync(root) ? realpathSync(root) : resolve(root);
+  if (isInside(rootReal, real)) {
     throw new StateDirError(
       `${source} の実体パスがリポジトリ配下へ解決されます（シンボリックリンク経由の可能性）: ${candidate} → ${real}`,
       'symlink_into_repo',

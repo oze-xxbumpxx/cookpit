@@ -10,7 +10,7 @@
 // 今回のスコープでは有界修正ループを実装しない。attempt / maxAttempts /
 // lastFailureFingerprint は将来拡張のための予約フィールドで、本モジュールは値を解釈しない。
 
-import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { stateDir, statePath } from './harness-paths.mjs';
@@ -193,10 +193,13 @@ export function withLock(lockPath, fn, { timeoutMs = 5_000, staleMs = LOCK_STALE
       break;
     } catch (error) {
       if (error?.code !== 'EEXIST') throw error;
-      // 古いロックは奪う（プロセス異常終了で残った場合の回復）
+      // 古いロックは奪う（プロセス異常終了で残った場合の回復）。
+      // 生成直後はロック内容がまだ書き込まれておらず空になりうるため、内容ではなく
+      // ファイルの mtime で年齢を判定する（内容ベースだと age=Date.now()-0 の
+      // 誤った巨大値になり、生きたロックを誤って「古い」と判定して奪ってしまう）。
       let age = 0;
       try {
-        age = Date.now() - Number(readFileSync(lockPath, 'utf8').trim() || 0);
+        age = Date.now() - statSync(lockPath).mtimeMs;
       } catch {
         age = staleMs + 1;
       }
@@ -273,25 +276,46 @@ export function loadRunState(opts = {}) {
   return { ok: true, state: read.value };
 }
 
-/** run 状態を書き込む（検証 → ロック → 原子的書き込み）。 */
-export function saveRunState(state, opts = {}) {
+// ロックを取らずに書き込む内部関数。呼び出し側がロックを保持していること。
+function writeRunStateUnlocked(state, path) {
   const valid = validateRunState(state);
   if (!valid.ok) {
     throw new Error(`run 状態が不正です（${valid.reason}）: ${valid.detail}`);
   }
-  const dir = stateDir(opts);
-  const path = join(dir, RUN_STATE_FILENAME);
-  return withLock(`${path}.lock`, () => {
-    atomicWriteJson(path, state);
-    return path;
-  });
+  atomicWriteJson(path, state);
+  return path;
 }
 
-/** 既存 run 状態へ差分を適用する。存在しなければ新規作成する。 */
-export function updateRunState(patch, opts = {}) {
-  const current = loadRunState(opts);
-  const base = current.ok ? current.state : createRunState({ taskId: patch.taskId ?? '' });
-  const next = { ...base, ...patch, updatedAt: new Date().toISOString() };
-  saveRunState(next, opts);
-  return next;
+/** run 状態を書き込む（検証 → ロック → 原子的書き込み）。 */
+export function saveRunState(state, opts = {}) {
+  const path = join(stateDir(opts), RUN_STATE_FILENAME);
+  return withLock(`${path}.lock`, () => writeRunStateUnlocked(state, path));
+}
+
+/**
+ * 既存 run 状態へ差分を適用する。存在しなければ新規作成する。
+ *
+ * **読み取りから書き込みまでを 1 つのロック区間に収める。** 読み取りをロック外で
+ * 行うと、並行更新が無言で失われる（2026-07-26 の再監査で 4 並行中 3 件消失を実証）。
+ * 有界修正ループの attempt カウンタが失われると上限が機能しないため、ここは必須。
+ *
+ * @param {object|((current: object) => object)} patchOrFn
+ *   差分オブジェクト、または現在の状態を受け取って差分を返す関数。
+ *   gateResults のような累積フィールドは関数形式でマージすること。
+ */
+export function updateRunState(patchOrFn, opts = {}) {
+  const path = join(stateDir(opts), RUN_STATE_FILENAME);
+  return withLock(`${path}.lock`, () => {
+    const read = readJsonStrict(path);
+    let base = null;
+    if (read.ok) {
+      const valid = validateRunState(read.value);
+      if (valid.ok) base = read.value;
+    }
+    const patch = typeof patchOrFn === 'function' ? patchOrFn(base) : patchOrFn;
+    if (base === null) base = createRunState({ taskId: patch.taskId ?? '' });
+    const next = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    writeRunStateUnlocked(next, path);
+    return next;
+  });
 }
