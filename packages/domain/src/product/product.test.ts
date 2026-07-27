@@ -252,6 +252,83 @@ describe('Product の状態変更', () => {
   });
 });
 
+describe('Product.removePriceRecord', () => {
+  const storeId = StoreId.fromString('store-1');
+
+  const seededProduct = (): Product => {
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('record-1', storeId, 100, new Date('2026-01-01T00:00:00.000Z')),
+    );
+    product.recordPrice(
+      createPriceRecord('record-2', storeId, 120, new Date('2026-01-02T00:00:00.000Z')),
+    );
+    return product;
+  };
+
+  it('PRR-01: 指定した価格記録だけを取り除く', () => {
+    const product = seededProduct();
+
+    product.removePriceRecord(PriceRecordId.fromString('record-1'));
+
+    expect(product.priceHistory.map((record) => record.id.value)).toEqual(['record-2']);
+  });
+
+  it('PRR-02: 最後の 1 件を取り除くと価格履歴が空になる', () => {
+    const product = createProduct();
+    product.recordPrice(createPriceRecord('record-1', storeId, 100, new Date()));
+
+    product.removePriceRecord(PriceRecordId.fromString('record-1'));
+
+    expect(product.priceHistory).toEqual([]);
+  });
+
+  it('PRR-03: 存在しない ID を指定すると throw し、価格履歴は変わらない', () => {
+    const product = seededProduct();
+
+    expect(() => product.removePriceRecord(PriceRecordId.fromString('unknown'))).toThrow(
+      'Price record not found: unknown',
+    );
+    expect(product.priceHistory).toHaveLength(2);
+  });
+
+  it('PRR-04: 削除後に updatedAt が進む', () => {
+    const product = seededProduct();
+    const before = product.updatedAt.getTime();
+
+    product.removePriceRecord(PriceRecordId.fromString('record-1'));
+
+    expect(product.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('PRR-05: 削除後もゲッターは防御的コピーを返す', () => {
+    const product = seededProduct();
+    product.removePriceRecord(PriceRecordId.fromString('record-1'));
+
+    product.priceHistory.push(createPriceRecord('injected', storeId, 100, new Date()));
+
+    expect(product.priceHistory.map((record) => record.id.value)).toEqual(['record-2']);
+  });
+
+  it('PRR-06: 削除した記録は cheapestStoreAt の判定から外れる', () => {
+    const otherStoreId = StoreId.fromString('store-2');
+    const at = new Date('2026-01-03T00:00:00.000Z');
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('cheap-record', storeId, 50, new Date('2026-01-01T00:00:00.000Z')),
+    );
+    product.recordPrice(
+      createPriceRecord('other-record', otherStoreId, 80, new Date('2026-01-01T00:00:00.000Z')),
+    );
+
+    expect(product.cheapestStoreAt(at)?.value).toBe('store-1');
+
+    product.removePriceRecord(PriceRecordId.fromString('cheap-record'));
+
+    expect(product.cheapestStoreAt(at)?.value).toBe('store-2');
+  });
+});
+
 describe('Product.latestPriceAt', () => {
   it('単一の最新価格を返す (P7)', () => {
     const product = createProduct();

@@ -4,13 +4,14 @@ import {
   findLatestPriceRecord,
   formatDate,
   formatDateTime,
+  formatUnitPrice,
   formatYen,
   sortPriceHistoryByObservedAt,
-  unitPriceBasisLabel,
 } from './product-format';
 
 function createPriceRecord(overrides: Partial<PriceRecordDto> = {}): PriceRecordDto {
   return {
+    id: 'price-record-a',
     storeId: 'store-a',
     storeName: '店舗A',
     priceAmount: 198,
@@ -81,12 +82,41 @@ describe('formatDate / formatDateTime', () => {
   });
 });
 
-describe('unitPriceBasisLabel', () => {
-  it('PF-06: g/kg は 100g、ml/l は 100ml、それ以外は 1<単位> を返す', () => {
-    expect(unitPriceBasisLabel('g')).toBe('100g');
-    expect(unitPriceBasisLabel('kg')).toBe('100g');
-    expect(unitPriceBasisLabel('ml')).toBe('100ml');
-    expect(unitPriceBasisLabel('l')).toBe('100ml');
-    expect(unitPriceBasisLabel('個')).toBe('1個');
+describe('formatUnitPrice', () => {
+  // 仕様変更（2026-07-27）: kg/l で記録したものは 100g/100ml ではなく 1kg/1L 基準で表示する。
+  // 旧 unitPriceBasisLabel は kg でも '100g' を返していた。
+  it('PF-06: 表示基準は内容量の単位から決まる（g→100g / kg→1kg / ml→100ml / l→1L）', () => {
+    expect(formatUnitPrice(1, 'g')).toBe('1円 / 100g');
+    expect(formatUnitPrice(1, 'kg')).toBe('10円 / 1kg');
+    expect(formatUnitPrice(1, 'ml')).toBe('1円 / 100ml');
+    expect(formatUnitPrice(1, 'l')).toBe('10円 / 1L');
+    expect(formatUnitPrice(1, '個')).toBe('1円 / 1個');
+  });
+
+  it('PF-06b: 大文字・全角などの表記ゆれは「その他」として扱う（UnitPriceCalculator と同じ厳密一致）', () => {
+    // 正準化側が 1 単位あたりで計算しているので、表示側も換算せず「1KG あたり」で出す。
+    // ここで正規化して 10 倍すると単価が 10 倍ズレる。
+    expect(formatUnitPrice(1, 'KG')).toBe('1円 / 1KG');
+    expect(formatUnitPrice(1, 'ｇ')).toBe('1円 / 1ｇ');
+  });
+
+  it('PF-08: kg / l は保存値（100g・100ml 基準）を 10 倍して表示する', () => {
+    expect(formatUnitPrice(29.8, 'kg')).toBe('298円 / 1kg');
+    expect(formatUnitPrice(15, 'l')).toBe('150円 / 1L');
+  });
+
+  it('PF-09: g / ml は保存値をそのまま 100g・100ml 基準で表示する', () => {
+    expect(formatUnitPrice(99, 'g')).toBe('99円 / 100g');
+    expect(formatUnitPrice(12.5, 'ml')).toBe('12.5円 / 100ml');
+  });
+
+  it('PF-10: g/kg/ml/l 以外は保存値をそのまま 1 単位あたりで表示する', () => {
+    expect(formatUnitPrice(48, '個')).toBe('48円 / 1個');
+    expect(formatUnitPrice(48, 'KG')).toBe('48円 / 1KG');
+  });
+
+  it('PF-11: 換算結果は 0.1 単位へ丸める（浮動小数の桁あふれを出さない）', () => {
+    expect(formatUnitPrice(33.3, 'kg')).toBe('333円 / 1kg');
+    expect(formatUnitPrice(0.07, 'kg')).toBe('0.7円 / 1kg');
   });
 });

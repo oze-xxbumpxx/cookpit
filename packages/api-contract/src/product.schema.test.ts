@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createProductSchema,
+  priceRecordIdParamSchema,
   productCategorySchema,
   recordPriceSchema,
   updateProductSchema,
@@ -121,5 +122,28 @@ describe('recordPriceSchema', () => {
       '箱',
     );
     expect(() => recordPriceSchema.parse({ ...VALID_PRICE, packageSizeUnit: '' })).toThrow();
+  });
+});
+
+describe('priceRecordIdParamSchema', () => {
+  const VALID_PRICE_RECORD_ID = '22222222-2222-4222-8222-222222222222';
+
+  it('商品 ID と価格記録 ID の 2 つを受け入れる', () => {
+    expect(
+      priceRecordIdParamSchema.parse({
+        id: VALID_STORE_ID,
+        priceRecordId: VALID_PRICE_RECORD_ID,
+      }),
+    ).toEqual({ id: VALID_STORE_ID, priceRecordId: VALID_PRICE_RECORD_ID });
+  });
+
+  it('priceRecordId が UUID でない入力を reject する', () => {
+    expect(() =>
+      priceRecordIdParamSchema.parse({ id: VALID_STORE_ID, priceRecordId: 'not-a-uuid' }),
+    ).toThrow();
+  });
+
+  it('priceRecordId が欠けている入力を reject する', () => {
+    expect(() => priceRecordIdParamSchema.parse({ id: VALID_STORE_ID })).toThrow();
   });
 });

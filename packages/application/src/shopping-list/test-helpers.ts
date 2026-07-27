@@ -94,6 +94,16 @@ export class InMemoryRecipeRepository implements RecipeRepository {
   }
 }
 
+/** 品目が購入予定店舗・実購入店舗のどちらかで指定店舗を指しているか（両方でも 1 件と数える）。 */
+function referencesStore(item: ShoppingItem, storeId: StoreId): boolean {
+  const targetStore = item.targetStore;
+  const actualStore = item.actualStore;
+  return (
+    (targetStore !== null && targetStore.equals(storeId)) ||
+    (actualStore !== null && actualStore.equals(storeId))
+  );
+}
+
 export class InMemoryProductRepository implements ProductRepository {
   private readonly map = new Map<string, Product>();
 
@@ -111,6 +121,14 @@ export class InMemoryProductRepository implements ProductRepository {
 
   async delete(id: ProductId): Promise<void> {
     this.map.delete(id.value);
+  }
+
+  async countPriceRecordsByStore(storeId: StoreId): Promise<number> {
+    return [...this.map.values()].reduce(
+      (total, product) =>
+        total + product.priceHistory.filter((record) => record.storeId.equals(storeId)).length,
+      0,
+    );
   }
 
   seed(product: Product): void {
@@ -133,6 +151,13 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
   async save(shoppingList: ShoppingList): Promise<void> {
     this.saveCount += 1;
     this.map.set(shoppingList.id.value, shoppingList);
+  }
+
+  async countItemsByStore(storeId: StoreId): Promise<number> {
+    return [...this.map.values()].reduce(
+      (total, list) => total + list.items.filter((item) => referencesStore(item, storeId)).length,
+      0,
+    );
   }
 
   seed(shoppingList: ShoppingList): void {

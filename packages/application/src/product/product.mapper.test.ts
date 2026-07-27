@@ -93,6 +93,7 @@ describe('toProductDto', () => {
 
     expect(dto.priceHistory).toHaveLength(1);
     expect(dto.priceHistory[0]).toEqual({
+      id: 'record-1',
       storeId: 'store-1',
       storeName: '西友',
       priceAmount: 300,

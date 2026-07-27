@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app } from '@/server/app';
 import {
   CreateProductUseCase,
+  DeletePriceRecordUseCase,
   DeleteProductUseCase,
   GetProductUseCase,
   GetProductsUseCase,
+  PriceRecordNotFoundError,
   ProductNotFoundError,
 } from '@cookpit/application';
 import type { ProductDto } from '@cookpit/application';
@@ -23,10 +25,12 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     CreateProductUseCase: vi.fn(),
     GetProductUseCase: vi.fn(),
     DeleteProductUseCase: vi.fn(),
+    DeletePriceRecordUseCase: vi.fn(),
   };
 });
 
 const PRODUCT_ID = '2b8f0cbb-3c1e-4c62-9d6a-6a1f6b9a0c11';
+const PRICE_RECORD_ID = '8f2c1d44-9a3b-4e5f-8a7c-1b2d3e4f5a6b';
 
 const productDto: ProductDto = {
   id: PRODUCT_ID,
@@ -113,5 +117,50 @@ describe('productsRoute', () => {
 
     expect(res.status).toBe(204);
     expect(execute).toHaveBeenCalledWith(PRODUCT_ID);
+  });
+  it('WH-P-06: DELETE /api/products/:id/price-records/:priceRecordId は 204 を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
+      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
+    );
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(execute).toHaveBeenCalledWith({
+      productId: PRODUCT_ID,
+      priceRecordId: PRICE_RECORD_ID,
+    });
+  });
+
+  it('WH-P-07: 価格記録の削除は PriceRecordNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new PriceRecordNotFoundError(PRICE_RECORD_ID));
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
+      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
+    );
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `PriceRecord not found: ${PRICE_RECORD_ID}` });
+  });
+
+  it('WH-P-08: 価格記録の削除は priceRecordId が UUID でなければ 400 を返す', async () => {
+    const execute = vi.fn();
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
+      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
+    );
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/not-a-uuid`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

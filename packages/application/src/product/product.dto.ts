@@ -1,6 +1,8 @@
 import type { ProductCategory, Unit } from '@cookpit/domain';
 
 export interface PriceRecordDto {
+  /** 価格記録の一意な ID（UUID）。1 件ずつ削除するために公開している。 */
+  id: string;
   storeId: string;
   storeName: string;
   priceAmount: number;
@@ -42,6 +44,11 @@ export interface UpdateProductInputDto {
   aliases: string[];
   category: ProductCategory;
   defaultUnit: Unit;
+}
+
+export interface DeletePriceRecordInputDto {
+  productId: string;
+  priceRecordId: string;
 }
 
 export interface RecordPriceInputDto {
