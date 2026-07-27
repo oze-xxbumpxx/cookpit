@@ -1,10 +1,18 @@
 # 設計書: store-delete-and-unit-price-basis
 
-- ステータス: confirmed
+- ステータス: confirmed（**③店舗の削除は 2026-07-27 に ADR-0013 で置き換え済み**）
 - レベル: L3
 - 関連: `docs/requirements/store-delete-and-unit-price-basis.md` /
   `docs/decisions/ADR-0012-store-delete-restrict-on-reference.md` /
   ADR-0011（物理削除の先例）/ ADR-0008（単位の自由記述）/ ADR-0010（パッケージ公開境界）
+
+> **③店舗の削除に関する記述は現行実装と異なる。**本書は ADR-0012（参照が 1 件でもあれば
+> 削除拒否・`StoreInUseError` → 422）に基づいているが、同方針は
+> [ADR-0013](../decisions/ADR-0013-store-limit-and-delete-cascade.md) で覆され、
+> 削除は参照ごとカスケードする（価格記録は物理削除・買い物品目の店舗指定は未割当へ）方式に
+> 変わった。`StoreInUseError` は削除済み。現行の正典は
+> [store-limit-and-render-performance.md](./store-limit-and-render-performance.md)。
+> ①単価の表示基準・②価格記録の削除に関する記述は現行のまま有効。
 
 ## 背景
 
