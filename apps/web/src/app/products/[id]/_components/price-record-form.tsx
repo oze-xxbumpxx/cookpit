@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import { packageSizeExample } from '@/app/products/_utils/package-size-example';
 import { isDuplicateStoreName, STORE_LIMIT } from '@/app/products/_utils/store-name';
 import { client } from '@/lib/api-client';
 import { parseQuantity } from '@/lib/parse-quantity';
@@ -73,6 +74,8 @@ export function PriceRecordForm({ product }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(emptyFieldErrors);
 
+  // プレースホルダとバリデーションエラーで同じ例を出すため、1 か所で組み立てる。
+  const sizeExample = packageSizeExample(product.defaultUnit);
   const parsedPackageSize = parseQuantity(packageSize);
   const canSubmit =
     storeId !== '' &&
@@ -153,7 +156,7 @@ export function PriceRecordForm({ product }: Props) {
       errors.priceAmount = '価格は1円以上の数値で入力してください。';
     }
     if (parsedSize.kind !== 'amount' || parsedSize.value <= 0) {
-      errors.packageSizeValue = '内容量は「数値+単位」で入力してください（例：300g）。';
+      errors.packageSizeValue = `内容量は「数値+単位」で入力してください（例：${sizeExample}）。`;
     }
 
     if (
@@ -462,7 +465,7 @@ export function PriceRecordForm({ product }: Props) {
               id={packageSizeId}
               value={packageSize}
               onValueChange={setPackageSize}
-              placeholder={`例：300${product.defaultUnit}`}
+              placeholder={`例：${sizeExample}`}
               className="h-11 rounded-xl bg-card"
               invalid={fieldErrors.packageSizeValue !== null}
               describedBy={

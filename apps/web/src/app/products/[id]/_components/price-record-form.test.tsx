@@ -305,7 +305,49 @@ describe('PriceRecordForm', () => {
     expect(screen.queryByText('店舗の削除に失敗しました。')).toBeNull();
   });
 
-  it('PRF-11: 削除が失敗したら理由を出し、一覧から消さない', async () => {
+  it('PRF-11: 内容量のプレースホルダは可算単位で 1 になる（基本単位=個）', async () => {
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    render(<PriceRecordForm product={createProductDto({ defaultUnit: '個' })} />);
+
+    await waitForStoresLoaded();
+
+    expect(screen.getByLabelText('内容量', { exact: false }).getAttribute('placeholder')).toBe(
+      '例：1個',
+    );
+  });
+
+  it('PRF-12: 内容量のプレースホルダは g で 300 になる（基本単位=g）', async () => {
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    render(<PriceRecordForm product={createProductDto({ defaultUnit: 'g' })} />);
+
+    await waitForStoresLoaded();
+
+    expect(screen.getByLabelText('内容量', { exact: false }).getAttribute('placeholder')).toBe(
+      '例：300g',
+    );
+  });
+
+  it('PRF-13: 単位なしの内容量では送信されない（内容量エラーは canSubmit に阻まれて表示されない）', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    const { container } = render(
+      <PriceRecordForm product={createProductDto({ defaultUnit: '個' })} />,
+    );
+
+    await waitForStoresLoaded();
+
+    await user.type(screen.getByLabelText('価格'), '298');
+    // 数値のみ（単位なし）は parseQuantity が 'valueOnly' を返すため canSubmit が false になる。
+    // buildInput まで到達しないので packageSizeValue のエラー文は画面に出ない。
+    // プレースホルダとエラー文が同じ例になることは packageSizeExample の単体テストで担保する。
+    await user.type(screen.getByLabelText('内容量', { exact: false }), '3');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect(postPriceRecord).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: '記録' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('PRF-14: 削除が失敗したら理由を出し、一覧から消さない', async () => {
     const user = userEvent.setup();
     getStores.mockResolvedValue({ ok: true, json: async () => STORES });
     getStoreUsage.mockResolvedValue({
