@@ -1,13 +1,25 @@
 import { StoreId } from '@cookpit/domain';
 import type { ProductRepository, ShoppingListRepository, StoreRepository } from '@cookpit/domain';
 import { StoreNotFoundError } from './store-not-found.error';
-import { StoreInUseError } from './store-in-use.error';
 
 /**
- * 店舗を削除する。価格記録・買い物リストの品目から参照されている店舗は削除できない（ADR-0012）。
+ * 店舗を削除する。参照があっても削除でき、参照ごとカスケードする（ADR-0013。ADR-0012 の
+ * 「参照が 1 件でもあれば拒否」を逆転した）。
  *
- * 参照件数の確認と削除は別トランザクションのため、その間に価格が記録されると
- * `price_records` の外部キー制約（restrict）が最後の砦として働く（既知の制約）。
+ * 参照先の扱いは 2 種類で意味が異なる。
+ * - 価格記録: **物理削除**する。店舗を剥がした価格記録は「どの店舗が安かったか」という
+ *   本体の情報を失うため、残す価値が無い。
+ * - 買い物品目の店舗指定: **未割当（null）へ戻す**。品目自体は買う予定として意味が残る。
+ *
+ * 実行順序は「参照元 → 参照先」で固定する。逆順は `price_records.store_id` の外部キー
+ * （restrict）に当たって生の DB エラー（→ 500）になる。FK は順序ミスを検出する安全網として
+ * 残してある。
+ *
+ * 単一トランザクションではないため、途中失敗すると中間状態が残る。各段は冪等なので
+ * 再実行による前方回復で整合させる（CompleteShoppingUseCase と同じ方針）。
+ *
+ * **削除された価格記録は復元できない。**呼び出し側（UI）は削除前に `GetStoreUsageUseCase` で
+ * 失われる件数を提示し、ユーザーの確認を取ること。
  */
 export class DeleteStoreUseCase {
   constructor(
@@ -18,7 +30,6 @@ export class DeleteStoreUseCase {
 
   /**
    * @throws StoreNotFoundError 店舗が存在しない場合
-   * @throws StoreInUseError 価格記録または買い物品目から参照されている場合
    */
   async execute(id: string): Promise<void> {
     const storeId = StoreId.fromString(id);
@@ -27,15 +38,19 @@ export class DeleteStoreUseCase {
       throw new StoreNotFoundError(id);
     }
 
-    const [priceRecordCount, shoppingItemCount] = await Promise.all([
-      this.productRepository.countPriceRecordsByStore(storeId),
-      this.shoppingListRepository.countItemsByStore(storeId),
-    ]);
-
-    if (priceRecordCount > 0 || shoppingItemCount > 0) {
-      throw new StoreInUseError(id, priceRecordCount, shoppingItemCount);
-    }
-
+    await this.productRepository.deletePriceRecordsByStore(storeId);
+    await this.unassignFromShoppingLists(storeId);
     await this.storeRepository.delete(storeId);
+  }
+
+  private async unassignFromShoppingLists(storeId: StoreId): Promise<void> {
+    const shoppingLists = await this.shoppingListRepository.findAllByStore(storeId);
+
+    // 保存はリスト単位で逐次実行し、保存順序を決定的に保つ（並列書き込みにしない）。
+    for (const shoppingList of shoppingLists) {
+      if (shoppingList.unassignStore(storeId)) {
+        await this.shoppingListRepository.save(shoppingList);
+      }
+    }
   }
 }

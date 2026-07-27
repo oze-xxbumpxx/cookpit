@@ -3,8 +3,10 @@ import { app } from '@/server/app';
 import {
   CreateStoreUseCase,
   DeleteStoreUseCase,
+  DuplicateStoreNameError,
   GetStoresUseCase,
-  StoreInUseError,
+  GetStoreUsageUseCase,
+  StoreLimitExceededError,
   StoreNotFoundError,
 } from '@cookpit/application';
 import type { StoreDto } from '@cookpit/application';
@@ -20,6 +22,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
   return {
     ...actual,
     GetStoresUseCase: vi.fn(),
+    GetStoreUsageUseCase: vi.fn(),
     CreateStoreUseCase: vi.fn(),
     DeleteStoreUseCase: vi.fn(),
   };
@@ -66,6 +69,72 @@ describe('storesRoute', () => {
     expect(execute).toHaveBeenCalledWith({ name: '西友' });
   });
 
+  it('WH-04: POST /api/stores は StoreLimitExceededError 時に 422 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new StoreLimitExceededError(3, 3));
+    vi.mocked(CreateStoreUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CreateStoreUseCase,
+    );
+
+    const res = await app.request('/api/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友' }),
+    });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('WH-05: POST /api/stores は DuplicateStoreNameError 時に 422 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new DuplicateStoreNameError('西友'));
+    vi.mocked(CreateStoreUseCase).mockImplementation(
+      () => ({ execute }) as unknown as CreateStoreUseCase,
+    );
+
+    const res = await app.request('/api/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友' }),
+    });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('WH-01: GET /api/stores/:id/usage は件数を 200 で返す', async () => {
+    const execute = vi.fn().mockResolvedValue({ priceRecordCount: 3, shoppingItemCount: 1 });
+    vi.mocked(GetStoreUsageUseCase).mockImplementation(
+      () => ({ execute }) as unknown as GetStoreUsageUseCase,
+    );
+
+    const res = await app.request(`/api/stores/${STORE_ID}/usage`);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ priceRecordCount: 3, shoppingItemCount: 1 });
+    expect(execute).toHaveBeenCalledWith(STORE_ID);
+  });
+
+  it('WH-02: GET /api/stores/:id/usage は StoreNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new StoreNotFoundError(STORE_ID));
+    vi.mocked(GetStoreUsageUseCase).mockImplementation(
+      () => ({ execute }) as unknown as GetStoreUsageUseCase,
+    );
+
+    const res = await app.request(`/api/stores/${STORE_ID}/usage`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('WH-03: GET /api/stores/:id/usage は id が UUID でなければ 400 を返す', async () => {
+    const execute = vi.fn();
+    vi.mocked(GetStoreUsageUseCase).mockImplementation(
+      () => ({ execute }) as unknown as GetStoreUsageUseCase,
+    );
+
+    const res = await app.request('/api/stores/not-a-uuid/usage');
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('WH-S-03: DELETE /api/stores/:id は 204 を返し、ボディは空', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     vi.mocked(DeleteStoreUseCase).mockImplementation(
@@ -91,18 +160,15 @@ describe('storesRoute', () => {
     expect(await res.json()).toEqual({ error: `Store not found: ${STORE_ID}` });
   });
 
-  it('WH-S-05: DELETE /api/stores/:id は StoreInUseError 時に 422 を返す', async () => {
-    const execute = vi.fn().mockRejectedValue(new StoreInUseError(STORE_ID, 3, 1));
+  it('WH-06: DELETE /api/stores/:id は参照があっても 204 を返す（ADR-0013 でカスケードへ変更）', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
     vi.mocked(DeleteStoreUseCase).mockImplementation(
       () => ({ execute }) as unknown as DeleteStoreUseCase,
     );
 
     const res = await app.request(`/api/stores/${STORE_ID}`, { method: 'DELETE' });
 
-    expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('3 price record(s)');
-    expect(body.error).toContain('1 shopping item(s)');
+    expect(res.status).toBe(204);
   });
 
   it('WH-S-06: DELETE /api/stores/:id は id が UUID でなければ 400 を返す', async () => {

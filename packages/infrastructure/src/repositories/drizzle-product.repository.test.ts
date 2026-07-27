@@ -310,6 +310,67 @@ describe('DrizzleProductRepository', () => {
   it('IR-P-13: countPriceRecordsByStore() は参照が無ければ 0 を返す', async () => {
     expect(await repository.countPriceRecordsByStore(StoreId.generate())).toBe(0);
   });
+
+  it('IR-04: deletePriceRecordsByStore() は対象店舗の記録だけを消す', async () => {
+    const storeA = await insertStore();
+    const storeB = Store.create({ name: 'スーパーB' });
+    await new DrizzleStoreRepository(db).save(storeB);
+
+    const product = createProduct({ name: 'トマト' });
+    product.recordPrice(createPriceRecord(storeA.id));
+    product.recordPrice(createPriceRecord(storeB.id));
+    await repository.save(product);
+
+    await repository.deletePriceRecordsByStore(storeA.id);
+
+    expect(await repository.countPriceRecordsByStore(storeA.id)).toBe(0);
+    expect(await repository.countPriceRecordsByStore(storeB.id)).toBe(1);
+  });
+
+  it('IR-05: deletePriceRecordsByStore() は複数商品にまたがる記録をすべて消す', async () => {
+    const store = await insertStore();
+    const product1 = createProduct({ name: 'トマト' });
+    product1.recordPrice(createPriceRecord(store.id));
+    const product2 = createProduct({ name: 'きゅうり' });
+    product2.recordPrice(createPriceRecord(store.id));
+    product2.recordPrice(
+      createPriceRecord(store.id, { observedAt: new Date('2026-06-02T00:00:00.000Z') }),
+    );
+    await repository.save(product1);
+    await repository.save(product2);
+
+    await repository.deletePriceRecordsByStore(store.id);
+
+    expect(await repository.countPriceRecordsByStore(store.id)).toBe(0);
+    expect((await repository.findById(product1.id))?.priceHistory).toEqual([]);
+    expect((await repository.findById(product2.id))?.priceHistory).toEqual([]);
+  });
+
+  it('IR-06: deletePriceRecordsByStore() は参照が無い店舗 ID でも例外にならない', async () => {
+    await expect(repository.deletePriceRecordsByStore(StoreId.generate())).resolves.toBeUndefined();
+  });
+
+  it('IR-12: 価格記録を消してから店舗を消すと FK restrict に当たらない', async () => {
+    const store = await insertStore();
+    const product = createProduct({ name: 'トマト' });
+    product.recordPrice(createPriceRecord(store.id));
+    await repository.save(product);
+    const storeRepository = new DrizzleStoreRepository(db);
+
+    await repository.deletePriceRecordsByStore(store.id);
+    await storeRepository.delete(store.id);
+
+    expect(await storeRepository.findById(store.id)).toBeNull();
+  });
+
+  it('IR-13: 価格記録を残したまま店舗を消すと FK restrict で失敗する（安全網の確認）', async () => {
+    const store = await insertStore();
+    const product = createProduct({ name: 'トマト' });
+    product.recordPrice(createPriceRecord(store.id));
+    await repository.save(product);
+
+    await expect(new DrizzleStoreRepository(db).delete(store.id)).rejects.toThrow();
+  });
 });
 
 describe('toUnit', () => {

@@ -245,6 +245,68 @@ describe('ShoppingItem', () => {
     expect(item.actualPrice).toBeNull();
     expect(item.actualStore).toBeNull();
   });
+
+  it('unassignStore は targetStore の参照を外す (UAS-01)', () => {
+    const item = createItem();
+
+    expect(item.unassignStore(StoreId.fromString('store-1'))).toBe(true);
+    expect(item.targetStore).toBeNull();
+  });
+
+  it('unassignStore は actualStore の参照を外す (UAS-02)', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-2'));
+
+    expect(item.unassignStore(StoreId.fromString('store-2'))).toBe(true);
+    expect(item.actualStore).toBeNull();
+  });
+
+  it('unassignStore は targetStore と actualStore の両方を外す (UAS-03)', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    expect(item.unassignStore(StoreId.fromString('store-1'))).toBe(true);
+    expect(item.targetStore).toBeNull();
+    expect(item.actualStore).toBeNull();
+  });
+
+  it('unassignStore は別店舗の参照には触れず false を返す (UAS-04)', () => {
+    const item = createItem();
+
+    expect(item.unassignStore(StoreId.fromString('store-999'))).toBe(false);
+    expect(item.targetStore?.value).toBe('store-1');
+  });
+
+  it('unassignStore は参照が両方 null なら false を返す (UAS-05)', () => {
+    const item = ShoppingItem.create({
+      productId: null,
+      displayName: '塩',
+      requiredAmount: null,
+      amountNote: '少々',
+      targetStore: null,
+      source: 'manually_added',
+    });
+
+    expect(item.unassignStore(StoreId.fromString('store-1'))).toBe(false);
+  });
+
+  it('unassignStore は bought の status を変えない (UAS-08)', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    item.unassignStore(StoreId.fromString('store-1'));
+
+    expect(item.status).toBe('bought');
+  });
+
+  it('unassignStore は actualPrice を保持する (UAS-09)', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    item.unassignStore(StoreId.fromString('store-1'));
+
+    expect(item.actualPrice?.amount).toBe(198);
+  });
 });
 
 describe('ShoppingList', () => {
@@ -595,5 +657,36 @@ describe('ShoppingList', () => {
     expect(() => list.uncheck(item.id)).toThrow(
       "Cannot uncheck a ShoppingItem with status 'pending'",
     );
+  });
+
+  it('unassignStore は該当品目のみ店舗指定を外す (UAS-06)', () => {
+    const target = createItem();
+    const other = ShoppingItem.create({
+      productId: null,
+      displayName: '牛乳',
+      requiredAmount: Quantity.of(1, '本'),
+      amountNote: null,
+      targetStore: StoreId.fromString('store-2'),
+      source: 'manually_added',
+    });
+    const list = createList([target, other]);
+
+    expect(list.unassignStore(StoreId.fromString('store-1'))).toBe(true);
+    expect(target.targetStore).toBeNull();
+    expect(other.targetStore?.value).toBe('store-2');
+  });
+
+  it('unassignStore は参照が無ければ false を返す (UAS-04)', () => {
+    const list = createList();
+
+    expect(list.unassignStore(StoreId.fromString('store-999'))).toBe(false);
+  });
+
+  it('unassignStore は completed のリストでも例外を投げずに適用する (UAS-07)', () => {
+    const item = createItem();
+    const list = reconstructCompletedList([item]);
+
+    expect(list.unassignStore(StoreId.fromString('store-1'))).toBe(true);
+    expect(item.targetStore).toBeNull();
   });
 });

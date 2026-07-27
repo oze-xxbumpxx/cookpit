@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   Money,
+  normalizeStoreName,
   PriceRecord,
   PriceRecordId,
   Product,
@@ -60,6 +61,16 @@ class InMemoryProductRepository implements ProductRepository {
     );
   }
 
+  async deletePriceRecordsByStore(storeId: StoreId): Promise<void> {
+    for (const product of this.map.values()) {
+      for (const record of product.priceHistory) {
+        if (record.storeId.equals(storeId)) {
+          product.removePriceRecord(record.id);
+        }
+      }
+    }
+  }
+
   seed(product: Product): void {
     this.map.set(product.id.value, product);
   }
@@ -79,6 +90,13 @@ class InMemoryStoreRepository implements StoreRepository {
 
   async findAll(): Promise<Store[]> {
     return [...this.map.values()];
+  }
+
+  async findByNormalizedName(normalizedName: string): Promise<Store | null> {
+    return (
+      [...this.map.values()].find((store) => normalizeStoreName(store.name) === normalizedName) ??
+      null
+    );
   }
 
   async save(store: Store): Promise<void> {

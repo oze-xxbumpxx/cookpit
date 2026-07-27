@@ -131,6 +131,16 @@ export class InMemoryProductRepository implements ProductRepository {
     );
   }
 
+  async deletePriceRecordsByStore(storeId: StoreId): Promise<void> {
+    for (const product of this.map.values()) {
+      for (const record of product.priceHistory) {
+        if (record.storeId.equals(storeId)) {
+          product.removePriceRecord(record.id);
+        }
+      }
+    }
+  }
+
   seed(product: Product): void {
     this.map.set(product.id.value, product);
   }
@@ -157,6 +167,12 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
     return [...this.map.values()].reduce(
       (total, list) => total + list.items.filter((item) => referencesStore(item, storeId)).length,
       0,
+    );
+  }
+
+  async findAllByStore(storeId: StoreId): Promise<ShoppingList[]> {
+    return [...this.map.values()].filter((list) =>
+      list.items.some((item) => referencesStore(item, storeId)),
     );
   }
 

@@ -63,23 +63,29 @@ class InMemoryShoppingListRepository implements ShoppingListRepository {
 
   async countItemsByStore(storeId: StoreId): Promise<number> {
     return [...this.map.values()].reduce(
-      (total, list) =>
-        total +
-        list.items.filter((item) => {
-          const targetStore = item.targetStore;
-          const actualStore = item.actualStore;
-          return (
-            (targetStore !== null && targetStore.equals(storeId)) ||
-            (actualStore !== null && actualStore.equals(storeId))
-          );
-        }).length,
+      (total, list) => total + list.items.filter((item) => referencesStore(item, storeId)).length,
       0,
+    );
+  }
+
+  async findAllByStore(storeId: StoreId): Promise<ShoppingList[]> {
+    return [...this.map.values()].filter((list) =>
+      list.items.some((item) => referencesStore(item, storeId)),
     );
   }
 
   seed(shoppingList: ShoppingList): void {
     this.map.set(shoppingList.id.value, shoppingList);
   }
+}
+
+function referencesStore(item: ShoppingItem, storeId: StoreId): boolean {
+  const targetStore = item.targetStore;
+  const actualStore = item.actualStore;
+  return (
+    (targetStore !== null && targetStore.equals(storeId)) ||
+    (actualStore !== null && actualStore.equals(storeId))
+  );
 }
 
 class InMemoryProductRepository implements ProductRepository {
@@ -114,6 +120,16 @@ class InMemoryProductRepository implements ProductRepository {
         total + product.priceHistory.filter((record) => record.storeId.equals(storeId)).length,
       0,
     );
+  }
+
+  async deletePriceRecordsByStore(storeId: StoreId): Promise<void> {
+    for (const product of this.map.values()) {
+      for (const record of product.priceHistory) {
+        if (record.storeId.equals(storeId)) {
+          product.removePriceRecord(record.id);
+        }
+      }
+    }
   }
 
   seed(product: Product): void {

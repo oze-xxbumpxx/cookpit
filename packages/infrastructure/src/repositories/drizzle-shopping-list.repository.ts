@@ -15,7 +15,7 @@ import type {
   ShoppingListRepository,
   ShoppingListStatus,
 } from '@cookpit/domain';
-import { and, count, eq, notInArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
   shoppingItems,
@@ -129,6 +129,29 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       );
 
     return rows[0]?.value ?? 0;
+  }
+
+  async findAllByStore(storeId: StoreId): Promise<ShoppingList[]> {
+    // 該当リストを 1 クエリで丸ごと取得する。inArray のサブクエリで「該当品目を持つリスト」に
+    // 絞り込んだうえで全品目を join するため、解除対象でない品目も含めて集約を完全に復元できる
+    // （品目だけを絞って復元すると、save 時に残りの品目が消える）。
+    const targetListIds = this.db
+      .select({ id: shoppingItems.shoppingListId })
+      .from(shoppingItems)
+      .where(
+        or(
+          eq(shoppingItems.targetStoreId, storeId.value),
+          eq(shoppingItems.actualStoreId, storeId.value),
+        ),
+      );
+
+    const rows = await this.db
+      .select({ shoppingList: shoppingLists, shoppingItem: shoppingItems })
+      .from(shoppingLists)
+      .leftJoin(shoppingItems, eq(shoppingLists.id, shoppingItems.shoppingListId))
+      .where(inArray(shoppingLists.id, targetListIds));
+
+    return this.toShoppingLists(rows);
   }
 
   private toShoppingLists(rows: ShoppingListWithItemRow[]): ShoppingList[] {

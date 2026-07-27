@@ -82,4 +82,33 @@ describe('DrizzleStoreRepository', () => {
   it('IR-S-05: delete() は存在しない ID でも例外にならない（冪等）', async () => {
     await expect(repository.delete(StoreId.generate())).resolves.toBeUndefined();
   });
+
+  it('IR-01: findByNormalizedName() は完全一致で 1 件返す', async () => {
+    const store = Store.create({ name: 'ライフ' });
+    await repository.save(store);
+
+    const found = await repository.findByNormalizedName('ライフ');
+
+    expect(found?.id.equals(store.id)).toBe(true);
+  });
+
+  it('IR-02: findByNormalizedName() は表記ゆれ（半角カナ）でも一致する', async () => {
+    await repository.save(Store.create({ name: '業務ｽｰﾊﾟｰ' }));
+
+    const found = await repository.findByNormalizedName('業務スーパー');
+
+    expect(found?.name).toBe('業務ｽｰﾊﾟｰ');
+  });
+
+  it('IR-02: findByNormalizedName() は前後空白付きで保存された店舗にも一致する', async () => {
+    await repository.save(Store.create({ name: ' ライフ ' }));
+
+    expect(await repository.findByNormalizedName('ライフ')).not.toBeNull();
+  });
+
+  it('IR-03: findByNormalizedName() は一致が無ければ null を返す', async () => {
+    await repository.save(Store.create({ name: 'ライフ' }));
+
+    expect(await repository.findByNormalizedName('コモディ飯田')).toBeNull();
+  });
 });

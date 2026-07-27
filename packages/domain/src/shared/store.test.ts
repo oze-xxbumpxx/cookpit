@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Store, StoreId } from './store';
+import { normalizeStoreName, Store, StoreId } from './store';
 
 describe('StoreId', () => {
   it('generate は UUID を生成する (S1)', () => {
@@ -66,5 +66,26 @@ describe('Store', () => {
     });
     createdAt.setFullYear(2099);
     expect(store.createdAt.getFullYear()).toBe(2026);
+  });
+});
+
+describe('normalizeStoreName', () => {
+  it.each([
+    ['ライフ', 'ライフ', 'NSN-01 正常系'],
+    ['  ライフ  ', 'ライフ', 'NSN-02 前後空白除去'],
+    ['ﾗｲﾌ', 'ライフ', 'NSN-03 半角カナを全角へ'],
+    ['業務ｽｰﾊﾟｰ', '業務スーパー', 'NSN-04 NFKC 混在'],
+    ['ＡＢＣ', 'ABC', 'NSN-05 全角英字を半角へ'],
+    ['', '', 'NSN-07 空文字'],
+  ])('%s を %s に正規化する (%s)', (input, expected) => {
+    expect(normalizeStoreName(input)).toBe(expected);
+  });
+
+  it('大文字小文字は同一視しない (NSN-06)', () => {
+    expect(normalizeStoreName('Life')).not.toBe(normalizeStoreName('life'));
+  });
+
+  it('表記ゆれのある同一店舗名が同じ値へ収束する (NSN-04)', () => {
+    expect(normalizeStoreName(' 業務ｽｰﾊﾟｰ ')).toBe(normalizeStoreName('業務スーパー'));
   });
 });

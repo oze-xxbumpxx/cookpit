@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createStoreSchema, storeResponseSchema, storeSchema } from './store.schema';
+import {
+  createStoreSchema,
+  storeResponseSchema,
+  storeSchema,
+  storeUsageResponseSchema,
+} from './store.schema';
 
 const VALID_STORE_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -57,5 +62,33 @@ describe('storeSchema', () => {
 
   it('不正な id を reject する', () => {
     expect(() => storeSchema.parse({ id: 'not-a-uuid', name: 'スーパーA' })).toThrow();
+  });
+});
+
+describe('storeUsageResponseSchema', () => {
+  it('正常な件数を parse できる', () => {
+    const dto = { priceRecordCount: 3, shoppingItemCount: 2 };
+    expect(storeUsageResponseSchema.parse(dto)).toEqual(dto);
+  });
+
+  it('0 件を受け入れる', () => {
+    const dto = { priceRecordCount: 0, shoppingItemCount: 0 };
+    expect(storeUsageResponseSchema.parse(dto)).toEqual(dto);
+  });
+
+  it('負数を reject する', () => {
+    expect(() =>
+      storeUsageResponseSchema.parse({ priceRecordCount: -1, shoppingItemCount: 0 }),
+    ).toThrow();
+  });
+
+  it('小数を reject する', () => {
+    expect(() =>
+      storeUsageResponseSchema.parse({ priceRecordCount: 1.5, shoppingItemCount: 0 }),
+    ).toThrow();
+  });
+
+  it('キーの省略を reject する', () => {
+    expect(() => storeUsageResponseSchema.parse({ priceRecordCount: 1 })).toThrow();
   });
 });

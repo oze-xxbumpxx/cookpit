@@ -12,7 +12,14 @@ export interface ShoppingListRepository {
   /**
    * 指定した店舗を購入予定店舗（targetStore）または実購入店舗（actualStore）として参照する
    * 品目の件数を返す（全リストの合計）。同じ品目が両方で参照していても 1 件と数える。
-   * 店舗削除の可否判定（ADR-0012）のためだけに使う。
+   * 削除で影響を受ける件数の事前提示（ADR-0013 / `GET /api/stores/:id/usage`）に使う。
    */
   countItemsByStore(storeId: StoreId): Promise<number>;
+  /**
+   * 指定した店舗を targetStore または actualStore として参照する品目を持つリストを返す。
+   * **completed のリストも含む**（過去の買い物も店舗を参照しているため）。
+   * 店舗削除時の参照解除（ADR-0013）のためだけに使う。
+   * 同一リスト内に該当品目が複数あっても、そのリストは 1 度だけ返す。
+   */
+  findAllByStore(storeId: StoreId): Promise<ShoppingList[]>;
 }

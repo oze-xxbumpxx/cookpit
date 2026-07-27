@@ -209,8 +209,23 @@ product.defaultUnit
   `同じ名前の店舗がすでに登録されています。` を表示し追加ボタンを無効化
 - 削除ダイアログは `usage` 取得後に件数を差し込む。取得に失敗した場合は件数を伏せ、
   「この店舗の価格記録はすべて削除されます」の定性表現で続行可能にする（削除自体は止めない）
-- 上限・同名の判定に使う正規化関数は Domain の `normalizeStoreName` を
-  `@cookpit/domain` から import して**サーバーと同一実装を共有**する
+- 上限・同名の判定に使う `STORE_LIMIT` と正規化関数は `apps/web` 側に**複製**し、
+  `store-name.node.test.ts` がサーバー側実装との一致を機械的に固定する
+
+> 当初は `@cookpit/domain` の `normalizeStoreName` と `@cookpit/application` の `STORE_LIMIT` を
+> クライアントから import して実装を 1 本化する想定だったが、**採れなかった**。
+> `StoreId.generate()` が `node:crypto` の `randomUUID` を使うため、これらを値として import すると
+> `node:crypto` がブラウザバンドルへ混入する（既存のクライアントコンポーネントはいずれも
+> `import type` に留めており、値 import の先例は Server Component だけだった）。
+>
+> 代替として `apps/web/src/app/products/_utils/store-name.ts` に複製を置き、
+> node 環境のテストから `@cookpit/domain` / `@cookpit/application` の実装を import して
+> 表記ゆれ 11 パターンと `STORE_LIMIT` の一致を assert する。片方だけ変えるとテストが落ちるため、
+> 乖離は機械的に防がれる。Domain 側が権威であり、UI 側は事前警告のためのヒントに過ぎない
+> （登録の可否はサーバーが決める）という関係は保たれる。
+>
+> `node:crypto` を `globalThis.crypto.randomUUID()` へ置き換えれば Domain パッケージは
+> 同型（isomorphic）になり複製は不要になるが、ID 生成の全面変更は本依頼のスコープ外とする。
 
 ### ② 内容量の例（`products/_utils/package-size-example.ts`、新規）
 

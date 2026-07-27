@@ -49,23 +49,25 @@
 
 ## 新規作成ファイル
 
-| ファイル                                                             | 用途                     |
-| -------------------------------------------------------------------- | ------------------------ |
-| `packages/application/src/store/store-limit-exceeded.error.ts`       | 上限超過エラー（422）    |
-| `packages/application/src/store/duplicate-store-name.error.ts`       | 同名エラー（422）        |
-| `packages/application/src/store/get-store-usage.use-case.ts`         | 参照件数の取得           |
-| `apps/web/src/app/products/_utils/package-size-example.ts`           | 内容量の例（純関数）     |
-| `apps/web/src/app/products/_utils/package-size-example.node.test.ts` | 上記のテスト             |
-| `apps/web/src/app/loading.tsx`                                       | ダッシュボードの骨組み   |
-| `apps/web/src/app/products/[id]/loading.tsx`                         | 商品詳細の骨組み         |
-| `apps/web/src/app/shopping-lists/loading.tsx`                        | 買い物入口の骨組み       |
-| `apps/web/src/app/shopping-lists/[id]/loading.tsx`                   | 買い物リスト詳細の骨組み |
-| `apps/web/src/app/recipes/[id]/loading.tsx`                          | レシピ詳細の骨組み       |
-| `apps/web/src/app/meal-plans/history/loading.tsx`                    | 献立履歴の骨組み         |
-| `apps/web/scripts/subset-fonts.mjs`                                  | フォントサブセット生成   |
-| `apps/web/public/fonts/zen-maru-gothic-subset-400.woff2`             | 生成物（コミットする）   |
-| `apps/web/public/fonts/zen-maru-gothic-subset-500.woff2`             | 生成物（コミットする）   |
-| `apps/web/public/fonts/zen-maru-gothic-subset-700.woff2`             | 生成物（コミットする）   |
+| ファイル                                                             | 用途                           |
+| -------------------------------------------------------------------- | ------------------------------ |
+| `packages/application/src/store/store-limit-exceeded.error.ts`       | 上限超過エラー（422）          |
+| `packages/application/src/store/duplicate-store-name.error.ts`       | 同名エラー（422）              |
+| `packages/application/src/store/get-store-usage.use-case.ts`         | 参照件数の取得                 |
+| `apps/web/src/app/products/_utils/store-name.ts`                     | UI 側の上限・同名判定（複製）  |
+| `apps/web/src/app/products/_utils/store-name.node.test.ts`           | 上記とサーバー側実装の一致固定 |
+| `apps/web/src/app/products/_utils/package-size-example.ts`           | 内容量の例（純関数）           |
+| `apps/web/src/app/products/_utils/package-size-example.node.test.ts` | 上記のテスト                   |
+| `apps/web/src/app/loading.tsx`                                       | ダッシュボードの骨組み         |
+| `apps/web/src/app/products/[id]/loading.tsx`                         | 商品詳細の骨組み               |
+| `apps/web/src/app/shopping-lists/loading.tsx`                        | 買い物入口の骨組み             |
+| `apps/web/src/app/shopping-lists/[id]/loading.tsx`                   | 買い物リスト詳細の骨組み       |
+| `apps/web/src/app/recipes/[id]/loading.tsx`                          | レシピ詳細の骨組み             |
+| `apps/web/src/app/meal-plans/history/loading.tsx`                    | 献立履歴の骨組み               |
+| `apps/web/scripts/subset-fonts.mjs`                                  | フォントサブセット生成         |
+| `apps/web/public/fonts/zen-maru-gothic-subset-400.woff2`             | 生成物（コミットする）         |
+| `apps/web/public/fonts/zen-maru-gothic-subset-500.woff2`             | 生成物（コミットする）         |
+| `apps/web/public/fonts/zen-maru-gothic-subset-700.woff2`             | 生成物（コミットする）         |
 
 ## 削除ファイル
 
