@@ -3,9 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { getStores, postStore, postPriceRecord, refresh, push } = vi.hoisted(() => ({
+const { getStores, postStore, deleteStore, postPriceRecord, refresh, push } = vi.hoisted(() => ({
   getStores: vi.fn(),
   postStore: vi.fn(),
+  deleteStore: vi.fn(),
   postPriceRecord: vi.fn(),
   refresh: vi.fn(),
   push: vi.fn(),
@@ -21,6 +22,9 @@ vi.mock('@/lib/api-client', () => ({
       stores: {
         $get: (...args: unknown[]) => getStores(...args),
         $post: (...args: unknown[]) => postStore(...args),
+        ':id': {
+          $delete: (...args: unknown[]) => deleteStore(...args),
+        },
       },
       products: {
         ':id': {
@@ -51,6 +55,7 @@ function createProductDto(overrides: Partial<ProductDto> = {}): ProductDto {
 
 const STORES: StoreDto[] = [
   { id: 'store-a', name: '店舗A', createdAt: '2026-06-01T00:00:00.000Z' },
+  { id: 'store-b', name: '店舗B', createdAt: '2026-06-02T00:00:00.000Z' },
 ];
 
 describe('PriceRecordForm', () => {
@@ -67,7 +72,9 @@ describe('PriceRecordForm', () => {
     const { container } = render(<PriceRecordForm product={product} />);
 
     // 店舗ロード完了（= 先頭店舗が自動選択される）まで待つ
-    expect(await screen.findByText('選択肢にない店舗はここから追加できます。')).toBeDefined();
+    expect(
+      await screen.findByText('プルダウンに出す店舗をここで追加・削除できます。'),
+    ).toBeDefined();
 
     await user.type(screen.getByLabelText('価格'), '298');
     // 内容量は数量と単位を 1 欄で入力する（要望2）
@@ -97,7 +104,9 @@ describe('PriceRecordForm', () => {
     render(<PriceRecordForm product={createProductDto()} />);
 
     // 店舗ロード完了（= 先頭店舗が自動選択される）まで待つ
-    expect(await screen.findByText('選択肢にない店舗はここから追加できます。')).toBeDefined();
+    expect(
+      await screen.findByText('プルダウンに出す店舗をここで追加・削除できます。'),
+    ).toBeDefined();
 
     await user.type(screen.getByLabelText('価格'), '0');
     await user.type(screen.getByLabelText('内容量', { exact: false }), '300個');
@@ -111,5 +120,71 @@ describe('PriceRecordForm', () => {
     render(<PriceRecordForm product={createProductDto()} />);
 
     expect(await screen.findByText('店舗の取得に失敗しました。')).toBeDefined();
+  });
+  it('PRF-04: 店舗管理パネルから削除すると一覧から消え、選択中なら選択が解除される', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    deleteStore.mockResolvedValue({ ok: true, status: 204 });
+    render(<PriceRecordForm product={createProductDto()} />);
+
+    // 先頭の店舗A が自動選択された状態から始まる
+    expect(
+      await screen.findByText('プルダウンに出す店舗をここで追加・削除できます。'),
+    ).toBeDefined();
+    expect(screen.getByRole('combobox', { name: '店舗' }).textContent).toContain('店舗A');
+
+    await user.click(screen.getByRole('button', { name: '店舗Aを削除' }));
+    await user.click(await screen.findByRole('button', { name: '削除する' }));
+
+    await waitFor(() => {
+      expect(deleteStore).toHaveBeenCalledWith({ param: { id: 'store-a' } });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '店舗Aを削除' })).toBeNull();
+    });
+    // 削除した店舗が選択中だったので選択が外れ、プレースホルダに戻る
+    expect(screen.getByRole('combobox', { name: '店舗' }).textContent).toContain('店舗を選択');
+    // 残った店舗は消えない
+    expect(screen.getByRole('button', { name: '店舗Bを削除' })).toBeDefined();
+  });
+
+  it('PRF-05: 参照のある店舗（422）は削除されず、理由が表示される', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    deleteStore.mockResolvedValue({ ok: false, status: 422 });
+    render(<PriceRecordForm product={createProductDto()} />);
+
+    expect(
+      await screen.findByText('プルダウンに出す店舗をここで追加・削除できます。'),
+    ).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: '店舗Aを削除' }));
+    await user.click(await screen.findByRole('button', { name: '削除する' }));
+
+    expect(
+      await screen.findByText(
+        'この店舗は価格記録や買い物リストで使われているため削除できません。先にそれらを削除してください。',
+      ),
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: '店舗Aを削除' })).toBeDefined();
+  });
+
+  it('PRF-06: 404 は「既に消えている」として成功扱いにする（冪等）', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    deleteStore.mockResolvedValue({ ok: false, status: 404 });
+    render(<PriceRecordForm product={createProductDto()} />);
+
+    expect(
+      await screen.findByText('プルダウンに出す店舗をここで追加・削除できます。'),
+    ).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: '店舗Bを削除' }));
+    await user.click(await screen.findByRole('button', { name: '削除する' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '店舗Bを削除' })).toBeNull();
+    });
+    expect(screen.queryByText('店舗の削除に失敗しました。')).toBeNull();
   });
 });

@@ -15,7 +15,7 @@ import type {
   ShoppingListRepository,
   ShoppingListStatus,
 } from '@cookpit/domain';
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, count, eq, notInArray, or, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import {
   shoppingItems,
@@ -113,6 +113,22 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
           },
         });
     }
+  }
+
+  async countItemsByStore(storeId: StoreId): Promise<number> {
+    // 1 品目が targetStore と actualStore の両方で同じ店舗を指していても 1 件として数えたいので、
+    // OR 条件の COUNT(*)（行数）にする。カラムごとに数えて足すと二重計上になる。
+    const rows = await this.db
+      .select({ value: count() })
+      .from(shoppingItems)
+      .where(
+        or(
+          eq(shoppingItems.targetStoreId, storeId.value),
+          eq(shoppingItems.actualStoreId, storeId.value),
+        ),
+      );
+
+    return rows[0]?.value ?? 0;
   }
 
   private toShoppingLists(rows: ShoppingListWithItemRow[]): ShoppingList[] {

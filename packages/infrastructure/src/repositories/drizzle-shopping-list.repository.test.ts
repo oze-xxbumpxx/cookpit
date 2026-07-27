@@ -269,4 +269,48 @@ describe('DrizzleShoppingListRepository', () => {
       toLocalDateString(shoppingList.shoppingDate),
     );
   });
+  it('IR-SL-10: countItemsByStore() は targetStore / actualStore の参照を数える', async () => {
+    const storeA = StoreId.fromString('store-1');
+    const storeB = StoreId.fromString('store-2');
+    const storeC = StoreId.fromString('store-3');
+    await repository.save(
+      createList({
+        items: [
+          // targetStore のみが storeA
+          createItem({
+            id: ShoppingItemId.fromString('item-target-only'),
+            targetStore: storeA,
+            status: 'pending',
+            actualPrice: null,
+            actualStore: null,
+          }),
+          // actualStore のみが storeA
+          createItem({
+            id: ShoppingItemId.fromString('item-actual-only'),
+            targetStore: storeC,
+            actualStore: storeA,
+          }),
+          // 両方が storeA。二重計上しないことの確認
+          createItem({
+            id: ShoppingItemId.fromString('item-both'),
+            targetStore: storeA,
+            actualStore: storeA,
+          }),
+          // storeA を参照しない
+          createItem({
+            id: ShoppingItemId.fromString('item-other'),
+            targetStore: storeB,
+            actualStore: storeB,
+          }),
+        ],
+      }),
+    );
+
+    expect(await repository.countItemsByStore(storeA)).toBe(3);
+    expect(await repository.countItemsByStore(storeB)).toBe(1);
+  });
+
+  it('IR-SL-11: countItemsByStore() は参照が無ければ 0 を返す', async () => {
+    expect(await repository.countItemsByStore(StoreId.fromString('store-unused'))).toBe(0);
+  });
 });

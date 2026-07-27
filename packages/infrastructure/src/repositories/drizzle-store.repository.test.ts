@@ -57,4 +57,29 @@ describe('DrizzleStoreRepository', () => {
 
     expect(found).toBeNull();
   });
+
+  it('IR-S-04: delete() で行が消え、他の店舗は残る', async () => {
+    const target = Store.reconstruct({
+      id: StoreId.generate(),
+      name: '消す店',
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+    });
+    const kept = Store.reconstruct({
+      id: StoreId.generate(),
+      name: '残す店',
+      createdAt: new Date('2026-06-02T00:00:00.000Z'),
+    });
+    await repository.save(target);
+    await repository.save(kept);
+
+    await repository.delete(target.id);
+
+    expect(await repository.findById(target.id)).toBeNull();
+    expect(await repository.findAll()).toHaveLength(1);
+    expect((await repository.findById(kept.id))?.name).toBe('残す店');
+  });
+
+  it('IR-S-05: delete() は存在しない ID でも例外にならない（冪等）', async () => {
+    await expect(repository.delete(StoreId.generate())).resolves.toBeUndefined();
+  });
 });

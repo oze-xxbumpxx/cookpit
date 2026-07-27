@@ -61,6 +61,22 @@ class InMemoryShoppingListRepository implements ShoppingListRepository {
     this.map.set(shoppingList.id.value, shoppingList);
   }
 
+  async countItemsByStore(storeId: StoreId): Promise<number> {
+    return [...this.map.values()].reduce(
+      (total, list) =>
+        total +
+        list.items.filter((item) => {
+          const targetStore = item.targetStore;
+          const actualStore = item.actualStore;
+          return (
+            (targetStore !== null && targetStore.equals(storeId)) ||
+            (actualStore !== null && actualStore.equals(storeId))
+          );
+        }).length,
+      0,
+    );
+  }
+
   seed(shoppingList: ShoppingList): void {
     this.map.set(shoppingList.id.value, shoppingList);
   }
@@ -90,6 +106,14 @@ class InMemoryProductRepository implements ProductRepository {
 
   async delete(id: ProductId): Promise<void> {
     this.map.delete(id.value);
+  }
+
+  async countPriceRecordsByStore(storeId: StoreId): Promise<number> {
+    return [...this.map.values()].reduce(
+      (total, product) =>
+        total + product.priceHistory.filter((record) => record.storeId.equals(storeId)).length,
+      0,
+    );
   }
 
   seed(product: Product): void {

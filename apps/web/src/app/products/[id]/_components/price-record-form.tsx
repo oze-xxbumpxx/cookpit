@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
@@ -8,9 +15,14 @@ import { client } from '@/lib/api-client';
 import { parseQuantity } from '@/lib/parse-quantity';
 import type { CreateStoreBody, RecordPriceBody } from '@cookpit/api-contract';
 import type { ProductDto, StoreDto } from '@cookpit/application';
+import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useEffect, useId, useState } from 'react';
+
+/** 参照が残っている店舗は削除できない（ADR-0012）。サーバーは 422 を返す。 */
+const STORE_IN_USE_MESSAGE =
+  'この店舗は価格記録や買い物リストで使われているため削除できません。先にそれらを削除してください。';
 
 interface Props {
   product: ProductDto;
@@ -50,6 +62,8 @@ export function PriceRecordForm({ product }: Props) {
   const [storesErrorMessage, setStoresErrorMessage] = useState<string | null>(null);
   const [newStoreName, setNewStoreName] = useState('');
   const [creatingStore, setCreatingStore] = useState(false);
+  const [pendingDeleteStore, setPendingDeleteStore] = useState<StoreDto | null>(null);
+  const [deletingStore, setDeletingStore] = useState(false);
   const [storeId, setStoreId] = useState('');
   const [priceAmount, setPriceAmount] = useState('');
   const [packageSize, setPackageSize] = useState('');
@@ -186,6 +200,39 @@ export function PriceRecordForm({ product }: Props) {
     }
   }
 
+  async function handleDeleteStore(): Promise<void> {
+    if (pendingDeleteStore === null) {
+      return;
+    }
+
+    const targetStoreId = pendingDeleteStore.id;
+    setDeletingStore(true);
+    setStoresErrorMessage(null);
+    try {
+      const response = await client.api.stores[':id'].$delete({ param: { id: targetStoreId } });
+      // Hono RPC の型は 404 / 422 を知らない（共通 onError 由来で型に現れない）ため number へ広げる。
+      const status: number = response.status;
+      if (status === 422) {
+        setStoresErrorMessage(STORE_IN_USE_MESSAGE);
+        setPendingDeleteStore(null);
+        return;
+      }
+      // 404 は「既に消えている」＝目的達成なので成功として扱う（削除操作を冪等にする）。
+      if (!response.ok && status !== 404) {
+        setStoresErrorMessage('店舗の削除に失敗しました。');
+        return;
+      }
+
+      setStores((current) => current.filter((store) => store.id !== targetStoreId));
+      setStoreId((current) => (current === targetStoreId ? '' : current));
+      setPendingDeleteStore(null);
+    } catch {
+      setStoresErrorMessage('店舗の削除中に通信エラーが発生しました。');
+    } finally {
+      setDeletingStore(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
@@ -267,8 +314,31 @@ export function PriceRecordForm({ product }: Props) {
                 ? '店舗を読み込んでいます。'
                 : stores.length === 0
                   ? '店舗がまだ登録されていません。価格を記録する前に店舗を追加してください。'
-                  : '選択肢にない店舗はここから追加できます。'}
+                  : 'プルダウンに出す店舗をここで追加・削除できます。'}
             </p>
+            {stores.length > 0 && (
+              <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-card">
+                {stores.map((store) => (
+                  <li
+                    key={store.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5"
+                  >
+                    <span className="truncate text-sm text-foreground">{store.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPendingDeleteStore(store)}
+                      disabled={deletingStore}
+                      aria-label={`${store.name}を削除`}
+                      className="text-muted-foreground"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <label htmlFor={newStoreNameId} className="sr-only">
               追加する店舗名
             </label>
@@ -341,6 +411,42 @@ export function PriceRecordForm({ product }: Props) {
           </div>
         </section>
       </div>
+
+      <AlertDialog
+        open={pendingDeleteStore !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteStore(null);
+          }
+        }}
+      >
+        {pendingDeleteStore !== null && (
+          <AlertDialogContent>
+            <AlertDialogTitle>{pendingDeleteStore.name}を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              価格記録や買い物リストで使われている店舗は削除できません。使われていない場合のみ削除されます。
+            </AlertDialogDescription>
+            <div className="mt-4 flex justify-end gap-2">
+              <AlertDialogClose
+                render={
+                  <Button type="button" variant="outline" className="h-9">
+                    キャンセル
+                  </Button>
+                }
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeleteStore}
+                disabled={deletingStore}
+                className="h-9"
+              >
+                {deletingStore ? '削除中' : '削除する'}
+              </Button>
+            </div>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </form>
   );
 }

@@ -32,6 +32,10 @@ export class DrizzleStoreRepository implements StoreRepository {
       });
   }
 
+  async delete(id: StoreId): Promise<void> {
+    await this.db.delete(stores).where(eq(stores.id, id.value));
+  }
+
   private toEntity(row: StoreRow): Store {
     return Store.reconstruct({
       id: StoreId.fromString(row.id),

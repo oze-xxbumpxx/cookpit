@@ -1,14 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Store, StoreId } from '@cookpit/domain';
-import type { StoreRepository } from '@cookpit/domain';
+import type { ProductRepository, ShoppingListRepository, StoreRepository } from '@cookpit/domain';
 import { CreateStoreUseCase } from './create-store.use-case';
+import { DeleteStoreUseCase } from './delete-store.use-case';
 import { GetStoresUseCase } from './get-stores.use-case';
+import { StoreInUseError } from './store-in-use.error';
+import { StoreNotFoundError } from './store-not-found.error';
 
 // UseCase の検証は外部 I/O を持たないインメモリ Repository で行う（DB 不要）。
 // 副作用（保存回数）も観測できるようにする。
 class InMemoryStoreRepository implements StoreRepository {
   private readonly map = new Map<string, Store>();
   public saveCount = 0;
+  public deleteCount = 0;
 
   async findById(id: StoreId): Promise<Store | null> {
     return this.map.get(id.value) ?? null;
@@ -21,6 +25,11 @@ class InMemoryStoreRepository implements StoreRepository {
   async save(store: Store): Promise<void> {
     this.saveCount += 1;
     this.map.set(store.id.value, store);
+  }
+
+  async delete(id: StoreId): Promise<void> {
+    this.deleteCount += 1;
+    this.map.delete(id.value);
   }
 
   seed(store: Store): void {
@@ -115,5 +124,108 @@ describe('GetStoresUseCase', () => {
     expect(dtos[0]?.id).toBe('id-1');
     expect(dtos[0]?.name).toBe('西友');
     expect(dtos[0]?.createdAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+});
+
+// DeleteStoreUseCase は「参照件数」しか使わないため、件数だけを返すスタブで足りる。
+// 呼ばれてはならないメソッドは throw させ、想定外の呼び出しをテストで検出する。
+function notCalled(name: string): never {
+  throw new Error(`Unexpected call: ${name}`);
+}
+
+class CountingProductRepository implements ProductRepository {
+  constructor(private readonly countByStore: number) {}
+
+  async findById(): Promise<never> {
+    return notCalled('ProductRepository.findById');
+  }
+  async findAll(): Promise<never> {
+    return notCalled('ProductRepository.findAll');
+  }
+  async save(): Promise<never> {
+    return notCalled('ProductRepository.save');
+  }
+  async delete(): Promise<never> {
+    return notCalled('ProductRepository.delete');
+  }
+  async countPriceRecordsByStore(): Promise<number> {
+    return this.countByStore;
+  }
+}
+
+class CountingShoppingListRepository implements ShoppingListRepository {
+  constructor(private readonly countByStore: number) {}
+
+  async findById(): Promise<never> {
+    return notCalled('ShoppingListRepository.findById');
+  }
+  async findByMealPlanId(): Promise<never> {
+    return notCalled('ShoppingListRepository.findByMealPlanId');
+  }
+  async save(): Promise<never> {
+    return notCalled('ShoppingListRepository.save');
+  }
+  async countItemsByStore(): Promise<number> {
+    return this.countByStore;
+  }
+}
+
+function deleteStoreUseCase(
+  priceRecordCount: number,
+  shoppingItemCount: number,
+): DeleteStoreUseCase {
+  return new DeleteStoreUseCase(
+    repository,
+    new CountingProductRepository(priceRecordCount),
+    new CountingShoppingListRepository(shoppingItemCount),
+  );
+}
+
+describe('DeleteStoreUseCase', () => {
+  it('DSU-01: どこからも参照されていない店舗を削除する', async () => {
+    repository.seed(seededStore('id-1', '西友'));
+
+    await deleteStoreUseCase(0, 0).execute('id-1');
+
+    expect(repository.deleteCount).toBe(1);
+    expect(repository.size).toBe(0);
+  });
+
+  it('DSU-02: 店舗が存在しなければ StoreNotFoundError を投げ、削除しない', async () => {
+    await expect(deleteStoreUseCase(0, 0).execute('missing')).rejects.toBeInstanceOf(
+      StoreNotFoundError,
+    );
+    expect(repository.deleteCount).toBe(0);
+  });
+
+  it('DSU-03: 価格記録から参照されていれば StoreInUseError を投げ、削除しない', async () => {
+    repository.seed(seededStore('id-1', '西友'));
+
+    await expect(deleteStoreUseCase(3, 0).execute('id-1')).rejects.toBeInstanceOf(StoreInUseError);
+    expect(repository.deleteCount).toBe(0);
+    expect(repository.size).toBe(1);
+  });
+
+  it('DSU-04: 買い物リストの品目から参照されていれば StoreInUseError を投げ、削除しない', async () => {
+    repository.seed(seededStore('id-1', '西友'));
+
+    await expect(deleteStoreUseCase(0, 1).execute('id-1')).rejects.toBeInstanceOf(StoreInUseError);
+    expect(repository.deleteCount).toBe(0);
+  });
+
+  it('DSU-05: StoreInUseError は内訳の件数を保持する', async () => {
+    repository.seed(seededStore('id-1', '西友'));
+
+    await expect(deleteStoreUseCase(3, 1).execute('id-1')).rejects.toMatchObject({
+      priceRecordCount: 3,
+      shoppingItemCount: 1,
+    });
+  });
+
+  it('DSU-06: 存在確認は参照件数の確認より先に行われる（存在しない店舗では件数を数えない）', async () => {
+    // 参照ありの件数を返すスタブでも、存在しない ID なら StoreNotFoundError が先に出る。
+    await expect(deleteStoreUseCase(5, 5).execute('missing')).rejects.toBeInstanceOf(
+      StoreNotFoundError,
+    );
   });
 });

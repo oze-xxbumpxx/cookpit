@@ -249,6 +249,67 @@ describe('DrizzleProductRepository', () => {
 
     expect(found?.priceHistory[0]?.price.amount).toBe(98.5);
   });
+
+  it('IR-P-10: removePriceRecord() 後の save() で該当する price_records 行が消える', async () => {
+    const store = await insertStore();
+    const product = createProduct();
+    const removed = createPriceRecord(store.id, { priceAmount: 300 });
+    const kept = createPriceRecord(store.id, {
+      priceAmount: 280,
+      observedAt: new Date('2026-06-02T00:00:00.000Z'),
+    });
+    product.recordPrice(removed);
+    product.recordPrice(kept);
+    await repository.save(product);
+
+    product.removePriceRecord(removed.id);
+    await repository.save(product);
+
+    const rows = await db
+      .select()
+      .from(priceRecords)
+      .where(eq(priceRecords.productId, product.id.value));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(kept.id.value);
+  });
+
+  it('IR-P-11: 最後の 1 件を removePriceRecord() すると price_records 行が 0 件になる', async () => {
+    const store = await insertStore();
+    const product = createProduct();
+    const only = createPriceRecord(store.id);
+    product.recordPrice(only);
+    await repository.save(product);
+
+    product.removePriceRecord(only.id);
+    await repository.save(product);
+
+    const found = await repository.findById(product.id);
+    expect(found?.priceHistory).toEqual([]);
+  });
+
+  it('IR-P-12: countPriceRecordsByStore() は店舗ごとに商品をまたいで数える', async () => {
+    const storeA = await insertStore();
+    const storeB = Store.create({ name: 'スーパーB' });
+    await new DrizzleStoreRepository(db).save(storeB);
+
+    const product1 = createProduct({ name: 'トマト' });
+    product1.recordPrice(createPriceRecord(storeA.id));
+    product1.recordPrice(
+      createPriceRecord(storeA.id, { observedAt: new Date('2026-06-02T00:00:00.000Z') }),
+    );
+    const product2 = createProduct({ name: 'きゅうり' });
+    product2.recordPrice(createPriceRecord(storeA.id));
+    product2.recordPrice(createPriceRecord(storeB.id));
+    await repository.save(product1);
+    await repository.save(product2);
+
+    expect(await repository.countPriceRecordsByStore(storeA.id)).toBe(3);
+    expect(await repository.countPriceRecordsByStore(storeB.id)).toBe(1);
+  });
+
+  it('IR-P-13: countPriceRecordsByStore() は参照が無ければ 0 を返す', async () => {
+    expect(await repository.countPriceRecordsByStore(StoreId.generate())).toBe(0);
+  });
 });
 
 describe('toUnit', () => {

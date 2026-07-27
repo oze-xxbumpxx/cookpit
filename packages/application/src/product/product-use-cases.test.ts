@@ -11,7 +11,9 @@ import {
 } from '@cookpit/domain';
 import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import { CreateProductUseCase } from './create-product.use-case';
+import { DeletePriceRecordUseCase } from './delete-price-record.use-case';
 import { DeleteProductUseCase } from './delete-product.use-case';
+import { PriceRecordNotFoundError } from './price-record-not-found.error';
 import { GetCheapestStoreUseCase } from './get-cheapest-store.use-case';
 import { GetProductUseCase } from './get-product.use-case';
 import { GetProductsUseCase } from './get-products.use-case';
@@ -50,6 +52,14 @@ class InMemoryProductRepository implements ProductRepository {
     this.map.delete(id.value);
   }
 
+  async countPriceRecordsByStore(storeId: StoreId): Promise<number> {
+    return [...this.map.values()].reduce(
+      (total, product) =>
+        total + product.priceHistory.filter((record) => record.storeId.equals(storeId)).length,
+      0,
+    );
+  }
+
   seed(product: Product): void {
     this.map.set(product.id.value, product);
   }
@@ -74,6 +84,10 @@ class InMemoryStoreRepository implements StoreRepository {
   async save(store: Store): Promise<void> {
     this.saveCount += 1;
     this.map.set(store.id.value, store);
+  }
+
+  async delete(id: StoreId): Promise<void> {
+    this.map.delete(id.value);
   }
 
   seed(store: Store): void {
@@ -390,5 +404,78 @@ describe('GetCheapestStoreUseCase', () => {
       unitPrice: 100,
       packageSizeUnit: '個',
     });
+  });
+});
+
+describe('DeletePriceRecordUseCase', () => {
+  const storeId = StoreId.fromString('store-1');
+
+  function seedTwoRecords(): void {
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord('record-1', storeId, 300, 100, new Date('2026-01-01T00:00:00.000Z')),
+        seededPriceRecord('record-2', storeId, 280, 93.3, new Date('2026-01-02T00:00:00.000Z')),
+      ]),
+    );
+  }
+
+  it('DPR-01: 指定した価格記録を取り除いて保存する', async () => {
+    seedTwoRecords();
+
+    await new DeletePriceRecordUseCase(productRepository).execute({
+      productId: 'product-1',
+      priceRecordId: 'record-1',
+    });
+
+    expect(productRepository.saveCount).toBe(1);
+    const saved = await productRepository.findById(ProductId.fromString('product-1'));
+    expect(saved?.priceHistory.map((record) => record.id.value)).toEqual(['record-2']);
+  });
+
+  it('DPR-02: 商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
+    await expect(
+      new DeletePriceRecordUseCase(productRepository).execute({
+        productId: 'missing',
+        priceRecordId: 'record-1',
+      }),
+    ).rejects.toBeInstanceOf(ProductNotFoundError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
+  it('DPR-03: 価格記録が存在しなければ PriceRecordNotFoundError を投げ、保存しない', async () => {
+    seedTwoRecords();
+
+    await expect(
+      new DeletePriceRecordUseCase(productRepository).execute({
+        productId: 'product-1',
+        priceRecordId: 'missing',
+      }),
+    ).rejects.toBeInstanceOf(PriceRecordNotFoundError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
+  it('DPR-04: 商品の存在確認が価格記録の存在確認より先に行われる', async () => {
+    await expect(
+      new DeletePriceRecordUseCase(productRepository).execute({
+        productId: 'missing',
+        priceRecordId: 'missing',
+      }),
+    ).rejects.toBeInstanceOf(ProductNotFoundError);
+  });
+
+  it('DPR-05: 最後の 1 件を削除すると価格履歴が空になる', async () => {
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord('record-1', storeId, 300, 100, new Date('2026-01-01T00:00:00.000Z')),
+      ]),
+    );
+
+    await new DeletePriceRecordUseCase(productRepository).execute({
+      productId: 'product-1',
+      priceRecordId: 'record-1',
+    });
+
+    const saved = await productRepository.findById(ProductId.fromString('product-1'));
+    expect(saved?.priceHistory).toEqual([]);
   });
 });
