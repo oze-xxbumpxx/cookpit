@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 // 丸ゴシック（自ホスト・日本語グリフ込み）を本文・見出し共通のアプリフォントにする。
-// next/font は日本語サブセット非対応のため Fontsource を使う。
+// next/font は日本語サブセット非対応のため、Fontsource のフォントを自前でサブセット化して使う。
+// Fontsource の japanese サブセットをそのまま読むと 3 ウェイトで 4.40MB あり、描画後の
+// 大規模な再レイアウトの主因になっていた（scripts/subset-fonts.mjs が fonts.css を生成する）。
 // 本文=400 / font-medium=500 / 見出し・font-semibold/bold=700 をカバーする最小限の重みだけ読み込む。
-import '@fontsource/zen-maru-gothic/japanese-400.css';
-import '@fontsource/zen-maru-gothic/japanese-500.css';
-import '@fontsource/zen-maru-gothic/japanese-700.css';
+import './fonts.css';
 import { NavBar } from './_components/nav-bar';
 import './globals.css';
 

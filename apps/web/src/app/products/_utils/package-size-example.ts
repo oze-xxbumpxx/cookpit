@@ -17,12 +17,18 @@ const FALLBACK_EXAMPLE = '300g';
  * 出し分けがすべて成立し、自由入力の未知単位（例: 杯）も安全側の 1 に落ちるため。
  * Domain を値として import しない理由は `store-name.ts` と同じ（node:crypto の混入）。
  *
+ * 単位自体が数字で始まる場合（`1L` `500ml` など。単位は自由記述で、本番に実在する）は
+ * 数量を前置せず単位をそのまま返す。前置すると「11L」のような壊れた例になるため。
+ *
  * @param unit 商品の基本単位。空文字・空白のみのときは既定例を返す
  */
 export function packageSizeExample(unit: string): string {
   const normalized = unit.trim().normalize('NFKC');
   if (normalized === '') {
     return FALLBACK_EXAMPLE;
+  }
+  if (/^\d/.test(normalized)) {
+    return normalized;
   }
 
   const quantity = LARGE_QUANTITY_UNITS.has(normalized.toLowerCase()) ? 300 : 1;

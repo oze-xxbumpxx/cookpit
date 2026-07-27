@@ -505,9 +505,11 @@ export function PriceRecordForm({ product }: Props) {
                   </strong>
                   が削除されます。
                   {pendingDeleteUsage.shoppingItemCount > 0 && (
+                    // JSX の改行はスペースに畳まれて「指定が 未割当」のように割れるため、
+                    // 折り返しても崩れないテンプレートリテラルで組み立てる。
                     <>
-                      買い物の品目 {pendingDeleteUsage.shoppingItemCount} 件は、店舗の指定が
-                      未割当に戻ります（品目自体は残ります）。
+                      {`買い物の品目 ${pendingDeleteUsage.shoppingItemCount} 件は、` +
+                        '店舗の指定が未割当に戻ります（品目自体は残ります）。'}
                     </>
                   )}
                   <br />
