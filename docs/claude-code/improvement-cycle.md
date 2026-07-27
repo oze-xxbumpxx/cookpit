@@ -54,7 +54,16 @@ agent-improvement-manager を起動するのは次のいずれか。**毎タス�
 - Agent 設定を変更する前 / 変更後の回帰評価時
 
 > 短期的事象に過剰適応せず、複数タスクで再現した傾向だけを正式設定へ反映する。
-> reflection-agent は毎タスク動いてよい（候補を貯めるだけで設定は変えないため）。
+> reflection-agent は feature 完了時に動いてよい（候補を貯めるだけで設定は変えない）。
+> 個人開発ライトモードでは毎セッション必須にしない（usage-guide §1.1）。
+
+### 減速ルール（IMP-2026-030）
+
+- **早期昇格は原則禁止**（回数条件前の proposal/本適用をしない）。例外は memory-policy の
+  「確証あり・修正極小」1 行のみ。
+- 対応済み candidate は `candidates/archive/` へ移す（基準は memory-policy）。
+- セッション終了時、可能なら `process.meta_work_ratio` を metrics に記録し、メタ作業の
+  再増殖を数字で監視する。
 
 ## 計測の原則（セッション内確定 / IMP-2026-019 方針 A）
 

@@ -23,41 +23,59 @@
 
 を提供する。**最優先は Agent 数ではなく、整合性・手戻り削減・追跡可能性・過剰実行の防止。**
 
+## 1.1 個人開発ライトモード（推奨既定）
+
+個人開発ではフル装備を毎回使わない。次を既定とする（設計:
+`docs/designs/harness-personal-light-mode.md` / IMP-2026-030・031）。
+
+| 方針 | 内容 |
+| --- | --- |
+| L0/L1 を積極活用 | 相談・調査は L0。文言・単純修正は L1（設計書を作らない） |
+| 実装の既定ルート | Codex 委譲（設計・計画・レビューは Claude） |
+| 常備で意識する Agent | orchestrator / architecture-designer / implementation-planner / test-designer / implementer / reviewer（+ 必要時 contract / security） |
+| reflection | feature 完了時。毎セッション必須ではない |
+| 改善サイクル | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止 |
+| 毎セッションの核 | Rules 3 本 + quality-gates + kickoff/close/work-log |
+
+保護ファイル（Agent 定義）の 11 本化は
+[patches/IMP-2026-031/APPLY.md](./improvements/patches/IMP-2026-031/APPLY.md) を人間が適用する
+まで、正典ドキュメント側が先にライトモードを示す（適用前は旧 Agent ファイルが残っていても
+**起動しない**運用とする）。
+
 ## 2. 構成の全体像
 
 ```
 .claude/
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
-├── agents/   (15)         Orchestrator + 専門/改善 Subagent
-├── skills/   (11)         再利用可能な作業手順とテンプレート
+├── agents/   (11 + archive)  Orchestrator + 専門/改善 Subagent
+├── skills/   (17)         再利用可能な作業手順とテンプレート
 ├── rules/    (3)          層・パス別の確定ルール（+ README）
-├── hooks/    (5 .mjs)     決定論的な検証・安全制御
-├── scripts/  (3 .sh)      コマンド検出・品質ゲート・メトリクス
-├── evals/                 改善の回帰評価（10 ケース + rubric + baselines）
+├── hooks/                 決定論的な検証・安全制御
+├── scripts/               コマンド検出・品質ゲート・メトリクス
+├── evals/                 改善の回帰評価（ケース + rubric + baselines）
 └── state/                 実行時の一時状態（Git 非追跡）
 docs/claude-code/          方針ドキュメントと改善記録（improvements/）
 docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  feature 単位の成果物
 ```
 
-### Agent（15）
+### Agent（11・IMP-2026-031）
 
 | Agent                     | Model    | 役割                                 | 起動条件                                      |
 | ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
 | orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
-| requirements-analyst      | sonnet-5 | 要求整理・既存調査                   | L3（必要な L2）                               |
-| architecture-designer     | sonnet-5 | 技術設計                             | L2/L3                                         |
+| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                      |
 | contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
 | test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
 | implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
-| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                        |
-| reviewer                  | opus-4-8 | 独立レビュー                         | L2/L3                                         |
+| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート           | L1〜L3（E2E は L3・基盤整備時）             |
+| reviewer                  | opus-4-8 | 独立レビュー（文書観点含む）         | L2/L3 / 文書レビュー依頼                      |
 | security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
-| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                  |
-| performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                  |
-| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）              |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                  |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | feature 完了時（ライトモード）                |
 | agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
 | agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                |
+
+> 吸収済み（起動しない）: requirements-analyst / performance-designer /
+> e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。

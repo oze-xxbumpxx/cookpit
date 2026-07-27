@@ -27,8 +27,8 @@ import { loadRunState } from '../lib/harness-state.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-// Agent() ツールの保持を許可する Agent（指揮・改善統括、および検証目的の reviewer）
-const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager', 'reviewer']);
+// Agent() ツールの保持を許可する Agent（指揮・改善統括。IMP-2026-031 で reviewer から除去）
+const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager']);
 // Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
 const BUILTIN_AGENTS = new Set(['Explore']);
 // 人間承認が必要な保護対象（improvement-cycle.md §承認境界）
@@ -112,7 +112,7 @@ function listAgentNames() {
 }
 
 function referencedAgents(toolsValue) {
-  // 例: "Agent(requirements-analyst, architecture-designer), Read, Grep"
+  // 例: "Agent(architecture-designer, implementer, Explore), Read, Grep"
   const refs = [];
   const m = toolsValue.match(/Agent\(([^)]*)\)/);
   if (m && m[1].trim()) {

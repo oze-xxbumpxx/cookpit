@@ -25,12 +25,11 @@
 ### 各 Agent の Memory スコープ
 
 - **orchestrator**: 委譲・統合で繰り返す判断の癖（どの順で委譲すると手戻りが減るか等）。
-- **requirements-analyst**: 既存仕様の所在・調査の入口・要確認になりやすい論点。
-- **architecture-designer**: このプロジェクトで繰り返す設計判断・既出の設計上の落とし穴。
+- **architecture-designer**: 設計判断・要件整理の落とし穴・性能節の判断材料。
 - **implementation-planner**: 分解の粒度・見落としがちな依存・ロールバック観点。
-- **implementer**: ビルド/型/lint の詰まりどころ・Drizzle/Hono 周りの定番注意点。
+- **implementer**: ビルド/型/lint の詰まりどころ・Drizzle/Hono・E2E 基盤の注意点。
 - **test-designer**: 漏れやすい境界・整合性・冪等性の観点。
-- **reviewer**: 頻出指摘の型（タイポ・無限ループ・依存方向違反など）。
+- **reviewer**: 頻出指摘の型（タイポ・無限ループ・依存方向違反・文書の事実誤りなど）。
 - **reflection-agent / manager / evaluator**: 改善メタ知見（昇格判断の精度・評価の限界）。
 
 > Subagent 固有 Memory は「その Agent の担当領域に閉じた知見」だけを置く。全 Agent に効く
@@ -49,10 +48,30 @@ Auto Memory の知見を無条件に CLAUDE.md / Skills へ反映してはいけ
 - 作業時間またはトークンを**継続的に浪費**している
 - 明確な**成功パターンが複数タスクで再現**した
 
+### 早期昇格の原則禁止（IMP-2026-030）
+
+上記の回数条件を満たす前に proposal 化・本適用しない。例外は次の**1 行だけ**:
+
+- **確証あり・修正極小**: 手動再実行等で再現が確定し、変更が 1 ファイル程度の客観的バグ修正
+  （例: Hook の誤検知修正）。例外適用時は proposal または backlog に「例外理由」を 1 行残す。
+
+個人開発ライトモードでは、例外を常用しない（改善サイクルの自己肥大を防ぐ）。
+
 ### 昇格時に記録する項目
 
 観測した事象 / 発生回数 / 対象タスク / 原因仮説 / 改善案 / 変更対象 / 想定される副作用 /
 評価方法。記録先は `improvements/candidates/<task-id>.md`（→ 横断分析後 `proposals/`）。
+
+## candidate のアーカイブ（IMP-2026-030）
+
+対応済み候補は `improvements/candidates/archive/` へ移し、現行一覧を痩せ保つ。
+移動基準の運用説明は [improvements/candidates/archive/README.md](./improvements/candidates/archive/README.md)。
+
+移してよい条件（すべて満たす）:
+
+1. 紐づく IMP が `accepted` または `rejected` で決着している
+2. backlog の当該行ステータスが更新済み（candidate のまま残っていない）
+3. 未解決の再発監視が candidate 本文に残っていない（残すなら backlog の Memory 留めへ）
 
 ## 肥大化への対策
 
@@ -72,6 +91,8 @@ Auto Memory の知見を無条件に CLAUDE.md / Skills へ反映してはいけ
   ローカル前提。チームで共有すべき確定知見は Git 管理の文書（Rule/Skill/ADR）へ昇格する。
 - **TTL の意識**: 「一時的・検証中」と明記した Auto Memory は、次の改善サイクルで再評価し、
   再現しなければ削除する。
+- **メタ作業を測る**: `metrics/<task-id>.yml` の `process.meta_work_ratio`（セッション時間に
+  占める改善・棚卸し・承認待ち等の割合。不明なら unknown）で再増殖を監視する。
 
 ## 誤った知見の削除手順
 
