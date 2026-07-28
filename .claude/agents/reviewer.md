@@ -5,7 +5,7 @@ description: >
   セキュリティ・性能・テスト不足・ドキュメント更新漏れをレビューする。
   文書成果物の品質レビュー（事実整合・矛盾・参照生存・鮮度）も担当する
   （旧 document-reviewer 吸収）。原則コードは変更しない。
-model: claude-opus-4-8
+model: claude-opus-5
 tools: Read, Grep, Glob, Bash
 ---
 

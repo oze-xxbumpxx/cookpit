@@ -8,8 +8,7 @@
 // - 解決順: HARNESS_STATE_DIR → XDG_STATE_HOME/<ns> → ~/.local/state/<ns> → リポジトリ内フォールバック。
 // - リポジトリ配下を指す明示指定（HARNESS_STATE_DIR / XDG_STATE_HOME）は**拒否**する。
 //   シンボリックリンクでリポジトリ内へ逆戻りしている場合も拒否する（realpath で検証）。
-// - リポジトリ内フォールバックは `trusted: false` を返す。承認情報は trusted な場所からしか
-//   読まない（harness-approval.mjs 側で fail-closed）。
+// - リポジトリ内フォールバックは `trusted: false` を返す（呼び出し側が信頼性を判断できるようにする）。
 //
 // このモジュールは副作用として stateDir() 呼び出し時のみディレクトリを作成する（mode 0700）。
 

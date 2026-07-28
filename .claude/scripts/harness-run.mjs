@@ -16,11 +16,6 @@
 
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 import {
-  OPERATION_CONFIG_CHANGE,
-  describeRejection,
-  verifyApproval,
-} from '../lib/harness-approval.mjs';
-import {
   APPROVAL_STATUSES,
   PHASES,
   STATUSES,
@@ -127,25 +122,6 @@ switch (command) {
     break;
   }
 
-  case 'approval-status': {
-    // AI が「承認状態を読み取る」ための唯一の入口（発行・変更はできない）。
-    // 生の承認ファイルではなく検証結果だけを返す。
-    const run = loadRunState();
-    const result = verifyApproval({
-      operation: typeof args.operation === 'string' ? args.operation : OPERATION_CONFIG_CHANGE,
-      target: typeof args.target === 'string' ? args.target : '',
-      runId: run.ok ? run.state.runId : null,
-    });
-    if (result.ok) {
-      process.stdout.write(
-        `承認あり: target=${result.approval.target} expires=${result.approval.expiresAt}\n`,
-      );
-      break;
-    }
-    process.stdout.write(`承認なし: ${describeRejection(result)}\n`);
-    break;
-  }
-
   case 'where': {
     const resolved = resolveStateDir();
     process.stdout.write(`state dir: ${resolved.dir}\nsource: ${resolved.source}\ntrusted: ${resolved.trusted}\n`);
@@ -155,6 +131,6 @@ switch (command) {
 
   default:
     fail(
-      'usage: harness-run.mjs <start|show|run-id|set|gate|approval-status|where> [options]',
+      'usage: harness-run.mjs <start|show|run-id|set|gate|where> [options]',
     );
 }
