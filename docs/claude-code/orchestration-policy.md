@@ -1,6 +1,6 @@
 # Orchestration ポリシー
 
-Orchestrator（`claude-opus-4-8`）は**指揮役**であり、自分で詳細設計や大量の実装を
+Orchestrator（`claude-opus-5`）は**指揮役**であり、自分で詳細設計や大量の実装を
 完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-5`）へ委譲する。
 
 `Agent` ツールを持つのは orchestrator・agent-improvement-manager の 2 つ（実務委譲）と、
@@ -222,7 +222,7 @@ IMP-2026-031）。モデルは「作業量」ではなく「判断の重さ」�
 | ------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
 | 軽い               | ファイル確認・検索・差分や書式のチェック                                      | Haiku（組み込み `Explore` を `model: haiku` 指定で起動） |
 | 方針が決まっている | 確定済み方針での実装・編集・設計書/計画/試験計画の作成・ライティング          | `claude-sonnet-5`                                        |
-| 判断がいる         | レビュー・練り直し・横断分析・オーケストレーション                            | `claude-opus-4-8`                                        |
+| 判断がいる         | レビュー・練り直し・横断分析・オーケストレーション                            | `claude-opus-5`                                          |
 | 特に重要           | L3 の全体設計・方針決め・重大トレードオフ・最終確認（失敗すると手戻りが重い） | Fable（動的オーバーライドまたはメイン切り替え）          |
 
 禁止事項（トークン浪費の典型パターン）：
@@ -239,17 +239,17 @@ IMP-2026-031）。モデルは「作業量」ではなく「判断の重さ」�
 
 | Agent                     | model                                                     |
 | ------------------------- | --------------------------------------------------------- |
-| orchestrator              | `claude-opus-4-8`                                         |
+| orchestrator              | `claude-opus-5`                                           |
 | architecture-designer     | `claude-sonnet-5`（L3 は Fable オーバーライド。下記参照） |
 | contract-designer         | `claude-sonnet-5`                                         |
 | implementation-planner    | `claude-sonnet-5`                                         |
 | implementer               | `claude-sonnet-5`                                         |
 | test-designer             | `claude-sonnet-5`                                         |
-| reviewer                  | `claude-opus-4-8`                                         |
-| security-reviewer         | `claude-opus-4-8`                                         |
+| reviewer                  | `claude-opus-5`                                           |
+| security-reviewer         | `claude-opus-5`                                           |
 | reflection-agent          | `claude-sonnet-5`                                         |
 | agent-evaluator           | `claude-sonnet-5`                                         |
-| agent-improvement-manager | `claude-opus-4-8`                                         |
+| agent-improvement-manager | `claude-opus-5`                                           |
 | （組み込み）Explore       | 呼び出し時に `model: haiku` を指定                        |
 
 agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定型評価で呼び出し回数が多い

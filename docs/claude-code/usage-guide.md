@@ -62,17 +62,17 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 | Agent                     | Model    | 役割                                 | 起動条件                                      |
 | ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
-| orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
+| orchestrator              | opus-5 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
 | architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                      |
 | contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
 | test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
 | implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
 | implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート           | L1〜L3（E2E は L3・基盤整備時）             |
-| reviewer                  | opus-4-8 | 独立レビュー（文書観点含む）         | L2/L3 / 文書レビュー依頼                      |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
+| reviewer                  | opus-5 | 独立レビュー（文書観点含む）         | L2/L3 / 文書レビュー依頼                      |
+| security-reviewer         | opus-5 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
 | reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | feature 完了時（ライトモード）                |
 | agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
-| agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                |
+| agent-improvement-manager | opus-5 | 横断分析・改善提案                   | トリガー時のみ                                |
 
 > 吸収済み（起動しない）: requirements-analyst / performance-designer /
 > e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）

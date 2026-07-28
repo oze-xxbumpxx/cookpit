@@ -43,17 +43,17 @@
 
 | Agent                     | Model    | 役割                                                      |
 | ------------------------- | -------- | --------------------------------------------------------- |
-| orchestrator              | opus-4-8 | 指揮・委譲・統合                                          |
+| orchestrator              | opus-5 | 指揮・委譲・統合                                          |
 | architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 条件付き性能）             |
 | contract-designer         | sonnet-5 | 契約設計（API/DB/イベント/DTO/Zod）。必要時のみ           |
 | test-designer             | sonnet-5 | 試験観点・試験計画                                        |
 | implementation-planner    | sonnet-5 | 実装計画                                                  |
 | implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート                                |
-| reviewer                  | opus-4-8 | 独立レビュー（文書観点含む）                              |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー（L3 原則必須 / L2 は省略可）     |
+| reviewer                  | opus-5 | 独立レビュー（文書観点含む）                              |
+| security-reviewer         | opus-5 | セキュリティ専門レビュー（L3 原則必須 / L2 は省略可）     |
 | reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                                    |
 | agent-evaluator           | sonnet-5 | 固定評価ケースで回帰評価                                  |
-| agent-improvement-manager | opus-4-8 | 横断分析・改善提案（重要設定は提案のみ）                  |
+| agent-improvement-manager | opus-5 | 横断分析・改善提案（重要設定は提案のみ）                  |
 
 ## 運用開始
 
