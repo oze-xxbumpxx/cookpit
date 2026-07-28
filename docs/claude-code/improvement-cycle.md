@@ -40,7 +40,7 @@
 | Agent                     | モデル   | 役割                     | 変更権限                                             |
 | ------------------------- | -------- | ------------------------ | ---------------------------------------------------- |
 | reflection-agent          | sonnet-5 | 振り返り・候補抽出       | 設定変更不可（candidates のみ Write）                |
-| agent-improvement-manager | opus-4-8 | 横断分析・提案・軽微反映 | 重要設定は不可（提案のみ）。軽微は proposal 付きで可 |
+| agent-improvement-manager | opus-5   | 横断分析・提案・軽微反映 | 重要設定は不可（提案のみ）。軽微は proposal 付きで可 |
 | agent-evaluator           | sonnet-5 | 回帰評価                 | 変更不可（evaluations のみ Write）                   |
 
 ## 実行タイミング
