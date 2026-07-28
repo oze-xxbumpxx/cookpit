@@ -11,18 +11,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import { packageSizeExample } from '@/app/products/_utils/package-size-example';
+import { isDuplicateStoreName, STORE_LIMIT } from '@/app/products/_utils/store-name';
 import { client } from '@/lib/api-client';
 import { parseQuantity } from '@/lib/parse-quantity';
 import type { CreateStoreBody, RecordPriceBody } from '@cookpit/api-contract';
-import type { ProductDto, StoreDto } from '@cookpit/application';
+import type { ProductDto, StoreDto, StoreUsageDto } from '@cookpit/application';
 import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useEffect, useId, useState } from 'react';
 
-/** 参照が残っている店舗は削除できない（ADR-0012）。サーバーは 422 を返す。 */
-const STORE_IN_USE_MESSAGE =
-  'この店舗は価格記録や買い物リストで使われているため削除できません。先にそれらを削除してください。';
+const STORE_LIMIT_MESSAGE = `店舗は${STORE_LIMIT}件までです。追加するには既存の店舗を削除してください。`;
+const DUPLICATE_STORE_MESSAGE = '同じ名前の店舗がすでに登録されています。';
 
 interface Props {
   product: ProductDto;
@@ -53,6 +54,7 @@ export function PriceRecordForm({ product }: Props) {
   const priceAmountId = useId();
   const packageSizeId = useId();
   const newStoreNameId = useId();
+  const newStoreHintId = useId();
   const storeIdErrorId = useId();
   const priceAmountErrorId = useId();
   const packageSizeValueErrorId = useId();
@@ -63,6 +65,7 @@ export function PriceRecordForm({ product }: Props) {
   const [newStoreName, setNewStoreName] = useState('');
   const [creatingStore, setCreatingStore] = useState(false);
   const [pendingDeleteStore, setPendingDeleteStore] = useState<StoreDto | null>(null);
+  const [pendingDeleteUsage, setPendingDeleteUsage] = useState<StoreUsageDto | null>(null);
   const [deletingStore, setDeletingStore] = useState(false);
   const [storeId, setStoreId] = useState('');
   const [priceAmount, setPriceAmount] = useState('');
@@ -71,6 +74,8 @@ export function PriceRecordForm({ product }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(emptyFieldErrors);
 
+  // プレースホルダとバリデーションエラーで同じ例を出すため、1 か所で組み立てる。
+  const sizeExample = packageSizeExample(product.defaultUnit);
   const parsedPackageSize = parseQuantity(packageSize);
   const canSubmit =
     storeId !== '' &&
@@ -78,7 +83,17 @@ export function PriceRecordForm({ product }: Props) {
     parsedPackageSize.kind === 'amount' &&
     parsedPackageSize.value > 0 &&
     !submitting;
-  const canCreateStore = newStoreName.trim() !== '' && !creatingStore && !storesLoading;
+  const storeLimitReached = stores.length >= STORE_LIMIT;
+  const duplicateStoreName = isDuplicateStoreName(
+    newStoreName,
+    stores.map((store) => store.name),
+  );
+  const canCreateStore =
+    newStoreName.trim() !== '' &&
+    !creatingStore &&
+    !storesLoading &&
+    !storeLimitReached &&
+    !duplicateStoreName;
   const storeOptions: SelectFieldOption[] = [
     {
       value: '',
@@ -141,7 +156,7 @@ export function PriceRecordForm({ product }: Props) {
       errors.priceAmount = '価格は1円以上の数値で入力してください。';
     }
     if (parsedSize.kind !== 'amount' || parsedSize.value <= 0) {
-      errors.packageSizeValue = '内容量は「数値+単位」で入力してください（例：300g）。';
+      errors.packageSizeValue = `内容量は「数値+単位」で入力してください（例：${sizeExample}）。`;
     }
 
     if (
@@ -167,6 +182,25 @@ export function PriceRecordForm({ product }: Props) {
     };
   }
 
+  /**
+   * サーバーが 422 で拒否した理由を、送信直前の一覧と入力名から推定して日本語化する。
+   * 同時実行で一覧が古かった場合はどちらにも当てはまらないため、汎用文言へ落とす。
+   */
+  function rejectionReason(attemptedName: string): string {
+    if (storeLimitReached) {
+      return STORE_LIMIT_MESSAGE;
+    }
+    if (
+      isDuplicateStoreName(
+        attemptedName,
+        stores.map((store) => store.name),
+      )
+    ) {
+      return DUPLICATE_STORE_MESSAGE;
+    }
+    return '店舗を追加できませんでした。一覧を確認してください。';
+  }
+
   async function handleCreateStore(): Promise<void> {
     if (!canCreateStore) {
       return;
@@ -181,7 +215,13 @@ export function PriceRecordForm({ product }: Props) {
     try {
       const response = await client.api.stores.$post({ json: input });
       if (!response.ok) {
-        setStoresErrorMessage('店舗の追加に失敗しました。');
+        // Hono RPC の型は 422 を知らない（共通 onError 由来で型に現れない）ため number へ広げる。
+        const status: number = response.status;
+        // 上限超過と同名はどちらも 422 で、本文は英語の内部表現。本文をパースせず、
+        // 送信直前の一覧と入力名から理由を組み立てて日本語化する（設計書 §データフロー）。
+        setStoresErrorMessage(
+          status === 422 ? rejectionReason(input.name) : '店舗の追加に失敗しました。',
+        );
         return;
       }
 
@@ -200,6 +240,23 @@ export function PriceRecordForm({ product }: Props) {
     }
   }
 
+  /**
+   * 削除確認ダイアログを開く。合わせて失われる件数を取得する（ADR-0013 の R-5）。
+   * 取得に失敗しても件数を伏せた定性表現で続行できるようにし、削除操作自体は止めない。
+   */
+  async function requestDeleteStore(store: StoreDto): Promise<void> {
+    setPendingDeleteStore(store);
+    setPendingDeleteUsage(null);
+    try {
+      const response = await client.api.stores[':id'].usage.$get({ param: { id: store.id } });
+      if (response.ok) {
+        setPendingDeleteUsage(await response.json());
+      }
+    } catch {
+      // 件数は削除の可否に影響しない補助情報なので、失敗を握って定性表現に委ねる。
+    }
+  }
+
   async function handleDeleteStore(): Promise<void> {
     if (pendingDeleteStore === null) {
       return;
@@ -210,22 +267,23 @@ export function PriceRecordForm({ product }: Props) {
     setStoresErrorMessage(null);
     try {
       const response = await client.api.stores[':id'].$delete({ param: { id: targetStoreId } });
-      // Hono RPC の型は 404 / 422 を知らない（共通 onError 由来で型に現れない）ため number へ広げる。
+      // Hono RPC の型は 404 を知らない（共通 onError 由来で型に現れない）ため number へ広げる。
       const status: number = response.status;
-      if (status === 422) {
-        setStoresErrorMessage(STORE_IN_USE_MESSAGE);
-        setPendingDeleteStore(null);
-        return;
-      }
       // 404 は「既に消えている」＝目的達成なので成功として扱う（削除操作を冪等にする）。
       if (!response.ok && status !== 404) {
         setStoresErrorMessage('店舗の削除に失敗しました。');
+        // エラー文はパネル側に出るため、ダイアログを開いたままだと裏に隠れて読めない。
+        setPendingDeleteStore(null);
+        setPendingDeleteUsage(null);
         return;
       }
 
       setStores((current) => current.filter((store) => store.id !== targetStoreId));
       setStoreId((current) => (current === targetStoreId ? '' : current));
       setPendingDeleteStore(null);
+      setPendingDeleteUsage(null);
+      // 価格記録がカスケード削除されるため、価格履歴・グラフ・最安店舗を取り直す（ADR-0013）。
+      router.refresh();
     } catch {
       setStoresErrorMessage('店舗の削除中に通信エラーが発生しました。');
     } finally {
@@ -314,7 +372,7 @@ export function PriceRecordForm({ product }: Props) {
                 ? '店舗を読み込んでいます。'
                 : stores.length === 0
                   ? '店舗がまだ登録されていません。価格を記録する前に店舗を追加してください。'
-                  : 'プルダウンに出す店舗をここで追加・削除できます。'}
+                  : `プルダウンに出す店舗をここで追加・削除できます（${STORE_LIMIT}件まで）。`}
             </p>
             {stores.length > 0 && (
               <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-card">
@@ -328,7 +386,7 @@ export function PriceRecordForm({ product }: Props) {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => setPendingDeleteStore(store)}
+                      onClick={() => void requestDeleteStore(store)}
                       disabled={deletingStore}
                       aria-label={`${store.name}を削除`}
                       className="text-muted-foreground"
@@ -348,6 +406,11 @@ export function PriceRecordForm({ product }: Props) {
                 value={newStoreName}
                 onChange={(event) => setNewStoreName(event.currentTarget.value)}
                 placeholder="例：近所のスーパー"
+                disabled={storeLimitReached}
+                aria-invalid={duplicateStoreName}
+                aria-describedby={
+                  storeLimitReached || duplicateStoreName ? newStoreHintId : undefined
+                }
                 className="h-10 rounded-lg bg-card"
               />
               <Button
@@ -360,6 +423,12 @@ export function PriceRecordForm({ product }: Props) {
                 {creatingStore ? '追加中' : '追加'}
               </Button>
             </div>
+            {/* 上限は同名より重い制約（既存を消さないと解消しない）ので、両方該当する場合は上限を出す。 */}
+            {(storeLimitReached || duplicateStoreName) && (
+              <p id={newStoreHintId} className="text-xs text-destructive">
+                {storeLimitReached ? STORE_LIMIT_MESSAGE : DUPLICATE_STORE_MESSAGE}
+              </p>
+            )}
           </div>
         </div>
 
@@ -396,7 +465,7 @@ export function PriceRecordForm({ product }: Props) {
               id={packageSizeId}
               value={packageSize}
               onValueChange={setPackageSize}
-              placeholder={`例：300${product.defaultUnit}`}
+              placeholder={`例：${sizeExample}`}
               className="h-11 rounded-xl bg-card"
               invalid={fieldErrors.packageSizeValue !== null}
               describedBy={
@@ -417,6 +486,7 @@ export function PriceRecordForm({ product }: Props) {
         onOpenChange={(open) => {
           if (!open) {
             setPendingDeleteStore(null);
+            setPendingDeleteUsage(null);
           }
         }}
       >
@@ -424,7 +494,28 @@ export function PriceRecordForm({ product }: Props) {
           <AlertDialogContent>
             <AlertDialogTitle>{pendingDeleteStore.name}を削除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
-              価格記録や買い物リストで使われている店舗は削除できません。使われていない場合のみ削除されます。
+              {pendingDeleteUsage === null ? (
+                // 件数の取得前・取得失敗時。失われるものは定性的に伝え、削除は止めない（ADR-0013）。
+                <>この店舗の価格記録はすべて削除されます。元には戻せません。</>
+              ) : (
+                <>
+                  この店舗の
+                  <strong className="font-semibold">
+                    価格記録 {pendingDeleteUsage.priceRecordCount} 件
+                  </strong>
+                  が削除されます。
+                  {pendingDeleteUsage.shoppingItemCount > 0 && (
+                    // JSX の改行はスペースに畳まれて「指定が 未割当」のように割れるため、
+                    // 折り返しても崩れないテンプレートリテラルで組み立てる。
+                    <>
+                      {`買い物の品目 ${pendingDeleteUsage.shoppingItemCount} 件は、` +
+                        '店舗の指定が未割当に戻ります（品目自体は残ります）。'}
+                    </>
+                  )}
+                  <br />
+                  元には戻せません。
+                </>
+              )}
             </AlertDialogDescription>
             <div className="mt-4 flex justify-end gap-2">
               <AlertDialogClose

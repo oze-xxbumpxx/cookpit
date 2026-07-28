@@ -313,4 +313,102 @@ describe('DrizzleShoppingListRepository', () => {
   it('IR-SL-11: countItemsByStore() は参照が無ければ 0 を返す', async () => {
     expect(await repository.countItemsByStore(StoreId.fromString('store-unused'))).toBe(0);
   });
+
+  it('IR-07: findAllByStore() は targetStore 参照のリストを返す', async () => {
+    await repository.save(
+      createList({
+        items: [
+          createItem({
+            targetStore: StoreId.fromString('store-1'),
+            status: 'pending',
+            actualPrice: null,
+            actualStore: null,
+          }),
+        ],
+      }),
+    );
+
+    const found = await repository.findAllByStore(StoreId.fromString('store-1'));
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.id.value).toBe('shopping-list-1');
+  });
+
+  it('IR-08: findAllByStore() は actualStore 参照のリストを返す', async () => {
+    await repository.save(
+      createList({
+        items: [createItem({ targetStore: null, actualStore: StoreId.fromString('store-9') })],
+      }),
+    );
+
+    const found = await repository.findAllByStore(StoreId.fromString('store-9'));
+
+    expect(found).toHaveLength(1);
+  });
+
+  it('IR-09: findAllByStore() は completed のリストも返す', async () => {
+    await repository.save(createList({ status: 'completed' }));
+
+    const found = await repository.findAllByStore(StoreId.fromString('store-1'));
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.status).toBe('completed');
+  });
+
+  it('IR-10: findAllByStore() は該当品目が複数あってもリストを 1 度だけ返し、全品目を復元する', async () => {
+    await repository.save(
+      createList({
+        items: [
+          createItem({ id: ShoppingItemId.fromString('item-1') }),
+          createItem({ id: ShoppingItemId.fromString('item-2') }),
+          // 対象店舗を参照しない品目も、集約の完全復元のために含まれる必要がある
+          // （欠けたまま save すると残りの品目が消えてしまう）
+          createItem({
+            id: ShoppingItemId.fromString('item-3'),
+            targetStore: StoreId.fromString('store-other'),
+            actualStore: StoreId.fromString('store-other'),
+          }),
+        ],
+      }),
+    );
+
+    const found = await repository.findAllByStore(StoreId.fromString('store-1'));
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.items).toHaveLength(3);
+  });
+
+  it('IR-11: findAllByStore() は参照が無ければ空配列を返す', async () => {
+    await repository.save(createList());
+
+    expect(await repository.findAllByStore(StoreId.fromString('store-unused'))).toEqual([]);
+  });
+
+  it('IR-04(SL): findAllByStore() は他リストを巻き込まない', async () => {
+    await repository.save(
+      createList({
+        id: 'shopping-list-1',
+        mealPlanId: 'meal-plan-1',
+        items: [createItem({ targetStore: StoreId.fromString('store-1'), actualStore: null })],
+      }),
+    );
+    await repository.save(
+      createList({
+        id: 'shopping-list-2',
+        mealPlanId: 'meal-plan-2',
+        items: [
+          createItem({
+            id: ShoppingItemId.fromString('shopping-item-2'),
+            targetStore: StoreId.fromString('store-other'),
+            actualStore: null,
+          }),
+        ],
+      }),
+    );
+
+    const found = await repository.findAllByStore(StoreId.fromString('store-1'));
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.id.value).toBe('shopping-list-1');
+  });
 });

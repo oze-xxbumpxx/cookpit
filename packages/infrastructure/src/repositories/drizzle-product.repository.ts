@@ -129,6 +129,10 @@ export class DrizzleProductRepository implements ProductRepository {
     return rows[0]?.value ?? 0;
   }
 
+  async deletePriceRecordsByStore(storeId: StoreId): Promise<void> {
+    await this.db.delete(priceRecords).where(eq(priceRecords.storeId, storeId.value));
+  }
+
   private toProducts(rows: ProductWithPriceRecordRow[]): Product[] {
     const groups = new Map<string, ProductGroup>();
 

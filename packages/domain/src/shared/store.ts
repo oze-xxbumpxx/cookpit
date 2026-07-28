@@ -20,6 +20,17 @@ export class StoreId {
   }
 }
 
+/**
+ * 店舗名の比較用正規化（前後空白除去 + NFKC 正規化）。同名登録の拒否（ADR-0013）に用い、
+ * "ライフ" と " ライフ "、"業務スーパー" と "業務ｽｰﾊﾟｰ" を同一視する。表示には原文を使う。
+ *
+ * 大文字小文字は同一視しない（"Life" と "life" は別店舗）。NFKC は全角英数の幅の統一までを
+ * 担う。正規化規則は `normalizeUnit` と揃えており、SQL 側では正規化しない（ADR-0013）。
+ */
+export function normalizeStoreName(name: string): string {
+  return name.trim().normalize('NFKC');
+}
+
 export interface StoreCreateInput {
   name: string;
 }
