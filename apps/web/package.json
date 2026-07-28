@@ -63,7 +63,7 @@
     "happy-dom": "^20.10.6",
     "subset-font": "^2.5.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^3.2.0"
   }
 }
