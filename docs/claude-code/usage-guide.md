@@ -28,14 +28,14 @@
 個人開発ではフル装備を毎回使わない。次を既定とする（設計:
 `docs/designs/harness-personal-light-mode.md` / IMP-2026-030・031）。
 
-| 方針 | 内容 |
-| --- | --- |
-| L0/L1 を積極活用 | 相談・調査は L0。文言・単純修正は L1（設計書を作らない） |
-| 実装の既定ルート | Codex 委譲（設計・計画・レビューは Claude） |
+| 方針                 | 内容                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| L0/L1 を積極活用     | 相談・調査は L0。文言・単純修正は L1（設計書を作らない）                                                                               |
+| 実装の既定ルート     | Codex 委譲（設計・計画・レビューは Claude）                                                                                            |
 | 常備で意識する Agent | orchestrator / architecture-designer / implementation-planner / test-designer / implementer / reviewer（+ 必要時 contract / security） |
-| reflection | feature 完了時。毎セッション必須ではない |
-| 改善サイクル | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止 |
-| 毎セッションの核 | Rules 3 本 + quality-gates + kickoff/close/work-log |
+| reflection           | feature 完了時。毎セッション必須ではない                                                                                               |
+| 改善サイクル         | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止                                                                      |
+| 毎セッションの核     | Rules 3 本 + quality-gates + kickoff/close/work-log                                                                                    |
 
 保護ファイル（Agent 定義）の 11 本化は
 [patches/IMP-2026-031/APPLY.md](./improvements/patches/IMP-2026-031/APPLY.md) を人間が適用する
@@ -60,19 +60,19 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 ### Agent（11・IMP-2026-031）
 
-| Agent                     | Model    | 役割                                 | 起動条件                                      |
-| ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
-| orchestrator              | opus-5 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
-| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                      |
-| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
-| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
-| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
-| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート           | L1〜L3（E2E は L3・基盤整備時）             |
-| reviewer                  | opus-5 | 独立レビュー（文書観点含む）         | L2/L3 / 文書レビュー依頼                      |
-| security-reviewer         | opus-5 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | feature 完了時（ライトモード）                |
-| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
-| agent-improvement-manager | opus-5 | 横断分析・改善提案                   | トリガー時のみ                                |
+| Agent                     | Model    | 役割                                    | 起動条件                                      |
+| ------------------------- | -------- | --------------------------------------- | --------------------------------------------- |
+| orchestrator              | opus-5   | 指揮・委譲・統合                        | 複数工程の開発タスク                          |
+| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                         |
+| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO）    | 契約変更があるとき                            |
+| test-designer             | sonnet-5 | 試験観点・試験計画                      | L2/L3                                         |
+| implementation-planner    | sonnet-5 | 実装計画                                | L2/L3                                         |
+| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート              | L1〜L3（E2E は L3・基盤整備時）               |
+| reviewer                  | opus-5   | 独立レビュー（文書観点含む）            | L2/L3 / 文書レビュー依頼                      |
+| security-reviewer         | opus-5   | セキュリティ専門レビュー                | L3 原則必須 / L2 は触点時必須（省略条件あり） |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                  | feature 完了時（ライトモード）                |
+| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                    | 改善提案の評価時                              |
+| agent-improvement-manager | opus-5   | 横断分析・改善提案                      | トリガー時のみ                                |
 
 > 吸収済み（起動しない）: requirements-analyst / performance-designer /
 > e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）
@@ -158,12 +158,15 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 日常操作は許可\*\*（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
 `permissions.deny` も併用。
 
-### 保護ファイルと承認マーカー
+### 構成ファイルの変更と承認境界
 
-`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` の変更は**人間承認が必要**
-（[improvement-cycle.md](./improvement-cycle.md) §承認境界）。`validate-agent-config` は
-未承認変更に警告を出す。承認済みのバッチを編集する間だけ
-`.claude/state/config-change-approved` を置き、終わったら削除する（警告抑止）。
+`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` などの構成ファイルは、
+作業ブランチへコミットし **PR レビュー**で確認する（[improvement-cycle.md](./improvement-cycle.md)
+§承認境界はPRレビュー）。`main` へ直接反映しない。
+
+> 2026-07-28 以前は承認ファイル（`config-change-approved` / `harness-approve.mjs`）で Hook が
+> 機械的に強制していたが、リモート環境から承認を発行できずハーネス自身を修正できなくなる
+> デッドロックを繰り返したため撤去した。
 
 ### Hook の一時無効化・復旧
 
@@ -178,21 +181,21 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 - **改善サイクル**：L2/L3 完了後に reflection-agent が
   `improvements/candidates/<task-id>.md` を起票 → 昇格条件（同問題3回 等）成立で
   agent-improvement-manager が `proposals/` に提案 → agent-evaluator が evals で before/after
-  回帰評価 → **悪化なし＆承認**で反映。重要設定は人間承認まで提案止まり。
+  回帰評価 → **悪化なし**で反映。重要設定は PR レビューで確認する。
   詳細：[improvement-cycle.md](./improvement-cycle.md)、記録：[improvements/](./improvements/)。
 - **回帰評価**：`.claude/evals/`（10 ケース・rubric 1〜5・baselines）。改善で1軸でも悪化したら
   採用しない。指示を増やすだけの改善も非採用（不要指示の削除・移動も改善に含む）。
 
 ## 7. よくある操作（早見）
 
-| やりたいこと         | どうする                                                                    |
-| -------------------- | --------------------------------------------------------------------------- |
-| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                              |
-| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                     |
-| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                     |
-| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す          |
-| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、承認後に反映（重要設定は人間承認） |
-| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md` |
+| やりたいこと         | どうする                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- |
+| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                                  |
+| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                         |
+| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                         |
+| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す              |
+| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、ブランチへ反映して PR レビューを受ける |
+| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md`     |
 
 ## 8. 設計上の原則（迷ったとき）
 
@@ -200,4 +203,4 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
   reviewer / agent-improvement-manager のみ。
 - 機械判定は Hook/スクリプト、意味判断は Reviewer。**Hook だけで品質保証したと主張しない。**
 - 指示を肥大化させない（同内容を複数所へ重複記載しない）。改善＝追加とは限らない。
-- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は人間承認。
+- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は PR レビューで確認。
