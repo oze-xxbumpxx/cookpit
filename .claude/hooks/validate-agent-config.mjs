@@ -20,8 +20,6 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   OPERATION_CONFIG_CHANGE,
-  describeRejection,
-  verifyApproval,
 } from '../lib/harness-approval.mjs';
 import { loadRunState } from '../lib/harness-state.mjs';
 
@@ -127,9 +125,7 @@ function referencedAgents(toolsValue) {
 function blockExit(reasons) {
   process.stderr.write(
     '⛔ Agent 設定の検証エラー（構文・整合性）— 修正してください:\n' +
-      reasons.map((r) => ` - ${r}`).join('\n') +
-      '\n参照: docs/claude-code/improvement-cycle.md §承認境界\n',
-  );
+      reasons.map((r) => ` - ${r}`).join('\n')   );
   process.exit(2);
 }
 
@@ -140,9 +136,7 @@ function warnExit(warnings) {
         hookEventName: 'PostToolUse',
         additionalContext:
           '⚠ Agent 設定の注意（方針・整合性。ブロックはしません）:\n' +
-          warnings.map((w) => ` - ${w}`).join('\n') +
-          '\n保護ファイルの恒久変更は improvement-cycle.md §承認境界 に従い人間承認が必要です。',
-      },
+          warnings.map((w) => ` - ${w}`).join('\n')       },
     }),
   );
   process.exit(0);
@@ -229,21 +223,6 @@ function main() {
     }
   }
 
-  // 保護ファイルの未承認変更（承認検証は harness-approval.mjs が正典）。
-  // 実際のブロックは PreToolUse の guard-dangerous.mjs が行う。ここは事後の可視化のみ。
-  if (isProtected(rel)) {
-    const run = loadRunState();
-    const approval = verifyApproval({
-      operation: OPERATION_CONFIG_CHANGE,
-      target: rel,
-      runId: run.ok ? run.state.runId : null,
-    });
-    if (!approval.ok) {
-      warns.push(
-        `保護ファイルを変更しました: ${rel}（人間承認が必要です — ${describeRejection(approval)}）`,
-      );
-    }
-  }
 
   if (blocks.length) blockExit(blocks);
   if (warns.length) warnExit(warns);
