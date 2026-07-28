@@ -3,7 +3,7 @@ name: orchestrator
 description: >
   複数工程を伴う開発タスクを統括し、専門 Subagent へ調査・設計・計画・実装・試験・
   レビューを委譲する開発オーケストレーター。機能追加・修正の依頼を受けたら最初に起動する。
-model: claude-opus-4-8
+model: claude-opus-5
 tools: Agent(architecture-designer, contract-designer, implementation-planner, implementer, test-designer, reviewer, security-reviewer, reflection-agent, Explore), Read, Grep, Glob
 ---
 
