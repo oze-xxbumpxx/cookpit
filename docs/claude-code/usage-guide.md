@@ -37,10 +37,9 @@
 | 改善サイクル         | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止                                                                      |
 | 毎セッションの核     | Rules 3 本 + quality-gates + kickoff/close/work-log                                                                                    |
 
-保護ファイル（Agent 定義）の 11 本化は
-[patches/IMP-2026-031/APPLY.md](./improvements/patches/IMP-2026-031/APPLY.md) を人間が適用する
-まで、正典ドキュメント側が先にライトモードを示す（適用前は旧 Agent ファイルが残っていても
-**起動しない**運用とする）。
+Agent の 11 本化は適用済み（吸収した 4 本は `docs/claude-code/archive/agents/` へ凍結）。
+構成ファイルの変更は作業ブランチへコミットし **PR レビュー**で確認する（承認境界の経緯は
+[harness-state-and-approval.md](./harness-state-and-approval.md) §5）。
 
 ## 2. 構成の全体像
 
@@ -80,13 +79,20 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。
 
-### Skills（11）
+### Skills（17）
 
-`classify-change`（レベル判定）/ `create-requirements-document` / `create-design-document` /
-`create-implementation-plan` / `create-test-plan` / `create-adr` / `validate-deliverables`
-（成果物整合チェック）/ `reflect-task`（振り返り）/ `write-work-log`（日次ログ）/
-`audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
-Claude が場面に応じて自動選択する。
+Claude が場面に応じて自動選択する。`/<skill-name>` で明示的にも呼べる。
+
+| 分類           | Skill                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 判定・検証     | `classify-change`（変更レベル判定）/ `validate-deliverables`（成果物整合）/ `quality-gates`（lint・型・テスト一括）                |
+| 成果物作成     | `create-requirements-document` / `create-design-document` / `create-implementation-plan` / `create-test-plan` / `create-adr`       |
+| セッション運用 | `kickoff-session`（開始の段取り）/ `close-session`（終了の一括処理）/ `write-work-log`（日次ログ）                                 |
+| Codex 委譲     | `create-codex-brief`（実装指示書）/ `review-codex-implementation`（受け入れレビュー）                                              |
+| 確認・振り返り | `manual-browser-verify`（画面手動確認）/ `reflect-task`（振り返り）/ `sprint-review`（週次レトロ）/ `audit-skills`（指示系棚卸し） |
+
+> ライトモードで**毎セッション使うのは 5〜6 本**（`quality-gates` / `kickoff-session` /
+> `close-session` / `write-work-log` + 変更レベルに応じた `create-*`）。残りは非常用。
 
 ### Rules（3）
 
