@@ -3,9 +3,9 @@
 実行状態・品質ゲート結果・危険操作のガードを、**コードで強制される形**で扱うための正典。
 自然言語のルールではなく、`.claude/lib/` のモジュールと `.claude/tests/` のテストが実体。
 
-> **2026-07-28 の変更**: 保護ファイルの人間承認層（`harness-approve.mjs` / 承認ファイル /
-> `verifyApproval` の Hook からの呼び出し）を撤去した。構成ファイル変更の承認境界は
+> **2026-07-28 の変更**: 保護ファイルの人間承認層を撤去した。構成ファイル変更の承認境界は
 > **PR レビュー**が担う。理由と経緯は §5。run 状態（§2・§3）は現役で稼働している。
+> 実体（`harness-approval.mjs` / `harness-approve.mjs` / 対応テスト・計 844 行）は同日削除済み。
 
 ## 1. 前提と限界（最初に読むこと）
 
@@ -148,14 +148,12 @@ fail-closed 設計自体は正しかったが、「安全側に倒れたあと�
 
 ## 8. 関連ファイル
 
-| ファイル                                 | 役割                                                       |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| `.claude/lib/harness-paths.mjs`          | 状態ディレクトリの解決・リポジトリ配下の拒否               |
-| `.claude/lib/harness-state.mjs`          | run 状態スキーマ・原子的書き込み・ロック                   |
-| `.claude/lib/harness-approval.mjs`       | **未使用**（承認層の撤去後も参照されない。削除は別タスク） |
-| `.claude/scripts/harness-run.mjs`        | run 状態の作成・参照・更新                                 |
-| `.claude/scripts/harness-approve.mjs`    | **未使用**（同上）                                         |
-| `.claude/scripts/migrate-state.mjs`      | 旧 `.claude/state/` からの冪等移行                         |
-| `.claude/scripts/assert-e2e-results.mjs` | E2E の未実行・0 件を成功扱いにしない検証                   |
-| `.claude/hooks/guard-dangerous.mjs`      | PreToolUse での deny（§4）                                 |
-| `.claude/tests/*.test.mjs`               | 上記の回帰テスト（`pnpm test:harness`）                    |
+| ファイル                                 | 役割                                         |
+| ---------------------------------------- | -------------------------------------------- |
+| `.claude/lib/harness-paths.mjs`          | 状態ディレクトリの解決・リポジトリ配下の拒否 |
+| `.claude/lib/harness-state.mjs`          | run 状態スキーマ・原子的書き込み・ロック     |
+| `.claude/scripts/harness-run.mjs`        | run 状態の作成・参照・更新                   |
+| `.claude/scripts/migrate-state.mjs`      | 旧 `.claude/state/` からの冪等移行           |
+| `.claude/scripts/assert-e2e-results.mjs` | E2E の未実行・0 件を成功扱いにしない検証     |
+| `.claude/hooks/guard-dangerous.mjs`      | PreToolUse での deny（§4）                   |
+| `.claude/tests/*.test.mjs`               | 上記の回帰テスト（`pnpm test:harness`）      |

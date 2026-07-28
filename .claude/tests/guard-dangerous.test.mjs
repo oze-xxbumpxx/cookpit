@@ -81,7 +81,7 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
       '.claude/agents/implementer.md',
       '.claude/rules/coding-standards.md',
       '.claude/skills/quality-gates/SKILL.md',
-      '.claude/lib/harness-approval.mjs',
+      '.claude/lib/harness-state.mjs',
       '.claude/tests/guard-dangerous.test.mjs',
       '.claude/scripts/run-quality-gates.sh',
       '.github/workflows/ci.yml',
@@ -94,7 +94,7 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
     for (const command of [
       'echo "x" > .claude/hooks/guard-dangerous.mjs',
       'echo "x" >> CLAUDE.md',
-      'node .claude/scripts/harness-approve.mjs --target .claude/hooks/',
+      'node .claude/scripts/harness-run.mjs where',
       'git apply /tmp/changes.patch',
       'git stash pop',
       `node -e "require('fs').writeFileSync('.claude/hooks/guard-dangerous.mjs','')"`,

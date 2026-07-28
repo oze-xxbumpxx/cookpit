@@ -17,8 +17,7 @@
       "Bash(pnpm test:harness)",
       "Bash(node .claude/scripts/harness-run.mjs show)",
       "Bash(node .claude/scripts/harness-run.mjs run-id)",
-      "Bash(node .claude/scripts/harness-run.mjs where)",
-      "Bash(node .claude/scripts/harness-run.mjs approval-status:*)"
+      "Bash(node .claude/scripts/harness-run.mjs where)"
     ],
     "deny": [
       "Read(**/.env)",
