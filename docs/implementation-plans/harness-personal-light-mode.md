@@ -8,37 +8,37 @@
 
 ## 変更対象ファイル
 
-| path | なぜ変えるか |
-| --- | --- |
-| docs/claude-code/usage-guide.md | 個人開発ライトモードを正典化 |
-| docs/claude-code/memory-policy.md | 早期昇格禁止・archive 基準 |
-| docs/claude-code/improvement-cycle.md | 減速ルール・meta 指標への言及 |
-| docs/claude-code/orchestration-policy.md | 委譲フロー・起動条件・Agent 表を 11 本化 |
-| docs/claude-code/agent-responsibilities.md | 責務表を 11 本化 |
-| docs/claude-code/README.md | Agent 一覧更新 |
-| docs/claude-code/development-workflow.md | 旧 Agent 名参照の同期 |
-| docs/claude-code/improvements/metrics/\_TEMPLATE.yml | meta_work_ratio |
-| docs/claude-code/improvements/improvement-backlog.md | IMP-030/031・事象 4/5 ステータス |
-| docs/claude-code/improvements/candidates/harness-complexity-audit.md | 採否反映 |
-| .claude/agents/architecture-designer.md | requirements + performance 吸収 |
-| .claude/agents/implementer.md | E2E 実装吸収 |
-| .claude/agents/reviewer.md | 文書レビュー吸収・requirements-analyst 起動削除 |
-| .claude/agents/orchestrator.md | tools/フロー更新・L3 要求は architecture 経由 |
-| .claude/skills/classify-change/SKILL.md | 必要 Agent 表の同期 |
-| .claude/skills/create-requirements-document/SKILL.md | 実行主体を architecture-designer に |
-| .claude/evals/cases/*.md（該当） | 期待 Agent 名の同期 |
+| path                                                                 | なぜ変えるか                                    |
+| -------------------------------------------------------------------- | ----------------------------------------------- |
+| docs/claude-code/usage-guide.md                                      | 個人開発ライトモードを正典化                    |
+| docs/claude-code/memory-policy.md                                    | 早期昇格禁止・archive 基準                      |
+| docs/claude-code/improvement-cycle.md                                | 減速ルール・meta 指標への言及                   |
+| docs/claude-code/orchestration-policy.md                             | 委譲フロー・起動条件・Agent 表を 11 本化        |
+| docs/claude-code/agent-responsibilities.md                           | 責務表を 11 本化                                |
+| docs/claude-code/README.md                                           | Agent 一覧更新                                  |
+| docs/claude-code/development-workflow.md                             | 旧 Agent 名参照の同期                           |
+| docs/claude-code/improvements/metrics/\_TEMPLATE.yml                 | meta_work_ratio                                 |
+| docs/claude-code/improvements/improvement-backlog.md                 | IMP-030/031・事象 4/5 ステータス                |
+| docs/claude-code/improvements/candidates/harness-complexity-audit.md | 採否反映                                        |
+| .claude/agents/architecture-designer.md                              | requirements + performance 吸収                 |
+| .claude/agents/implementer.md                                        | E2E 実装吸収                                    |
+| .claude/agents/reviewer.md                                           | 文書レビュー吸収・requirements-analyst 起動削除 |
+| .claude/agents/orchestrator.md                                       | tools/フロー更新・L3 要求は architecture 経由   |
+| .claude/skills/classify-change/SKILL.md                              | 必要 Agent 表の同期                             |
+| .claude/skills/create-requirements-document/SKILL.md                 | 実行主体を architecture-designer に             |
+| .claude/evals/cases/\*.md（該当）                                    | 期待 Agent 名の同期                             |
 
 ## 新規作成ファイル
 
-| path | 役割 |
-| --- | --- |
-| docs/implementation-plans/harness-personal-light-mode.md | 本計画 |
-| docs/designs/harness-personal-light-mode.md | 設計 |
-| docs/tests/harness-personal-light-mode.md | 試験計画 |
-| docs/claude-code/improvements/proposals/IMP-2026-030.md | 事象 5 proposal |
-| docs/claude-code/improvements/proposals/IMP-2026-031.md | 事象 4 proposal |
-| docs/claude-code/improvements/candidates/archive/README.md | archive 運用説明 |
-| docs/claude-code/archive/agents/README.md | 吸収済み Agent の置き場説明 |
+| path                                                       | 役割                        |
+| ---------------------------------------------------------- | --------------------------- |
+| docs/implementation-plans/harness-personal-light-mode.md   | 本計画                      |
+| docs/designs/harness-personal-light-mode.md                | 設計                        |
+| docs/tests/harness-personal-light-mode.md                  | 試験計画                    |
+| docs/claude-code/improvements/proposals/IMP-2026-030.md    | 事象 5 proposal             |
+| docs/claude-code/improvements/proposals/IMP-2026-031.md    | 事象 4 proposal             |
+| docs/claude-code/improvements/candidates/archive/README.md | archive 運用説明            |
+| docs/claude-code/archive/agents/README.md                  | 吸収済み Agent の置き場説明 |
 
 ## 実装手順
 
@@ -55,7 +55,7 @@
 
 ### Step 3: Phase2 改善サイクル減速（IMP-030）
 
-- 対象: memory-policy.md / improvement-cycle.md / metrics/_TEMPLATE.yml /
+- 対象: memory-policy.md / improvement-cycle.md / metrics/\_TEMPLATE.yml /
   candidates/archive/README.md
 - 変更:
   1. 早期昇格原則禁止 + 例外 1 行
@@ -102,5 +102,17 @@ docs/tests/harness-personal-light-mode.md 参照
 
 ## ドキュメント更新対象
 
-- docs/claude-code/*（上記）
+- docs/claude-code/\*（上記）
 - CLAUDE.md は Agent 一覧を持たないため原則変更なし（必要な場合のみ 1 行ポインタ）
+
+## 2026-07-29 追補: 承認境界の実装同期
+
+PR レビュー承認という本設計の決定に、実装と現行文書を同期する。
+
+1. `harness-approval.mjs`、`harness-approve.mjs`、専用テストを削除する。
+2. `harness-run.mjs` と run 状態から承認フィールド・コマンドを削除する。
+3. run 状態を schema v2 にし、schema v1 の読み込み移行を追加する。
+4. `harness-state.md` を正典として、現行 Agent / Skill / 運用文書を PR レビュー方式へ統一する。
+5. 承認済み IMP-2026-032 変更 A を正典の Agent 4 本へ適用する。
+6. `.env.example` 等のテンプレートを読めるよう、settings の deny と Hook の例外を整合させる。
+7. `pnpm test:harness` と品質ゲートを実行し、Claude Code レビュー後に PR を作成する。

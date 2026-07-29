@@ -168,10 +168,9 @@ IMP 後半の相当数（018/020/021/024/026 ほか）が「以前の改善が�
     2026-07-20。settings.json はユーザー直接編集で登録 → リモート touch/rm スモーク PASS。
     なお settings.json の Claude 経由編集はハーネス側の自己編集境界により恒久不可と判明 —
     以後はユーザー直接編集で運用。proposal §評価結果参照）**
-  - 事象 4（低稼働 Agent 統合）— **採用（→ IMP-2026-031・2026-07-26）**。
-    docs 正典は本 PR で 11 Agent 構成へ更新。保護ファイル（`.claude/agents` /
-    Skills）は [patches/IMP-2026-031/APPLY.md](../patches/IMP-2026-031/APPLY.md)
-    を人間承認後に適用（security-reviewer は維持。e2e は implementer 吸収）。
+  - 事象 4（低稼働 Agent 統合）— **採用・適用完了（→ IMP-2026-031・2026-07-26）**。
+    11 Agent 構成へ更新済み（security-reviewer は維持。e2e は implementer 吸収）。
+    適用待ちパッチは 2026-07-29 に削除した。
   - 事象 5（改善サイクルの減速）— **採用・docs 適用（→ IMP-2026-030・2026-07-26）**
 - Memory に留めたもの（昇格せず・再発監視）: なし
 - 追記（2026-07-26）: 個人開発ライトモードを usage-guide §1.1 に正典化

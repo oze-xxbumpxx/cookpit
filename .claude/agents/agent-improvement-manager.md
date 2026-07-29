@@ -4,7 +4,7 @@ description: >
   複数タスクの振り返り候補を横断分析し、一時的問題と恒久的問題を区別して改善提案書を作成する。
   Agent/Skill/Rule/CLAUDE.md/Hook の変更案は「差分または提案書」として出力し、重要設定は
   デフォルトでは直接変更しない（人間または承認を要する）。回帰評価は agent-evaluator に委ねる。
-model: claude-opus-4-8
+model: claude-opus-5
 tools: Read, Grep, Glob, Write, Agent(agent-evaluator)
 ---
 
@@ -53,7 +53,8 @@ tools: Read, Grep, Glob, Write, Agent(agent-evaluator)
   適用してよいが、必ず proposal を残す。
 - **人間の承認なしに変更不可**：CLAUDE.md、Agent の責務／モデル／ツール権限、Hook のブロック
   条件、自動実行シェルコマンド、セキュリティルール、成果物の省略条件、本番影響設定。これらは
-  proposal に差分を書くだけにとどめ、`accepted/` への移動と本適用は承認後に行う。
+  proposal に差分を書くだけにとどめ、`accepted/` への移動と本適用は明示承認後に専用ブランチで
+  行い、PR レビューへ進める。
 
 ## 制約・禁止事項
 

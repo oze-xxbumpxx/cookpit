@@ -28,19 +28,17 @@
 個人開発ではフル装備を毎回使わない。次を既定とする（設計:
 `docs/designs/harness-personal-light-mode.md` / IMP-2026-030・031）。
 
-| 方針 | 内容 |
-| --- | --- |
-| L0/L1 を積極活用 | 相談・調査は L0。文言・単純修正は L1（設計書を作らない） |
-| 実装の既定ルート | Codex 委譲（設計・計画・レビューは Claude） |
+| 方針                 | 内容                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| L0/L1 を積極活用     | 相談・調査は L0。文言・単純修正は L1（設計書を作らない）                                                                               |
+| 実装の既定ルート     | Codex 委譲（設計・計画・レビューは Claude）                                                                                            |
 | 常備で意識する Agent | orchestrator / architecture-designer / implementation-planner / test-designer / implementer / reviewer（+ 必要時 contract / security） |
-| reflection | feature 完了時。毎セッション必須ではない |
-| 改善サイクル | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止 |
-| 毎セッションの核 | Rules 3 本 + quality-gates + kickoff/close/work-log |
+| reflection           | feature 完了時。毎セッション必須ではない                                                                                               |
+| 改善サイクル         | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止                                                                      |
+| 毎セッションの核     | Rules 3 本 + quality-gates + kickoff/close/work-log                                                                                    |
 
-保護ファイル（Agent 定義）の 11 本化は
-[patches/IMP-2026-031/APPLY.md](./improvements/patches/IMP-2026-031/APPLY.md) を人間が適用する
-まで、正典ドキュメント側が先にライトモードを示す（適用前は旧 Agent ファイルが残っていても
-**起動しない**運用とする）。
+Agent 定義の 11 本化は適用済み。旧 4 Agent は `docs/claude-code/archive/agents/` に履歴として
+保存し、起動対象には含めない。
 
 ## 2. 構成の全体像
 
@@ -60,19 +58,19 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 
 ### Agent（11・IMP-2026-031）
 
-| Agent                     | Model    | 役割                                 | 起動条件                                      |
-| ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
-| orchestrator              | opus-5 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
-| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                      |
-| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
-| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
-| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
-| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート           | L1〜L3（E2E は L3・基盤整備時）             |
-| reviewer                  | opus-5 | 独立レビュー（文書観点含む）         | L2/L3 / 文書レビュー依頼                      |
-| security-reviewer         | opus-5 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | feature 完了時（ライトモード）                |
-| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
-| agent-improvement-manager | opus-5 | 横断分析・改善提案                   | トリガー時のみ                                |
+| Agent                     | Model    | 役割                                    | 起動条件                                      |
+| ------------------------- | -------- | --------------------------------------- | --------------------------------------------- |
+| orchestrator              | opus-5   | 指揮・委譲・統合                        | 複数工程の開発タスク                          |
+| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                         |
+| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO）    | 契約変更があるとき                            |
+| test-designer             | sonnet-5 | 試験観点・試験計画                      | L2/L3                                         |
+| implementation-planner    | sonnet-5 | 実装計画                                | L2/L3                                         |
+| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート              | L1〜L3（E2E は L3・基盤整備時）               |
+| reviewer                  | opus-5   | 独立レビュー（文書観点含む）            | L2/L3 / 文書レビュー依頼                      |
+| security-reviewer         | opus-5   | セキュリティ専門レビュー                | L3 原則必須 / L2 は触点時必須（省略条件あり） |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                  | feature 完了時（ライトモード）                |
+| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                    | 改善提案の評価時                              |
+| agent-improvement-manager | opus-5   | 横断分析・改善提案                      | トリガー時のみ                                |
 
 > 吸収済み（起動しない）: requirements-analyst / performance-designer /
 > e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）
@@ -158,12 +156,12 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 日常操作は許可\*\*（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
 `permissions.deny` も併用。
 
-### 保護ファイルと承認マーカー
+### 重要構成と PR レビュー
 
-`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` の変更は**人間承認が必要**
-（[improvement-cycle.md](./improvement-cycle.md) §承認境界）。`validate-agent-config` は
-未承認変更に警告を出す。承認済みのバッチを編集する間だけ
-`.claude/state/config-change-approved` を置き、終わったら削除する（警告抑止）。
+`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` などの重要構成は**人間承認が必要**
+（[improvement-cycle.md](./improvement-cycle.md) §承認境界）。変更案と差分を提示し、
+ユーザーの明示承認後に専用ブランチで適用する。ハーネステストと Claude Code レビューを通し、
+PR の差分確認とマージ判断を最終境界にする。ファイルマーカーは使わない。
 
 ### Hook の一時無効化・復旧
 
