@@ -11,7 +11,8 @@
 | --- | -------------------------------- | ------- | ------ |
 | 1   | GitHub Actions 復旧の実体確認    | 2026-08 | 待機中 |
 | 2   | `main` の branch protection 設定 | #1 の後 | 待機中 |
-| 3   | 重要構成を PR レビューで扱う     | 毎回    | 運用中 |
+| 3   | PR に構成ファイル差分を可視化    | #2 の後 | 任意   |
+| 4   | 重要構成を PR レビューで扱う     | 毎回    | 運用中 |
 
 GitHub Actions は 2026-08 に復旧見込みのため、代替 CI は構築しない。
 `.github/workflows/ci.yml` を唯一の CI として扱う。
@@ -63,15 +64,29 @@ gh api repos/oze-xxbumpxx/cookpit/branches/main --jq '.protected'
 `true` になり、失敗した required check がマージを止めることまで確認する。完了後、
 [harness-state.md](./harness-state.md) の防御層表と既知の限界を更新する。
 
-## 3. 重要構成を変更するときの運用
+## 3. PR に構成ファイル差分を可視化する（任意）
 
-Agent、Hook、Rule、Skill、`CLAUDE.md` などを変更するときは次を PR に残す。
+構成ファイル（`.claude/**` / `CLAUDE.md` / `lefthook.yml` / `.github/workflows/`）に触れた場合、
+変更ファイル一覧を Job Summary へ出すと見落としを減らせる。Actions 復旧後に追加し、
+`Harness tests` とあわせて required check にする。
 
-- ユーザーが承認した対象と出典
+## 4. 重要構成を変更するときの運用
+
+Agent、Hook、Rule、Skill、`CLAUDE.md` などを変更するときは、専用ブランチへ変更をコミットし、
+次を PR に残す。
+
 - 変更理由と範囲
 - `pnpm test:harness` と品質ゲートの結果
 - Claude Code レビューの結果
 - ロールバック方法
 
-承認ファイル、ローカルトークン、期限付きマーカーは使わない。ユーザーが専用ブランチの差分を
-確認し、PR のマージを決定する。
+承認ファイル、ローカルトークン、期限付きマーカーは使わない。ユーザーが PR の差分を確認し、
+マージを決定することを承認境界とする。
+
+## 変更履歴
+
+| 日付       | 内容                                                  |
+| ---------- | ----------------------------------------------------- |
+| 2026-07-26 | 初版。Actions と branch protection の所有者作業を定義 |
+| 2026-07-28 | ファイル承認を撤去し、PR レビュー方式へ移行           |
+| 2026-07-29 | 状態 schema v2 と現行の PR 運用へ同期                 |

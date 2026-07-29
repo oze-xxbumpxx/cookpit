@@ -57,9 +57,9 @@ description: >
   できる例の追記。
 - **提案止まり**: 目的・判断基準・スコープを変えるもの、出典のない改善案、単発事象の
   ルール化（memory-policy の昇格条件に従う）、ファイルの削除・移設。各提案に選択肢と推奨を添える。
-- スキル・Agent・Rule・CLAUDE.md を含むコミットは**人間承認必須**（improvement-cycle
-  §承認境界）。対象と差分を提示して明示承認を得た後、専用ブランチで適用し、PR レビューへ
-  進める（正典: docs/claude-code/harness-state.md）。
+- スキル・Agent・Rule・CLAUDE.md を含む変更は作業ブランチへコミットしてよい。承認境界は
+  **PR レビュー**（improvement-cycle §承認境界）。`main` へ直接反映しない
+  （正典: docs/claude-code/harness-state.md）。
 
 ## 完了条件
 

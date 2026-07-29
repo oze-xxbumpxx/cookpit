@@ -37,8 +37,9 @@
 | 改善サイクル         | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止                                                                      |
 | 毎セッションの核     | Rules 3 本 + quality-gates + kickoff/close/work-log                                                                                    |
 
-Agent 定義の 11 本化は適用済み。旧 4 Agent は `docs/claude-code/archive/agents/` に履歴として
-保存し、起動対象には含めない。
+Agent の 11 本化は適用済み（吸収した 4 本は `docs/claude-code/archive/agents/` へ凍結）。
+構成ファイルの変更は作業ブランチへコミットし **PR レビュー**で確認する（承認境界の経緯は
+[harness-state.md](./harness-state.md) §4）。
 
 ## 2. 構成の全体像
 
@@ -78,13 +79,20 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。
 
-### Skills（11）
+### Skills（17）
 
-`classify-change`（レベル判定）/ `create-requirements-document` / `create-design-document` /
-`create-implementation-plan` / `create-test-plan` / `create-adr` / `validate-deliverables`
-（成果物整合チェック）/ `reflect-task`（振り返り）/ `write-work-log`（日次ログ）/
-`audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
-Claude が場面に応じて自動選択する。
+Claude が場面に応じて自動選択する。`/<skill-name>` で明示的にも呼べる。
+
+| 分類           | Skill                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 判定・検証     | `classify-change`（変更レベル判定）/ `validate-deliverables`（成果物整合）/ `quality-gates`（lint・型・テスト一括）                |
+| 成果物作成     | `create-requirements-document` / `create-design-document` / `create-implementation-plan` / `create-test-plan` / `create-adr`       |
+| セッション運用 | `kickoff-session`（開始の段取り）/ `close-session`（終了の一括処理）/ `write-work-log`（日次ログ）                                 |
+| Codex 委譲     | `create-codex-brief`（実装指示書）/ `review-codex-implementation`（受け入れレビュー）                                              |
+| 確認・振り返り | `manual-browser-verify`（画面手動確認）/ `reflect-task`（振り返り）/ `sprint-review`（週次レトロ）/ `audit-skills`（指示系棚卸し） |
+
+> ライトモードで**毎セッション使うのは 5〜6 本**（`quality-gates` / `kickoff-session` /
+> `close-session` / `write-work-log` + 変更レベルに応じた `create-*`）。残りは非常用。
 
 ### Rules（3）
 
@@ -156,12 +164,16 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 日常操作は許可\*\*（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
 `permissions.deny` も併用。
 
-### 重要構成と PR レビュー
+### 構成ファイルの変更と承認境界
 
-`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` などの重要構成は**人間承認が必要**
-（[improvement-cycle.md](./improvement-cycle.md) §承認境界）。変更案と差分を提示し、
-ユーザーの明示承認後に専用ブランチで適用する。ハーネステストと Claude Code レビューを通し、
-PR の差分確認とマージ判断を最終境界にする。ファイルマーカーは使わない。
+`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` などの構成ファイルは、
+作業ブランチへコミットし **PR レビュー**で確認する（[improvement-cycle.md](./improvement-cycle.md)
+§承認境界はPRレビュー）。`main` へ直接反映しない。
+
+> 2026-07-28 以前は承認ファイル（`config-change-approved` / `harness-approve.mjs`）で Hook が
+> 機械的に強制していたが、リモート環境から承認を発行できずハーネス自身を修正できなくなる
+> デッドロックを繰り返したため撤去した。
+> 現行手順は [harness-state.md](./harness-state.md) を参照する。
 
 ### Hook の一時無効化・復旧
 
@@ -176,21 +188,21 @@ PR の差分確認とマージ判断を最終境界にする。ファイルマ�
 - **改善サイクル**：L2/L3 完了後に reflection-agent が
   `improvements/candidates/<task-id>.md` を起票 → 昇格条件（同問題3回 等）成立で
   agent-improvement-manager が `proposals/` に提案 → agent-evaluator が evals で before/after
-  回帰評価 → **悪化なし＆承認**で反映。重要設定は人間承認まで提案止まり。
+  回帰評価 → **悪化なし**で反映。重要設定は PR レビューで確認する。
   詳細：[improvement-cycle.md](./improvement-cycle.md)、記録：[improvements/](./improvements/)。
 - **回帰評価**：`.claude/evals/`（10 ケース・rubric 1〜5・baselines）。改善で1軸でも悪化したら
   採用しない。指示を増やすだけの改善も非採用（不要指示の削除・移動も改善に含む）。
 
 ## 7. よくある操作（早見）
 
-| やりたいこと         | どうする                                                                    |
-| -------------------- | --------------------------------------------------------------------------- |
-| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                              |
-| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                     |
-| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                     |
-| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す          |
-| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、承認後に反映（重要設定は人間承認） |
-| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md` |
+| やりたいこと         | どうする                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- |
+| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                                  |
+| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                         |
+| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                         |
+| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す              |
+| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、ブランチへ反映して PR レビューを受ける |
+| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md`     |
 
 ## 8. 設計上の原則（迷ったとき）
 
@@ -198,4 +210,4 @@ PR の差分確認とマージ判断を最終境界にする。ファイルマ�
   reviewer / agent-improvement-manager のみ。
 - 機械判定は Hook/スクリプト、意味判断は Reviewer。**Hook だけで品質保証したと主張しない。**
 - 指示を肥大化させない（同内容を複数所へ重複記載しない）。改善＝追加とは限らない。
-- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は人間承認。
+- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は PR レビューで確認。
