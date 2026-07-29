@@ -2,13 +2,11 @@
 // harness-run.mjs — run 状態（実行単位）の作成・参照・更新 CLI。
 //
 // run 状態はリポジトリ外の永続領域に保存される（.claude/lib/harness-paths.mjs）。
-// 承認は runId に束縛されるため、保護対象を変更する作業では最初に `start` する。
-//
 // 使い方:
 //   node .claude/scripts/harness-run.mjs start [--task-id <id>] [--force]
 //   node .claude/scripts/harness-run.mjs show
 //   node .claude/scripts/harness-run.mjs run-id
-//   node .claude/scripts/harness-run.mjs set --phase <p> [--status <s>] [--approval-status <a>]
+//   node .claude/scripts/harness-run.mjs set --phase <p> [--status <s>]
 //   node .claude/scripts/harness-run.mjs gate --name <gate> --result <pass|fail|skip>
 //   node .claude/scripts/harness-run.mjs where
 //
@@ -16,7 +14,6 @@
 
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 import {
-  APPROVAL_STATUSES,
   PHASES,
   STATUSES,
   createRunState,
@@ -62,7 +59,9 @@ switch (command) {
       );
       break;
     }
-    const state = createRunState({ taskId: typeof args['task-id'] === 'string' ? args['task-id'] : '' });
+    const state = createRunState({
+      taskId: typeof args['task-id'] === 'string' ? args['task-id'] : '',
+    });
     const path = saveRunState(state);
     process.stdout.write(`run を開始しました: ${state.runId}\n保存先: ${path}\n`);
     break;
@@ -92,15 +91,9 @@ switch (command) {
       if (!STATUSES.includes(args.status)) fail(`status が不正です（${STATUSES.join(' | ')}）`);
       patch.status = args.status;
     }
-    if (typeof args['approval-status'] === 'string') {
-      if (!APPROVAL_STATUSES.includes(args['approval-status'])) {
-        fail(`approval-status が不正です（${APPROVAL_STATUSES.join(' | ')}）`);
-      }
-      patch.approvalStatus = args['approval-status'];
-    }
-    if (Object.keys(patch).length === 0) fail('--phase / --status / --approval-status のいずれかを指定してください');
+    if (Object.keys(patch).length === 0) fail('--phase / --status のいずれかを指定してください');
     const next = updateRunState(patch);
-    process.stdout.write(`更新しました: phase=${next.phase} status=${next.status} approval=${next.approvalStatus}\n`);
+    process.stdout.write(`更新しました: phase=${next.phase} status=${next.status}\n`);
     break;
   }
 
@@ -124,13 +117,13 @@ switch (command) {
 
   case 'where': {
     const resolved = resolveStateDir();
-    process.stdout.write(`state dir: ${resolved.dir}\nsource: ${resolved.source}\ntrusted: ${resolved.trusted}\n`);
+    process.stdout.write(
+      `state dir: ${resolved.dir}\nsource: ${resolved.source}\ntrusted: ${resolved.trusted}\n`,
+    );
     for (const warning of resolved.warnings) process.stdout.write(`warning: ${warning}\n`);
     break;
   }
 
   default:
-    fail(
-      'usage: harness-run.mjs <start|show|run-id|set|gate|where> [options]',
-    );
+    fail('usage: harness-run.mjs <start|show|run-id|set|gate|where> [options]');
 }

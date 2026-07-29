@@ -57,12 +57,12 @@ Cookpit の Claude Code ハーネスは成熟したが、個人開発として�
 
 ### Agent（15 → 11）
 
-| 吸収元 | 吸収先 | 内容 |
-| --- | --- | --- |
-| requirements-analyst | orchestrator（調査）+ architecture-designer（requirements 保存） | L3 要求整理 |
-| performance-designer | architecture-designer | L3・外部 I/O/大量データ時の性能節 |
-| e2e-test-implementer | implementer | L3・基盤整備済み時の E2E 実装 |
-| document-reviewer | reviewer | 文書品質レビュー観点（依頼時・文書中心時） |
+| 吸収元               | 吸収先                                                           | 内容                                       |
+| -------------------- | ---------------------------------------------------------------- | ------------------------------------------ |
+| requirements-analyst | orchestrator（調査）+ architecture-designer（requirements 保存） | L3 要求整理                                |
+| performance-designer | architecture-designer                                            | L3・外部 I/O/大量データ時の性能節          |
+| e2e-test-implementer | implementer                                                      | L3・基盤整備済み時の E2E 実装              |
+| document-reviewer    | reviewer                                                         | 文書品質レビュー観点（依頼時・文書中心時） |
 
 残す: orchestrator / architecture-designer / contract-designer / implementation-planner /
 implementer / test-designer / reviewer / security-reviewer / reflection-agent /
@@ -139,14 +139,21 @@ reflection は feature 完了時、を正典化。
 
 ## リスク
 
-| リスク | 緩和 |
-| --- | --- |
-| L3 要求整理の品質低下 | architecture-designer に requirements 手順を明示 / orchestrator 先行調査を維持 |
-| E2E 実装漏れ | implementer に起動条件セクションを移植、orchestration-policy に残す |
-| 文書レビュー観点の埋没 | reviewer に条件付きセクションとしてチェックリストを移植 |
-| 旧名参照の残存 | 現行正典・Skill・evals cases を同期。歴史文書は触らない |
-| 統合先 Agent 肥大 | 条件付きセクションは発動条件+観点リストに限定 |
+| リスク                 | 緩和                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| L3 要求整理の品質低下  | architecture-designer に requirements 手順を明示 / orchestrator 先行調査を維持 |
+| E2E 実装漏れ           | implementer に起動条件セクションを移植、orchestration-policy に残す            |
+| 文書レビュー観点の埋没 | reviewer に条件付きセクションとしてチェックリストを移植                        |
+| 旧名参照の残存         | 現行正典・Skill・evals cases を同期。歴史文書は触らない                        |
+| 統合先 Agent 肥大      | 条件付きセクションは発動条件+観点リストに限定                                  |
 
 ## 未決事項
 
 なし（ユーザーが最善策での着手を承認済み。security-reviewer 維持・e2e は implementer 吸収を本設計の推奨として確定）
+
+## 2026-07-29 追補: 承認境界の実装
+
+本設計の「PR レビュー承認」を実装上の正典とする。旧ファイル承認は、同一 OS ユーザー環境で
+認証境界にならず、リモート環境では修復を止めるため廃止する。重要構成はユーザーの明示承認後、
+専用ブランチで変更し、ハーネステスト、Claude Code レビュー、PR の差分確認を経てマージする。
+run 状態は承認情報を持たず、既存 schema v1 は読み込み時に schema v2 へ移行する。

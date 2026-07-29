@@ -94,12 +94,16 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
     for (const command of [
       'echo "x" > .claude/hooks/guard-dangerous.mjs',
       'echo "x" >> CLAUDE.md',
-      'node .claude/scripts/harness-run.mjs where',
+      'node .claude/scripts/harness-run.mjs set --phase gates',
       'git apply /tmp/changes.patch',
       'git stash pop',
       `node -e "require('fs').writeFileSync('.claude/hooks/guard-dangerous.mjs','')"`,
     ]) {
-      assert.equal(runHook(sb, bash(command)).code, ALLOW, `構成変更が拒否されています: ${command}`);
+      assert.equal(
+        runHook(sb, bash(command)).code,
+        ALLOW,
+        `構成変更が拒否されています: ${command}`,
+      );
     }
   } finally {
     sb.cleanup();
@@ -109,7 +113,10 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
 test('ハーネススクリプトの実行・読み取りは妨げない', () => {
   const sb = sandbox();
   try {
-    assert.equal(runHook(sb, bash('bash .claude/scripts/run-quality-gates.sh --all 2>&1')).code, ALLOW);
+    assert.equal(
+      runHook(sb, bash('bash .claude/scripts/run-quality-gates.sh --all 2>&1')).code,
+      ALLOW,
+    );
     assert.equal(runHook(sb, bash('node .claude/scripts/harness-run.mjs show')).code, ALLOW);
     assert.equal(runHook(sb, bash('cat .claude/settings.json')).code, ALLOW);
     assert.equal(runHook(sb, bash('rg "deny" .claude/hooks/guard-dangerous.mjs')).code, ALLOW);

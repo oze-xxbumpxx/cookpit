@@ -39,7 +39,7 @@
 
 Agent の 11 本化は適用済み（吸収した 4 本は `docs/claude-code/archive/agents/` へ凍結）。
 構成ファイルの変更は作業ブランチへコミットし **PR レビュー**で確認する（承認境界の経緯は
-[harness-state-and-approval.md](./harness-state-and-approval.md) §5）。
+[harness-state.md](./harness-state.md) §4）。
 
 ## 2. 構成の全体像
 
@@ -173,6 +173,7 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 > 2026-07-28 以前は承認ファイル（`config-change-approved` / `harness-approve.mjs`）で Hook が
 > 機械的に強制していたが、リモート環境から承認を発行できずハーネス自身を修正できなくなる
 > デッドロックを繰り返したため撤去した。
+> 現行手順は [harness-state.md](./harness-state.md) を参照する。
 
 ### Hook の一時無効化・復旧
 
