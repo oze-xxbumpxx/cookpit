@@ -30,9 +30,10 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 - 静的チェックの実行：
   - `pnpm lint`
   - `pnpm type-check`
-  - 該当パッケージのテスト（テストランナー: Vitest。**全層導入済み** — domain: co-located
-    `src/**/*.test.ts`、application: UseCase テスト、infrastructure: PGlite Repository
-    テスト、apps/web: Hono ルート + RTL。2026-07-01 PR #21）。変更したパッケージの
+  - 該当パッケージのテスト（テストランナー: Vitest。**全層導入済み** — 各 workspace の
+    `tests/` は `src/` の構造をミラーする。domain: 単体テスト、application: UseCase テスト、
+    infrastructure: PGlite Repository テスト、apps/web: Hono ルート + RTL。
+    2026-07-01 PR #21）。変更したパッケージの
     対応テストを追加し、`pnpm test`（または対象パッケージで `vitest run`）を実行する。
 
 ## テスト品質基準

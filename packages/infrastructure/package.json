@@ -5,8 +5,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "lint": "eslint src",
+    "type-check": "tsc --project tsconfig.test.json --noEmit",
+    "lint": "eslint src tests",
     "test": "vitest run"
   },
   "dependencies": {

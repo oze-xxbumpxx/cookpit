@@ -197,17 +197,28 @@ Codex はプロジェクト起動時に `AGENTS.md` を自動で読み込む。
 
 ## テスト方針
 
-| 対象                                 | テスト種別                            | 方針          |
-| ------------------------------------ | ------------------------------------- | ------------- |
-| Domain 層（Entity / Value Object）   | ユニットテスト                        | 必須          |
-| Application 層（UseCase）            | ユニットテスト（Repository はモック） | 必須          |
-| Infrastructure 層（Repository 実装） | 統合テスト（実 DB）                   | 必須          |
-| E2E                                  | -                                     | MVP1 は対象外 |
+| 対象                                 | テスト種別                            | 方針           |
+| ------------------------------------ | ------------------------------------- | -------------- |
+| Domain 層（Entity / Value Object）   | ユニットテスト                        | 必須           |
+| Application 層（UseCase）            | ユニットテスト（Repository はモック） | 必須           |
+| Infrastructure 層（Repository 実装） | 統合テスト（実 DB）                   | 必須           |
+| E2E                                  | Playwright スモーク                   | 主要フローのみ |
 
-テストランナーは **Vitest**。全層に導入済み — Domain（co-located `src/**/*.test.ts`）/
+テストランナーは **Vitest**。全層に導入済み — Domain（単体テスト）/
 Application（UseCase テスト）/ Infrastructure（PGlite Repository テスト）/ apps/web
 （Hono ルート + RTL。2026-07-01 PR #21）。`pnpm test`（= `turbo test`）で実行する。
-E2E は Playwright 設定のみ存在し、シナリオは feature 単位で整備する。
+E2E は Playwright で、シナリオは feature 単位で整備する。
+
+### テスト配置
+
+- 各 workspace の本番コードは `src/`、テストコードは `tests/` に分離する。
+- `tests/` は `src/` のサブディレクトリ構造をミラーする。
+- テスト専用のフィクスチャ・テストダブル・DB セットアップも `tests/` に置く。
+- 本番コードから `tests/` への依存は禁止する。
+- `src/**/*.{test,spec}.{ts,tsx}` は ESLint で禁止し、配置の後戻りを防ぐ。
+- apps/web の Vitest は `tests/**/*.node.test.ts` / `tests/server/**/*.test.ts` を node、
+  `tests/**/*.dom.test.ts` / `tests/**/*.test.tsx` を DOM テストとして検出する。
+- Playwright E2E は `apps/web/tests/e2e/` に置く。
 
 ---
 
