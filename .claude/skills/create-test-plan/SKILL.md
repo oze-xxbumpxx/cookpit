@@ -55,9 +55,11 @@ description: >
    `docs/claude-code/improvements/candidates/recipe-servings.md` 事象2）。E2E（Playwright UI）
    等の未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
 10. **新規テストのファイル名は、対象パッケージの vitest `include` と突き合わせる**（projects
-    分割があるパッケージでは必須）。apps/web の例:
-    `*.node.test.ts` / `src/server/**/*.test.ts`（node）と `*.dom.test.ts` / `*.test.tsx`（dom）。
-    素の `src/**/*.test.ts`（server 以外）は**どの project にも一致せず silent skip** になる
+    分割があるパッケージでは必須）。テストは各 workspace の `tests/` に置き、`src/` の構造を
+    ミラーする。apps/web の例:
+    `tests/**/*.node.test.ts` / `tests/server/**/*.test.ts`（node）と
+    `tests/**/*.dom.test.ts` / `tests/**/*.test.tsx`（dom）。
+    素の `tests/**/*.test.ts`（server 以外）は**どの project にも一致せず silent skip** になる
     （出典: meal-plan-screens 事象 1）。試験計画に書くパスは include に合う名前にする。
 11. **仕様が集合・列挙・デフォルト値を規定する箇所**は、代表値 1〜2 点だけで終わらせない。
     `toEqual` 等で想定集合の過不足なしを固定するか、境界を跨ぐデータ量で検証する

@@ -72,6 +72,8 @@ recipe-app/
 │       ├── components/               # ページ固有コンポーネント
 │       ├── lib/
 │       │   └── api-client.ts         # Hono RPC クライアント
+│       ├── tests/                    # src/ をミラーする Web テスト
+│       │   └── e2e/                  # Playwright E2E
 │       ├── public/
 │       └── package.json
 │
@@ -94,6 +96,7 @@ recipe-app/
 │   │   │       ├── unit.ts
 │   │   │       ├── week-identifier.ts
 │   │   │       └── store.ts
+│   │   ├── tests/                    # src/ をミラーする Domain 単体テスト
 │   │   └── package.json
 │   │
 │   ├── application/                  # ユースケース層
@@ -107,6 +110,7 @@ recipe-app/
 │   │   │   ├── shopping-list/
 │   │   │   ├── pantry/
 │   │   │   └── product/
+│   │   ├── tests/                    # src/ をミラーする UseCase 単体テスト
 │   │   └── package.json
 │   │
 │   ├── infrastructure/               # 永続化層
@@ -121,6 +125,7 @@ recipe-app/
 │   │   │       ├── drizzle-shopping-list.repository.ts
 │   │   │       ├── drizzle-pantry.repository.ts
 │   │   │       └── drizzle-product.repository.ts
+│   │   ├── tests/                    # Repository 統合テストとテスト専用ヘルパー
 │   │   └── package.json
 │   │
 │   ├── api-contract/                 # API 契約（Zod）
@@ -128,6 +133,7 @@ recipe-app/
 │   │   │   ├── recipe.schema.ts
 │   │   │   ├── meal-plan.schema.ts
 │   │   │   └── ...
+│   │   ├── tests/                    # API 契約テスト
 │   │   └── package.json
 │   │
 │   └── config/                       # 共通設定
@@ -140,6 +146,10 @@ recipe-app/
 ├── package.json
 └── docs/
 ```
+
+各 workspace では、本番コードを `src/`、テストコードとテスト専用ヘルパーを `tests/` に分離する。
+`tests/` は対応する `src/` のサブディレクトリ構造をミラーし、テスト対象との対応を明確にする。
+本番コードから `tests/` への依存は禁止する。
 
 ## パッケージ間の依存関係
 

@@ -93,9 +93,9 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
 
 ## テスト
 
-<co-located のテストファイル名。対象パッケージの vitest `include` に合う拡張子にする
-（apps/web 例: `*.node.test.ts` / `*.dom.test.ts` / `*.test.tsx`。素の `*.test.ts` は
-server 配下以外では silent skip になる）>
+<各 workspace の `tests/` に置くテストファイル名。`src/` の構造をミラーし、対象パッケージの
+vitest `include` に合う拡張子にする（apps/web 例: `*.node.test.ts` / `*.dom.test.ts` /
+`*.test.tsx`。素の `*.test.ts` は server 配下以外では silent skip になる）>
 
 ## 完了条件
 

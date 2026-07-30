@@ -18,8 +18,9 @@ description: >
 3. 各ステップに「対象ファイル・変更内容・完了条件」を必ず付ける。
 4. テスト計画・リスク・ロールバック・ドキュメント更新対象を埋める。
    - **テスト計画のファイル名**は、対象パッケージの vitest `include`（`vitest.config.*` /
-     projects）と突き合わせる。apps/web は `*.node.test.ts` / `*.dom.test.ts` /
-     `*.test.tsx` / `src/server/**/*.test.ts` のみ。素の `*.test.ts` は silent skip の原因
+     projects）と突き合わせる。テストは各 workspace の `tests/` に置き、`src/` の構造を
+     ミラーする。apps/web は `tests/**/*.node.test.ts` / `tests/**/*.dom.test.ts` /
+     `tests/**/*.test.tsx` / `tests/server/**/*.test.ts` のみ。素の `*.test.ts` は silent skip の原因
      （出典: meal-plan-screens 事象 1 / IMP-2026-012 の残穴）。
 5. 既存計画があれば更新する（重複作成しない）。
 6. **実装ルート = Codex 委譲の場合（軽量モード）**: ファイル別の完成コード・詳細シグネチャは

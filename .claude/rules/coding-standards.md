@@ -37,10 +37,11 @@ pnpm test      # テストランナー: Vitest
 pnpm format    # 必要に応じて
 ```
 
-テストランナーは Vitest。全層に導入済み — Domain（co-located `src/**/*.test.ts`）/
+テストランナーは Vitest。全層に導入済み — Domain（単体テスト）/
 Application（UseCase テスト）/ Infrastructure（PGlite Repository テスト）/ apps/web
-（Hono ルート + RTL コンポーネントテスト。2026-07-01 PR #21）。該当パッケージを変更したら
-対応するテストを追加・実行する。
+（Hono ルート + RTL コンポーネントテスト。2026-07-01 PR #21）。テストとテスト専用ヘルパーは
+各 workspace の `tests/` に置き、`src/` の構造をミラーする。本番コードから `tests/` への依存は禁止。
+該当パッケージを変更したら対応するテストを追加・実行する。
 
 ## スコープ
 
