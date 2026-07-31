@@ -40,19 +40,19 @@ description: >
    観点を含む）がある場合、**要件書を正として**全観点が試験計画に反映されているか照合する。
    設計書のテスト方針節が要件書の観点を省略していても、それを黙って踏襲しない。
    意図的に外す観点は「対象外（理由）」を明記する。
-   （出典: store-master で設計書 §17-2 が要件書の観点 N-02 を省略 → test-designer と
+   （出典: cookpit/store-master で設計書 §17-2 が要件書の観点 N-02 を省略 → test-designer と
    implementer が踏襲 → reviewer の Should-2 指摘で手戻り。
-   `docs/claude-code/improvements/candidates/store-master.md` 事象 3 /
-   `docs/reviews/store-master.md` Should-2）
+   `cookpit/store-master` 事象 3 /
+   `cookpit/store-master レビュー` Should-2）
 9. テストランナー（Vitest）は domain / application / infrastructure / apps/web に導入済み
-   （2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）。**上記以外のパッケージ
+   （2026-07-01 PR #21・`cookpit/test-infra-expansion 設計書`）。**上記以外のパッケージ
    （例: `packages/api-contract`）に試験観点を書く場合は、対象パッケージに実行環境
    （`vitest.config.*` や `package.json` の `test` スクリプト）が実在するか先に確認する。
    無ければ観点は削らず残しつつ「テスト基盤未整備のため本タスクでは未実装（実装計画で対応要否を
-   確認）」と明記し、実装される前提でファイルパスを断定しない**（出典: recipe-servings で
+   確認）」と明記し、実装される前提でファイルパスを断定しない**（出典: cookpit/recipe-servings で
    test-designer が api-contract の Vitest 未整備に気づかず全観点を実装前提で記述し、
    implementation-planner のスコープ判断と食い違って reviewer 指摘になった —
-   `docs/claude-code/improvements/candidates/recipe-servings.md` 事象2）。E2E（Playwright UI）
+   `cookpit/recipe-servings` 事象2）。E2E（Playwright UI）
    等の未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
 10. **新規テストのファイル名は、対象パッケージの vitest `include` と突き合わせる**（projects
     分割があるパッケージでは必須）。テストは各 workspace の `tests/` に置き、`src/` の構造を
@@ -60,10 +60,10 @@ description: >
     `tests/**/*.node.test.ts` / `tests/server/**/*.test.ts`（node）と
     `tests/**/*.dom.test.ts` / `tests/**/*.test.tsx`（dom）。
     素の `tests/**/*.test.ts`（server 以外）は**どの project にも一致せず silent skip** になる
-    （出典: meal-plan-screens 事象 1）。試験計画に書くパスは include に合う名前にする。
+    （出典: cookpit/meal-plan-screens 事象 1）。試験計画に書くパスは include に合う名前にする。
 11. **仕様が集合・列挙・デフォルト値を規定する箇所**は、代表値 1〜2 点だけで終わらせない。
     `toEqual` 等で想定集合の過不足なしを固定するか、境界を跨ぐデータ量で検証する
-    （出典: meal-plan-core / meal-plan-screens の「弱いアサーション」累計 2。適用は
+    （出典: cookpit/meal-plan-core / cookpit/meal-plan-screens の「弱いアサーション」累計 2。適用は
     「仕様上意味のある集合」に限定し、全配列の網羅は要求しない）。
 
 ## 観点の選択基準（過剰適用を防ぐ）
@@ -153,4 +153,4 @@ description: >
   完了条件を「必須（リリースブロッカー）/ 推奨 / 将来フェーズ」に分割しており、
   テストランナー未整備の層でも観点を落とさず残せている
   （出典: reviewer が「試験計画 vs 実装の対応」「Mapper の public API 網羅」を
-  問題なしと確認 — `docs/reviews/store-master.md`）。
+  問題なしと確認 — `cookpit/store-master レビュー`）。

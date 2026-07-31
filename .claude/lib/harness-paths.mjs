@@ -6,18 +6,32 @@
 //   リポジトリ配下（.claude/state/）は .gitignore 対象かつエフェメラル環境で消滅するため、
 //   OS のユーザー状態ディレクトリを既定の永続先とする。
 // - 解決順: HARNESS_STATE_DIR → XDG_STATE_HOME/<ns> → ~/.local/state/<ns> → リポジトリ内フォールバック。
+//   <ns> はプロジェクト名に依存しないよう導出する（resolveNamespace 参照）。
 // - リポジトリ配下を指す明示指定（HARNESS_STATE_DIR / XDG_STATE_HOME）は**拒否**する。
 //   シンボリックリンクでリポジトリ内へ逆戻りしている場合も拒否する（realpath で検証）。
 // - リポジトリ内フォールバックは `trusted: false` を返し、永続性がないことを呼び出し側へ伝える。
 //
 // このモジュールは副作用として stateDir() 呼び出し時のみディレクトリを作成する（mode 0700）。
 
-import { existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 
-/** OS 状態ディレクトリ配下で使う名前空間。 */
-export const STATE_NAMESPACE = 'cookpit-harness';
+/** 名前空間を導出できなかったときの既定値（プロジェクト名に依存しない）。 */
+export const DEFAULT_NAMESPACE = 'claude-harness';
+
+// 名前空間は状態ディレクトリのパスへ連結される。区切り文字や相対参照が残ると
+// 指定次第で意図しない場所を指せるため、単一セグメントへ落として無害化する。
+function sanitizeNamespaceSegment(value) {
+  if (typeof value !== 'string') return null;
+  const segment = value
+    .trim()
+    .replace(/^@/, '') // npm スコープの記号
+    .replace(/[^a-zA-Z0-9_-]+/g, '-') // '/' '\' '.' 等はすべて '-' へ倒す
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return segment === '' ? null : segment;
+}
 
 /** 解決に失敗した（＝安全に決められない）ことを表す。呼び出し側は fail-closed で扱う。 */
 export class StateDirError extends Error {
@@ -30,6 +44,45 @@ export class StateDirError extends Error {
 
 export function repoRoot(env = process.env) {
   return env.CLAUDE_PROJECT_DIR || process.cwd();
+}
+
+/**
+ * `.git` を持つ最も近い祖先を返す（見つからなければ start をそのまま返す）。
+ * CLAUDE_PROJECT_DIR 未設定で cwd がサブディレクトリのとき、モノレポの
+ * workspace 側 package.json を誤って拾わないためにリポジトリ境界で止める。
+ */
+function repoRootFromMarker(start) {
+  let current = resolve(start);
+  for (;;) {
+    if (existsSync(join(current, '.git'))) return current;
+    const parent = resolve(current, '..');
+    if (parent === current) return resolve(start);
+    current = parent;
+  }
+}
+
+/**
+ * OS 状態ディレクトリ配下で使う名前空間を解決する。
+ * 解決順: HARNESS_NAMESPACE → package.json の name に `-harness` を付けたもの → DEFAULT_NAMESPACE。
+ * **例外を投げない**。名前空間の都合で記録系 Hook を止めないため、読めない場合は既定値へ落とす。
+ *
+ * モジュール自身の位置は使わない。Plugin として配布するとモジュールは利用者リポジトリの
+ * 外に置かれ、全プロジェクトが同一の名前空間になってしまうため。
+ */
+export function resolveNamespace({ env = process.env, root = repoRoot(env) } = {}) {
+  const explicit = sanitizeNamespaceSegment(env.HARNESS_NAMESPACE);
+  if (explicit) return explicit;
+
+  try {
+    const pkg = JSON.parse(readFileSync(join(repoRootFromMarker(root), 'package.json'), 'utf8'));
+    const derived = sanitizeNamespaceSegment(pkg?.name);
+    // サフィックスは現行値との互換（cookpit → cookpit-harness）と、
+    // OS の状態ディレクトリ配下で用途が名前から分かることの両立。
+    if (derived) return `${derived}-harness`;
+  } catch {
+    // package.json が無い・壊れている・name が無い → 既定値
+  }
+  return DEFAULT_NAMESPACE;
 }
 
 /** child が parent と同一、またはその配下か。 */
@@ -95,12 +148,24 @@ export function resolveStateDir({
     return { dir: resolve(raw), source: 'HARNESS_STATE_DIR', trusted: true, warnings };
   }
 
+  // HARNESS_STATE_DIR で決まる経路では名前空間を使わないため、ここまで来てから解決する。
+  const namespace = resolveNamespace({ env, root });
+  // 既定値へ落ちた = プロジェクトを特定できていない。この状態は保存先が本来と変わり、
+  // 既存の状態ファイルが参照されなくなる（静かに孤児化する）ため必ず警告する。
+  if (namespace === DEFAULT_NAMESPACE && !sanitizeNamespaceSegment(env.HARNESS_NAMESPACE)) {
+    warnings.push(
+      `プロジェクトを特定できないため名前空間を既定値（${DEFAULT_NAMESPACE}）にしました。` +
+        'CLAUDE_PROJECT_DIR を設定するか、リポジトリ内で実行してください' +
+        '（別の状態ディレクトリを使うことになり、既存の記録は参照されません）',
+    );
+  }
+
   const xdg = env.XDG_STATE_HOME;
   if (xdg && xdg.trim() !== '') {
     const raw = xdg.trim();
-    assertOutsideRepo(resolve(join(raw, STATE_NAMESPACE)), root, 'XDG_STATE_HOME', raw);
+    assertOutsideRepo(resolve(join(raw, namespace)), root, 'XDG_STATE_HOME', raw);
     return {
-      dir: resolve(join(raw, STATE_NAMESPACE)),
+      dir: resolve(join(raw, namespace)),
       source: 'XDG_STATE_HOME',
       trusted: true,
       warnings,
@@ -108,7 +173,7 @@ export function resolveStateDir({
   }
 
   if (home && home.trim() !== '' && home !== '/') {
-    const candidate = resolve(join(home, '.local/state', STATE_NAMESPACE));
+    const candidate = resolve(join(home, '.local/state', namespace));
     // home がリポジトリ内という異常構成では信頼できない。フォールバックへ落とす。
     if (!isInside(root, candidate)) {
       return { dir: candidate, source: 'home', trusted: true, warnings };

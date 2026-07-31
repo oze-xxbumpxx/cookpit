@@ -99,7 +99,8 @@ function staleWorkLogWarning() {
 // 時間表現（数字 + 分/時間/h）があれば記録済みとみなす。
 function timeUnrecordedNudge() {
   try {
-    const tz = process.env.COOKPIT_TZ || 'Asia/Tokyo';
+    // COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
+    const tz = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
     const today = new Date().toLocaleDateString('sv-SE', { timeZone: tz });
     const p = join(ROOT, `logs/${today}.md`);
     if (!existsSync(p)) return null;
