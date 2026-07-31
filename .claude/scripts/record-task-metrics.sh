@@ -59,13 +59,13 @@ process.stdout.write(resolveReadablePath("subagent-log.jsonl") ?? "");
 ' 2>/dev/null || echo "")"
 if [ -f "$SUBAGENT_LOG" ]; then
   AGENT_CALLS="$(
-    COOKPIT_METRICS_OUT="$OUT" \
-    COOKPIT_METRICS_FEATURE="$FEATURE" \
-    COOKPIT_METRICS_SUBAGENT_LOG="$SUBAGENT_LOG" \
+    HARNESS_METRICS_OUT="$OUT" \
+    HARNESS_METRICS_FEATURE="$FEATURE" \
+    HARNESS_METRICS_SUBAGENT_LOG="$SUBAGENT_LOG" \
     node -e "
 const fs = require('fs');
-const log = process.env.COOKPIT_METRICS_SUBAGENT_LOG;
-const feature = process.env.COOKPIT_METRICS_FEATURE;
+const log = process.env.HARNESS_METRICS_SUBAGENT_LOG;
+const feature = process.env.HARNESS_METRICS_FEATURE;
 const lines = fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
 const n = lines.filter((l) => {
   try { return JSON.parse(l).feature === feature; } catch { return false; }
@@ -75,12 +75,12 @@ process.stdout.write(String(n));
   )"
   AGENT_CALLS="${AGENT_CALLS:-0}"
   if [ "$AGENT_CALLS" -gt 0 ] 2>/dev/null; then
-    COOKPIT_METRICS_OUT="$OUT" \
-    COOKPIT_METRICS_AGENT_CALLS="$AGENT_CALLS" \
+    HARNESS_METRICS_OUT="$OUT" \
+    HARNESS_METRICS_AGENT_CALLS="$AGENT_CALLS" \
     node -e "
 const fs = require('fs');
-const out = process.env.COOKPIT_METRICS_OUT;
-const n = process.env.COOKPIT_METRICS_AGENT_CALLS;
+const out = process.env.HARNESS_METRICS_OUT;
+const n = process.env.HARNESS_METRICS_AGENT_CALLS;
 let t = fs.readFileSync(out, 'utf8');
 t = t.replace(/^  calls: unknown/m, '  calls: ' + n + '  # subagent-log から自動集計');
 fs.writeFileSync(out, t);
@@ -94,12 +94,12 @@ if [ ! -f "$ROOT/docs/designs/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); f
 if [ ! -f "$ROOT/docs/implementation-plans/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
 if [ ! -f "$ROOT/docs/tests/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
 if [ "$LEVEL" -ge 2 ] 2>/dev/null && [ "$MISSING" -gt 0 ]; then
-  COOKPIT_METRICS_OUT="$OUT" \
-  COOKPIT_METRICS_MISSING="$MISSING" \
+  HARNESS_METRICS_OUT="$OUT" \
+  HARNESS_METRICS_MISSING="$MISSING" \
   node -e "
 const fs = require('fs');
-const out = process.env.COOKPIT_METRICS_OUT;
-const n = process.env.COOKPIT_METRICS_MISSING;
+const out = process.env.HARNESS_METRICS_OUT;
+const n = process.env.HARNESS_METRICS_MISSING;
 let t = fs.readFileSync(out, 'utf8');
 t = t.replace(/^  missing_documents: 0/m, '  missing_documents: ' + n + '  # docs 存在チェックから自動補完');
 fs.writeFileSync(out, t);

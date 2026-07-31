@@ -26,7 +26,7 @@ description: >
 6. **実装ルート = Codex 委譲の場合（軽量モード）**: ファイル別の完成コード・詳細シグネチャは
    実装計画に書かない（正本はブリーフ `docs/tasks/codex/<feature>/`）。実装計画は
    タスク分解・依存順・Task 別完了条件・テストファイル対応・リスク・ロールバックのみを持つ。
-   同じ確定コードを実装計画とブリーフの両方に二重記述しない（出典: candidates/pantry-core.md 事象 1）。
+   同じ確定コードを実装計画とブリーフの両方に二重記述しない（出典: cookpit/pantry-core 事象 1）。
 
 ## テンプレート
 
@@ -89,18 +89,18 @@ description: >
     （ファイル別の完成コードは持たない。それはブリーフが正本）。
 - ドメインモデル変更を含む場合、「ドキュメント更新対象」に `docs/04-domain-model.md` の
   整合確認が含まれている（出典: store-master で更新漏れが reviewer Nice-2 指摘になった —
-  `docs/reviews/store-master.md` Nice-2 /
-  `docs/claude-code/improvements/candidates/store-master.md` 事象 4）。
+  `cookpit/store-master レビュー` Nice-2 /
+  `cookpit/store-master` 事象 4）。
 
 ## 良い例（実タスクの成果物）
 
 - `docs/implementation-plans/store-master.md` — 9 ステップ全てに対象ファイル・変更内容・
   完了条件があり、依存関係グラフと品質ゲート（Step 9）・手動テスト観点まで含む。
   この計画に沿った実装は reviewer の整合性チェック（要件・設計・実装計画・実装）を
-  問題なしで通過した（出典: `docs/reviews/store-master.md`「問題なし（確認済み項目）」）。
+  問題なしで通過した（出典: `cookpit/store-master レビュー`「問題なし（確認済み項目）」）。
 - `docs/implementation-plans/test-infra-expansion.md` — リスク表（R-1〜R-4）に検出タイミングと
   **回避策の優先順**を明記（例: R-1 型非互換は「まず型キャストを試す → ダメなら中断して
   ユーザー確認」）。未確定挙動（mergeConfig の include 連結）には「実装時に確認せよ」の注記を
   置いた。実装時の判断がすべて「計画に書いてある分岐を選ぶだけ」になり、手戻り・テスト失敗
-  ゼロで完走した（出典: `docs/claude-code/improvements/candidates/test-infra-expansion.md`
+  ゼロで完走した（出典: `cookpit/test-infra-expansion`
   事象 1・3）。

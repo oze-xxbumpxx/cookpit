@@ -14,8 +14,15 @@
 
 ## ルール一覧
 
-| ファイル | 適用範囲 |
-| --- | --- |
-| [domain-layer.md](./domain-layer.md) | `packages/domain/`（および集約をまたぐ操作） |
-| [coding-standards.md](./coding-standards.md) | 全 TypeScript コード |
-| [presentation-layer.md](./presentation-layer.md) | `apps/web/`（Next.js / Hono） |
+| ファイル | 適用範囲 | Plugin 配布 |
+| --- | --- | --- |
+| [domain-layer.md](./domain-layer.md) | `packages/domain/`（および集約をまたぐ操作） | 非同梱（Clean Architecture + DDD 前提） |
+| [coding-standards.md](./coding-standards.md) | 全 TypeScript コード | 汎用分を CLAUDE.md 断片として配る |
+| [presentation-layer.md](./presentation-layer.md) | `apps/web/`（Next.js / Hono） | 非同梱（Next.js App Router + Hono 前提） |
+
+> **Plugin 配布との関係**（ADR-0014）: Plugin は `.claude/rules/` に相当する配布
+> プリミティブを持たない。汎用分は `.claude/templates/claude-md-coding-standards.md`
+> として切り出し、移植先の CLAUDE.md へ取り込む形で配る。スタック前提を含む 2 本は
+> 他プロジェクトへ持ち込むと有害（トークンを消費した上で誤った前提を注入する）ため
+> Cookpit ローカルに残す。層の正典は
+> [plugin-layer-manifest.md](../../docs/claude-code/plugin-layer-manifest.md)。

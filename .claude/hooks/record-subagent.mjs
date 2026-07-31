@@ -3,7 +3,7 @@
 //
 // 方針（docs/claude-code/improvement-cycle.md）:
 // - Command Hook は「いつ・どの作業単位で・どの Subagent 実行が終わったか」という機械的事実
-//   だけを記録する。成果/失敗/未解決/Memory候補などの意味的な抽出は reflection-agent が
+//   だけを記録する。成果/失敗/未解決/Memory候補などの意味的な抽出は振り返り工程が
 //   transcript と成果物を読んで行う（LLM 判断が必要なため Command Hook では決めない）。
 // - 記録先: <永続領域>/subagent-log.jsonl（1 行 1 JSON、追記のみ。リポジトリ外の永続領域）。
 // - 失敗しても処理はブロックしない（常に exit 0）。
@@ -45,7 +45,7 @@ function main() {
     feature: readFeatureName(),
     session_id: input.session_id ?? null,
     transcript_path: input.transcript_path ?? null,
-    // 抽出すべき意味項目（reflection-agent が transcript から埋める）:
+    // 抽出すべき意味項目（振り返り工程が transcript から埋める）:
     // agent_name / 成果 / 失敗 / 未解決 / 引き継ぎ情報 / Memory候補 / 改善候補
     pending_reflection: true,
   };

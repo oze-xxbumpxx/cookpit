@@ -47,7 +47,7 @@ reflection-agent がタスク完了後の振り返りを行い、Memory 候補�
 `docs/claude-code/improvements/candidates/_TEMPLATE.md`）。各候補に観測事象・発生回数・
 対象タスク・原因仮説・改善案・変更対象・想定副作用・評価方法を含める。
 
-良い例: `docs/claude-code/improvements/candidates/store-master.md` — 事象ごとに
+良い例: `cookpit/store-master` — 事象ごとに
 観測事実と原因仮説を分離し、昇格判定に理由を明記。事象 1 はこの起票がそのまま
 IMP-2026-008 の proposal → 採用（2026-07-01）につながった
 （出典: `docs/claude-code/improvements/improvement-backlog.md` IMP-2026-008 行）。
@@ -88,7 +88,7 @@ candidate ファイル作成後、タスクのメトリクスを記録する。
      （エフェメラル）環境ではセッションを跨いで残らない（improvement-cycle.md §計測の原則 /
      IMP-2026-019）。同一セッション内で自動補完が働かない値は会話ログから数えて手動記入し、
      判別できない値は `unknown` とする（出典:
-     `docs/claude-code/improvements/candidates/test-infra-expansion.md` 事象 4）。
+     `cookpit/test-infra-expansion` 事象 4）。
 
 ## 禁止事項
 

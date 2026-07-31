@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // 作業ログ（logs/YYYY-MM-DD.md）の「所要時間」欄を自動推定する。
 //
+// 層: harness-core（Plugin 分割時）。write-work-log（core）の雛形にある「所要時間」節を
+// 埋めるため core に置く。メトリクスの*集計*側は improvement 層。
+//
 // 使い方:
 //   node .claude/scripts/estimate-session-time.mjs [YYYY-MM-DD]
 //   （日付省略時は HARNESS_TZ（旧 COOKPIT_TZ・既定 Asia/Tokyo）での今日）

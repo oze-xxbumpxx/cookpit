@@ -26,7 +26,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
   （`docs/04-domain-model.md` 等）の更新、設計書ステータスの `confirmed` への変更など）。
   コード変更と同格の完了条件として扱い、実施漏れを最終報告前に自己チェックする（出典:
   recipe-servings で計画に明記された2件の非コード指示が実施されず reviewer 指摘になった —
-  `docs/claude-code/improvements/candidates/recipe-servings.md` 事象1）。
+  `cookpit/recipe-servings` 事象1）。
 - 静的チェックの実行：
   - `pnpm lint`
   - `pnpm type-check`
