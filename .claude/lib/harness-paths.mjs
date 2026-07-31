@@ -47,16 +47,34 @@ export function repoRoot(env = process.env) {
 }
 
 /**
+ * `.git` を持つ最も近い祖先を返す（見つからなければ start をそのまま返す）。
+ * CLAUDE_PROJECT_DIR 未設定で cwd がサブディレクトリのとき、モノレポの
+ * workspace 側 package.json を誤って拾わないためにリポジトリ境界で止める。
+ */
+function repoRootFromMarker(start) {
+  let current = resolve(start);
+  for (;;) {
+    if (existsSync(join(current, '.git'))) return current;
+    const parent = resolve(current, '..');
+    if (parent === current) return resolve(start);
+    current = parent;
+  }
+}
+
+/**
  * OS 状態ディレクトリ配下で使う名前空間を解決する。
  * 解決順: HARNESS_NAMESPACE → package.json の name に `-harness` を付けたもの → DEFAULT_NAMESPACE。
  * **例外を投げない**。名前空間の都合で記録系 Hook を止めないため、読めない場合は既定値へ落とす。
+ *
+ * モジュール自身の位置は使わない。Plugin として配布するとモジュールは利用者リポジトリの
+ * 外に置かれ、全プロジェクトが同一の名前空間になってしまうため。
  */
 export function resolveNamespace({ env = process.env, root = repoRoot(env) } = {}) {
   const explicit = sanitizeNamespaceSegment(env.HARNESS_NAMESPACE);
   if (explicit) return explicit;
 
   try {
-    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    const pkg = JSON.parse(readFileSync(join(repoRootFromMarker(root), 'package.json'), 'utf8'));
     const derived = sanitizeNamespaceSegment(pkg?.name);
     // サフィックスは現行値との互換（cookpit → cookpit-harness）と、
     // OS の状態ディレクトリ配下で用途が名前から分かることの両立。
@@ -132,6 +150,15 @@ export function resolveStateDir({
 
   // HARNESS_STATE_DIR で決まる経路では名前空間を使わないため、ここまで来てから解決する。
   const namespace = resolveNamespace({ env, root });
+  // 既定値へ落ちた = プロジェクトを特定できていない。この状態は保存先が本来と変わり、
+  // 既存の状態ファイルが参照されなくなる（静かに孤児化する）ため必ず警告する。
+  if (namespace === DEFAULT_NAMESPACE && !sanitizeNamespaceSegment(env.HARNESS_NAMESPACE)) {
+    warnings.push(
+      `プロジェクトを特定できないため名前空間を既定値（${DEFAULT_NAMESPACE}）にしました。` +
+        'CLAUDE_PROJECT_DIR を設定するか、リポジトリ内で実行してください' +
+        '（別の状態ディレクトリを使うことになり、既存の記録は参照されません）',
+    );
+  }
 
   const xdg = env.XDG_STATE_HOME;
   if (xdg && xdg.trim() !== '') {

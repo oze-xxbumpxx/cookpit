@@ -212,6 +212,51 @@ test('このリポジトリでは cookpit-harness を導出する（移行不要
   assert.equal(resolveNamespace({ env: {}, root: REPO_ROOT }), 'cookpit-harness');
 });
 
+// モノレポのサブディレクトリから実行しても workspace 側の package.json を拾わないこと。
+// `.git` を持つ祖先まで遡るため、apps/web（@cookpit/web）ではなくルートの name を使う。
+test('サブディレクトリから解決してもリポジトリルートの name を使う', () => {
+  const sub = join(REPO_ROOT, 'apps/web');
+  assert.equal(resolveNamespace({ env: {}, root: sub }), 'cookpit-harness');
+});
+
+test('.git を持つ祖先が無ければ既定値へ落ちる', () => {
+  const { root, cleanup } = sandbox();
+  try {
+    // sandbox は .git も package.json も持たない
+    assert.equal(resolveNamespace({ env: {}, root }), DEFAULT_NAMESPACE);
+  } finally {
+    cleanup();
+  }
+});
+
+// 既定値へ落ちた状態は保存先が変わる＝既存記録が参照されなくなるため、必ず警告すること。
+// 警告が無いと「別のディレクトリに書いている」ことに気づけない（静かな孤児化）。
+test('名前空間が既定値へ落ちたら警告する', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const resolved = resolveStateDir({ env: {}, root, home });
+    assert.ok(
+      resolved.warnings.some((w) => w.includes(DEFAULT_NAMESPACE)),
+      `既定値へ落ちたのに警告が無い: ${JSON.stringify(resolved.warnings)}`,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+test('HARNESS_NAMESPACE で明示したときは既定値の警告を出さない', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const resolved = resolveStateDir({ env: { HARNESS_NAMESPACE: DEFAULT_NAMESPACE }, root, home });
+    assert.equal(
+      resolved.warnings.some((w) => w.includes('プロジェクトを特定できない')),
+      false,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test('isInside は同一パスと配下を真、外を偽とする', () => {
   assert.equal(isInside('/a/b', '/a/b'), true);
   assert.equal(isInside('/a/b', '/a/b/c'), true);
