@@ -3,7 +3,7 @@
 //
 // 使い方:
 //   node .claude/scripts/estimate-session-time.mjs [YYYY-MM-DD]
-//   （日付省略時は COOKPIT_TZ（既定 Asia/Tokyo）での今日）
+//   （日付省略時は HARNESS_TZ（旧 COOKPIT_TZ・既定 Asia/Tokyo）での今日）
 //
 // 入力ソース（あるものだけ使う。どれも無ければ「記録なし」を出力して正常終了）:
 //   1. .claude/state/activity-log.jsonl — record-activity.mjs Hook の活動タイムスタンプ
@@ -21,8 +21,11 @@ import { execSync } from 'node:child_process';
 import { resolveReadablePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const TZ = process.env.COOKPIT_TZ || 'Asia/Tokyo';
-const GAP_CAP_MIN = Number(process.env.COOKPIT_GAP_CAP_MIN || 30);
+// COOKPIT_* は旧名（後方互換）。新規は HARNESS_* を使う。
+const TZ = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
+const GAP_CAP_MIN = Number(
+  process.env.HARNESS_GAP_CAP_MIN || process.env.COOKPIT_GAP_CAP_MIN || 30,
+);
 
 function dayInTz(date) {
   // en-CA ロケールは YYYY-MM-DD 形式を返す

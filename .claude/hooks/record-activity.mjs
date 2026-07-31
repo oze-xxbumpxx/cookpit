@@ -7,7 +7,8 @@
 // - 用途: estimate-session-time.mjs が logs/ の「所要時間」欄を自動推定するための入力。
 //   record-subagent.mjs と同じ設計（append-only / 失敗しても常に exit 0）。
 // - 記録先: <永続領域>/activity-log.jsonl（harness-paths.mjs が解決。既定は
-//   ~/.local/state/cookpit-harness/。リポジトリ外のためコンテナ回収でも失われない）。
+//   ~/.local/state/<ns>/ で <ns> はプロジェクト名から導出する（Cookpit では cookpit-harness）。
+//   リポジトリ外のためコンテナ回収でも失われない）。
 
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
