@@ -1,7 +1,16 @@
 // 状態ディレクトリ解決のテスト（永続化先の決定・リポジトリ配下フォールバックの拒否）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, symlinkSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  statSync,
+  symlinkSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,9 +18,17 @@ import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_NAMESPACE,
   StateDirError,
+  hasSafePermissions,
   isInside,
+  legacyStateDir,
+  legacyStatePath,
+  repoRoot,
   resolveNamespace,
+  resolveReadablePath,
   resolveStateDir,
+  safeStatePath,
+  stateDir,
+  statePath,
 } from '../lib/harness-paths.mjs';
 
 // このテストファイルから見たリポジトリルート（.claude/tests → .claude → root）。
@@ -200,4 +217,141 @@ test('isInside は同一パスと配下を真、外を偽とする', () => {
   assert.equal(isInside('/a/b', '/a/b/c'), true);
   assert.equal(isInside('/a/b', '/a/bc'), false);
   assert.equal(isInside('/a/b', '/a'), false);
+});
+
+// --- 以下は Plugin 切り出し前の土台固め（harness-core として他プロジェクトへ配るため） ---
+
+test('repoRoot は CLAUDE_PROJECT_DIR を優先し、無ければ cwd を返す', () => {
+  assert.equal(repoRoot({ CLAUDE_PROJECT_DIR: '/some/repo' }), '/some/repo');
+  assert.equal(repoRoot({}), process.cwd());
+});
+
+test('stateDir は状態ディレクトリを 0700 で作成して返す', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const dir = stateDir({ env: {}, root, home });
+    assert.equal(dir, join(home, '.local/state', resolveNamespace({ env: {}, root })));
+    assert.ok(existsSync(dir), '作成されていない');
+    // 他ユーザーへ開いていないこと（0o077 が立っていない）。
+    assert.equal(statSync(dir).mode & 0o077, 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test('stateDir は既存ディレクトリでも失敗しない（冪等）', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const first = stateDir({ env: {}, root, home });
+    const second = stateDir({ env: {}, root, home });
+    assert.equal(first, second);
+  } finally {
+    cleanup();
+  }
+});
+
+test('statePath はディレクトリを作らずにパスだけ返す', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const p = statePath('run.json', { env: {}, root, home });
+    assert.equal(p, join(home, '.local/state', resolveNamespace({ env: {}, root }), 'run.json'));
+    assert.equal(existsSync(dirname(p)), false, 'ディレクトリを作ってしまっている');
+  } finally {
+    cleanup();
+  }
+});
+
+test('safeStatePath は解決できれば永続領域のパスを返す', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    const p = safeStatePath('activity-log.jsonl', { env: {}, root, home });
+    assert.equal(dirname(p), join(home, '.local/state', resolveNamespace({ env: {}, root })));
+    assert.ok(existsSync(dirname(p)), 'ディレクトリが作られていない');
+  } finally {
+    cleanup();
+  }
+});
+
+// 記録系 Hook は状態ディレクトリを解決できなくても作業を止めてはならない（fail-open）。
+test('safeStatePath は解決に失敗しても例外を投げず旧パスへ落ちる', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    // リポジトリ配下を指す HARNESS_STATE_DIR は resolveStateDir が拒否する（StateDirError）。
+    const env = { HARNESS_STATE_DIR: join(root, '.claude/state') };
+    const p = safeStatePath('activity-log.jsonl', { env, root, home });
+    assert.equal(p, join(legacyStateDir(root), 'activity-log.jsonl'));
+    assert.ok(existsSync(legacyStateDir(root)), 'フォールバック先が作られていない');
+  } finally {
+    cleanup();
+  }
+});
+
+test('legacyStateDir / legacyStatePath は <root>/.claude/state を指す', () => {
+  const { root, cleanup } = sandbox();
+  try {
+    assert.equal(legacyStateDir(root), join(root, '.claude/state'));
+    assert.equal(legacyStatePath('run.json', root), join(root, '.claude/state/run.json'));
+  } finally {
+    cleanup();
+  }
+});
+
+test('resolveReadablePath は永続領域を優先する', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    // 新旧の両方に同名ファイルを置き、永続領域が選ばれることを確認する。
+    const persistent = stateDir({ env: {}, root, home });
+    writeFileSync(join(persistent, 'run.json'), '{}');
+    mkdirSync(legacyStateDir(root), { recursive: true });
+    writeFileSync(legacyStatePath('run.json', root), '{}');
+
+    assert.equal(
+      resolveReadablePath('run.json', { env: {}, root, home }),
+      join(persistent, 'run.json'),
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+test('resolveReadablePath は永続領域に無ければ旧パスを返す', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    mkdirSync(legacyStateDir(root), { recursive: true });
+    writeFileSync(legacyStatePath('run.json', root), '{}');
+
+    assert.equal(
+      resolveReadablePath('run.json', { env: {}, root, home }),
+      legacyStatePath('run.json', root),
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+test('resolveReadablePath はどちらにも無ければ null を返す', () => {
+  const { root, home, cleanup } = sandbox();
+  try {
+    assert.equal(resolveReadablePath('missing.json', { env: {}, root, home }), null);
+  } finally {
+    cleanup();
+  }
+});
+
+test('hasSafePermissions は他ユーザーへ開いた権限を偽とする', () => {
+  const { base, cleanup } = sandbox();
+  try {
+    const safe = join(base, 'safe');
+    const open = join(base, 'open');
+    mkdirSync(safe, { mode: 0o700 });
+    mkdirSync(open, { mode: 0o700 });
+    chmodSync(open, 0o777);
+
+    assert.equal(hasSafePermissions(safe), true);
+    assert.equal(hasSafePermissions(open), false);
+    // 存在しないパスは判定できないため false（fail-closed）。
+    assert.equal(hasSafePermissions(join(base, 'nonexistent')), false);
+  } finally {
+    cleanup();
+  }
 });
