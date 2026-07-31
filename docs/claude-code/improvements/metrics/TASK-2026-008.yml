@@ -18,20 +18,20 @@ codex:
   notes: ''
 
 quality:
-  tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
-  initial_test_failures: unknown
-  reviewer_critical: 0
-  reviewer_major: 0
-  reviewer_minor: 0
+  tests_added: 0 # 設定ファイルの再編のため自動試験の追加対象なし（検証は機械照合）
+  initial_test_failures: 0
+  reviewer_critical: 1 # M-1: 要件 F-7 が部分充足のまま完了と報告しかけた（自己レビューで検出・修正済み）
+  reviewer_major: 3 # S-1〜S-3（申し送り）
+  reviewer_minor: 2 # N-1〜N-2
   user_corrections: 0
   escaped_defects: 0
 
 process:
-  requirement_rework: 0
-  design_rework: 0
-  implementation_rework: 0
-  missing_documents: 1 # docs 存在チェックから自動補完
-  unresolved_items: 0
+  requirement_rework: 1 # 実装中に R-3 の対象範囲を拡張（COOKPIT_GAP_CAP_MIN 相当の発見はせず、出典の母集団定義を修正）
+  design_rework: 2 # 層割り当ての訂正 2 件（check-review-coverage / record-activity・estimate-session-time）
+  implementation_rework: 1 # 出典書き換えの取りこぼし 7 箇所をレビュー後に修正
+  missing_documents: 0 # docs/reviews/ を後から作成して充足（自動補完時は 1 だった）
+  unresolved_items: 3 # S-1（Cookpit 固有ドキュメント参照）/ S-2（core 単独の未実証）/ S-3（settings.json と Hook 配線）
   # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
   # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
   meta_work_ratio: unknown

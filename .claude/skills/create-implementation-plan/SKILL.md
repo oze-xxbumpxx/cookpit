@@ -21,7 +21,7 @@ description: >
      projects）と突き合わせる。テストは各 workspace の `tests/` に置き、`src/` の構造を
      ミラーする。apps/web は `tests/**/*.node.test.ts` / `tests/**/*.dom.test.ts` /
      `tests/**/*.test.tsx` / `tests/server/**/*.test.ts` のみ。素の `*.test.ts` は silent skip の原因
-     （出典: meal-plan-screens 事象 1 / IMP-2026-012 の残穴）。
+     （出典: cookpit/meal-plan-screens 事象 1 / IMP-2026-012 の残穴）。
 5. 既存計画があれば更新する（重複作成しない）。
 6. **実装ルート = Codex 委譲の場合（軽量モード）**: ファイル別の完成コード・詳細シグネチャは
    実装計画に書かない（正本はブリーフ `docs/tasks/codex/<feature>/`）。実装計画は
@@ -37,7 +37,7 @@ description: >
 - レベル: L2 | L3
 - 実装ルート: Orchestrator（implementer）| Codex 委譲
 - 判断理由: （既定どおりなら「既定」+ docs/06-ai-tools.md の観点 1 語。
-  特殊判断・切替があれば理由 1 行。出典: shopping-list-screens 事象 5 /
+  特殊判断・切替があれば理由 1 行。出典: cookpit/shopping-list-screens 事象 5 /
   harness-post-020-audit 事象 2）
 
 ## 変更対象ファイル
@@ -88,7 +88,7 @@ description: >
   - Codex 委譲経路: create-codex-brief がこの計画からブリーフを生成できる分解粒度
     （ファイル別の完成コードは持たない。それはブリーフが正本）。
 - ドメインモデル変更を含む場合、「ドキュメント更新対象」に `docs/04-domain-model.md` の
-  整合確認が含まれている（出典: store-master で更新漏れが reviewer Nice-2 指摘になった —
+  整合確認が含まれている（出典: cookpit/store-master で更新漏れが reviewer Nice-2 指摘になった —
   `cookpit/store-master レビュー` Nice-2 /
   `cookpit/store-master` 事象 4）。
 
