@@ -16,12 +16,21 @@
 `.claude/lib/harness-paths.mjs` が次の順に保存先を解決する。
 
 1. `HARNESS_STATE_DIR`（絶対パス必須、リポジトリ配下は拒否）
-2. `XDG_STATE_HOME/cookpit-harness`（同上）
-3. `~/.local/state/cookpit-harness`
+2. `XDG_STATE_HOME/<ns>`（同上）
+3. `~/.local/state/<ns>`
 4. `<repo>/.claude/state`（永続性のない最終フォールバック）
+
+`<ns>`（名前空間）は他プロジェクトでも同じコードが動くよう `resolveNamespace()` が導出する。
+
+1. `HARNESS_NAMESPACE`（パスへ連結するため単一セグメントへ無害化する）
+2. `package.json` の `name` に `-harness` を付けたもの（**Cookpit では `cookpit-harness`**）
+3. `claude-harness`（`package.json` が無い・壊れている・`name` が無い場合）
 
 シンボリックリンクで実体がリポジトリ配下へ戻る指定も拒否する。ディレクトリは `0700`、
 状態ファイルは `0600` で作成する。
+
+`migrate-state.mjs` が扱うのはリポジトリ内 → 永続領域の移行のみで、名前空間の変更は扱わない。
+`HARNESS_NAMESPACE` を後から変えると旧名前空間の状態は参照されなくなる。
 
 ```bash
 node .claude/scripts/harness-run.mjs where
