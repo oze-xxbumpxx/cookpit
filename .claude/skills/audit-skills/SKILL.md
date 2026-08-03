@@ -38,7 +38,7 @@ description: >
 
 横断チェック（毎回実施）: 同じルール・フロー・状態が複数文書に書かれていないか grep で確認し、
 食い違いがあれば正典を 1 つ決めて他を合わせる（実例: 委譲フローが 5 文書で不一致だった —
-`candidates/skills-inventory-audit.md` 事象 2）。
+`cookpit/skills-inventory-audit` 事象 2）。
 
 ## 攻め: 実績からの還流
 
@@ -49,7 +49,7 @@ description: >
    （発動条件・手順・完了条件のドラフトつき）。
 3. **ログの知識は現行コード・直近コミットで裏取りしてから還流する**（賞味期限切れの
    知識をそのまま定着させない。実例: 「--webpack 必須」は解消済みだった —
-   `candidates/skills-inventory-audit.md` 事象 4）。
+   `cookpit/skills-inventory-audit` 事象 4）。
 
 ## 変更の扱い（承認境界）
 
@@ -72,4 +72,4 @@ description: >
 
 - 2026-07-02 の棚卸し（commit 8743e97 / b7ebf71 / c8ec43e）— ADR 採番の事実誤り
   （採番衝突）を発見・修正し、テスト基盤状態の鮮度切れ 8 箇所を一括解消。振り返りは
-  `docs/claude-code/improvements/candidates/skills-inventory-audit.md`。
+  `cookpit/skills-inventory-audit`。

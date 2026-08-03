@@ -29,7 +29,7 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
    - **新規画面だけでは L3 にしない。** 新規 API / DB 変更を伴う場合のみ L3。既存 API・既存契約
      だけを使う画面追加は L2（出典: `.claude/evals/cases/frontend-screen-addition.md`、
      recipe-edit-screen 実判定 —
-     `docs/claude-code/improvements/candidates/recipe-edit-screen.md` 事象 3）。
+     `cookpit/recipe-edit-screen` 事象 3）。
      「新規画面」を L3 トリガー一覧の見出しだけで読まないこと。
 5. 境界例（例：API 項目追加だが DB スキーマも変わる）は**上位レベル**として扱う。
 
@@ -37,14 +37,14 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 
 - **L2 の例**: recipe-edit-screen — 新規画面だがバックエンド・契約は既存のまま
   （Presentation 層のみ）→ L2。手戻りゼロで完走
-  （出典: `docs/claude-code/improvements/candidates/recipe-edit-screen.md` 事象 1・3）。
+  （出典: `cookpit/recipe-edit-screen` 事象 1・3）。
 - **L3 の例**: store-master — 新規 API（`GET/POST /api/stores`）+ DB スキーマ変更
   （stores テーブル）を含む全層変更 → L3
-  （出典: `docs/requirements/store-master.md` / `docs/designs/store-master.md`）。
+  （出典: `cookpit/store-master 要件` / `cookpit/store-master 設計書`）。
 - **L2 の例（テストのみの変更）**: test-infra-expansion — プロダクションコード変更 0 の
   テスト基盤拡張だが、新規 9 ファイル・複数パッケージ（infrastructure / apps/web）に及ぶ
   → 「軽微修正」ではなく L2。手戻りゼロで完走
-  （出典: `docs/claude-code/improvements/candidates/test-infra-expansion.md` 対象タスク概要・事象 1）。
+  （出典: `cookpit/test-infra-expansion` 対象タスク概要・事象 1）。
 
 ## 出力（会話でユーザーへ提示）
 
@@ -60,8 +60,14 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 0     | （調査のみ。読み取りで完結）                                                                                                                                         | なし（必要なら提案書）                                                                      |
 | 1     | implementer（必要なら reviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
-| 2     | architecture-designer →〔契約あれば contract-designer〕→ (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→ reflection-agent | designs / implementation-plans / tests                                                      |
+| 2     | architecture-designer →〔契約あれば contract-designer※〕→ (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→〔reflection-agent※〕 | designs / implementation-plans / tests                                                      |
 | 3     | architecture-designer（requirements + design）→ 上記 + ADR。E2E は implementer が条件付きで担当                                                                      | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
+
+※ `contract-designer` と `reflection-agent` は**存在する場合のみ**起動する。前者は
+契約（API / DB / スキーマ）を持つプロジェクト固有の Agent、後者は改善サイクルを
+運用しているプロジェクトの Agent で、どちらも開発ワークフロー層の必須要素ではない
+（層マニフェスト: `docs/claude-code/plugin-layer-manifest.md`）。無い環境では
+その工程を飛ばし、飛ばした旨を報告に書く。
 
 ## 注意
 

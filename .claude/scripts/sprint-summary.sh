@@ -10,7 +10,8 @@ set -euo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$ROOT"
 
-TZ_NAME="${COOKPIT_TZ:-Asia/Tokyo}"
+# COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
+TZ_NAME="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}"
 UNTIL="$(TZ="$TZ_NAME" date +%F)"
 SINCE="$(TZ="$TZ_NAME" date -d '6 days ago' +%F 2>/dev/null || TZ="$TZ_NAME" date -v-6d +%F)"
 

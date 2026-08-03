@@ -6,8 +6,11 @@
 //   会話内容・プロンプト本文・秘密情報は一切保存しない（ts / event / session_id のみ）。
 // - 用途: estimate-session-time.mjs が logs/ の「所要時間」欄を自動推定するための入力。
 //   record-subagent.mjs と同じ設計（append-only / 失敗しても常に exit 0）。
+// - 層: harness-core（Plugin 分割時）。依存は harness-paths.mjs のみで、
+//   write-work-log の「所要時間」欄を estimate-session-time.mjs 経由で埋めるための入力。
 // - 記録先: <永続領域>/activity-log.jsonl（harness-paths.mjs が解決。既定は
-//   ~/.local/state/cookpit-harness/。リポジトリ外のためコンテナ回収でも失われない）。
+//   ~/.local/state/<ns>/ で <ns> はプロジェクト名から導出する（Cookpit では cookpit-harness）。
+//   リポジトリ外のためコンテナ回収でも失われない）。
 
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
