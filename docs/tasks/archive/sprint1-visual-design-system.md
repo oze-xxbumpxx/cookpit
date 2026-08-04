@@ -100,7 +100,7 @@ apps/web/src/app/recipes/new/_components/step-row.tsx
 apps/web/src/components/ui/button.tsx / input.tsx / textarea.tsx  # トークン参照済み。原則編集不要
 ```
 
-> 詳細画面（`/recipes/[id]`、`docs/tasks/sprint1-recipe-ui-detail.md`）が**この指針より後に実装される場合**は、詳細画面は最初から本トークン（`bg-background` / `text-foreground` / `bg-primary` 等）で実装すること。先に実装済みなら同じ移行マッピングを適用する。
+> 詳細画面（`/recipes/[id]`、`docs/tasks/archive/sprint1-recipe-ui-detail.md`）が**この指針より後に実装される場合**は、詳細画面は最初から本トークン（`bg-background` / `text-foreground` / `bg-primary` 等）で実装すること。先に実装済みなら同じ移行マッピングを適用する。
 
 ---
 
