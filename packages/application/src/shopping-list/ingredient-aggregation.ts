@@ -89,8 +89,7 @@ function aggregateIngredients(
       if (isSeasoningName(ingredient.displayName)) {
         continue;
       }
-      const productId =
-        ingredient.productRef === null ? null : ProductId.fromString(ingredient.productRef.value);
+      const productId = ingredient.productRef;
 
       if (ingredient.amount === null) {
         individual.push({

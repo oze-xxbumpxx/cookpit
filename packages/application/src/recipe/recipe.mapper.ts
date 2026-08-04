@@ -1,4 +1,4 @@
-import { CookingStep, Quantity, RecipeIngredient } from '@cookpit/domain';
+import { CookingStep, ProductId, Quantity, RecipeIngredient } from '@cookpit/domain';
 import type { Recipe, Unit } from '@cookpit/domain';
 import type { RecipeIngredientDto, CookingStepDto, RecipeDto } from './recipe.dto';
 
@@ -11,7 +11,7 @@ function toQuantity(value: number | null, unit: Unit | null): Quantity | null {
 
 export function toIngredient(dto: RecipeIngredientDto): RecipeIngredient {
   return RecipeIngredient.create({
-    productRef: dto.productRef !== null ? { value: dto.productRef } : null,
+    productRef: dto.productRef !== null ? ProductId.fromString(dto.productRef) : null,
     displayName: dto.displayName,
     amount: toQuantity(dto.amountValue, dto.amountUnit),
     amountNote: dto.amountNote,
