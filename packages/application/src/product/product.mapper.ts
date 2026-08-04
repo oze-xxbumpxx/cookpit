@@ -26,6 +26,7 @@ export function toProductDto(product: Product, storeMap: StoreNameMap): ProductD
 
 function toPriceRecordDto(record: PriceRecord, storeMap: StoreNameMap): PriceRecordDto {
   return {
+    id: record.id.value,
     storeId: record.storeId.value,
     storeName: storeMap.get(record.storeId.value) ?? '',
     priceAmount: record.price.amount,

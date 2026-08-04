@@ -1,42 +1,31 @@
 #!/usr/bin/env node
 // PostToolUse Hook — Agent 設定の構文・整合性検証
 //
-// 方針（docs/claude-code/improvement-cycle.md §承認境界 / memory機能改善 §7）:
+// 方針（docs/claude-code/improvement-cycle.md / memory機能改善 §7）:
 // - 重要な制御は Command Hook で行う。LLM 判断が必要な部分は Agent（reflection / manager）に委ねる。
-// - 強制度（ユーザー選択）: 「構文エラーはブロック・方針違反は警告」
+// - 強制度: 「構文エラーはブロック・方針違反は警告」
 //     BLOCK(exit 2, stderr): 機械的に確実な誤り
 //       - settings.json の JSON が不正
 //       - Agent/Skill の YAML frontmatter が欠落 or 不正
 //       - model 指定が claude-* の形式でない（タイポ等）
 //       - Agent 名が重複している
 //     WARN(exit 0, additionalContext): 方針・整合性の注意（ロックアウト回避のためブロックしない）
-//       - 保護ファイル（CLAUDE.md / .claude/agents/** / settings.json）の未承認変更
 //       - Agent() ツール権限を許可外 Agent が持つ（過剰権限の疑い）
 //       - 参照先 Agent / Skill / Rule が存在しない
 //       - Agent 名とファイル名の不一致
+// - 構成変更の人間承認はフックでは行わない（PR レビューが担う）。
 // - 監視対象外のファイルでは即 exit 0。
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import {
-  OPERATION_CONFIG_CHANGE,
-  describeRejection,
-  verifyApproval,
-} from '../lib/harness-approval.mjs';
-import { loadRunState } from '../lib/harness-state.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-// Agent() ツールの保持を許可する Agent（指揮・改善統括、および検証目的の reviewer）
-const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager', 'reviewer']);
+// Agent() ツールの保持を許可する Agent（指揮・改善統括。IMP-2026-031 で reviewer から除去）
+const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager']);
 // Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
 const BUILTIN_AGENTS = new Set(['Explore']);
-// 人間承認が必要な保護対象（improvement-cycle.md §承認境界）
-function isProtected(rel) {
-  return (
-    rel === 'CLAUDE.md' || rel.startsWith('.claude/agents/') || rel === '.claude/settings.json'
-  );
-}
+// 構成変更の承認境界は PR レビュー（フック内の人間承認層は撤去済み）
 
 function readStdin() {
   try {
@@ -112,7 +101,7 @@ function listAgentNames() {
 }
 
 function referencedAgents(toolsValue) {
-  // 例: "Agent(requirements-analyst, architecture-designer), Read, Grep"
+  // 例: "Agent(architecture-designer, implementer, Explore), Read, Grep"
   const refs = [];
   const m = toolsValue.match(/Agent\(([^)]*)\)/);
   if (m && m[1].trim()) {
@@ -128,7 +117,7 @@ function blockExit(reasons) {
   process.stderr.write(
     '⛔ Agent 設定の検証エラー（構文・整合性）— 修正してください:\n' +
       reasons.map((r) => ` - ${r}`).join('\n') +
-      '\n参照: docs/claude-code/improvement-cycle.md §承認境界\n',
+      '\n',
   );
   process.exit(2);
 }
@@ -140,8 +129,7 @@ function warnExit(warnings) {
         hookEventName: 'PostToolUse',
         additionalContext:
           '⚠ Agent 設定の注意（方針・整合性。ブロックはしません）:\n' +
-          warnings.map((w) => ` - ${w}`).join('\n') +
-          '\n保護ファイルの恒久変更は improvement-cycle.md §承認境界 に従い人間承認が必要です。',
+          warnings.map((w) => ` - ${w}`).join('\n'),
       },
     }),
   );
@@ -229,21 +217,6 @@ function main() {
     }
   }
 
-  // 保護ファイルの未承認変更（承認検証は harness-approval.mjs が正典）。
-  // 実際のブロックは PreToolUse の guard-dangerous.mjs が行う。ここは事後の可視化のみ。
-  if (isProtected(rel)) {
-    const run = loadRunState();
-    const approval = verifyApproval({
-      operation: OPERATION_CONFIG_CHANGE,
-      target: rel,
-      runId: run.ok ? run.state.runId : null,
-    });
-    if (!approval.ok) {
-      warns.push(
-        `保護ファイルを変更しました: ${rel}（人間承認が必要です — ${describeRejection(approval)}）`,
-      );
-    }
-  }
 
   if (blocks.length) blockExit(blocks);
   if (warns.length) warnExit(warns);

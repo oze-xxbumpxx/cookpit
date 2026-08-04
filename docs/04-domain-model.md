@@ -146,7 +146,16 @@ export class Store {
 }
 ```
 
-MVP1 では Store はシード（初期データ）として 2 件を DB に登録する想定。動的な追加は Phase 2 以降。
+> **現行実装は上記より進んでいる。**「シードのみ・動的追加は Phase 2 以降」の想定は撤回済みで、
+> 価格記録フォームから追加・削除できる。あわせて 2026-07-27 に
+> [ADR-0013](./decisions/ADR-0013-store-limit-and-delete-cascade.md) で次の不変条件が入った。
+>
+> - **登録は最大 3 件**（実運用の「2 人で 2〜3 店舗を回る」に合わせた実数）
+> - **同名は登録不可**（`normalizeStoreName` = 前後空白除去 + NFKC 後の完全一致で判定）
+> - **削除は参照ごとカスケード**（価格記録は物理削除、買い物品目の店舗指定は未割当へ戻す）
+>
+> どちらも単一の `Store` では判定できないコレクション制約なので、Entity ではなく
+> `CreateStoreUseCase` / `DeleteStoreUseCase`（Application 層）が担う。
 
 ## 集約詳細
 

@@ -46,7 +46,7 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
 - [ ] `pnpm lint` が通る
 - [ ] `pnpm type-check` が通る
 - [ ] `pnpm test` が通る（Vitest は domain / application / infrastructure / apps/web に
-  導入済み — 2026-07-01 PR #21 `docs/designs/test-infra-expansion.md`。E2E は未整備）
+  導入済み — 2026-07-01 PR #21 `cookpit/test-infra-expansion 設計書`。E2E は未整備）
 - [ ] `apps/web` の画面変更を含む場合、`manual-browser-verify` Skill の確認結果
   （全項目に PASS / BLOCKED(理由) / FAIL）が報告に含まれている
 

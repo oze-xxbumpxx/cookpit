@@ -1,0 +1,29 @@
+/*
+ * 生成物。手で編集しないこと（apps/web/scripts/subset-fonts.mjs が生成する）。
+ *
+ * Zen Maru Gothic を JIS X 0208 第一水準漢字 + 仮名 + 英数記号へサブセット化したもの。
+ * Fontsource の japanese サブセット（1 ウェイト約 1.4MB）を置き換える。
+ */
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('../fonts/zen-maru-gothic-subset-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('../fonts/zen-maru-gothic-subset-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('../fonts/zen-maru-gothic-subset-700.woff2') format('woff2');
+}

@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, count, eq, notInArray, sql } from 'drizzle-orm';
 import {
   Money,
   PriceRecord,
@@ -118,6 +118,19 @@ export class DrizzleProductRepository implements ProductRepository {
 
   async delete(id: ProductId): Promise<void> {
     await this.db.delete(products).where(eq(products.id, id.value));
+  }
+
+  async countPriceRecordsByStore(storeId: StoreId): Promise<number> {
+    const rows = await this.db
+      .select({ value: count() })
+      .from(priceRecords)
+      .where(eq(priceRecords.storeId, storeId.value));
+
+    return rows[0]?.value ?? 0;
+  }
+
+  async deletePriceRecordsByStore(storeId: StoreId): Promise<void> {
+    await this.db.delete(priceRecords).where(eq(priceRecords.storeId, storeId.value));
   }
 
   private toProducts(rows: ProductWithPriceRecordRow[]): Product[] {

@@ -32,6 +32,9 @@ process:
   implementation_rework: 0
   missing_documents: 0
   unresolved_items: 0
+  # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
+  # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
+  meta_work_ratio: unknown
 
 machine:
   # collect-task-metrics.mjs が transcript / quality-gates-log から自動で埋める（手で編集しない）。

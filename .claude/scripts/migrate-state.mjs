@@ -5,7 +5,7 @@
 // - **元データは削除しない**（読み取り側は永続領域 → 旧パスの順で見るため、両方あっても壊れない）。
 // - 移行先に同名ファイルが既にある場合は上書きしない（重複移行の防止）。
 // - 移行前に旧ディレクトリ全体のバックアップを永続領域へ作る（Git 管理外の安全な場所）。
-// - 承認ファイルは移行対象外（旧方式のマーカーは新方式では無効。作り直させる）。
+// - 廃止済みの承認ファイルは移行対象外。
 //
 // 使い方:
 //   node .claude/scripts/migrate-state.mjs [--dry-run]
@@ -16,8 +16,12 @@ import { legacyStateDir, repoRoot, resolveStateDir, stateDir } from '../lib/harn
 
 const dryRun = process.argv.includes('--dry-run');
 
-// 旧方式の承認マーカーは移行しない（新方式は構造化 JSON + runId 束縛のため互換性がない）
-const EXCLUDED = new Set(['config-change-approved', 'approval.json']);
+// 旧方式の承認マーカー・消費ログは移行しない。
+const DEPRECATED_APPROVAL_FILES = new Set([
+  'config-change-approved',
+  'approval.json',
+  'used-approvals.jsonl',
+]);
 
 const root = repoRoot();
 const legacyDir = legacyStateDir(root);
@@ -38,7 +42,9 @@ if (!resolved.trusted) {
   process.exit(1);
 }
 
-process.stdout.write(`移行元: ${legacyDir}\n移行先: ${resolved.dir}（source: ${resolved.source}）\n\n`);
+process.stdout.write(
+  `移行元: ${legacyDir}\n移行先: ${resolved.dir}（source: ${resolved.source}）\n\n`,
+);
 
 if (!existsSync(legacyDir)) {
   process.stdout.write('旧状態ディレクトリがありません。移行不要です。\n');
@@ -46,7 +52,7 @@ if (!existsSync(legacyDir)) {
 }
 
 const entries = readdirSync(legacyDir).filter((name) => {
-  if (EXCLUDED.has(name)) return false;
+  if (DEPRECATED_APPROVAL_FILES.has(name)) return false;
   try {
     return statSync(join(legacyDir, name)).isFile();
   } catch {
@@ -60,7 +66,10 @@ if (entries.length === 0) {
 }
 
 const target = dryRun ? resolved.dir : stateDir();
-const backupDir = join(target, `migration-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+const backupDir = join(
+  target,
+  `migration-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`,
+);
 
 const copied = [];
 const skipped = [];
@@ -90,4 +99,6 @@ for (const name of skipped) process.stdout.write(`  = ${name}\n`);
 if (!dryRun && copied.length > 0) {
   process.stdout.write(`\nバックアップ: ${backupDir}\n`);
 }
-process.stdout.write('\n旧 .claude/state/ は削除していません（読み取りは新旧どちらも参照します）。\n');
+process.stdout.write(
+  '\n旧 .claude/state/ は削除していません（読み取りは新旧どちらも参照します）。\n',
+);

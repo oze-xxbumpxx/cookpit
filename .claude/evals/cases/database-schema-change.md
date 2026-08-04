@@ -13,8 +13,8 @@ Recipe に `status`（下書き / 公開）を追加する。Drizzle スキー�
 ## 期待される進め方
 
 - 変更レベルを **L3** と判定（DB スキーマ設計判断＋データ移行＝後方互換のため要ユーザー確認）。
-- 委譲フロー: requirements-analyst → architecture-designer →（planner ∥ test-designer）→
-  implementer → reviewer（＋ ADR `docs/decisions/`）。
+- 委譲フロー: architecture-designer（requirements + design）→（planner ∥ test-designer）→
+  implementer → reviewer（＋ ADR `docs/decisions/`）→ security-reviewer。
 - **DB スキーマ設計は提案にとどめ、確定前にユーザー確認**を取る（CLAUDE.md 行動制約）。
 - 後方互換・移行: 既存行のデフォルト値、ダウンタイム有無、ロールバック手順を明記。
 - 状態遷移ロジックは Entity（`status` VO）に閉じ込め、UseCase は遷移を呼ぶだけにする。

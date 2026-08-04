@@ -1,16 +1,20 @@
 ---
 name: close-session
 description: >
-  セッション終了時のメタ作業（品質ゲート・所要時間の自動推定・日次ログ・メトリクス・
-  振り返り・コミット & プッシュ）を一括で行う手順。ユーザーが「今日は終わり」「締めて」
-  「クローズして」と言ったとき、または成果報告の直前に使う。kickoff-session と対になる。
+  セッション終了時のメタ作業（品質ゲート・所要時間の自動推定・日次ログ・コミット & プッシュ）
+  を一括で行う手順。ユーザーが「今日は終わり」「締めて」「クローズして」と言ったとき、
+  または成果報告の直前に使う。kickoff-session と対になる。
 ---
 
 # セッション終了スキル
 
-終了時に毎回発生するメタ作業（ログ・メトリクス・振り返り・コミット）を 1 コマンドに
-集約するスキル。個別 Skill（write-work-log / reflect-task）の置き換えではなく、
-正しい順序で漏れなく呼ぶためのチェックリスト付きラッパー。
+終了時に毎回発生するメタ作業（ゲート・ログ・コミット）を 1 コマンドに集約するスキル。
+個別 Skill（write-work-log）の置き換えではなく、正しい順序で漏れなく呼ぶための
+チェックリスト付きラッパー。
+
+メトリクス記録と振り返りは `record-metrics-and-reflect` Skill へ分離している
+（層マニフェスト: このスキルは `harness-workflow`、あちらは `harness-improvement`）。
+改善サイクルを運用していないプロジェクトでも本スキルだけで終了作業が完結する。
 
 ## 発動条件
 
@@ -30,31 +34,19 @@ description: >
      環境でもコミットがあれば動く。
 3. **日次ログ**: write-work-log Skill の手順で `logs/YYYY-MM-DD.md` を作成・追記する。
    kickoff-session で雛形を作っていれば残りの節を埋める。
-4. **メトリクス**（L2/L3 の機能タスクに関与したセッションは毎回）:
-   `bash .claude/scripts/record-task-metrics.sh <task-id> <feature> <level>` を実行する。
-   - 初回は雛形を作成、2 回目以降は `machine:` セクションだけ再集計して累積する（冪等）。
-   - **feature が未完了でも先送りしない**。`machine:` セクションの転記は毎セッション実行する
-     （意味値の記入だけタスク完了時でよい。セッション内確定の原則 — improvement-cycle.md
-     §計測の原則 / IMP-2026-019）。
-   - 所要時間・トークン・ツール/Agent 呼び出し・ゲート実行（手戻りプロキシ）は
-     `collect-task-metrics.mjs` が transcript と quality-gates-log から自動で埋める。
-     transcript はローカルマシンにしか残らないため、タスク完了時ではなく
-     **セッションごと**に実行して YAML へ固定化する（複数日タスクの取りこぼし防止）。
-   - ブランチ名に feature 名が含まれないブランチで作業した場合は
-     `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --branch <ブランチ部分一致> --task-id <task-id> --write`
-     で対象ブランチを明示して再実行する。
-   - 意味的な値（quality/process の手戻り・レビュー指摘・ユーザー修正数）は自動化対象外。
-     タスク完了時に reflection-agent / 人間が会話の記憶から埋める（不明値は unknown のまま）。
-5. **振り返り**（L2/L3 のみ）: reflection-agent へ委譲し reflect-task Skill で
-   candidate を作成する。L0/L1 はスキップ（過剰工程にしない）。
-6. **コミット & プッシュ**: 指定の作業ブランチへコミットし `git push -u origin <branch>` する
+4. **メトリクス・振り返り**（L2/L3 のみ）: `record-metrics-and-reflect` Skill が
+   利用可能なら実行する（改善サイクルを運用しているプロジェクト）。
+   - **利用できない環境ではスキップし、ログにスキップした旨を書く。** セッション終了作業を
+     メトリクスの都合で止めない（出典: cookpit/harness-plugin-split 要件 E-02）。
+   - L0/L1 はそもそも対象外（過剰工程にしない）。
+5. **コミット & プッシュ**: 指定の作業ブランチへコミットし `git push -u origin <branch>` する
    （CLAUDE.md の行動制約どおり、作業ブランチへは事前承認不要。構成ファイル
-   （CLAUDE.md / agents / hooks / skills / rules / settings.json）を含む変更は
-   人間承認の対象であることをコミットメッセージと報告に明記する）。
+   （CLAUDE.md / agents / hooks / skills / rules / settings.json）を含む変更は、
+   PR レビューで重点確認する対象であることをコミットメッセージと報告に明記する）。
    - **強制終了が近い・usage が逼迫しているとき**: フェーズ境界のチェックポイントコミットを
      先にリモートへ出し、「次回やること」を残工程が機械判別できる粒度で書く
      （次セッションの復旧チェックリスト — development-workflow.md §セッション跨ぎの復旧）。
-7. **最終報告**: やったこと・ゲート結果・所要時間・持ち越し（次回やること）を要約して
+6. **最終報告**: やったこと・ゲート結果・所要時間・持ち越し（次回やること）を要約して
    ユーザーへ報告する。
 
 ## 完了条件
@@ -62,8 +54,6 @@ description: >
 - ログの全節が非空で、「所要時間」が推定値または理由つき「記録なし」になっている。
 - 「次回やること」が、次セッションの kickoff-session がそのまま拾える具体性を持つ。
 - 未プッシュのコミットが残っていない（エフェメラル環境では成果消失に直結するため必須）。
-- L2/L3 タスクでメトリクス・振り返りを飛ばしていない（飛ばした場合は理由を報告に明記）。
-- 複数 Task の Codex 委譲 feature では、main マージ済み Task 分の
-  docs/reviews/<feature>.md 記録が揃っているか
-  `node .claude/scripts/check-review-coverage.mjs <feature>` で確認する
-  （空配列 = 網羅済み。出典: pantry-core 事象 2 / IMP-2026-020 適用後の再発）。
+- L2/L3 タスクで手順 4 を飛ばした場合、その理由を報告に明記している
+  （`record-metrics-and-reflect` を持たない環境なら「improvement 層なし」と書く）。
+  メトリクス・振り返り自体の完了条件はあちらの Skill が持つ。

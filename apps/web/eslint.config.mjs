@@ -11,6 +11,18 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
     },
   },
+  {
+    files: ['src/**/*.{test,spec}.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Program',
+          message: 'テストファイルは src/ ではなく tests/ 配下に配置してください。',
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

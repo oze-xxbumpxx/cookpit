@@ -9,7 +9,8 @@ set -euo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$ROOT"
 
-echo "# セッションブリーフィング（$(TZ="${COOKPIT_TZ:-Asia/Tokyo}" date +%F)）"
+# COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
+echo "# セッションブリーフィング（$(TZ="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}" date +%F)）"
 echo
 
 # ── 前回ログの「次回やること」 ──────────────────────────────

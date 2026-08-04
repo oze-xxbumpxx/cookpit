@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ブラウザ手動確認スクリプトのスクリーンショット
+/scripts/.verify-*.png

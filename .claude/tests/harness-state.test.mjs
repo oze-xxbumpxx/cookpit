@@ -1,7 +1,15 @@
 // run 状態の検証・原子的書き込み・破損検出のテスト。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+  rmSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
@@ -13,6 +21,7 @@ import {
   createRunState,
   isIsoTimestamp,
   loadRunState,
+  normalizeRunState,
   readJsonStrict,
   saveRunState,
   updateRunState,
@@ -62,15 +71,61 @@ test('必須フィールド欠落を拒否する', () => {
   assert.equal(result.reason, 'schema_mismatch');
 });
 
-test('不正な phase / status / approvalStatus を拒否する', () => {
+test('不正な phase / status を拒否する', () => {
   for (const [key, value] of [
     ['phase', 'bogus'],
     ['status', 'bogus'],
-    ['approvalStatus', 'bogus'],
   ]) {
     const result = validateRunState({ ...createRunState(), [key]: value });
     assert.equal(result.ok, false, `${key} が拒否されていません`);
     assert.equal(result.reason, 'corrupt');
+  }
+});
+
+test('旧 schema v1 の承認状態を schema v2 へ移行する', () => {
+  const current = createRunState({ taskId: 'legacy' });
+  const legacy = {
+    ...current,
+    schemaVersion: 1,
+    phase: 'planning',
+    status: 'waiting_for_approval',
+    approvalStatus: 'pending',
+  };
+
+  const migrated = normalizeRunState(legacy);
+
+  assert.equal(migrated.schemaVersion, RUN_STATE_SCHEMA_VERSION);
+  assert.equal(migrated.phase, 'blocked');
+  assert.equal(migrated.status, 'active');
+  assert.equal('approvalStatus' in migrated, false);
+  assert.equal(validateRunState(migrated).ok, true);
+});
+
+test('旧 schema v1 を読み込み、次回更新時に schema v2 で保存する', () => {
+  const { opts, state: stateDirPath, cleanup } = sandbox();
+  try {
+    const current = createRunState({ taskId: 'legacy-file' });
+    const legacy = {
+      ...current,
+      schemaVersion: 1,
+      status: 'waiting_for_approval',
+      approvalStatus: 'approved',
+    };
+    const path = join(stateDirPath, RUN_STATE_FILENAME);
+    writeFileSync(path, JSON.stringify(legacy));
+
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true);
+    assert.equal(loaded.state.schemaVersion, RUN_STATE_SCHEMA_VERSION);
+    assert.equal(loaded.state.phase, 'blocked');
+    assert.equal('approvalStatus' in loaded.state, false);
+
+    updateRunState({ phase: 'implementing' }, opts);
+    const persisted = JSON.parse(readFileSync(path, 'utf8'));
+    assert.equal(persisted.schemaVersion, RUN_STATE_SCHEMA_VERSION);
+    assert.equal('approvalStatus' in persisted, false);
+  } finally {
+    cleanup();
   }
 });
 
@@ -125,10 +180,10 @@ test('壊れた JSON は corrupt として検出する', () => {
   }
 });
 
-test('スキーマ不一致の状態ファイルは schema_mismatch として検出する', () => {
+test('未知のスキーマの状態ファイルは schema_mismatch として検出する', () => {
   const { opts, state: stateDirPath, cleanup } = sandbox();
   try {
-    writeFileSync(join(stateDirPath, RUN_STATE_FILENAME), JSON.stringify({ schemaVersion: 2 }));
+    writeFileSync(join(stateDirPath, RUN_STATE_FILENAME), JSON.stringify({ schemaVersion: 999 }));
     const loaded = loadRunState(opts);
     assert.equal(loaded.ok, false);
     assert.equal(loaded.reason, 'schema_mismatch');
@@ -168,7 +223,7 @@ test('中断された一時ファイルを正式な状態として読まない',
 test('不正な状態は保存できない', () => {
   const { opts, cleanup } = sandbox();
   try {
-    assert.throws(() => saveRunState({ schemaVersion: 1 }, opts));
+    assert.throws(() => saveRunState({ schemaVersion: 999 }, opts));
   } finally {
     cleanup();
   }
@@ -209,7 +264,6 @@ test('ロックは排他され、解放後に再取得できる', () => {
   }
 });
 
-
 // ── 再監査 2026-07-26: 同時更新で更新が失われないこと（R-004 回帰）──
 
 test('並行 updateRunState で更新が失われない', async () => {
@@ -222,7 +276,10 @@ test('並行 updateRunState で更新が失われない', async () => {
     for (const name of names) {
       updateRunState(
         (state) => ({
-          gateResults: { ...(state?.gateResults ?? {}), [name]: { result: 'pass', at: new Date().toISOString() } },
+          gateResults: {
+            ...(state?.gateResults ?? {}),
+            [name]: { result: 'pass', at: new Date().toISOString() },
+          },
         }),
         opts,
       );

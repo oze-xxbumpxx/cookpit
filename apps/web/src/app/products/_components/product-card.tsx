@@ -1,8 +1,8 @@
 import {
   findLatestPriceRecord,
   formatDate,
+  formatUnitPrice,
   formatYen,
-  unitPriceBasisLabel,
 } from '@/app/products/_utils/product-format';
 import { productCategoryChipClass } from '@/app/_utils/category-color';
 import { cn } from '@/lib/utils';
@@ -66,8 +66,7 @@ export function ProductCard({ product }: Props) {
             最新 {formatYen(latestPrice.priceAmount)} / {latestPrice.packageSizeValue}
             {latestPrice.packageSizeUnit}
             <span className="ml-1">
-              {formatYen(latestPrice.unitPriceAmount)} /{' '}
-              {unitPriceBasisLabel(latestPrice.packageSizeUnit)}
+              {formatUnitPrice(latestPrice.unitPriceAmount, latestPrice.packageSizeUnit)}
             </span>
             <span className="ml-1">({formatDate(latestPrice.observedAt)})</span>
           </p>

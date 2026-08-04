@@ -59,8 +59,8 @@ description: >
 ## 良い例（既存 ADR）
 
 - `docs/decisions/ADR-0003-no-auth-in-mvp1.md`（ADR-003）— 検討した選択肢 A/B/C と採択理由が残っており、
-  後続の設計書（`docs/designs/store-master.md` §13 ほか）が「ADR-003 準拠」として参照できて
-  いる（出典: `docs/reviews/store-master.md` で意図的な設計判断として確認済み）。
+  後続の設計書（`cookpit/store-master 設計書` §13 ほか）が「ADR-003 準拠」として参照できて
+  いる（出典: `cookpit/store-master レビュー` で意図的な設計判断として確認済み）。
   ※旧形式のため Migration / Rollback 節が無い。新規作成では本スキルのテンプレートを使う。
 
 ## 注意

@@ -10,12 +10,24 @@
 // 今回のスコープでは有界修正ループを実装しない。attempt / maxAttempts /
 // lastFailureFingerprint は将来拡張のための予約フィールドで、本モジュールは値を解釈しない。
 
-import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { stateDir, statePath } from './harness-paths.mjs';
 
-export const RUN_STATE_SCHEMA_VERSION = 1;
+export const RUN_STATE_SCHEMA_VERSION = 2;
 export const RUN_STATE_FILENAME = 'run-state.json';
 
 export const PHASES = Object.freeze([
@@ -26,8 +38,10 @@ export const PHASES = Object.freeze([
   'completed',
   'failed',
 ]);
-export const STATUSES = Object.freeze(['active', 'waiting_for_approval', 'completed', 'failed']);
-export const APPROVAL_STATUSES = Object.freeze([
+export const STATUSES = Object.freeze(['active', 'completed', 'failed']);
+
+const LEGACY_RUN_STATE_SCHEMA_VERSION = 1;
+const LEGACY_APPROVAL_STATUSES = Object.freeze([
   'not_required',
   'pending',
   'approved',
@@ -43,7 +57,6 @@ const REQUIRED_KEYS = Object.freeze([
   'status',
   'changedFiles',
   'gateResults',
-  'approvalStatus',
   'startedAt',
   'updatedAt',
 ]);
@@ -96,13 +109,6 @@ export function validateRunState(value) {
   if (!STATUSES.includes(value.status)) {
     return { ok: false, reason: 'corrupt', detail: `status が不正です: ${String(value.status)}` };
   }
-  if (!APPROVAL_STATUSES.includes(value.approvalStatus)) {
-    return {
-      ok: false,
-      reason: 'corrupt',
-      detail: `approvalStatus が不正です: ${String(value.approvalStatus)}`,
-    };
-  }
   if (!Array.isArray(value.changedFiles) || value.changedFiles.some((f) => typeof f !== 'string')) {
     return { ok: false, reason: 'corrupt', detail: 'changedFiles が文字列配列ではありません' };
   }
@@ -119,6 +125,33 @@ export function validateRunState(value) {
     }
   }
   return { ok: true };
+}
+
+/**
+ * 旧 schema v1 のファイル承認状態を schema v2 へ移行する。
+ *
+ * waiting_for_approval は、作業が完了していないことを保ったまま
+ * phase=blocked / status=active へ変換する。承認の判断自体は PR レビューへ移管済み。
+ */
+export function normalizeRunState(value) {
+  if (
+    value === null ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    value.schemaVersion !== LEGACY_RUN_STATE_SCHEMA_VERSION ||
+    !Object.hasOwn(value, 'approvalStatus') ||
+    !LEGACY_APPROVAL_STATUSES.includes(value.approvalStatus)
+  ) {
+    return value;
+  }
+
+  const { approvalStatus: _approvalStatus, ...migrated } = value;
+  return {
+    ...migrated,
+    schemaVersion: RUN_STATE_SCHEMA_VERSION,
+    phase: value.status === 'waiting_for_approval' ? 'blocked' : value.phase,
+    status: value.status === 'waiting_for_approval' ? 'active' : value.status,
+  };
 }
 
 /** 一時ファイル → fsync → rename の原子的書き込み（mode 0600）。 */
@@ -159,26 +192,6 @@ export function readJsonStrict(path) {
 
 export function appendJsonl(path, record) {
   writeFileSync(path, `${JSON.stringify(record)}\n`, { flag: 'a', mode: 0o600 });
-}
-
-export function readJsonl(path) {
-  if (!existsSync(path)) return [];
-  const out = [];
-  let raw;
-  try {
-    raw = readFileSync(path, 'utf8');
-  } catch {
-    return out;
-  }
-  for (const line of raw.split('\n')) {
-    if (line.trim() === '') continue;
-    try {
-      out.push(JSON.parse(line));
-    } catch {
-      // 壊れた行は無視する（append-only ログのため部分的な破損は致命でない）
-    }
-  }
-  return out;
 }
 
 const LOCK_STALE_MS = 30_000;
@@ -244,7 +257,6 @@ export function createRunState({ runId = newRunId(), taskId = '', now = new Date
     status: 'active',
     changedFiles: [],
     gateResults: {},
-    approvalStatus: 'not_required',
     startedAt: iso,
     updatedAt: iso,
     // 予約フィールド（自動修正処理は未実装）
@@ -271,9 +283,10 @@ export function loadRunState(opts = {}) {
   }
   const read = readJsonStrict(path);
   if (!read.ok) return { ok: false, reason: read.reason, detail: read.detail };
-  const valid = validateRunState(read.value);
+  const state = normalizeRunState(read.value);
+  const valid = validateRunState(state);
   if (!valid.ok) return { ok: false, reason: valid.reason, detail: valid.detail };
-  return { ok: true, state: read.value };
+  return { ok: true, state };
 }
 
 // ロックを取らずに書き込む内部関数。呼び出し側がロックを保持していること。
@@ -309,8 +322,9 @@ export function updateRunState(patchOrFn, opts = {}) {
     const read = readJsonStrict(path);
     let base = null;
     if (read.ok) {
-      const valid = validateRunState(read.value);
-      if (valid.ok) base = read.value;
+      const state = normalizeRunState(read.value);
+      const valid = validateRunState(state);
+      if (valid.ok) base = state;
     }
     const patch = typeof patchOrFn === 'function' ? patchOrFn(base) : patchOrFn;
     if (base === null) base = createRunState({ taskId: patch.taskId ?? '' });

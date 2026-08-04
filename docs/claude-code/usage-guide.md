@@ -23,52 +23,76 @@
 
 を提供する。**最優先は Agent 数ではなく、整合性・手戻り削減・追跡可能性・過剰実行の防止。**
 
+## 1.1 個人開発ライトモード（推奨既定）
+
+個人開発ではフル装備を毎回使わない。次を既定とする（設計:
+`docs/designs/harness-personal-light-mode.md` / IMP-2026-030・031）。
+
+| 方針                 | 内容                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| L0/L1 を積極活用     | 相談・調査は L0。文言・単純修正は L1（設計書を作らない）                                                                               |
+| 実装の既定ルート     | Codex 委譲（設計・計画・レビューは Claude）                                                                                            |
+| 常備で意識する Agent | orchestrator / architecture-designer / implementation-planner / test-designer / implementer / reviewer（+ 必要時 contract / security） |
+| reflection           | feature 完了時。毎セッション必須ではない                                                                                               |
+| 改善サイクル         | 5 タスクごと / 同種 3 回 / ユーザー依頼時のみ。早期昇格は原則禁止                                                                      |
+| 毎セッションの核     | Rules 3 本 + quality-gates + kickoff/close/work-log                                                                                    |
+
+Agent の 11 本化は適用済み（吸収した 4 本は `docs/claude-code/archive/agents/` へ凍結）。
+構成ファイルの変更は作業ブランチへコミットし **PR レビュー**で確認する（承認境界の経緯は
+[harness-state.md](./harness-state.md) §4）。
+
 ## 2. 構成の全体像
 
 ```
 .claude/
 ├── settings.json          Hook 登録 + permissions.deny（安全層）
-├── agents/   (15)         Orchestrator + 専門/改善 Subagent
-├── skills/   (11)         再利用可能な作業手順とテンプレート
+├── agents/   (11 + archive)  Orchestrator + 専門/改善 Subagent
+├── skills/   (17)         再利用可能な作業手順とテンプレート
 ├── rules/    (3)          層・パス別の確定ルール（+ README）
-├── hooks/    (5 .mjs)     決定論的な検証・安全制御
-├── scripts/  (3 .sh)      コマンド検出・品質ゲート・メトリクス
-├── evals/                 改善の回帰評価（10 ケース + rubric + baselines）
+├── hooks/                 決定論的な検証・安全制御
+├── scripts/               コマンド検出・品質ゲート・メトリクス
+├── evals/                 改善の回帰評価（ケース + rubric + baselines）
 └── state/                 実行時の一時状態（Git 非追跡）
 docs/claude-code/          方針ドキュメントと改善記録（improvements/）
 docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  feature 単位の成果物
 ```
 
-### Agent（15）
+### Agent（11・IMP-2026-031）
 
-| Agent                     | Model    | 役割                                 | 起動条件                                      |
-| ------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
-| orchestrator              | opus-4-8 | 指揮・委譲・統合                     | 複数工程の開発タスク                          |
-| requirements-analyst      | sonnet-5 | 要求整理・既存調査                   | L3（必要な L2）                               |
-| architecture-designer     | sonnet-5 | 技術設計                             | L2/L3                                         |
-| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO） | 契約変更があるとき                            |
-| test-designer             | sonnet-5 | 試験観点・試験計画                   | L2/L3                                         |
-| implementation-planner    | sonnet-5 | 実装計画                             | L2/L3                                         |
-| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート         | L1〜L3                                        |
-| reviewer                  | opus-4-8 | 独立レビュー                         | L2/L3                                         |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー             | L3 原則必須 / L2 は触点時必須（省略条件あり） |
-| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装                  | L3・テスト基盤整備済みのとき                  |
-| performance-designer      | sonnet-5 | パフォーマンス設計                   | L3・外部I/O/大量データのとき                  |
-| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー             | 文書レビュー依頼時（単体起動可）              |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出               | L2/L3 完了後                                  |
-| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                 | 改善提案の評価時                              |
-| agent-improvement-manager | opus-4-8 | 横断分析・改善提案                   | トリガー時のみ                                |
+| Agent                     | Model    | 役割                                    | 起動条件                                      |
+| ------------------------- | -------- | --------------------------------------- | --------------------------------------------- |
+| orchestrator              | opus-5   | 指揮・委譲・統合                        | 複数工程の開発タスク                          |
+| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 性能節） | L2/L3                                         |
+| contract-designer         | sonnet-5 | 契約設計（Zod/Drizzle/Hono RPC/DTO）    | 契約変更があるとき                            |
+| test-designer             | sonnet-5 | 試験観点・試験計画                      | L2/L3                                         |
+| implementation-planner    | sonnet-5 | 実装計画                                | L2/L3                                         |
+| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート              | L1〜L3（E2E は L3・基盤整備時）               |
+| reviewer                  | opus-5   | 独立レビュー（文書観点含む）            | L2/L3 / 文書レビュー依頼                      |
+| security-reviewer         | opus-5   | セキュリティ専門レビュー                | L3 原則必須 / L2 は触点時必須（省略条件あり） |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                  | feature 完了時（ライトモード）                |
+| agent-evaluator           | sonnet-5 | 固定ケースで回帰評価                    | 改善提案の評価時                              |
+| agent-improvement-manager | opus-5   | 横断分析・改善提案                      | トリガー時のみ                                |
+
+> 吸収済み（起動しない）: requirements-analyst / performance-designer /
+> e2e-test-implementer / document-reviewer → `docs/claude-code/archive/agents/`（適用済み）
 
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。
 
-### Skills（11）
+### Skills（17）
 
-`classify-change`（レベル判定）/ `create-requirements-document` / `create-design-document` /
-`create-implementation-plan` / `create-test-plan` / `create-adr` / `validate-deliverables`
-（成果物整合チェック）/ `reflect-task`（振り返り）/ `write-work-log`（日次ログ）/
-`audit-skills`（指示系棚卸し）/ `manual-browser-verify`（画面手動確認）。
-Claude が場面に応じて自動選択する。
+Claude が場面に応じて自動選択する。`/<skill-name>` で明示的にも呼べる。
+
+| 分類           | Skill                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 判定・検証     | `classify-change`（変更レベル判定）/ `validate-deliverables`（成果物整合）/ `quality-gates`（lint・型・テスト一括）                |
+| 成果物作成     | `create-requirements-document` / `create-design-document` / `create-implementation-plan` / `create-test-plan` / `create-adr`       |
+| セッション運用 | `kickoff-session`（開始の段取り）/ `close-session`（終了の一括処理）/ `write-work-log`（日次ログ）                                 |
+| Codex 委譲     | `create-codex-brief`（実装指示書）/ `review-codex-implementation`（受け入れレビュー）                                              |
+| 確認・振り返り | `manual-browser-verify`（画面手動確認）/ `reflect-task`（振り返り）/ `sprint-review`（週次レトロ）/ `audit-skills`（指示系棚卸し） |
+
+> ライトモードで**毎セッション使うのは 5〜6 本**（`quality-gates` / `kickoff-session` /
+> `close-session` / `write-work-log` + 変更レベルに応じた `create-*`）。残りは非常用。
 
 ### Rules（3）
 
@@ -140,12 +164,16 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 日常操作は許可\*\*（壊滅的ターゲットのみ deny）。二層目として `settings.json` の
 `permissions.deny` も併用。
 
-### 保護ファイルと承認マーカー
+### 構成ファイルの変更と承認境界
 
-`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` の変更は**人間承認が必要**
-（[improvement-cycle.md](./improvement-cycle.md) §承認境界）。`validate-agent-config` は
-未承認変更に警告を出す。承認済みのバッチを編集する間だけ
-`.claude/state/config-change-approved` を置き、終わったら削除する（警告抑止）。
+`CLAUDE.md` / `.claude/agents/**` / `.claude/settings.json` などの構成ファイルは、
+作業ブランチへコミットし **PR レビュー**で確認する（[improvement-cycle.md](./improvement-cycle.md)
+§承認境界はPRレビュー）。`main` へ直接反映しない。
+
+> 2026-07-28 以前は承認ファイル（`config-change-approved` / `harness-approve.mjs`）で Hook が
+> 機械的に強制していたが、リモート環境から承認を発行できずハーネス自身を修正できなくなる
+> デッドロックを繰り返したため撤去した。
+> 現行手順は [harness-state.md](./harness-state.md) を参照する。
 
 ### Hook の一時無効化・復旧
 
@@ -160,21 +188,21 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
 - **改善サイクル**：L2/L3 完了後に reflection-agent が
   `improvements/candidates/<task-id>.md` を起票 → 昇格条件（同問題3回 等）成立で
   agent-improvement-manager が `proposals/` に提案 → agent-evaluator が evals で before/after
-  回帰評価 → **悪化なし＆承認**で反映。重要設定は人間承認まで提案止まり。
+  回帰評価 → **悪化なし**で反映。重要設定は PR レビューで確認する。
   詳細：[improvement-cycle.md](./improvement-cycle.md)、記録：[improvements/](./improvements/)。
 - **回帰評価**：`.claude/evals/`（10 ケース・rubric 1〜5・baselines）。改善で1軸でも悪化したら
   採用しない。指示を増やすだけの改善も非採用（不要指示の削除・移動も改善に含む）。
 
 ## 7. よくある操作（早見）
 
-| やりたいこと         | どうする                                                                    |
-| -------------------- | --------------------------------------------------------------------------- |
-| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                              |
-| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                     |
-| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                     |
-| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す          |
-| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、承認後に反映（重要設定は人間承認） |
-| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md` |
+| やりたいこと         | どうする                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- |
+| 機能追加を頼む       | そのまま依頼 → Orchestrator がレベル判定し委譲                                  |
+| 品質ゲートを回す     | `bash .claude/scripts/run-quality-gates.sh --level <N>`                         |
+| 改善提案を見る       | `docs/claude-code/improvements/` を見る                                         |
+| 危険操作で止められた | 意図的なら手動実行、または settings.json から guard を一時的に外す              |
+| Agent/設定を直したい | 提案を `improvements/proposals/` に作り、ブランチへ反映して PR レビューを受ける |
+| ルールを足したい     | 局所なら `.claude/rules/`、手順なら `.claude/skills/`、原則のみ `CLAUDE.md`     |
 
 ## 8. 設計上の原則（迷ったとき）
 
@@ -182,4 +210,4 @@ bash .claude/scripts/record-task-metrics.sh TASK-2026-001 <feature-name> 2
   reviewer / agent-improvement-manager のみ。
 - 機械判定は Hook/スクリプト、意味判断は Reviewer。**Hook だけで品質保証したと主張しない。**
 - 指示を肥大化させない（同内容を複数所へ重複記載しない）。改善＝追加とは限らない。
-- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は人間承認。
+- 本番コード・CI/CD・本番インフラ・秘密情報に推測で触れない。重要設定は PR レビューで確認。
