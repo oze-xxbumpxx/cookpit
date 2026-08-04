@@ -2,7 +2,7 @@
 
 Codex への実装指示書。実装後は必ず Claude Code でレビューを受けること。
 
-**前提**：`docs/tasks/sprint1-recipe-usecase.md` の作業が完了していること（Recipe UseCase 一式が `packages/application/src/recipe/` に実装済み）。
+**前提**：`docs/tasks/archive/sprint1-recipe-usecase.md` の作業が完了していること（Recipe UseCase 一式が `packages/application/src/recipe/` に実装済み）。
 
 ---
 
