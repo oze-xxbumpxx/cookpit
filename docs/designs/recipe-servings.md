@@ -23,14 +23,14 @@ Recipe 集約に任意項目 `servings`（正の整数・null 許容）を追加
 
 ## 要件
 
-| #   | 要件                                                              |
+| # | 要件 |
 | --- | ----------------------------------------------------------------- | ------------ |
-| 1   | `servings` は 1 以上の正の整数、または null（未設定）             |
-| 2   | `servings: null` が「値なし」を表す（`undefined` との混在なし）   |
-| 3   | 作成・更新リクエストで `servings` を省略した場合、null として扱う |
-| 4   | レスポンス（一覧・詳細）には常に `servings: number                | null` を含む |
-| 5   | 既存レシピの `servings` は null（移行データなし）                 |
-| 6   | 既存クライアントは `servings` を送信せずとも動作する（後方互換）  |
+| 1 | `servings` は 1 以上の正の整数、または null（未設定） |
+| 2 | `servings: null` が「値なし」を表す（`undefined` との混在なし） |
+| 3 | 作成・更新リクエストで `servings` を省略した場合、null として扱う |
+| 4 | レスポンス（一覧・詳細）には常に `servings: number                | null` を含む |
+| 5 | 既存レシピの `servings` は null（移行データなし） |
+| 6 | 既存クライアントは `servings` を送信せずとも動作する（後方互換） |
 
 ---
 
@@ -859,9 +859,9 @@ PGlite を使った Repository 結合テストがある場合:
 
 ファイル: `apps/web/src/server/routes/` 配下のルートテスト
 
-| #     | テストケース                                                               |
+| # | テストケース |
 | ----- | -------------------------------------------------------------------------- | ---------------- |
-| T-P01 | `POST /api/recipes` with `servings: 4` → 201、`response.servings === 4`    |
+| T-P01 | `POST /api/recipes` with `servings: 4` → 201、`response.servings === 4` |
 | T-P02 | `POST /api/recipes` without `servings` → 201、`response.servings === null` |
 | T-P03 | `PUT /api/recipes/:id` with `servings: 2` → 200、`response.servings === 2` |
 | T-P04 | `GET /api/recipes` → 各要素に `servings: number                            | null` が存在する |
