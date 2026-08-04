@@ -1,4 +1,4 @@
-import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import type { ProductDto, ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { Store } from 'lucide-react';
 import { ShoppingItemRow } from './shopping-item-row';
 
@@ -17,6 +17,7 @@ interface Props {
   /** 削除の確認を親に要求する。中継漏れを型で検出するため必須にする。 */
   onRequestRemove: (itemId: string) => void;
   stores: StoreDto[];
+  productMap: Map<string, ProductDto>;
 }
 
 /** 店舗ごとのグループ（ヘッダー + item 一覧。D-2/S-6 案A）。 */
@@ -33,6 +34,7 @@ export function StoreGroup({
   onReassignStore,
   onRequestRemove,
   stores,
+  productMap,
 }: Props) {
   const boughtCount = items.filter((item) => item.status === 'bought').length;
 
@@ -61,6 +63,7 @@ export function StoreGroup({
             onMarkAsBought={onMarkAsBought}
             onReassignStore={onReassignStore}
             onRequestRemove={onRequestRemove}
+            productMap={productMap}
           />
         ))}
       </ul>

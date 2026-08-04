@@ -12,6 +12,7 @@ import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, useApiAction } from '@/lib/use-api-action';
 import type {
+  ProductDto,
   ShoppingItemDto,
   ShoppingListDto,
   StockAdditionInputDto,
@@ -20,7 +21,7 @@ import type {
 import { EmptyState } from '@/app/_components/empty-state';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { startTransition, useEffect, useOptimistic, useState } from 'react';
+import { startTransition, useEffect, useMemo, useOptimistic, useState } from 'react';
 import {
   describeRemoveConfirmation,
   formatShoppingDate,
@@ -33,6 +34,7 @@ import { StoreGroup } from './store-group';
 interface Props {
   shoppingList: ShoppingListDto;
   stores: StoreDto[];
+  products: ProductDto[];
 }
 
 /** 品目追加・再取得を表す実行中キー（品目行の操作は itemId をキーにする）。 */
@@ -74,7 +76,7 @@ function applyOptimisticAction(
 }
 
 /** 詳細画面の状態管理・全体統括（Client。S-4/D-7）。 */
-export function ShoppingListClient({ shoppingList, stores }: Props) {
+export function ShoppingListClient({ shoppingList, stores, products }: Props) {
   const [items, setItems] = useState<ShoppingItemDto[]>(shoppingList.items);
   const [optimisticItems, setOptimisticItems] = useOptimistic(items, applyOptimisticAction);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -95,6 +97,8 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const completeAction = useApiAction();
   const reopenAction = useApiAction();
   const syncAction = useApiAction();
+
+  const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   // 在庫化の候補は購入済みの品目のみ。楽観的更新中の値ではなく確定済みの items から取る。
   const boughtItems = items.filter((item) => item.status === 'bought');
@@ -488,6 +492,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 }
                 onRequestRemove={handleRequestRemove}
                 stores={stores}
+                productMap={productMap}
               />
             ))}
           </div>
