@@ -72,9 +72,9 @@ describe('recipesRoute', () => {
   it('T-P01: POST /api/recipes with servings: 4 → 201、response.servings === 4', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: 4 };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -92,9 +92,9 @@ describe('recipesRoute', () => {
   it('T-P02: POST /api/recipes without servings → 201、response.servings === null', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: null };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -112,9 +112,9 @@ describe('recipesRoute', () => {
   it('T-P03: POST /api/recipes with servings: null → 201、response.servings === null', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: null };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -130,9 +130,9 @@ describe('recipesRoute', () => {
   // T-P04: Zod validation rejects servings: 0
   it('T-P04: POST /api/recipes with servings: 0 → 400、UseCase が呼ばれない', async () => {
     const execute = vi.fn();
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -147,9 +147,9 @@ describe('recipesRoute', () => {
   // T-P05: Zod validation rejects servings: -1
   it('T-P05: POST /api/recipes with servings: -1 → 400、UseCase が呼ばれない', async () => {
     const execute = vi.fn();
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -164,9 +164,9 @@ describe('recipesRoute', () => {
   // T-P06: Zod validation rejects servings: 1.5
   it('T-P06: POST /api/recipes with servings: 1.5 → 400、UseCase が呼ばれない', async () => {
     const execute = vi.fn();
-    vi.mocked(CreateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateRecipeUseCase,
-    );
+    vi.mocked(CreateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateRecipeUseCase;
+    });
 
     const res = await app.request('/api/recipes', {
       method: 'POST',
@@ -182,9 +182,9 @@ describe('recipesRoute', () => {
   it('T-P07: PUT /api/recipes/:id with servings: 2 → 200、response.servings === 2', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: 2 };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(UpdateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as UpdateRecipeUseCase,
-    );
+    vi.mocked(UpdateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`, {
       method: 'PUT',
@@ -202,9 +202,9 @@ describe('recipesRoute', () => {
   it('T-P08: PUT /api/recipes/:id with servings: null → 200、response.servings === null', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: null };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(UpdateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as UpdateRecipeUseCase,
-    );
+    vi.mocked(UpdateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`, {
       method: 'PUT',
@@ -221,9 +221,9 @@ describe('recipesRoute', () => {
   it('T-P09: PUT /api/recipes/:id with servings 省略 → 200、response.servings === null', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: null };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(UpdateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as UpdateRecipeUseCase,
-    );
+    vi.mocked(UpdateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`, {
       method: 'PUT',
@@ -239,9 +239,9 @@ describe('recipesRoute', () => {
   // T-P10: Zod validation rejects servings: 0 on PUT
   it('T-P10: PUT /api/recipes/:id with servings: 0 → 400、UseCase が呼ばれない', async () => {
     const execute = vi.fn();
-    vi.mocked(UpdateRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as UpdateRecipeUseCase,
-    );
+    vi.mocked(UpdateRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`, {
       method: 'PUT',
@@ -260,9 +260,9 @@ describe('recipesRoute', () => {
       { ...baseRecipeDto, id: 'id-2', servings: null },
     ];
     const execute = vi.fn().mockResolvedValue(dtos);
-    vi.mocked(GetRecipesUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetRecipesUseCase,
-    );
+    vi.mocked(GetRecipesUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetRecipesUseCase;
+    });
 
     const res = await app.request('/api/recipes');
 
@@ -278,9 +278,9 @@ describe('recipesRoute', () => {
   it('T-P12: GET /api/recipes/:id → 200、servings === 3 が存在する', async () => {
     const dto: RecipeDto = { ...baseRecipeDto, servings: 3 };
     const execute = vi.fn().mockResolvedValue(dto);
-    vi.mocked(GetRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetRecipeUseCase,
-    );
+    vi.mocked(GetRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`);
 
@@ -291,9 +291,9 @@ describe('recipesRoute', () => {
 
   it('GET /api/recipes/:id が存在しない ID で 404 を返す', async () => {
     const execute = vi.fn().mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
-    vi.mocked(GetRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetRecipeUseCase,
-    );
+    vi.mocked(GetRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`);
 
@@ -303,9 +303,9 @@ describe('recipesRoute', () => {
 
   it('DELETE /api/recipes/:id は 204 を返す', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(DeleteRecipeUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DeleteRecipeUseCase,
-    );
+    vi.mocked(DeleteRecipeUseCase).mockImplementation(function () {
+      return { execute } as unknown as DeleteRecipeUseCase;
+    });
 
     const res = await app.request(`/api/recipes/${RECIPE_ID}`, { method: 'DELETE' });
 

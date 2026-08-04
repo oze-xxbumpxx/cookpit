@@ -38,9 +38,9 @@ describe('shoppingListsRoute（チェック）', () => {
   it('POST /api/shopping-lists/:id/items/:itemId/checked は 200 で ShoppingItemDto を返す', async () => {
     const boughtItem: ShoppingItemDto = { ...shoppingItemDto, status: 'bought' };
     const execute = vi.fn().mockResolvedValue(boughtItem);
-    vi.mocked(SetItemCheckedUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SetItemCheckedUseCase,
-    );
+    vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+      return { execute } as unknown as SetItemCheckedUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/checked`,
@@ -69,9 +69,9 @@ describe('shoppingListsRoute（チェック）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/checked は%sで 400 を返す',
     async (_case, id, itemId, body) => {
       const execute = vi.fn();
-      vi.mocked(SetItemCheckedUseCase).mockImplementation(
-        () => ({ execute }) as unknown as SetItemCheckedUseCase,
-      );
+      vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+        return { execute } as unknown as SetItemCheckedUseCase;
+      });
 
       const res = await app.request(`/api/shopping-lists/${id}/items/${itemId}/checked`, {
         method: 'POST',
@@ -99,9 +99,9 @@ describe('shoppingListsRoute（チェック）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/checked は%sを 404 に変換する',
     async (_case, error, message) => {
       const execute = vi.fn().mockRejectedValue(error);
-      vi.mocked(SetItemCheckedUseCase).mockImplementation(
-        () => ({ execute }) as unknown as SetItemCheckedUseCase,
-      );
+      vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+        return { execute } as unknown as SetItemCheckedUseCase;
+      });
 
       const res = await app.request(
         `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/checked`,
@@ -121,9 +121,9 @@ describe('shoppingListsRoute（チェック）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('completed', 'setItemChecked'));
-    vi.mocked(SetItemCheckedUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SetItemCheckedUseCase,
-    );
+    vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+      return { execute } as unknown as SetItemCheckedUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/checked`,
@@ -143,9 +143,9 @@ describe('shoppingListsRoute（チェック）', () => {
   it('POST /api/shopping-lists/:id/items/:itemId/checked は同一 checked を連続送信しても 200 を返し続ける（冪等性の契約テスト）', async () => {
     const boughtItem: ShoppingItemDto = { ...shoppingItemDto, status: 'bought' };
     const execute = vi.fn().mockResolvedValue(boughtItem);
-    vi.mocked(SetItemCheckedUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SetItemCheckedUseCase,
-    );
+    vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+      return { execute } as unknown as SetItemCheckedUseCase;
+    });
 
     const first = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/checked`,

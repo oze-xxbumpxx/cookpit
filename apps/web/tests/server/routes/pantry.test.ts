@@ -62,9 +62,9 @@ describe('pantryRoute', () => {
 
   it('GET /api/pantry は空の Pantry でも 200 で空配列を返す', async () => {
     const execute = vi.fn().mockResolvedValue({ stocks: [] });
-    vi.mocked(GetPantryUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetPantryUseCase,
-    );
+    vi.mocked(GetPantryUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetPantryUseCase;
+    });
 
     const res = await app.request('/api/pantry');
 
@@ -75,9 +75,9 @@ describe('pantryRoute', () => {
 
   it('GET /api/pantry は 200 で複数の Stock をすべて返す', async () => {
     const execute = vi.fn().mockResolvedValue(pantryDto);
-    vi.mocked(GetPantryUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetPantryUseCase,
-    );
+    vi.mocked(GetPantryUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetPantryUseCase;
+    });
 
     const res = await app.request('/api/pantry');
 
@@ -94,9 +94,9 @@ describe('pantryRoute', () => {
       expiresAt: '2026-07-31',
     };
     const execute = vi.fn().mockResolvedValue(pantryDto);
-    vi.mocked(AddStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddStockUseCase,
-    );
+    vi.mocked(AddStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddStockUseCase;
+    });
 
     const res = await app.request('/api/pantry/stocks', {
       method: 'POST',
@@ -111,9 +111,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks は displayName が空の場合 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(AddStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddStockUseCase,
-    );
+    vi.mocked(AddStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddStockUseCase;
+    });
 
     const res = await app.request('/api/pantry/stocks', {
       method: 'POST',
@@ -132,9 +132,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks は amount.value が 0 の場合 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(AddStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddStockUseCase,
-    );
+    vi.mocked(AddStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddStockUseCase;
+    });
 
     const res = await app.request('/api/pantry/stocks', {
       method: 'POST',
@@ -154,9 +154,9 @@ describe('pantryRoute', () => {
   it('POST /api/pantry/stocks/:stockId/consume は 200 で PantryDto を返す', async () => {
     const body = { amount: { value: 1, unit: '個' } };
     const execute = vi.fn().mockResolvedValue(pantryDto);
-    vi.mocked(ConsumeStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ConsumeStockUseCase,
-    );
+    vi.mocked(ConsumeStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as ConsumeStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/consume`, {
       method: 'POST',
@@ -171,9 +171,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/consume は amount.value が 0 の場合 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(ConsumeStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ConsumeStockUseCase,
-    );
+    vi.mocked(ConsumeStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as ConsumeStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/consume`, {
       method: 'POST',
@@ -187,9 +187,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/consume は不正な stockId で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(ConsumeStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ConsumeStockUseCase,
-    );
+    vi.mocked(ConsumeStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as ConsumeStockUseCase;
+    });
 
     const res = await app.request('/api/pantry/stocks/not-a-uuid/consume', {
       method: 'POST',
@@ -203,9 +203,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/consume は StockNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new StockNotFoundError(STOCK_ID));
-    vi.mocked(ConsumeStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ConsumeStockUseCase,
-    );
+    vi.mocked(ConsumeStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as ConsumeStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/consume`, {
       method: 'POST',
@@ -219,9 +219,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/consume は InvalidStockOperationError を 422 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new InvalidStockOperationError('Unit mismatch'));
-    vi.mocked(ConsumeStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ConsumeStockUseCase,
-    );
+    vi.mocked(ConsumeStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as ConsumeStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/consume`, {
       method: 'POST',
@@ -235,9 +235,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/discard は 200 で PantryDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(pantryDto);
-    vi.mocked(DiscardStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DiscardStockUseCase,
-    );
+    vi.mocked(DiscardStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as DiscardStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/discard`, {
       method: 'POST',
@@ -250,9 +250,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/discard は不正な stockId で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(DiscardStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DiscardStockUseCase,
-    );
+    vi.mocked(DiscardStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as DiscardStockUseCase;
+    });
 
     const res = await app.request('/api/pantry/stocks/not-a-uuid/discard', {
       method: 'POST',
@@ -264,9 +264,9 @@ describe('pantryRoute', () => {
 
   it('POST /api/pantry/stocks/:stockId/discard は StockNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new StockNotFoundError(STOCK_ID));
-    vi.mocked(DiscardStockUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DiscardStockUseCase,
-    );
+    vi.mocked(DiscardStockUseCase).mockImplementation(function () {
+      return { execute } as unknown as DiscardStockUseCase;
+    });
 
     const res = await app.request(`/api/pantry/stocks/${STOCK_ID}/discard`, {
       method: 'POST',
