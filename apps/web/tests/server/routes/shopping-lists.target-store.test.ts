@@ -36,9 +36,9 @@ describe('shoppingListsRoute（店舗再割当）', () => {
 
   it('POST /api/shopping-lists/:id/items/:itemId/target-store は 200 で ShoppingItemDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingItemDto);
-    vi.mocked(ReassignStoreUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ReassignStoreUseCase,
-    );
+    vi.mocked(ReassignStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as ReassignStoreUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/target-store`,
@@ -66,9 +66,9 @@ describe('shoppingListsRoute（店舗再割当）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/target-store は%sで 400 を返す',
     async (_case, id, itemId, body) => {
       const execute = vi.fn();
-      vi.mocked(ReassignStoreUseCase).mockImplementation(
-        () => ({ execute }) as unknown as ReassignStoreUseCase,
-      );
+      vi.mocked(ReassignStoreUseCase).mockImplementation(function () {
+        return { execute } as unknown as ReassignStoreUseCase;
+      });
 
       const res = await app.request(`/api/shopping-lists/${id}/items/${itemId}/target-store`, {
         method: 'POST',
@@ -96,9 +96,9 @@ describe('shoppingListsRoute（店舗再割当）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/target-store は%sを 404 に変換する',
     async (_case, error, message) => {
       const execute = vi.fn().mockRejectedValue(error);
-      vi.mocked(ReassignStoreUseCase).mockImplementation(
-        () => ({ execute }) as unknown as ReassignStoreUseCase,
-      );
+      vi.mocked(ReassignStoreUseCase).mockImplementation(function () {
+        return { execute } as unknown as ReassignStoreUseCase;
+      });
 
       const res = await app.request(
         `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/target-store`,
@@ -118,9 +118,9 @@ describe('shoppingListsRoute（店舗再割当）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('completed', 'reassignStore'));
-    vi.mocked(ReassignStoreUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ReassignStoreUseCase,
-    );
+    vi.mocked(ReassignStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as ReassignStoreUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/target-store`,

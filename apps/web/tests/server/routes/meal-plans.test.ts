@@ -114,9 +114,9 @@ describe('mealPlansRoute', () => {
   it('POST /api/meal-plans は 201 で MealPlanDto を返す', async () => {
     const body = { weekIdentifier: '2026-07-04' };
     const execute = vi.fn().mockResolvedValue(mealPlanDto);
-    vi.mocked(CreateMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateMealPlanUseCase,
-    );
+    vi.mocked(CreateMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateMealPlanUseCase;
+    });
 
     const res = await app.request('/api/meal-plans', {
       method: 'POST',
@@ -131,9 +131,9 @@ describe('mealPlansRoute', () => {
 
   it('POST /api/meal-plans は不正な weekIdentifier で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(CreateMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateMealPlanUseCase,
-    );
+    vi.mocked(CreateMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateMealPlanUseCase;
+    });
 
     const res = await app.request('/api/meal-plans', {
       method: 'POST',
@@ -147,9 +147,9 @@ describe('mealPlansRoute', () => {
 
   it('GET /api/meal-plans/current は MealPlanDto を data に包んで返す', async () => {
     const execute = vi.fn().mockResolvedValue(mealPlanDto);
-    vi.mocked(GetCurrentMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetCurrentMealPlanUseCase,
-    );
+    vi.mocked(GetCurrentMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetCurrentMealPlanUseCase;
+    });
 
     const res = await app.request('/api/meal-plans/current');
 
@@ -160,9 +160,9 @@ describe('mealPlansRoute', () => {
 
   it('GET /api/meal-plans/current は MealPlan がない場合も 200 + data:null を返す', async () => {
     const execute = vi.fn().mockResolvedValue(null);
-    vi.mocked(GetCurrentMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetCurrentMealPlanUseCase,
-    );
+    vi.mocked(GetCurrentMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetCurrentMealPlanUseCase;
+    });
 
     const res = await app.request('/api/meal-plans/current');
 
@@ -173,9 +173,9 @@ describe('mealPlansRoute', () => {
 
   it('GET /api/meal-plans/history は limit を UseCase に渡して MealPlanDto 配列を返す', async () => {
     const execute = vi.fn().mockResolvedValue([mealPlanDto]);
-    vi.mocked(GetMealPlanHistoryUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetMealPlanHistoryUseCase,
-    );
+    vi.mocked(GetMealPlanHistoryUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetMealPlanHistoryUseCase;
+    });
 
     const res = await app.request('/api/meal-plans/history?limit=4');
 
@@ -186,9 +186,9 @@ describe('mealPlansRoute', () => {
 
   it('GET /api/meal-plans/history は limit が最大値を超えると 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(GetMealPlanHistoryUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetMealPlanHistoryUseCase,
-    );
+    vi.mocked(GetMealPlanHistoryUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetMealPlanHistoryUseCase;
+    });
 
     const res = await app.request('/api/meal-plans/history?limit=13');
 
@@ -199,9 +199,9 @@ describe('mealPlansRoute', () => {
   it('POST /api/meal-plans/:id/recipes は 201 で PlannedRecipeDto を返す', async () => {
     const body = { recipeId: RECIPE_ID, scaleFactor: 1.5 };
     const execute = vi.fn().mockResolvedValue(plannedRecipeDto);
-    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddRecipeToMealPlanUseCase,
-    );
+    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddRecipeToMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes`, {
       method: 'POST',
@@ -216,9 +216,9 @@ describe('mealPlansRoute', () => {
 
   it('POST /api/meal-plans/:id/recipes は不正な MealPlan ID で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddRecipeToMealPlanUseCase,
-    );
+    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddRecipeToMealPlanUseCase;
+    });
 
     const res = await app.request('/api/meal-plans/not-a-uuid/recipes', {
       method: 'POST',
@@ -234,9 +234,9 @@ describe('mealPlansRoute', () => {
     'POST /api/meal-plans/:id/recipes は scaleFactor:%s で 400 を返す',
     async (scaleFactor) => {
       const execute = vi.fn();
-      vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(
-        () => ({ execute }) as unknown as AddRecipeToMealPlanUseCase,
-      );
+      vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(function () {
+        return { execute } as unknown as AddRecipeToMealPlanUseCase;
+      });
 
       const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes`, {
         method: 'POST',
@@ -251,9 +251,9 @@ describe('mealPlansRoute', () => {
 
   it('POST /api/meal-plans/:id/recipes は MealPlanNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new MealPlanNotFoundError(MEAL_PLAN_ID));
-    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddRecipeToMealPlanUseCase,
-    );
+    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddRecipeToMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes`, {
       method: 'POST',
@@ -269,9 +269,9 @@ describe('mealPlansRoute', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidMealPlanStateError('cooking', 'addRecipe'));
-    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as AddRecipeToMealPlanUseCase,
-    );
+    vi.mocked(AddRecipeToMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddRecipeToMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes`, {
       method: 'POST',
@@ -287,9 +287,9 @@ describe('mealPlansRoute', () => {
 
   it('DELETE /api/meal-plans/:id/recipes/:plannedRecipeId は 204 を返す', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as RemoveRecipeFromMealPlanUseCase,
-    );
+    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as RemoveRecipeFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes/${PLANNED_RECIPE_ID}`, {
       method: 'DELETE',
@@ -304,9 +304,9 @@ describe('mealPlansRoute', () => {
 
   it('DELETE /api/meal-plans/:id/recipes/:plannedRecipeId は MealPlanNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new MealPlanNotFoundError(MEAL_PLAN_ID));
-    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as RemoveRecipeFromMealPlanUseCase,
-    );
+    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as RemoveRecipeFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes/${PLANNED_RECIPE_ID}`, {
       method: 'DELETE',
@@ -318,9 +318,9 @@ describe('mealPlansRoute', () => {
 
   it('DELETE /api/meal-plans/:id/recipes/:plannedRecipeId は PlannedRecipeNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new PlannedRecipeNotFoundError(PLANNED_RECIPE_ID));
-    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as RemoveRecipeFromMealPlanUseCase,
-    );
+    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as RemoveRecipeFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes/${PLANNED_RECIPE_ID}`, {
       method: 'DELETE',
@@ -336,9 +336,9 @@ describe('mealPlansRoute', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidMealPlanStateError('cooking', 'removeRecipe'));
-    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as RemoveRecipeFromMealPlanUseCase,
-    );
+    vi.mocked(RemoveRecipeFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as RemoveRecipeFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/meal-plans/${MEAL_PLAN_ID}/recipes/${PLANNED_RECIPE_ID}`, {
       method: 'DELETE',
@@ -351,15 +351,15 @@ describe('mealPlansRoute', () => {
   });
 
   it('mealPlansRoute マウント後も既存の health/recipes/products/stores レスポンスが変わらない', async () => {
-    vi.mocked(GetRecipesUseCase).mockImplementation(
-      () => ({ execute: vi.fn().mockResolvedValue([recipeDto]) }) as unknown as GetRecipesUseCase,
-    );
-    vi.mocked(GetProductsUseCase).mockImplementation(
-      () => ({ execute: vi.fn().mockResolvedValue([productDto]) }) as unknown as GetProductsUseCase,
-    );
-    vi.mocked(GetStoresUseCase).mockImplementation(
-      () => ({ execute: vi.fn().mockResolvedValue([storeDto]) }) as unknown as GetStoresUseCase,
-    );
+    vi.mocked(GetRecipesUseCase).mockImplementation(function () {
+      return { execute: vi.fn().mockResolvedValue([recipeDto]) } as unknown as GetRecipesUseCase;
+    });
+    vi.mocked(GetProductsUseCase).mockImplementation(function () {
+      return { execute: vi.fn().mockResolvedValue([productDto]) } as unknown as GetProductsUseCase;
+    });
+    vi.mocked(GetStoresUseCase).mockImplementation(function () {
+      return { execute: vi.fn().mockResolvedValue([storeDto]) } as unknown as GetStoresUseCase;
+    });
 
     const healthRes = await app.request('/api/health');
     const recipesRes = await app.request('/api/recipes');
@@ -380,24 +380,21 @@ describe('mealPlansRoute', () => {
   });
 
   it('既存の Recipe/Product/Store の 404 エラー分岐を維持する', async () => {
-    vi.mocked(GetRecipeUseCase).mockImplementation(
-      () =>
-        ({
-          execute: vi.fn().mockRejectedValue(new RecipeNotFoundError(RECIPE_ID)),
-        }) as unknown as GetRecipeUseCase,
-    );
-    vi.mocked(GetProductUseCase).mockImplementation(
-      () =>
-        ({
-          execute: vi.fn().mockRejectedValue(new ProductNotFoundError(PRODUCT_ID)),
-        }) as unknown as GetProductUseCase,
-    );
-    vi.mocked(RecordPriceUseCase).mockImplementation(
-      () =>
-        ({
-          execute: vi.fn().mockRejectedValue(new StoreNotFoundError(STORE_ID)),
-        }) as unknown as RecordPriceUseCase,
-    );
+    vi.mocked(GetRecipeUseCase).mockImplementation(function () {
+      return {
+        execute: vi.fn().mockRejectedValue(new RecipeNotFoundError(RECIPE_ID)),
+      } as unknown as GetRecipeUseCase;
+    });
+    vi.mocked(GetProductUseCase).mockImplementation(function () {
+      return {
+        execute: vi.fn().mockRejectedValue(new ProductNotFoundError(PRODUCT_ID)),
+      } as unknown as GetProductUseCase;
+    });
+    vi.mocked(RecordPriceUseCase).mockImplementation(function () {
+      return {
+        execute: vi.fn().mockRejectedValue(new StoreNotFoundError(STORE_ID)),
+      } as unknown as RecordPriceUseCase;
+    });
 
     const recipeRes = await app.request(`/api/recipes/${RECIPE_ID}`);
     const productRes = await app.request(`/api/products/${PRODUCT_ID}`);

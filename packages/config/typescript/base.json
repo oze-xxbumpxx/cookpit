@@ -11,6 +11,7 @@
     "noImplicitOverride": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["node"],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true

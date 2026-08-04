@@ -49,9 +49,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は stockAdditions が空でも 200 で ShoppingListDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(completedShoppingListDto);
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -68,9 +68,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は stockAdditions をそのまま UseCase へ渡す', async () => {
     const execute = vi.fn().mockResolvedValue(completedShoppingListDto);
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
     const addition = {
       itemId: ITEM_ID,
       amount: { value: 500, unit: 'g' },
@@ -92,9 +92,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は不正な id で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists/not-a-uuid/complete', completeRequest());
 
@@ -104,9 +104,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete はボディなしで 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/complete`, {
       method: 'POST',
@@ -118,9 +118,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は数量 0 の stockAdditions で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -140,9 +140,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は ShoppingListNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new ShoppingListNotFoundError(SHOPPING_LIST_ID));
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -157,9 +157,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は ShoppingItemNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new ShoppingItemNotFoundError(ITEM_ID));
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -173,9 +173,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidStockOperationError('ShoppingItem is not bought'));
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -188,9 +188,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/complete は 2 回連続でも同じ形を 200 で返す', async () => {
     const execute = vi.fn().mockResolvedValue(completedShoppingListDto);
-    vi.mocked(CompleteShoppingUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CompleteShoppingUseCase,
-    );
+    vi.mocked(CompleteShoppingUseCase).mockImplementation(function () {
+      return { execute } as unknown as CompleteShoppingUseCase;
+    });
 
     const first = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/complete`,
@@ -218,9 +218,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/reopen は 200 で active の ShoppingListDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingListDto);
-    vi.mocked(ReopenShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ReopenShoppingListUseCase,
-    );
+    vi.mocked(ReopenShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as ReopenShoppingListUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/reopen`, {
       method: 'POST',
@@ -235,9 +235,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('active', 'reopen'));
-    vi.mocked(ReopenShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as ReopenShoppingListUseCase,
-    );
+    vi.mocked(ReopenShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as ReopenShoppingListUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/reopen`, {
       method: 'POST',
@@ -251,9 +251,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
 
   it('POST /api/shopping-lists/:id/sync は 200 で更新後 ShoppingListDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingListDto);
-    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SyncShoppingListFromMealPlanUseCase,
-    );
+    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as SyncShoppingListFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/sync`, {
       method: 'POST',
@@ -268,9 +268,9 @@ describe('shoppingListsRoute（完了・再開・同期）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('completed', 'sync'));
-    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SyncShoppingListFromMealPlanUseCase,
-    );
+    vi.mocked(SyncShoppingListFromMealPlanUseCase).mockImplementation(function () {
+      return { execute } as unknown as SyncShoppingListFromMealPlanUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/sync`, {
       method: 'POST',

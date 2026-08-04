@@ -44,9 +44,9 @@ describe('shoppingListsRoute（購入確定）', () => {
       actualStoreId: STORE_ID,
     };
     const execute = vi.fn().mockResolvedValue(boughtItem);
-    vi.mocked(MarkAsBoughtUseCase).mockImplementation(
-      () => ({ execute }) as unknown as MarkAsBoughtUseCase,
-    );
+    vi.mocked(MarkAsBoughtUseCase).mockImplementation(function () {
+      return { execute } as unknown as MarkAsBoughtUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/bought`,
@@ -91,9 +91,9 @@ describe('shoppingListsRoute（購入確定）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/bought は%sで 400 を返す',
     async (_case, id, itemId, body) => {
       const execute = vi.fn();
-      vi.mocked(MarkAsBoughtUseCase).mockImplementation(
-        () => ({ execute }) as unknown as MarkAsBoughtUseCase,
-      );
+      vi.mocked(MarkAsBoughtUseCase).mockImplementation(function () {
+        return { execute } as unknown as MarkAsBoughtUseCase;
+      });
 
       const res = await app.request(`/api/shopping-lists/${id}/items/${itemId}/bought`, {
         method: 'POST',
@@ -121,9 +121,9 @@ describe('shoppingListsRoute（購入確定）', () => {
     'POST /api/shopping-lists/:id/items/:itemId/bought は%sを 404 に変換する',
     async (_case, error, message) => {
       const execute = vi.fn().mockRejectedValue(error);
-      vi.mocked(MarkAsBoughtUseCase).mockImplementation(
-        () => ({ execute }) as unknown as MarkAsBoughtUseCase,
-      );
+      vi.mocked(MarkAsBoughtUseCase).mockImplementation(function () {
+        return { execute } as unknown as MarkAsBoughtUseCase;
+      });
 
       const res = await app.request(
         `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/bought`,
@@ -143,9 +143,9 @@ describe('shoppingListsRoute（購入確定）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('completed', 'markAsBought'));
-    vi.mocked(MarkAsBoughtUseCase).mockImplementation(
-      () => ({ execute }) as unknown as MarkAsBoughtUseCase,
-    );
+    vi.mocked(MarkAsBoughtUseCase).mockImplementation(function () {
+      return { execute } as unknown as MarkAsBoughtUseCase;
+    });
 
     const res = await app.request(
       `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}/bought`,
