@@ -1,6 +1,6 @@
 # 設計書: shopping-list-price-comparison
 
-- ステータス: **確定**
+- ステータス: **実装済み**（2026-08-04）
 - レベル: L2
 - スプリント: Sprint 7（MVP2）タスク1
 - 関連: `docs/05-roadmap.md` Sprint 7 タスク1 / `docs/designs/shopping-list-screens.md`（S-6・D-5・R-6・将来課題） /
