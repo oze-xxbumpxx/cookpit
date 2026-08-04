@@ -1,4 +1,4 @@
-import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import type { PriceRecordDto, ProductDto, ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +29,57 @@ function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): Shoppi
   };
 }
 
+function createPriceRecordDto(overrides: Partial<PriceRecordDto> = {}): PriceRecordDto {
+  return {
+    id: 'price-record-a',
+    storeId: 'store-a',
+    storeName: '店舗A',
+    priceAmount: 250,
+    unitPriceAmount: 50,
+    packageSizeValue: 500,
+    packageSizeUnit: 'g',
+    observedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function createProductDto(overrides: Partial<ProductDto> = {}): ProductDto {
+  return {
+    id: 'product-a',
+    name: '醤油',
+    aliases: [],
+    category: '調味料',
+    defaultUnit: '本',
+    priceHistory: [],
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/** 内訳が非 null になる商品（店舗A・店舗B の 2 件、weight で換算可能）。 */
+function createProductWithBreakdown(): ProductDto {
+  return createProductDto({
+    id: 'product-a',
+    priceHistory: [
+      createPriceRecordDto({
+        id: 'record-a',
+        storeId: 'store-a',
+        storeName: '店舗A',
+        unitPriceAmount: 50,
+        packageSizeUnit: 'g',
+      }),
+      createPriceRecordDto({
+        id: 'record-b',
+        storeId: 'store-b',
+        storeName: '店舗B',
+        unitPriceAmount: 80,
+        packageSizeUnit: 'g',
+      }),
+    ],
+  });
+}
+
 const STORES = [
   createStoreDto({ id: 'store-a', name: '店舗A' }),
   createStoreDto({ id: 'store-b', name: '店舗B' }),
@@ -46,6 +97,7 @@ function renderRow(props: Partial<Parameters<typeof ShoppingItemRow>[0]> = {}) {
     onMarkAsBought: vi.fn(),
     onReassignStore: vi.fn(),
     onRequestRemove: vi.fn(),
+    productMap: new Map<string, ProductDto>(),
   };
   const merged = { ...defaults, ...props };
   render(<ul>{<ShoppingItemRow {...merged} />}</ul>);
@@ -281,5 +333,154 @@ describe('ShoppingItemRow', () => {
     renderRow({ item: createShoppingItemDto({ status: 'bought', displayName: '醤油' }) });
 
     expect(screen.getByRole('checkbox').getAttribute('aria-label')).toBe('醤油のチェックを外す');
+  });
+
+  it('IR-25: priceDiff !== null のとき総額差の行が表示される', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({
+        productId: 'product-a',
+        requiredAmount: { value: 300, unit: 'g' },
+      }),
+      productMap,
+    });
+
+    expect(screen.getByText('店舗Aの方が約90円安い')).toBeDefined();
+  });
+
+  it('IR-26: priceDiff === null のとき総額差の行が表示されない', () => {
+    renderRow({ item: createShoppingItemDto({ productId: null }) });
+
+    expect(screen.queryByText(/円安い/)).toBeNull();
+  });
+
+  it('IR-27: 未購入品目でも hasBreakdown なら展開トリガーが表示される（P-4）', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({ status: 'pending', productId: 'product-a' }),
+      productMap,
+    });
+
+    expect(screen.getByRole('button', { name: '店舗別の単価を見る' })).toBeDefined();
+  });
+
+  it('IR-28: 未購入かつ hasBreakdown=false なら展開トリガーは表示されない', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'pending' }) });
+
+    expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '金額を記録' })).toBeNull();
+  });
+
+  it('IR-29: bought item は hasBreakdown の有無に関わらず「金額を記録」が表示される', () => {
+    renderRow({ item: createShoppingItemDto({ status: 'bought' }) });
+
+    expect(screen.getByRole('button', { name: '金額を記録' })).toBeDefined();
+  });
+
+  it('IR-30: bought かつ hasBreakdown=true でもラベルは「金額を記録」のまま', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({ status: 'bought', productId: 'product-a' }),
+      productMap,
+    });
+
+    expect(screen.getByRole('button', { name: '金額を記録' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
+  });
+
+  it('IR-31: readOnly かつ未購入かつ hasBreakdown=true でもトリガーは表示されない', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({ status: 'pending', productId: 'product-a' }),
+      readOnly: true,
+      productMap,
+    });
+
+    expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
+  });
+
+  it('IR-32: 未購入 + 展開時は内訳のみが表示され PurchaseInputForm は出ない', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({ status: 'pending', productId: 'product-a' }),
+      expanded: true,
+      productMap,
+    });
+
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+30円')).toBeDefined();
+    expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
+  });
+
+  it('IR-33: 未購入 + expanded + hasBreakdown=false は展開パネル自体が表示されない（防御性）', () => {
+    renderRow({
+      item: createShoppingItemDto({ status: 'pending' }),
+      expanded: true,
+    });
+
+    expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
+    expect(screen.queryByText('← 最安')).toBeNull();
+  });
+
+  it('IR-34: 未購入品目の「店舗別の単価を見る」click で onToggleExpand が呼ばれる', async () => {
+    const user = userEvent.setup();
+    const onToggleExpand = vi.fn();
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({ id: 'item-1', status: 'pending', productId: 'product-a' }),
+      onToggleExpand,
+      productMap,
+    });
+
+    await user.click(screen.getByRole('button', { name: '店舗別の単価を見る' }));
+
+    expect(onToggleExpand).toHaveBeenCalledWith('item-1');
+  });
+
+  it('IR-35: productMap 経由の実データが総額差・内訳の両方に反映される（結合の要）', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({
+        status: 'pending',
+        productId: 'product-a',
+        requiredAmount: { value: 300, unit: 'g' },
+      }),
+      expanded: true,
+      productMap,
+    });
+
+    expect(screen.getByText('店舗Aの方が約90円安い')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+30円')).toBeDefined();
+  });
+
+  it('IR-36: productId が null のとき productMap に何を渡してもトリガー・総額差行が出ない', () => {
+    const productMap = new Map([
+      ['product-a', createProductWithBreakdown()],
+      ['product-b', createProductWithBreakdown()],
+    ]);
+    renderRow({
+      item: createShoppingItemDto({ productId: null, status: 'pending' }),
+      productMap,
+    });
+
+    expect(screen.queryByText(/円安い/)).toBeNull();
+    expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
+  });
+
+  it('IR-37: 推奨店舗バッジと最安店舗（総額差）の食い違いを許容する（P-2）', () => {
+    const productMap = new Map([['product-a', createProductWithBreakdown()]]);
+    renderRow({
+      item: createShoppingItemDto({
+        status: 'pending',
+        productId: 'product-a',
+        targetStoreId: 'store-b',
+        requiredAmount: { value: 300, unit: 'g' },
+      }),
+      productMap,
+    });
+
+    expect(screen.getByRole('button', { name: '店舗B' })).toBeDefined();
+    expect(screen.getByText('店舗Aの方が約90円安い')).toBeDefined();
   });
 });

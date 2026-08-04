@@ -1,4 +1,4 @@
-import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import type { PriceRecordDto, ProductDto, ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +29,34 @@ function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): Shoppi
   };
 }
 
+function createPriceRecordDto(overrides: Partial<PriceRecordDto> = {}): PriceRecordDto {
+  return {
+    id: 'price-record-a',
+    storeId: 'store-a',
+    storeName: 'イオン',
+    priceAmount: 250,
+    unitPriceAmount: 50,
+    packageSizeValue: 500,
+    packageSizeUnit: 'g',
+    observedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function createProductDto(overrides: Partial<ProductDto> = {}): ProductDto {
+  return {
+    id: 'product-a',
+    name: '醤油',
+    aliases: [],
+    category: '調味料',
+    defaultUnit: '本',
+    priceHistory: [],
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 const STORES = [createStoreDto({ id: 'store-a', name: 'イオン' })];
 
 function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {}) {
@@ -45,6 +73,7 @@ function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {})
     onReassignStore: vi.fn(),
     onRequestRemove: vi.fn(),
     stores: STORES,
+    productMap: new Map<string, ProductDto>(),
   };
   render(<StoreGroup {...defaults} {...props} />);
 }
@@ -79,7 +108,10 @@ describe('StoreGroup', () => {
     expect(screen.getAllByRole('checkbox')).toHaveLength(3);
   });
 
-  it('SG-04: 金額差表示が存在しない（S-6 案A・スコープ確認）', () => {
+  // productId が null（デフォルト fixture）のときは price-comparison.ts の縮退ケース#1 により
+  // priceDiff が常に null になるため、金額差は表示されない。productId 紐付き品目では表示される
+  // ようになった（SG-08 参照。shopping-list-price-comparison で S-6 案A の前提が部分的に変わった）。
+  it('SG-04: productId が null のとき金額差表示が存在しない', () => {
     renderStoreGroup();
 
     expect(screen.queryByText(/円安い/)).toBeNull();
@@ -126,5 +158,33 @@ describe('StoreGroup', () => {
     await user.click(screen.getByRole('button', { name: '味噌を削除' }));
 
     expect(onRequestRemove).toHaveBeenCalledWith('item-2');
+  });
+
+  it('SG-08: productMap が ShoppingItemRow まで中継される（中継確認）', () => {
+    const product = createProductDto({
+      id: 'product-a',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: 'イオン',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: 'ライフ',
+          unitPriceAmount: 80,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    renderStoreGroup({
+      items: [createShoppingItemDto({ id: 'item-1', productId: 'product-a' })],
+      productMap: new Map([['product-a', product]]),
+    });
+
+    expect(screen.getByRole('button', { name: '店舗別の単価を見る' })).toBeDefined();
   });
 });

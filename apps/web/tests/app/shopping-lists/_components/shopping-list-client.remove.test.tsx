@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createShoppingItemDto,
   createShoppingListDto,
+  PRODUCTS,
   STORES,
 } from './shopping-list-test-fixtures';
 
@@ -53,7 +54,7 @@ const ONION = createShoppingItemDto({
 
 function renderList(items = [SOY_SAUCE, ONION], status: 'active' | 'completed' = 'active') {
   const shoppingList = createShoppingListDto({ items, status });
-  render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+  render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
   return shoppingList;
 }
 
