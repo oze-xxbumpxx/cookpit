@@ -109,14 +109,14 @@ Infrastructure / Presentation 層のテストは未実装（テスト基盤が�
 
 ### 2-8. `DrizzleStoreRepository`
 
-| メソッド                                   | 試験計画内の観点       |
+| メソッド | 試験計画内の観点 |
 | ------------------------------------------ | ---------------------- | ---------- |
-| `constructor(db: DrizzleClient)`           | —                      |
-| `findById(id: StoreId): Promise<Store      | null>`                 | I-01〜I-03 |
-| `findAll(): Promise<Store[]>`              | I-04〜I-06             |
-| `save(store: Store): Promise<void>`        | I-07〜I-10             |
-| `private toEntity(row: StoreRow): Store`   | I-01, I-04（間接確認） |
-| `private toRow(store: Store): NewStoreRow` | I-07（間接確認）       |
+| `constructor(db: DrizzleClient)` | — |
+| `findById(id: StoreId): Promise<Store      | null>` | I-01〜I-03 |
+| `findAll(): Promise<Store[]>` | I-04〜I-06 |
+| `save(store: Store): Promise<void>` | I-07〜I-10 |
+| `private toEntity(row: StoreRow): Store` | I-01, I-04（間接確認） |
+| `private toRow(store: Store): NewStoreRow` | I-07（間接確認） |
 
 ### 2-9. `storesRoute`（Hono ルート）
 
