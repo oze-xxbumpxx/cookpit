@@ -333,4 +333,59 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     expect(screen.queryByText(/円安い/)).toBeNull();
     expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
   });
+
+  it('LC-34: 回帰: フォーカス復帰 refetch は products を再取得せず総額差・内訳が変化しない', async () => {
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 120,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const item = {
+      id: 'item-1',
+      displayName: '醤油',
+      productId: 'product-1',
+      requiredAmount: { value: 0.3, unit: 'kg' },
+    };
+    // refetch は items のみを返す（products/priceHistory は API 契約上ここに含まれない）
+    getShoppingList.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingListDto({
+          items: [createShoppingItemDto({ ...item, status: 'bought' })],
+        }),
+    });
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ ...item, status: 'pending' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    await waitFor(() => {
+      expect(getShoppingList).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'true',
+      );
+    });
+    // products は props 由来のまま（再取得されていれば表示が消えるか変わる）
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+  });
 });

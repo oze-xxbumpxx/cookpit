@@ -11,10 +11,15 @@ export interface StoreUnitPriceEntry {
   storeName: string;
   unitPriceAmount: number;
   isCheapest: boolean;
+  /**
+   * isCheapest のとき 0。非最安でも単価差が 0.5 円未満なら丸めで 0 になりうる
+   * （unitPriceAmount は小数第 1 位まで保持されるため）。
+   */
   diffFromCheapestYen: number;
 }
 
 export interface StoreUnitPriceBreakdown {
+  /** '100g' | '100ml' | `1${unit}` */
   basisLabel: string;
   entries: StoreUnitPriceEntry[];
 }
@@ -66,10 +71,29 @@ function pickLatestRecordPerStore(priceHistory: PriceRecordDto[]): PriceRecordDt
   return [...latestByStore.values()];
 }
 
-function findCheapestRecord(records: PriceRecordDto[]): PriceRecordDto {
-  return records.reduce((cheapest, record) =>
-    record.unitPriceAmount < cheapest.unitPriceAmount ? record : cheapest,
-  );
+// 内訳の基準となる単位区分を「記録数が最も多い kind」で決める。
+// unitPriceAmount を kind をまたいで数値比較してはならない（100g 単価・100ml 単価・
+// 1 単位あたりの価格は次元が違うため大小に意味が無く、少数派の kind がたまたま小さい値だと
+// 比較可能な多数派が丸ごと捨てられて内訳が静かに消える）。
+// 同数のときは weight → volume → other の固定順で決める（決定的な挙動にするため）。
+const BASIS_KIND_PRIORITY: UnitBasisKind[] = ['weight', 'volume', 'other'];
+
+function pickBasisKind(records: PriceRecordDto[]): UnitBasisKind {
+  const counts = new Map<UnitBasisKind, number>();
+  for (const record of records) {
+    const kind = unitBasis(record.packageSizeUnit).kind;
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+  let basisKind: UnitBasisKind = BASIS_KIND_PRIORITY[0];
+  let maxCount = -1;
+  for (const kind of BASIS_KIND_PRIORITY) {
+    const count = counts.get(kind) ?? 0;
+    if (count > maxCount) {
+      basisKind = kind;
+      maxCount = count;
+    }
+  }
+  return basisKind;
 }
 
 interface TotalCandidate {
@@ -78,6 +102,16 @@ interface TotalCandidate {
   estimatedTotal: number;
 }
 
+/**
+ * 品目の必要量を最安店舗で買った場合と 2 番目に安い店舗で買った場合の概算総額差を求める。
+ *
+ * 次のいずれかに当たるときは `null`（＝非表示への縮退）を返す。
+ * - 品目に `productId` / `requiredAmount` が無い、または商品に価格記録が無い
+ * - 必要量と単位区分（重量・容量・その他）が一致する店舗が 2 件未満
+ * - 丸めた総額差が 0 円以下
+ *
+ * `product` は `Map.get()` の戻り値を素通しするため `undefined` を受ける。
+ */
 export function estimateItemPriceDiff(
   item: ShoppingItemDto,
   product: ProductDto | undefined,
@@ -135,6 +169,18 @@ export function estimateItemPriceDiff(
   };
 }
 
+/**
+ * 店舗ごとの最新価格記録から、単価の安い順に並べた内訳を組み立てる。
+ *
+ * 基準となる単位区分は記録数が最も多い kind（同数なら weight → volume → other）で、
+ * 異なる区分の記録は内訳から除外する。次のいずれかに当たるときは `null` を返す。
+ * - 商品が無い、または価格記録が無い
+ * - `storeName` が空（＝参照先店舗が解決できない）記録を除くと 2 件未満
+ * - 基準区分に一致する記録が 2 件未満
+ *
+ * `product` は `Map.get()` の戻り値を素通しするため `undefined` を受ける。
+ * 引数の `priceHistory` は書き換えない。
+ */
 export function buildStoreUnitPriceBreakdown(
   product: ProductDto | undefined,
 ): StoreUnitPriceBreakdown | null {
@@ -143,8 +189,12 @@ export function buildStoreUnitPriceBreakdown(
   }
 
   const latestRecords = pickLatestRecordPerStore(product.priceHistory);
-  const cheapestRecord = findCheapestRecord(latestRecords);
-  const basisKind = unitBasis(cheapestRecord.packageSizeUnit).kind;
+  // pickLatestRecordPerStore が storeName === '' を全除外すると空配列になりうる
+  // （設計書 §縮退ケース一覧 #7「候補から除外」＝非表示への縮退）。
+  if (latestRecords.length < 2) {
+    return null;
+  }
+  const basisKind = pickBasisKind(latestRecords);
 
   // kind === 'other' の内訳比較は packageSizeUnit の生文字列一致までは要求しない（総額差とは異なる）。
   // UnitPriceCalculator 自体が「重量・容量以外はすべて『1 単位あたり』」として正準化しており、
@@ -176,15 +226,33 @@ export function buildStoreUnitPriceBreakdown(
       ? '100g'
       : basisKind === 'volume'
         ? '100ml'
-        : `1${cheapestRecord.packageSizeUnit}`;
+        : `1${sorted[0].packageSizeUnit}`;
 
   return { basisLabel, entries };
 }
 
+/**
+ * 内訳 1 行の差額ラベルを組み立てる。
+ *
+ * 非最安でも単価差が 0.5 円未満だと丸めで 0 になるため、そのまま `+0円` と出すと
+ * 「差が無いのに片方だけ最安」に見える。丸め後 0 の行は「ほぼ同額」に置き換える。
+ */
+export function formatStoreUnitPriceDiffLabel(entry: StoreUnitPriceEntry): string {
+  if (entry.isCheapest) {
+    return '← 最安';
+  }
+  if (entry.diffFromCheapestYen === 0) {
+    return 'ほぼ同額';
+  }
+  return `+${entry.diffFromCheapestYen}円`;
+}
+
+/** 総額差メッセージ（例: `オーケーの方が約210円安い`）。 */
 export function formatEstimatedDiffMessage(diff: EstimatedPriceDiff): string {
   return `${diff.cheapestStoreName}の方が約${diff.estimatedDiffYen}円安い`;
 }
 
+/** 金額を桁区切り付きの円表記にする（例: `1,234円`）。 */
 export function formatYen(amount: number): string {
   return `${amount.toLocaleString('ja-JP')}円`;
 }

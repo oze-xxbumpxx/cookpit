@@ -35,5 +35,16 @@ export default async function ShoppingListDetailPage({ params }: Props) {
     throw error;
   }
 
-  return <ShoppingListClient shoppingList={shoppingList} stores={stores} products={products} />;
+  // 買い物リストが参照しない商品まで priceHistory ごとフライトペイロードへ載せない
+  // （価格記録は削除しない限り貯まり続けるため、買い物中のモバイル回線で効いてくる）。
+  const referencedProductIds = new Set(
+    shoppingList.items
+      .map((item) => item.productId)
+      .filter((productId): productId is string => productId !== null),
+  );
+  const referencedProducts = products.filter((product) => referencedProductIds.has(product.id));
+
+  return (
+    <ShoppingListClient shoppingList={shoppingList} stores={stores} products={referencedProducts} />
+  );
 }

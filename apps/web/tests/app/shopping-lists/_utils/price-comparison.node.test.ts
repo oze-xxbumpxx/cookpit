@@ -6,6 +6,7 @@ import {
   buildStoreUnitPriceBreakdown,
   estimateItemPriceDiff,
   formatEstimatedDiffMessage,
+  formatStoreUnitPriceDiffLabel,
   formatYen,
 } from '../../../../src/app/shopping-lists/_utils/price-comparison';
 
@@ -533,6 +534,55 @@ describe('縮退ケース一覧（設計書 1〜9 の全件対応）', () => {
     expect(breakdown?.entries.some((entry) => entry.storeId === 'store-deleted')).toBe(false);
   });
 
+  it('PC-20b: 全記録の storeName === "" → 例外を投げず双方 null（M-1 回帰）', () => {
+    const item = createShoppingItemDto({ requiredAmount: { value: 100, unit: 'g' } });
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-deleted-1',
+          storeId: 'store-deleted-1',
+          storeName: '',
+          unitPriceAmount: 10,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'r-deleted-2',
+          storeId: 'store-deleted-2',
+          storeName: '',
+          unitPriceAmount: 20,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+
+    expect(() => buildStoreUnitPriceBreakdown(product)).not.toThrow();
+    expect(buildStoreUnitPriceBreakdown(product)).toBeNull();
+    expect(estimateItemPriceDiff(item, product)).toBeNull();
+  });
+
+  it('PC-20c: 有効な記録が 1 店舗だけ残る → 内訳は null（M-1 の境界）', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-x',
+          storeId: 'store-x',
+          storeName: '店舗X',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'r-deleted',
+          storeId: 'store-deleted',
+          storeName: '',
+          unitPriceAmount: 10,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+
+    expect(buildStoreUnitPriceBreakdown(product)).toBeNull();
+  });
+
   it('PC-21: 総額差 1 位・2 位が同額 → 非表示（3 位との比較はしない）', () => {
     const item = createShoppingItemDto({ requiredAmount: { value: 100, unit: 'g' } });
     const product = createProductDto({
@@ -707,7 +757,7 @@ describe('buildStoreUnitPriceBreakdown 固有の順序・基準ロジック', ()
     expect(breakdown?.entries[2].diffFromCheapestYen).toBe(21);
   });
 
-  it('PC-26: basisLabel は最安記録の kind に基づく', () => {
+  it('PC-26: basisLabel は基準区分の kind に基づく', () => {
     const weightProduct = createProductDto({
       priceHistory: [
         createPriceRecordDto({
@@ -892,5 +942,114 @@ describe('防御性', () => {
     });
 
     expect(estimateItemPriceDiff(item, product)?.estimatedDiffYen).toBe(150);
+  });
+
+  it('PC-32: 基準区分は最頻の kind（少数派の raw 最小単価に引きずられない・S-3）', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 200,
+          packageSizeUnit: '1L',
+        }),
+        createPriceRecordDto({
+          id: 'r-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 150,
+          packageSizeUnit: '1L',
+        }),
+        // 次元の違う volume の単価 18 が raw 最小だが、少数派なので基準にはならない
+        createPriceRecordDto({
+          id: 'r-c',
+          storeId: 'store-c',
+          storeName: '店舗C',
+          unitPriceAmount: 18,
+          packageSizeUnit: 'ml',
+        }),
+      ],
+    });
+
+    const breakdown = buildStoreUnitPriceBreakdown(product);
+    expect(breakdown?.basisLabel).toBe('11L');
+    expect(breakdown?.entries.map((entry) => entry.storeId)).toEqual(['store-b', 'store-a']);
+  });
+
+  it('PC-33: 基準区分が同数のときは weight → volume → other の固定順（S-3 の tie-break）', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 10,
+          packageSizeUnit: 'ml',
+        }),
+        createPriceRecordDto({
+          id: 'r-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 20,
+          packageSizeUnit: 'ml',
+        }),
+        createPriceRecordDto({
+          id: 'r-c',
+          storeId: 'store-c',
+          storeName: '店舗C',
+          unitPriceAmount: 30,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'r-d',
+          storeId: 'store-d',
+          storeName: '店舗D',
+          unitPriceAmount: 40,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+
+    expect(buildStoreUnitPriceBreakdown(product)?.basisLabel).toBe('100g');
+  });
+
+  it('PC-34: 非最安でも丸め後の差が 0 なら「ほぼ同額」（S-1）', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-x',
+          storeId: 'store-x',
+          storeName: '店舗X',
+          unitPriceAmount: 100,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'r-y',
+          storeId: 'store-y',
+          storeName: '店舗Y',
+          unitPriceAmount: 100.4,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+
+    const entries = buildStoreUnitPriceBreakdown(product)?.entries ?? [];
+    expect(entries[1].isCheapest).toBe(false);
+    expect(entries[1].diffFromCheapestYen).toBe(0);
+    expect(formatStoreUnitPriceDiffLabel(entries[0])).toBe('← 最安');
+    expect(formatStoreUnitPriceDiffLabel(entries[1])).toBe('ほぼ同額');
+  });
+
+  it('PC-35: formatStoreUnitPriceDiffLabel は差がある行を +N円 で返す', () => {
+    expect(
+      formatStoreUnitPriceDiffLabel({
+        storeId: 'store-y',
+        storeName: '店舗Y',
+        unitPriceAmount: 130,
+        isCheapest: false,
+        diffFromCheapestYen: 30,
+      }),
+    ).toBe('+30円');
   });
 });

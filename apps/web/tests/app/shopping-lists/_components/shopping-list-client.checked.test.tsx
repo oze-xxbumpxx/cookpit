@@ -628,6 +628,75 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     });
   });
 
+  it('LC-33: 整合性: 店舗再割当は総額差・内訳の表示内容に影響しない', async () => {
+    const user = userEvent.setup();
+    postTargetStore.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+          targetStoreId: 'store-b',
+          status: 'pending',
+        }),
+    });
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 120,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+          targetStoreId: 'store-a',
+          status: 'pending',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    // 総額差は targetStoreId ではなく productId / priceHistory から決まる（設計書 P-2）
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '店舗別の単価を見る' }));
+    expect(screen.getByText('50円 / 100g')).toBeDefined();
+    expect(screen.getByText('120円 / 100g')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+70円')).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: '店舗A' }));
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '店舗B' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: '店舗B' })).toBeDefined();
+    });
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+    expect(screen.getByText('50円 / 100g')).toBeDefined();
+    expect(screen.getByText('120円 / 100g')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+70円')).toBeDefined();
+  });
+
   it('LC-32: 回帰: bought item でチェックを外すと breakdown があってもパネルごと閉じる', async () => {
     const user = userEvent.setup();
     postChecked.mockResolvedValue({

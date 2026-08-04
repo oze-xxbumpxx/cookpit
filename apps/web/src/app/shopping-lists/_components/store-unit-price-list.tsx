@@ -1,5 +1,5 @@
 import type { StoreUnitPriceEntry } from '../_utils/price-comparison';
-import { formatYen } from '../_utils/price-comparison';
+import { formatStoreUnitPriceDiffLabel, formatYen } from '../_utils/price-comparison';
 
 interface Props {
   basisLabel: string;
@@ -17,7 +17,7 @@ export function StoreUnitPriceList({ basisLabel, entries }: Props) {
             {formatYen(entry.unitPriceAmount)} / {basisLabel}
           </span>
           <span className="shrink-0 font-medium text-foreground">
-            {entry.isCheapest ? '← 最安' : `+${entry.diffFromCheapestYen}円`}
+            {formatStoreUnitPriceDiffLabel(entry)}
           </span>
         </li>
       ))}

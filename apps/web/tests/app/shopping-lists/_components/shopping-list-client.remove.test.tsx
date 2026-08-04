@@ -124,10 +124,12 @@ describe('ShoppingListClient（品目削除）', () => {
     await requestRemove('醤油');
     await confirmRemove();
 
+    // 楽観削除の巻き戻しはエラーバナー表示とは別コミットで反映されるため、
+    // 行の復帰も waitFor の中で待つ（外に置くとまれに巻き戻し前に評価されて落ちる）。
     await waitFor(() => {
       expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+      expect(screen.getByRole('button', { name: '醤油を削除' })).toBeDefined();
     });
-    expect(screen.getByRole('button', { name: '醤油を削除' })).toBeDefined();
   });
 
   it('SDL-06: 422 では回復導線つきの文言が出る', async () => {
