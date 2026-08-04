@@ -6,7 +6,7 @@ export default defineConfig({
     ...baseConfig.test,
     name: 'dom',
     environment: 'happy-dom',
-    include: ['src/**/*.dom.test.ts', 'src/**/*.test.tsx'],
+    include: ['tests/**/*.dom.test.ts', 'tests/**/*.test.tsx'],
   },
   resolve: {
     alias: {

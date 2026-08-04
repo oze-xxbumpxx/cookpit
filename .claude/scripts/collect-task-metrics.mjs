@@ -9,7 +9,7 @@
 //   --branch <substr>       ブランチフィルタ（部分一致・複数可）。指定時は既定を置き換える
 //   --task-id <TASK-...>    --write 時の出力先 docs/claude-code/improvements/metrics/<task-id>.yml
 //   --out <path>            出力先の明示指定（--task-id より優先）
-//   --since / --until       集計期間 YYYY-MM-DD（COOKPIT_TZ の日付・両端含む）
+//   --since / --until       集計期間 YYYY-MM-DD（HARNESS_TZ（旧 COOKPIT_TZ）の日付・両端含む）
 //   --exclude-session <id>  誤って紐付いたセッションを除外（複数可）
 //   --write                 YAML の machine: セクションへマージ（無指定なら stdout に表示のみ）
 //   --transcript-dir <dir>  transcript ディレクトリ上書き（既定: ~/.claude/projects/<プロジェクト slug>）
@@ -38,10 +38,15 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+// 状態ファイルは永続領域（リポジトリ外）を優先し、旧 .claude/state/ もフォールバックで読む
+import { resolveReadablePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const TZ = process.env.COOKPIT_TZ || 'Asia/Tokyo';
-const GAP_CAP_MIN = Number(process.env.COOKPIT_GAP_CAP_MIN || 30);
+// COOKPIT_* は旧名（後方互換）。新規は HARNESS_* を使う。
+const TZ = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
+const GAP_CAP_MIN = Number(
+  process.env.HARNESS_GAP_CAP_MIN || process.env.COOKPIT_GAP_CAP_MIN || 30,
+);
 
 function dayInTz(date) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
@@ -130,7 +135,7 @@ function parseJsonl(path) {
 
 // subagent-log の feature 一致でセッションを直接紐付け（current-feature 運用時）
 const featureSessionIds = new Set();
-for (const rec of parseJsonl(join(ROOT, '.claude/state/subagent-log.jsonl'))) {
+for (const rec of parseJsonl(resolveReadablePath('subagent-log.jsonl') ?? '')) {
   if (rec.feature === args.feature && rec.session_id) featureSessionIds.add(rec.session_id);
 }
 
@@ -243,7 +248,7 @@ sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id.local
 // ---- 2. 品質ゲート実行結果（手戻りプロキシ） ---------------------------------
 
 const gateHistory = [];
-for (const rec of parseJsonl(join(ROOT, '.claude/state/quality-gates-log.jsonl'))) {
+for (const rec of parseJsonl(resolveReadablePath('quality-gates-log.jsonl') ?? '')) {
   if (!rec.ts || !inRange(rec.ts)) continue;
   const branchOk = rec.branch && branchFilters.some((f) => rec.branch.includes(f));
   if (!branchOk) continue;

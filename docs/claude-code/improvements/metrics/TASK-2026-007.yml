@@ -1,0 +1,101 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-2026-007
+feature_name: harness-portability
+change_level: 2
+date: 2026-07-31
+
+agents:
+  calls: 0 # Subagent は起動せずメインセッション（Orchestrator 役）で完結
+  retries: 0
+  unnecessary_calls: 0
+
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+# IMP-2026-025 の効果実測をモデル条件込みで比較するための記録（2026-07-18 追加）。
+codex:
+  model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
+  reasoning_effort: unknown # 例: low | medium | high（Task/層で変えた場合は notes に内訳）
+  notes: ''
+
+quality:
+  tests_added: 8 # node:test（.claude/tests/harness-paths.test.mjs）。既存 48 → 56 件
+  initial_test_failures: 0 # 初回実行で 56/56 PASS
+  reviewer_critical: 0 # reviewer Subagent は起動せず（L2 は docs/reviews 作成対象外）
+  reviewer_major: 0
+  reviewer_minor: 0
+  user_corrections: 0
+  escaped_defects: 0
+
+process:
+  requirement_rework: 0
+  # 実装中に COOKPIT_GAP_CAP_MIN を追加発見し、要件 R-3 と対象範囲を更新した
+  # （candidates/harness-portability.md 事象 2）
+  design_rework: 1
+  implementation_rework: 0
+  missing_documents: 0
+  # 設計書「未決事項」3 件: 名前空間変更時の読み取り互換を非実装 /
+  # Phase 2 の rules 配布方式 / 移植ティア未決
+  unresolved_items: 3
+  # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
+  # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
+  # 注: 本タスクはユーザー依頼そのものがハーネス改修のため 1.0。
+  # プロダクト作業に対する「間接費」ではないので、肥大監視の集計時は除外して読むこと。
+  meta_work_ratio: 1.0
+
+machine:
+  # collect-task-metrics.mjs による自動集計。手で編集しない（--write の再実行で更新）
+  collected_at: 2026-07-31
+  branch_filters: ['claude/reuse-config-other-projects-n8wqmj']
+  sessions: # session_id 単位でマージ・累積（1 行 = 1 セッション）
+    - {
+        'id': 'e05c6540-2de6-521e-883f-0069dab02f9f',
+        'date': '2026-07-31',
+        'branches': ['claude/reuse-config-other-projects-n8wqmj'],
+        'matched_by': 'branch',
+        'active_minutes': 114,
+        'tokens':
+          { 'input': 1927, 'output': 112864, 'cache_creation': 693404, 'cache_read': 11612309 },
+        'tool_uses': 116,
+        'user_prompts': 24,
+        'agent_calls': {},
+        'models': ['claude-opus-5'],
+      }
+  gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
+    - {
+        'ts': '2026-07-31T02:52:43.935Z',
+        'branch': 'claude/reuse-config-other-projects-n8wqmj',
+        'pass': ['harness'],
+        'fail': ['lint', 'type-check', 'build', 'format-check', 'test'],
+        'skip': [],
+      }
+    - {
+        'ts': '2026-07-31T02:57:01.688Z',
+        'branch': 'claude/reuse-config-other-projects-n8wqmj',
+        'pass': ['harness', 'lint', 'type-check', 'build', 'test'],
+        'fail': ['format-check'],
+        'skip': [],
+      }
+  totals:
+    sessions: 1
+    active_minutes: 114 # 約1時間54分（活動時間ベース・空白30分超は除外）
+    tokens_input: 1927
+    tokens_output: 112864
+    tokens_cache_creation: 693404
+    tokens_cache_read: 11612309
+    tokens_total: 12420504
+    tool_uses: 116
+    user_prompts: 24
+    agent_calls: 0
+    agent_calls_by_type: {}
+    agent_restarts: 0 # 同一 Subagent 種の再起動数（手戻りプロキシ）
+    gate_runs: 2
+    gate_fail_runs: 2
+    gate_rework_rate: 1 # FAIL を含む実行 / 総実行（手戻りプロキシ）
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+# 機械自動では埋めない。不明な欄は unknown のまま。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }

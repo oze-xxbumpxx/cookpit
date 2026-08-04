@@ -146,7 +146,16 @@ export class Store {
 }
 ```
 
-MVP1 では Store はシード（初期データ）として 2 件を DB に登録する想定。動的な追加は Phase 2 以降。
+> **現行実装は上記より進んでいる。**「シードのみ・動的追加は Phase 2 以降」の想定は撤回済みで、
+> 価格記録フォームから追加・削除できる。あわせて 2026-07-27 に
+> [ADR-0013](./decisions/ADR-0013-store-limit-and-delete-cascade.md) で次の不変条件が入った。
+>
+> - **登録は最大 3 件**（実運用の「2 人で 2〜3 店舗を回る」に合わせた実数）
+> - **同名は登録不可**（`normalizeStoreName` = 前後空白除去 + NFKC 後の完全一致で判定）
+> - **削除は参照ごとカスケード**（価格記録は物理削除、買い物品目の店舗指定は未割当へ戻す）
+>
+> どちらも単一の `Store` では判定できないコレクション制約なので、Entity ではなく
+> `CreateStoreUseCase` / `DeleteStoreUseCase`（Application 層）が担う。
 
 ## 集約詳細
 
@@ -477,11 +486,21 @@ export type ShoppingListStatus = 'active' | 'completed';
   `status === 'active'` ガード（D-2）
 - `markAsSkipped` / `complete()` は Domain 実装のみで API 非公開（S-8 / S-9）
 - `getBoughtItemsForPantry()` は実装しない。Pantry 連携（CompleteShoppingUseCase）とともに Sprint 5 で設計（S-8）
-- `removeItem` は未実装（削除 API とともに Sprint 4 スコープ外）
+- `removeItem`（品目の物理削除）は 2026-07-25 に実装（下記の実装追記を参照）
 - `shoppingDate = mealPlan.weekOf.startDate()`（週開始土曜固定）。DB は `date` 型・ローカル日付整形で
   JST 前日ずれを回避（S-10）
 - `shopping_items` は別テーブル（JSONB 不採用）・`shopping_lists.meal_plan_id` に UNIQUE 制約
   （S-1。生成冪等 S-6 の基盤）
+
+> 実装追記（2026-07-25, `docs/designs/shopping-item-remove.md` / ADR-0011）: `ShoppingList` に
+> `removeItem(itemId)` を追加した。`assertActive('removeItem')` を通し、存在しない itemId は
+> `Error('ShoppingItem not found')`。**status / source を問わず削除できる**（`bought` の品目を
+> 削除すると購入実績 `actualPrice` / `actualStore` も一緒に失われる）。永続化は
+> `DrizzleShoppingListRepository.save()` の既存の `notInArray` 差分削除がそのまま追随するため、
+> リポジトリ実装と DB スキーマは無変更。既存の `markAsSkipped()` は引き続き API 非公開のまま残す
+> （物理削除と skipped の使い分けの根拠は ADR-0011）。なお献立由来の品目を削除しても、
+> `SyncShoppingListFromMealPlanUseCase`（ADR-0007 の差分マージ）は削除を記憶しないため
+> 再同期で再び追加される。
 
 > 実装追記（2026-07-24, `docs/designs/shopping-list-item-check.md`）: `ShoppingItem` に
 > `check()`（価格・店舗に触れず `bought` へ遷移）/ `uncheck()`（`bought` からのみ許可し `pending` に
@@ -505,6 +524,13 @@ export type ShoppingListStatus = 'active' | 'completed';
 > あり、既存 Stock への加算は行わない。なお本セクション以下のコード例は設計初期版で現行実装と乖離が
 > ある（`storedLocation`/`productId` は null 許容、`ConsumptionReason` は撤廃、消費はクランプ方式）。
 > 正典は `packages/domain/src/pantry/pantry.ts` と `docs/designs/pantry-core.md`。
+
+> 実装追記（2026-07-25, `docs/designs/shopping-complete-stock-selection.md`）: Stock の生成経路は
+> 2 系統ある。**在庫画面からの手動追加**（`sourceShoppingItemId: null`）と、**買い物完了時の選択追加**
+> （`sourceShoppingItemId` に買い物品目 ID を設定）。後者は購入した品目のうち画面で選んだものだけを
+> 在庫化する（購入＝自動在庫化ではない）。`sourceShoppingItemId` は
+> `Pantry.hasStockFromShoppingItem()`（Application 側の事前スキップ）と DB の UNIQUE 制約の二段で
+> 「1 買い物品目 : 最大 1 Stock」を守り、買い物再開 → 再完了での二重在庫を防ぐ。
 
 ```typescript
 export class Pantry {

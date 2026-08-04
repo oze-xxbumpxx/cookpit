@@ -3,26 +3,15 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
-import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import { SelectField } from '@/components/ui/select-field';
 import { parseQuantity } from '@/lib/parse-quantity';
-import { storageLocationSchema } from '@cookpit/api-contract';
 import type { StorageLocation } from '@cookpit/application';
 import { useId, useState } from 'react';
-import { LOCATION_LABELS } from '../_utils/pantry-view';
-
-const UNSET_LOCATION_VALUE = '';
-
-const LOCATION_SELECT_OPTIONS: SelectFieldOption[] = [
-  { value: UNSET_LOCATION_VALUE, label: '未設定' },
-  ...storageLocationSchema.options.map((location) => ({
-    value: location,
-    label: LOCATION_LABELS[location],
-  })),
-];
-
-function toStorageLocation(value: string): StorageLocation | null {
-  return value === UNSET_LOCATION_VALUE ? null : (value as StorageLocation);
-}
+import {
+  LOCATION_SELECT_OPTIONS,
+  UNSET_LOCATION_VALUE,
+  toStorageLocation,
+} from '../_utils/pantry-view';
 
 export interface AddStockFormInput {
   displayName: string;

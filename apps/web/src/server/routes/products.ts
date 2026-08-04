@@ -1,11 +1,13 @@
 import {
   createProductSchema,
   idParamSchema,
+  priceRecordIdParamSchema,
   recordPriceSchema,
   updateProductSchema,
 } from '@cookpit/api-contract';
 import {
   CreateProductUseCase,
+  DeletePriceRecordUseCase,
   DeleteProductUseCase,
   GetCheapestStoreUseCase,
   GetProductUseCase,
@@ -63,6 +65,16 @@ export const productsRoute = new Hono()
       const usecase = new RecordPriceUseCase(productRepository(), storeRepository());
       await usecase.execute({ productId: id, ...body });
       return c.body(null, 200);
+    },
+  )
+  .delete(
+    '/:id/price-records/:priceRecordId',
+    zValidator('param', priceRecordIdParamSchema),
+    async (c) => {
+      const { id, priceRecordId } = c.req.valid('param');
+      const usecase = new DeletePriceRecordUseCase(productRepository());
+      await usecase.execute({ productId: id, priceRecordId });
+      return c.body(null, 204);
     },
   )
   .get('/:id/cheapest-store', zValidator('param', idParamSchema), async (c) => {

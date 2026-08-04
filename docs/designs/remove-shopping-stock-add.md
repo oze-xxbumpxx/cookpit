@@ -1,6 +1,14 @@
 # 設計書: remove-shopping-stock-add（買い物完了時の在庫加算を削除）
 
-- ステータス: 確定（ユーザー確定・2026-07-24。「在庫加算のみ削除」）
+> **⚠️ この設計は 2026-07-25 に上書きされた。**
+> 在庫加算を全廃した結果「買い物完了後に在庫タブへ何も出てこない」UX 断絶が確認されたため、
+> **完了時に在庫化する品目を選ぶ**方式へ再設計した。現行の正典は
+> [shopping-complete-stock-selection.md](./shopping-complete-stock-selection.md)。
+> 本書は経緯と、価格記録の冪等性を「決定的 `PriceRecordId`」へ移した理由（D-1）の出典として残す。
+> なお本書 D-5 の「`Pantry.hasStockFromShoppingItem` は残置」は実態と異なっていた
+> （同日 `972f279` で死コードとして削除された）。詳細は上書き先の §現状構成を参照。
+
+- ステータス: superseded（2026-07-25。当初は確定・ユーザー確定 2026-07-24「在庫加算のみ削除」）
 - レベル: L2
 - 関連: `docs/designs/pantry-shopping-integration.md` / `pantry-core.md`（S-3 冪等設計の正典）、
   `docs/designs/pantry-manual-add.md`（項目5・手動追加＝在庫を増やす代替導線）、

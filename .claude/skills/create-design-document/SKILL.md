@@ -12,7 +12,7 @@ description: >
 
 ## 手順
 
-1. 入力を確認する：要求メモ（requirements-analyst）、`docs/03-architecture.md`、
+1. 入力を確認する：要求メモ（Orchestrator）、`docs/03-architecture.md`、
    `docs/04-domain-model.md`、関連する既存実装。
 2. 既存の `docs/designs/<feature-name>.md` があれば**更新**する（重複作成しない）。
 3. 下のテンプレートの**全セクションを残す**。該当しないセクションは削除せず
@@ -67,18 +67,18 @@ description: >
 
 ## 良い例（実タスクの成果物）
 
-- **トレードオフ併記 + 推奨（手順4の実例）**: `docs/designs/test-infra-expansion.md` §4 —
+- **トレードオフ併記 + 推奨（手順4の実例）**: `cookpit/test-infra-expansion 設計書` §4 —
   テスト DB 戦略を比較表（§4.2）で並べ、推奨 1 案（§4.3 PGlite）を理由つきで提示。
-- **後続 Agent への引き継ぎ**: `docs/designs/store-master.md` §18「Recipe 先例との構造的差分」
+- **後続 Agent への引き継ぎ**: `cookpit/store-master 設計書` §18「Recipe 先例との構造的差分」
   §19「契約テスト観点（test-designer への引き継ぎ）」— 既存実装との差分を明示し、
   試験観点を設計書側から test-designer へ渡している
-  （出典: reviewer が設計との整合性を問題なしと確認 — `docs/reviews/store-master.md`）。
+  （出典: reviewer が設計との整合性を問題なしと確認 — `cookpit/store-master レビュー`）。
 
 ## 悪い例（実タスクで手戻りになったもの）
 
-- **ライブラリ API を採用バージョンで未確認のまま指定**: `docs/designs/test-infra-expansion.md`
+- **ライブラリ API を採用バージョンで未確認のまま指定**: `cookpit/test-infra-expansion 設計書`
   は Vitest の `defineWorkspace` を指定したが、インストールされた Vitest 3.2.6 では非推奨で、
   実装時に `test.projects` への置き換えが必要になった。設定ファイル・フレームワーク API を
   設計書に指定するときは、採用バージョンの現行 API か（非推奨でないか）を確認する
-  （出典: `docs/claude-code/improvements/candidates/test-infra-expansion.md` 事象 2。
+  （出典: `cookpit/test-infra-expansion` 事象 2。
   ※1 回目の観測のため手順への必須化は保留 — 再発時に昇格検討）。

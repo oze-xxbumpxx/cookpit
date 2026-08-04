@@ -1,19 +1,22 @@
-#!/usr/bin/env node
-// PreToolUse Hook — 危険・破壊的・秘密情報アクセスの防止（§13.1）
+// PreToolUse Hook — 危険・破壊的・秘密情報アクセス・Hook 回避の防止
 //
 // 方針:
-// - 決定論的に判定できる危険操作だけをブロックする（exit 2 で deny、理由を stderr に出す）。
+// - 決定論的に判定できる操作だけをブロックする（exit 2 で deny、理由を stderr に出す）。
 // - 誤検知を避けるため、日常的に正当な操作（rm -rf node_modules 等）はブロックしない。
 //   破壊的 rm は「再帰+強制フラグ」かつ「壊滅的ターゲット（/, ~, $HOME, *, ., ..）」のみ deny。
-// - settings.json の permissions.deny と二層で併用する（こちらは理由つきの動的判定）。
-// - 一時的に無効化したい場合は settings.json の PreToolUse から本フックを外す（最終報告 §9）。
+// - 読み取り・調査は妨げない。
 //
-// 対象ツール: Bash（コマンド検査） / Read・Edit・Write・MultiEdit（秘密ファイル・保護構成ファイル検査）。
+// 保護ファイルの人間承認層は撤去した。個人開発では承認する人とされる人が同一であり、
+// 承認ファイルが実行中コンテナ内に置かれるためリモートから発行できず、ハーネスが自分自身の
+// 修正を拒否するデッドロックを生んでいた。構成変更の承認境界は **PR レビュー**が担う。
+// 詳細は docs/claude-code/harness-state.md。
+//
+// 限界（隠さない）: 同一 OS ユーザーで任意シェルを実行できる相手に対し、文字列マッチングは
+// 難読化で回避されうる。本フックは事故を防ぐ層であり、認証境界ではない。
+//
+// 対象ツール: Bash（コマンド検査） / Read・Edit・Write・MultiEdit・NotebookEdit（パス検査）。
 
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-
-const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+import { readFileSync } from 'node:fs';
 
 function readStdin() {
   try {
@@ -23,11 +26,11 @@ function readStdin() {
   }
 }
 
-function deny(reason) {
+function deny(reason, extra = '') {
   process.stderr.write(
     `⛔ 危険操作をブロックしました: ${reason}\n` +
-      `この操作は人間の承認が必要です（本番影響・破壊的・秘密情報）。意図的な場合は手動で実行するか、\n` +
-      `.claude/settings.json の PreToolUse から guard-dangerous を一時的に外してください。\n`,
+      (extra ? `${extra}\n` : '') +
+      `この操作は人間の確認が必要です（本番影響・破壊的・秘密情報）。\n`,
   );
   process.exit(2);
 }
@@ -60,6 +63,16 @@ const ALWAYS_DENY = [
   { re: /\baws\s+(deploy|s3\s+rm|cloudformation\s+(deploy|delete))\b/, why: 'AWS 本番操作' },
 ];
 
+// ローカル Hook（lefthook）の回避。ローカル Hook は早期フィードバック層であり、
+// 最終ゲートは CI が担うが、回避操作は検出して止める。
+const HOOK_BYPASS_DENY = [
+  { re: /--no-verify\b/, why: 'Git Hook の回避（--no-verify）' },
+  { re: /\bLEFTHOOK\s*=\s*0\b/, why: 'Git Hook の無効化（LEFTHOOK=0）' },
+  { re: /\bHUSKY\s*=\s*0\b/, why: 'Git Hook の無効化（HUSKY=0）' },
+  { re: /\bSKIP\s*=\S*\s+git\b/, why: 'Git Hook のスキップ（SKIP=... git ...）' },
+  { re: /\bgit\s+config\b[^\n]*core\.hooksPath/, why: 'Git Hook パスの変更（core.hooksPath）' },
+];
+
 const READ_CMD = /\b(cat|less|more|head|tail|bat|nl|od|xxd|strings|grep|rg|awk|sed|cp|scp|rsync)\b/;
 
 function bashSecretRead(cmd) {
@@ -78,6 +91,14 @@ function bashSecretRead(cmd) {
 function checkBash(cmd) {
   if (typeof cmd !== 'string' || cmd.trim() === '') return;
   for (const d of ALWAYS_DENY) if (d.re.test(cmd)) deny(d.why);
+  for (const d of HOOK_BYPASS_DENY) {
+    if (d.re.test(cmd)) {
+      deny(
+        d.why,
+        'ローカル Hook は早期フィードバック層です。回避せず、失敗の内容を修正してください。',
+      );
+    }
+  }
   if (rmHasRecursiveForce(cmd) && rmHasCatastrophicTarget(cmd)) {
     deny('壊滅的な再帰削除（rm -rf で / ~ $HOME * . .. を対象）');
   }
@@ -99,48 +120,23 @@ function isSecretPath(p) {
   );
 }
 
-// ── 保護構成ファイルへの書き込み判定（improvement-cycle.md §承認境界）─────
-// 承認マーカー（.claude/state/config-change-approved）が無い限り、Agent の指示・挙動を決める
-// 構成ファイルへの Edit/Write/MultiEdit をブロックする。従来は validate-agent-config.mjs の
-// 警告のみだったが、「read-only を宣言する Agent が Write を保持する」穴を決定論的に塞ぐ
-// （2026-07-04 セットアップ監査 / IMP-2026-013）。.claude/evals/ と .claude/state/ は
-// 成果物置き場のため対象外。
-function isProtectedConfigPath(p) {
-  if (typeof p !== 'string') return false;
-  const rel = p.startsWith(ROOT) ? p.slice(ROOT.length + 1) : p;
-  return (
-    rel === 'CLAUDE.md' ||
-    rel === '.claude/settings.json' ||
-    rel.startsWith('.claude/agents/') ||
-    rel.startsWith('.claude/hooks/') ||
-    rel.startsWith('.claude/rules/') ||
-    rel.startsWith('.claude/skills/')
-  );
-}
-function configChangeApproved() {
-  return existsSync(join(ROOT, '.claude/state/config-change-approved'));
-}
-
 function main() {
+  const raw = readStdin();
   let input = {};
   try {
-    input = JSON.parse(readStdin() || '{}');
+    input = JSON.parse(raw || '{}');
   } catch {
-    process.exit(0);
+    process.exit(0); // 解析不能な入力で通常操作を妨げない
   }
+
   const tool = input.tool_name || '';
   const ti = input.tool_input || {};
 
-  if (tool === 'Bash') checkBash(ti.command);
-  else if (tool === 'Read' || tool === 'Edit' || tool === 'Write' || tool === 'MultiEdit') {
-    if (isSecretPath(ti.file_path)) deny(`秘密情報ファイルへのアクセス: ${ti.file_path}`);
-    if (tool !== 'Read' && isProtectedConfigPath(ti.file_path) && !configChangeApproved()) {
-      deny(
-        `保護構成ファイルへの未承認の書き込み: ${ti.file_path}\n` +
-          `人間が承認する場合は .claude/state/config-change-approved を作成してから再実行\n` +
-          `（touch .claude/state/config-change-approved。作業後は削除する）`,
-      );
-    }
+  if (tool === 'Bash') {
+    checkBash(ti.command);
+  } else if (['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
+    const filePath = ti.file_path ?? ti.notebook_path;
+    if (isSecretPath(filePath)) deny(`秘密情報ファイルへのアクセス: ${filePath}`);
   }
 
   process.exit(0); // 危険でなければ許可

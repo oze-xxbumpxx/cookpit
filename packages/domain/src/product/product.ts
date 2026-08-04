@@ -168,6 +168,24 @@ export class Product {
     this.touch();
   }
 
+  /**
+   * 価格記録を 1 件取り除く。誤った価格・内容量で記録したものを消して記録し直すための操作。
+   * 取り消し（undo）は無く、消した記録は復元できない（ADR-0012 と同じ物理削除の方針）。
+   *
+   * @throws Error 指定 ID の価格記録が存在しない場合
+   */
+  removePriceRecord(priceRecordId: PriceRecordId): void {
+    const exists = this.productPriceHistory.some((record) => record.id.equals(priceRecordId));
+    if (!exists) {
+      throw new Error(`Price record not found: ${priceRecordId.value}`);
+    }
+
+    this.productPriceHistory = this.productPriceHistory.filter(
+      (record) => !record.id.equals(priceRecordId),
+    );
+    this.touch();
+  }
+
   latestPriceAt(storeId: StoreId): Money | null {
     return this.latestPriceRecordAt(storeId)?.price ?? null;
   }

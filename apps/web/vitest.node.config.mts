@@ -6,7 +6,7 @@ export default defineConfig({
     ...baseConfig.test,
     name: 'node',
     environment: 'node',
-    include: ['src/**/*.node.test.ts', 'src/server/**/*.test.ts'],
+    include: ['tests/**/*.node.test.ts', 'tests/server/**/*.test.ts'],
   },
   resolve: {
     alias: {

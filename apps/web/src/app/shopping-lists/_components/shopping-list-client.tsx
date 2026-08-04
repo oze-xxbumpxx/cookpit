@@ -1,16 +1,33 @@
 'use client';
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, useApiAction } from '@/lib/use-api-action';
-import type { ShoppingItemDto, ShoppingListDto, StoreDto } from '@cookpit/application';
+import type {
+  ShoppingItemDto,
+  ShoppingListDto,
+  StockAdditionInputDto,
+  StoreDto,
+} from '@cookpit/application';
 import { EmptyState } from '@/app/_components/empty-state';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { startTransition, useEffect, useOptimistic, useState } from 'react';
-import { formatShoppingDate, groupItemsByStore } from '../_utils/shopping-list-view';
+import {
+  describeRemoveConfirmation,
+  formatShoppingDate,
+  groupItemsByStore,
+} from '../_utils/shopping-list-view';
 import { AddItemForm, type AddItemFormInput } from './add-item-form';
+import { CompleteShoppingPanel } from './complete-shopping-panel';
 import { StoreGroup } from './store-group';
 
 interface Props {
@@ -38,22 +55,28 @@ function resolveItemFailureMessage(status: number): string {
   return status === 422 ? COMPLETED_REJECTED_MESSAGE : API_FAILURE_MESSAGE;
 }
 
-interface OptimisticAction {
-  itemId: string;
-  patch: Partial<ShoppingItemDto>;
-}
+/**
+ * 楽観的更新の操作。行の削除は `map` によるパッチでは表現できないため判別可能ユニオンにする。
+ * `type` を判別子にすることで、新しい操作を足したときの分岐漏れが型エラーになる。
+ */
+type OptimisticAction =
+  | { type: 'patch'; itemId: string; patch: Partial<ShoppingItemDto> }
+  | { type: 'remove'; itemId: string };
 
-function applyOptimisticPatch(
+function applyOptimisticAction(
   current: ShoppingItemDto[],
   action: OptimisticAction,
 ): ShoppingItemDto[] {
+  if (action.type === 'remove') {
+    return current.filter((item) => item.id !== action.itemId);
+  }
   return current.map((item) => (item.id === action.itemId ? { ...item, ...action.patch } : item));
 }
 
 /** 詳細画面の状態管理・全体統括（Client。S-4/D-7）。 */
 export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [items, setItems] = useState<ShoppingItemDto[]>(shoppingList.items);
-  const [optimisticItems, setOptimisticItems] = useOptimistic(items, applyOptimisticPatch);
+  const [optimisticItems, setOptimisticItems] = useOptimistic(items, applyOptimisticAction);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [addFormOpen, setAddFormOpen] = useState(false);
   // 品目の楽観的更新（check / markAsBought）は状態更新の順序自体が挙動になるため
@@ -61,7 +84,10 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const [submittingItemId, setSubmittingItemId] = useState<string | null>(null);
   const [status, setStatus] = useState(shoppingList.status);
   const [completeSuccess, setCompleteSuccess] = useState(false);
+  const [completePanelOpen, setCompletePanelOpen] = useState(false);
+  const [addedStockCount, setAddedStockCount] = useState(0);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [pendingRemoveItem, setPendingRemoveItem] = useState<ShoppingItemDto | null>(null);
 
   // 品目の追加・再取得は同じエラーバナーを共有する。完了・再開・同期はそれぞれ独立した
   // バナーを持つため別インスタンスにする。
@@ -69,6 +95,9 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
   const completeAction = useApiAction();
   const reopenAction = useApiAction();
   const syncAction = useApiAction();
+
+  // 在庫化の候補は購入済みの品目のみ。楽観的更新中の値ではなく確定済みの items から取る。
+  const boughtItems = items.filter((item) => item.status === 'bought');
 
   async function handleSync(): Promise<void> {
     setSyncMessage(null);
@@ -125,6 +154,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     itemsAction.setErrorMessage(null);
     startTransition(async () => {
       setOptimisticItems({
+        type: 'patch',
         itemId,
         patch: {
           status: 'bought',
@@ -160,6 +190,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     itemsAction.setErrorMessage(null);
     startTransition(async () => {
       setOptimisticItems({
+        type: 'patch',
         itemId,
         patch: checked
           ? { status: 'bought' }
@@ -180,6 +211,43 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           // チェックを外したら展開中の価格フォームも閉じる（誤操作防止。設計書 §フロントエンド設計）
           setExpandedItemId((current) => (current === itemId ? null : current));
         }
+      } catch {
+        itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
+      } finally {
+        setSubmittingItemId(null);
+      }
+    });
+  }
+
+  /** 削除の確認要求。対象は確定値の items から引く（optimisticItems は transition 中の値）。 */
+  function handleRequestRemove(itemId: string): void {
+    setPendingRemoveItem(items.find((item) => item.id === itemId) ?? null);
+  }
+
+  function handleRemoveItem(itemId: string): void {
+    if (submittingItemId === itemId) {
+      return;
+    }
+    // handleSetChecked と同じ理由で、submittingItemId は startTransition の外で更新する。
+    setSubmittingItemId(itemId);
+    itemsAction.setErrorMessage(null);
+    startTransition(async () => {
+      setOptimisticItems({ type: 'remove', itemId });
+      try {
+        const response = await client.api['shopping-lists'][':id'].items[':itemId'].$delete({
+          param: { id: shoppingList.id, itemId },
+        });
+        // 404 は「その品目がサーバーに無い」＝削除の目的は達成済み。2 人で使っていて相手が
+        // 先に消した場合にエラーを出さないよう、成功として扱う。
+        // Hono RPC の型は 404 / 422 を知らない（共通 onError 由来で型に現れない）ため、
+        // 比較の前に number へ広げる。
+        const status: number = response.status;
+        if (!response.ok && status !== 404) {
+          itemsAction.setErrorMessage(resolveItemFailureMessage(response.status));
+          return;
+        }
+        setItems((current) => current.filter((item) => item.id !== itemId));
+        setExpandedItemId((current) => (current === itemId ? null : current));
       } catch {
         itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
       } finally {
@@ -230,16 +298,32 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
     setExpandedItemId((current) => (current === itemId ? null : itemId));
   }
 
-  async function handleComplete(): Promise<void> {
+  async function handleComplete(stockAdditions: StockAdditionInputDto[]): Promise<void> {
     await completeAction.run(
-      () => client.api['shopping-lists'][':id'].complete.$post({ param: { id: shoppingList.id } }),
+      () =>
+        client.api['shopping-lists'][':id'].complete.$post({
+          param: { id: shoppingList.id },
+          json: { stockAdditions },
+        }),
       {
         onSuccess: (dto) => {
           setStatus(dto.status);
           setCompleteSuccess(true);
+          setAddedStockCount(stockAdditions.length);
+          setCompletePanelOpen(false);
         },
       },
     );
+    // 失敗時はパネルを開いたままにする（入力を失わず再送できる）。
+  }
+
+  /** 在庫化の候補が無ければ選択パネルを挟まず完了する。 */
+  function handleCompleteRequest(): void {
+    if (boughtItems.length === 0) {
+      void handleComplete([]);
+      return;
+    }
+    setCompletePanelOpen(true);
   }
 
   async function handleReopen(): Promise<void> {
@@ -250,6 +334,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
           setStatus(dto.status);
           // 再開したので「完了しました」バナーは消す。以降は追加・チェックが再び可能になる。
           setCompleteSuccess(false);
+          setAddedStockCount(0);
         },
       },
     );
@@ -316,14 +401,24 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 {syncAction.errorMessage}
               </p>
             )}
-            <Button
-              type="button"
-              onClick={() => void handleComplete()}
-              disabled={completeAction.pending}
-              className="h-11 w-full"
-            >
-              買い物完了
-            </Button>
+            {!completePanelOpen && (
+              <Button
+                type="button"
+                onClick={handleCompleteRequest}
+                disabled={completeAction.pending}
+                className="h-11 w-full"
+              >
+                買い物完了
+              </Button>
+            )}
+            {completePanelOpen && (
+              <CompleteShoppingPanel
+                items={boughtItems}
+                submitting={completeAction.pending}
+                onCancel={() => setCompletePanelOpen(false)}
+                onComplete={(stockAdditions) => void handleComplete(stockAdditions)}
+              />
+            )}
           </>
         )}
 
@@ -359,6 +454,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
         {completeSuccess && (
           <div className="rounded-lg border bg-secondary px-3 py-2 text-sm text-foreground">
             <p>買い物を完了しました</p>
+            {addedStockCount > 0 && <p>{addedStockCount}件を在庫に追加しました</p>}
             <Link
               href="/pantry"
               className={cn(
@@ -390,6 +486,7 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
                 onReassignStore={(itemId, targetStoreId) =>
                   void handleReassignStore(itemId, targetStoreId)
                 }
+                onRequestRemove={handleRequestRemove}
                 stores={stores}
               />
             ))}
@@ -414,6 +511,45 @@ export function ShoppingListClient({ shoppingList, stores }: Props) {
             </Button>
           ))}
       </div>
+
+      <AlertDialog
+        open={pendingRemoveItem !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRemoveItem(null);
+          }
+        }}
+      >
+        {pendingRemoveItem !== null && (
+          <AlertDialogContent>
+            <AlertDialogTitle>{pendingRemoveItem.displayName}を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {describeRemoveConfirmation(pendingRemoveItem)}
+            </AlertDialogDescription>
+            <div className="mt-4 flex justify-end gap-2">
+              <AlertDialogClose
+                render={
+                  <Button type="button" variant="outline" className="h-9">
+                    キャンセル
+                  </Button>
+                }
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  const target = pendingRemoveItem;
+                  setPendingRemoveItem(null);
+                  handleRemoveItem(target.id);
+                }}
+                className="h-9"
+              >
+                削除する
+              </Button>
+            </div>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import type { Unit } from '@cookpit/domain';
+import type { StorageLocation } from '../pantry/pantry.dto';
 
 export type ShoppingListStatus = 'active' | 'completed';
 export type ItemStatus = 'pending' | 'bought' | 'skipped';
@@ -66,12 +67,31 @@ export interface ReassignStoreInputDto {
   targetStoreId: string;
 }
 
+export interface RemoveItemInputDto {
+  shoppingListId: string;
+  itemId: string;
+}
+
 export interface GetShoppingListInputDto {
   shoppingListId: string;
 }
 
+/**
+ * 買い物完了時に在庫へ追加する 1 品目の指定。`itemId` はそのリストの bought 品目でなければならない。
+ * `amount` は画面で修正できるため、買い物リスト側の数量とは一致しないことがある。
+ */
+export interface StockAdditionInputDto {
+  itemId: string;
+  amount: { value: number; unit: Unit };
+  storedLocation: StorageLocation | null;
+  /** "2026-07-25" 形式のローカル日付（ISO datetime ではない。S-10 と同じ扱い）。 */
+  expiresAt: string | null;
+}
+
 export interface CompleteShoppingInputDto {
   shoppingListId: string;
+  /** 在庫へ追加しない場合も空配列を明示的に渡す。 */
+  stockAdditions: StockAdditionInputDto[];
 }
 
 export interface ReopenShoppingListInputDto {

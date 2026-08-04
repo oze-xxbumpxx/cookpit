@@ -16,8 +16,8 @@ L2〜L3（外部依存・秘匿情報・本番影響を伴うため設計判断�
 ## 期待される進め方
 
 - 変更レベルを **L3** と判定（外部依存追加・秘匿情報・本番影響 → 要ユーザー確認）。
-- 委譲フロー: requirements-analyst → architecture-designer →（planner ∥ test-designer）→
-  implementer → reviewer（＋ ADR）。
+- 委譲フロー: architecture-designer（requirements + design〔+ 性能節〕）→
+  （planner ∥ test-designer）→ implementer → reviewer（＋ ADR）→ security-reviewer。
 - 依存方向を守る: ストレージは **Infrastructure** に置き、Application は**インターフェース**に
   依存する（Domain は外部 I/O を知らない）。
 - 秘匿情報: 環境変数で注入し、ログ/コミット/エラーメッセージに鍵を残さない（セキュリティルール）。

@@ -1,5 +1,6 @@
 import {
   addItemSchema,
+  completeShoppingSchema,
   generateShoppingListSchema,
   markAsBoughtSchema,
   reassignStoreSchema,
@@ -14,6 +15,7 @@ import {
   GetShoppingListUseCase,
   MarkAsBoughtUseCase,
   ReassignStoreUseCase,
+  RemoveItemUseCase,
   ReopenShoppingListUseCase,
   SetItemCheckedUseCase,
   SyncShoppingListFromMealPlanUseCase,
@@ -96,16 +98,32 @@ export const shoppingListsRoute = new Hono()
       return c.json(dto, 200);
     },
   )
-  .post('/:id/complete', zValidator('param', shoppingListIdParamSchema), async (c) => {
-    const { id } = c.req.valid('param');
-    const usecase = new CompleteShoppingUseCase(
-      shoppingListRepository(),
-      productRepository(),
-      mealPlanRepository(),
-    );
-    const dto = await usecase.execute({ shoppingListId: id });
-    return c.json(dto, 200);
+  .delete('/:id/items/:itemId', zValidator('param', shoppingItemIdParamSchema), async (c) => {
+    const { id, itemId } = c.req.valid('param');
+    const usecase = new RemoveItemUseCase(shoppingListRepository());
+    await usecase.execute({ shoppingListId: id, itemId });
+    return c.body(null, 204);
   })
+  .post(
+    '/:id/complete',
+    zValidator('param', shoppingListIdParamSchema),
+    zValidator('json', completeShoppingSchema),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new CompleteShoppingUseCase(
+        shoppingListRepository(),
+        pantryRepository(),
+        productRepository(),
+        mealPlanRepository(),
+      );
+      const dto = await usecase.execute({
+        shoppingListId: id,
+        stockAdditions: body.stockAdditions,
+      });
+      return c.json(dto, 200);
+    },
+  )
   .post('/:id/reopen', zValidator('param', shoppingListIdParamSchema), async (c) => {
     const { id } = c.req.valid('param');
     const usecase = new ReopenShoppingListUseCase(shoppingListRepository());
