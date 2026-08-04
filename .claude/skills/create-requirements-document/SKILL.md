@@ -2,12 +2,14 @@
 name: create-requirements-document
 description: >
   要件定義書を docs/requirements/<feature-name>.md に作成する手順とテンプレート。
-  requirements-analyst が Level 3（および必要な Level 2）で使う。対象外項目は削除せず「対象外」と明記する。
+  architecture-designer が Level 3（および必要な Level 2）で使う（IMP-2026-031）。
+  対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 要件定義書作成スキル
 
-requirements-analyst が `docs/requirements/<feature-name>.md` を作成するための手順と雛形。
+architecture-designer が `docs/requirements/<feature-name>.md` を作成するための手順と雛形
+（旧 requirements-analyst の責務を吸収。IMP-2026-031）。
 **コードは変更しない。** 既存の要件文書があれば新規作成せず更新する（重複作成しない）。
 
 ## 進め方
@@ -53,10 +55,10 @@ requirements-analyst が `docs/requirements/<feature-name>.md` を作成する�
 
 ## 良い例（実タスクの成果物）
 
-- `docs/requirements/store-master.md` §5 — 正常系 N-xx / 異常系 E-xx / 境界 B-xx の採番つき
+- `cookpit/store-master 要件` §5 — 正常系 N-xx / 異常系 E-xx / 境界 B-xx の採番つき
   観点表で列挙。この採番が下流工程の照合基準になり（create-test-plan 手順8 は「要件書を正」
   として全観点の反映を照合する）、reviewer の「要件・設計・実装計画・実装の整合性」確認を
-  通過した（出典: `docs/reviews/store-master.md`。同レビュー Should-2 は、要件書 N-02 を
+  通過した（出典: `cookpit/store-master レビュー`。同レビュー Should-2 は、要件書 N-02 を
   下流が省略したことを要件書側の採番のおかげで検出できた例でもある）。
 
 ## 禁止事項

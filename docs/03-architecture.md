@@ -71,36 +71,44 @@ cookpit/
 │       │   └── lib/
 │       │       ├── api-client.ts        # Hono RPC クライアント
 │       │       └── use-api-action.ts    # Client の mutation 共通ヘルパ
+│       ├── tests/                       # src/ をミラーする Web テスト
+│       │   └── e2e/                     # Playwright E2E スモーク
+│       ├── public/
 │       └── package.json
 │
 ├── packages/
 │   ├── domain/                          # ドメイン層（@cookpit/domain）
-│   │   └── src/
-│   │       ├── index.ts                 # 公開境界バレル（ADR-0010）
-│   │       ├── recipe/                  # 集約 + Repository IF
-│   │       ├── meal-plan/
-│   │       ├── shopping-list/
-│   │       ├── pantry/
-│   │       ├── product/
-│   │       └── shared/                  # Money / Quantity / Unit / Store 等
+│   │   ├── src/
+│   │   │   ├── index.ts                 # 公開境界バレル（ADR-0010）
+│   │   │   ├── recipe/                  # 集約 + Repository IF
+│   │   │   ├── meal-plan/
+│   │   │   ├── shopping-list/
+│   │   │   ├── pantry/
+│   │   │   ├── product/
+│   │   │   └── shared/                  # Money / Quantity / Unit / Store 等
+│   │   └── tests/                       # src/ をミラーする Domain 単体テスト
 │   │
 │   ├── application/                     # ユースケース層（@cookpit/application）
-│   │   └── src/
-│   │       ├── recipe/                  # *UseCase + DTO + mapper
-│   │       ├── meal-plan/
-│   │       ├── shopping-list/
-│   │       ├── pantry/
-│   │       ├── product/
-│   │       ├── store/
-│   │       └── shared/                  # NotFoundError 等の基底・日付ヘルパ
+│   │   ├── src/
+│   │   │   ├── recipe/                  # *UseCase + DTO + mapper
+│   │   │   ├── meal-plan/
+│   │   │   ├── shopping-list/
+│   │   │   ├── pantry/
+│   │   │   ├── product/
+│   │   │   ├── store/
+│   │   │   └── shared/                  # NotFoundError 等の基底・日付ヘルパ
+│   │   └── tests/                       # src/ をミラーする UseCase 単体テスト
 │   │
 │   ├── infrastructure/                  # 永続化層（@cookpit/infrastructure）
-│   │   └── src/
-│   │       ├── db/                      # schema / client
-│   │       ├── repositories/            # Drizzle*Repository
-│   │       └── index.ts                 # バレル（schema を namespace export）
+│   │   ├── src/
+│   │   │   ├── db/                      # schema / client
+│   │   │   ├── repositories/            # Drizzle*Repository
+│   │   │   └── index.ts                 # バレル（schema を namespace export）
+│   │   └── tests/                       # Repository 統合テストとテスト専用ヘルパー
 │   │
 │   ├── api-contract/                    # API 契約（Zod / @cookpit/api-contract）
+│   │   ├── src/
+│   │   └── tests/                       # API 契約テスト
 │   └── config/                          # eslint / typescript / tailwind
 │
 ├── turbo.json
@@ -108,6 +116,10 @@ cookpit/
 ├── package.json
 └── docs/
 ```
+
+各 workspace では、本番コードを `src/`、テストコードとテスト専用ヘルパーを `tests/` に分離する。
+`tests/` は対応する `src/` のサブディレクトリ構造をミラーし、テスト対象との対応を明確にする。
+本番コードから `tests/` への依存は禁止する。
 
 ## パッケージ間の依存関係
 

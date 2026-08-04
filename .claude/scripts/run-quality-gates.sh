@@ -48,6 +48,8 @@ skip_gate() { SKIP+=("$1 ($2)"); echo "── gate: $1 → SKIP ($2)"; echo; }
 echo "===== run-quality-gates (level=$LEVEL) ====="
 echo
 
+# harness（ハーネス自身の安全境界テスト。Node 標準ランナーのみで追加依存なし）
+if has_script test:harness; then run_gate "harness" pnpm test:harness; else skip_gate "harness" "unavailable"; fi
 # lint
 if has_script lint; then run_gate "lint" pnpm lint; else skip_gate "lint" "unavailable"; fi
 # type-check
@@ -73,23 +75,37 @@ echo "FAIL: ${FAIL[*]:-(none)}"
 echo "SKIP/unknown: ${SKIP[*]:-(none)}"
 echo
 
-# 実行結果を .claude/state/quality-gates-log.jsonl へ機械記録する
-# （collect-task-metrics.mjs が手戻りプロキシ = FAIL サイクル数として集計する。記録失敗でゲート結果は変えない）
+# 実行結果を永続領域の quality-gates-log.jsonl へ機械記録する（保存先は harness-paths.mjs が決定。
+# 既定はリポジトリ外のユーザー状態ディレクトリで、環境破棄でも失われない）。
+# あわせて run 状態のゲート結果を更新する。記録に失敗してもゲート判定は変えない。
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-node -e '
-const { appendFileSync, mkdirSync } = require("node:fs");
+node --input-type=module -e '
+import { appendJsonl, loadRunState, updateRunState } from "./.claude/lib/harness-state.mjs";
+import { stateDir, statePath } from "./.claude/lib/harness-paths.mjs";
 const [branch, level, pass, fail, skip] = process.argv.slice(1);
 const split = (s) => (s ? s.split("\u0001") : []);
+const passed = split(pass);
+const failed = split(fail);
 const entry = {
   ts: new Date().toISOString(),
   branch,
   level: Number(level),
-  pass: split(pass),
-  fail: split(fail),
+  pass: passed,
+  fail: failed,
   skip: split(skip),
 };
-mkdirSync(".claude/state", { recursive: true });
-appendFileSync(".claude/state/quality-gates-log.jsonl", JSON.stringify(entry) + "\n");
+stateDir();
+appendJsonl(statePath("quality-gates-log.jsonl"), entry);
+// run 状態がある場合だけゲート結果を反映する（無くてもゲート実行は妨げない）
+if (loadRunState().ok) {
+  // 関数形式で既存のゲート結果へマージする（上書きすると別実行の結果が消える）
+  updateRunState((state) => {
+    const gateResults = { ...(state?.gateResults ?? {}) };
+    for (const name of passed) gateResults[name] = { result: "pass", at: entry.ts };
+    for (const name of failed) gateResults[name] = { result: "fail", at: entry.ts };
+    return { phase: "gates", gateResults };
+  });
+}
 ' "$BRANCH" "$LEVEL" \
   "$(IFS=$'\001'; echo "${PASS[*]:-}")" \
   "$(IFS=$'\001'; echo "${FAIL[*]:-}")" \

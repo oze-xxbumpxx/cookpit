@@ -17,6 +17,8 @@
 | [agent-responsibilities.md](./agent-responsibilities.md) | 各 Agent の責務・入出力・権限の早見表            |
 | [memory-policy.md](./memory-policy.md)                   | Memory 分類・昇格条件・肥大化対策・誤情報削除    |
 | [improvement-cycle.md](./improvement-cycle.md)           | 改善サイクル・承認境界・回帰評価・実行タイミング |
+| [harness-state.md](./harness-state.md)                   | ハーネス状態・重要構成の PR レビュー手順         |
+| [harness-owner-setup.md](./harness-owner-setup.md)       | Actions 復旧後の所有者向け設定                   |
 | [improvements/](./improvements/)                         | 改善候補・提案・評価・採否の記録                 |
 
 ## 実施指示書との対応（命名マッピング）
@@ -36,27 +38,23 @@
 | rules backend / frontend     | `.claude/rules/domain-layer.md` / `presentation-layer.md`                                                                          |
 | scripts/\*.sh（検証系）      | 一部は `.claude/hooks/*.mjs` で実装（validate-agent-config / check-deliverables）。品質ゲート・メトリクスは `.claude/scripts/*.sh` |
 
-## Agent 構成（15）
+## Agent 構成（11・IMP-2026-031）
 
 正典は各 `.claude/agents/<name>.md` の frontmatter（下表は早見）。
 
-| Agent                     | Model    | 役割                                                   |
-| ------------------------- | -------- | ------------------------------------------------------ |
-| orchestrator              | opus-4-8 | 指揮・委譲・統合                                       |
-| requirements-analyst      | sonnet-5 | 要求整理・既存調査・観点抽出                           |
-| architecture-designer     | sonnet-5 | 技術設計                                               |
-| contract-designer         | sonnet-5 | 契約設計（API/DB/イベント/DTO/Zod）。必要時のみ        |
-| test-designer             | sonnet-5 | 試験観点・試験計画                                     |
-| implementation-planner    | sonnet-5 | 実装計画                                               |
-| implementer               | sonnet-5 | 実装・単体テスト・品質ゲート                           |
-| reviewer                  | opus-4-8 | 独立レビュー                                           |
-| security-reviewer         | opus-4-8 | セキュリティ専門レビュー（L3 原則必須 / L2 は省略可）  |
-| e2e-test-implementer      | sonnet-5 | E2E・結合テスト実装（L3・基盤整備済みのみ）            |
-| performance-designer      | sonnet-5 | パフォーマンス設計（L3・外部I/O/大量データのみ）       |
-| document-reviewer         | opus-4-8 | 文書成果物の専門レビュー（開発フロー外でも単体起動可） |
-| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                                 |
-| agent-evaluator           | sonnet-5 | 固定評価ケースで回帰評価                               |
-| agent-improvement-manager | opus-4-8 | 横断分析・改善提案（重要設定は提案のみ）               |
+| Agent                     | Model    | 役割                                                  |
+| ------------------------- | -------- | ----------------------------------------------------- |
+| orchestrator              | opus-5   | 指揮・委譲・統合                                      |
+| architecture-designer     | sonnet-5 | 技術設計（L3 は requirements + 条件付き性能）         |
+| contract-designer         | sonnet-5 | 契約設計（API/DB/イベント/DTO/Zod）。必要時のみ       |
+| test-designer             | sonnet-5 | 試験観点・試験計画                                    |
+| implementation-planner    | sonnet-5 | 実装計画                                              |
+| implementer               | sonnet-5 | 実装・単体/E2E・品質ゲート                            |
+| reviewer                  | opus-5   | 独立レビュー（文書観点含む）                          |
+| security-reviewer         | opus-5   | セキュリティ専門レビュー（L3 原則必須 / L2 は省略可） |
+| reflection-agent          | sonnet-5 | 振り返り・改善候補抽出                                |
+| agent-evaluator           | sonnet-5 | 固定評価ケースで回帰評価                              |
+| agent-improvement-manager | opus-5   | 横断分析・改善提案（重要設定は提案のみ）              |
 
 ## 運用開始
 

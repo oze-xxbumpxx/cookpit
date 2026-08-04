@@ -5,6 +5,8 @@ CLAUDE.md / Hook）を**半自動型**で段階的に改善するための記録
 
 - 改善サイクルの全体像・承認フロー・実行タイミング: [../improvement-cycle.md](../improvement-cycle.md)
 - 知見の保存先分類・昇格条件・肥大化対策: [../memory-policy.md](../memory-policy.md)
+- 現行の承認方式: [../harness-state.md](../harness-state.md)（2026-07-29 以降は PR レビュー。
+  過去の proposal に残る承認マーカー手順は履歴であり、実行しない）
 
 ## 重要な前提（過剰適応を避ける）
 
@@ -57,5 +59,5 @@ candidate → proposal → (evaluation) → accepted / rejected
 
 - 候補・提案を起票したら必ず `improvement-backlog.md` に 1 行追加・更新する。
 - 「人間の承認が必要」な対象（improvement-cycle.md §承認境界）は、proposal に差分を書くだけで
-  本適用しない。承認後に `accepted/` へ移動する。
+  本適用しない。明示承認後に専用ブランチで適用し、PR レビューを経て `accepted/` へ移動する。
 - 採用・却下のいずれでも、理由とロールバック方法を残す（再発時の判断材料）。

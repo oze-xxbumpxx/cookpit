@@ -4,7 +4,7 @@ const baseConfig = {
   test: {
     environment: 'node',
     globals: false,
-    include: ['src/**/*.test.ts'],
+    include: ['tests/**/*.test.ts'],
   },
 };
 

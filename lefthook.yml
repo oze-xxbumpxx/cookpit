@@ -29,5 +29,10 @@ commit-msg:
 
 pre-push:
   commands:
+    # ハーネスの安全境界テスト（数秒）。ローカルでの早期フィードバック用で、
+    # 最終的な必須ゲートは CI（.github/workflows/ci.yml の Harness tests）が担う。
+    # LEFTHOOK=0 / --no-verify で外しても CI 側は迂回できない。
+    harness:
+      run: pnpm test:harness
     type-check:
       run: pnpm type-check

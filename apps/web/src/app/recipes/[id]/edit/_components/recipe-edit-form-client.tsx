@@ -6,6 +6,9 @@ import type { RecipeDto } from '@cookpit/application';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
+import { LeaveConfirmationDialog } from '@/app/_components/leave-confirmation-dialog';
+import { isRecipeFormDirty, type RecipeFormSnapshot } from '@/app/recipes/_utils/recipe-form-dirty';
+import { useLeaveConfirmation } from '@/lib/use-leave-confirmation';
 import {
   RecipeFormFields,
   buildRecipeFormBody,
@@ -25,6 +28,13 @@ export function RecipeEditFormClient({ recipe }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RecipeFieldErrors>(emptyRecipeFieldErrors);
+
+  // baseServings は編集不可なので、初期値・現在値の両方に同じ文字列を渡して判定から外す。
+  const baseServings = String(recipe.baseServings);
+  const [initialSnapshot] = useState<RecipeFormSnapshot>(() => ({ value, baseServings }));
+  const dirty = isRecipeFormDirty(initialSnapshot, { value, baseServings });
+  const detailHref = `/recipes/${recipe.id}`;
+  const leave = useLeaveConfirmation({ dirty, fallbackHref: detailHref });
 
   const canSubmit = value.name.trim() !== '' && !submitting;
 
@@ -51,7 +61,7 @@ export function RecipeEditFormClient({ recipe }: Props) {
         json: result.input,
       });
       if (response.ok) {
-        router.push(`/recipes/${recipe.id}`);
+        leave.leaveAfterSave(detailHref);
         router.refresh();
         return;
       }
@@ -75,7 +85,7 @@ export function RecipeEditFormClient({ recipe }: Props) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/recipes/${recipe.id}`)}
+              onClick={() => leave.requestLeave(detailHref)}
               className="h-9 px-2"
             >
               キャンセル
@@ -110,6 +120,12 @@ export function RecipeEditFormClient({ recipe }: Props) {
           }
         />
       </form>
+
+      <LeaveConfirmationDialog
+        open={leave.confirmOpen}
+        onOpenChange={leave.onConfirmOpenChange}
+        onConfirm={leave.confirmLeave}
+      />
     </main>
   );
 }

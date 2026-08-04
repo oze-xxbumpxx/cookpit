@@ -1,5 +1,6 @@
 export * from './generate-shopping-list.use-case';
 export * from './add-item.use-case';
+export * from './remove-item.use-case';
 export * from './mark-as-bought.use-case';
 export * from './set-item-checked.use-case';
 export * from './reassign-store.use-case';

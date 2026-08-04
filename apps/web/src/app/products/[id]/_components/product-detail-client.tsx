@@ -5,9 +5,9 @@ import { PriceRecordForm } from '@/app/products/[id]/_components/price-record-fo
 import {
   findLatestPriceRecord,
   formatDateTime,
+  formatUnitPrice,
   formatYen,
   sortPriceHistoryByObservedAt,
-  unitPriceBasisLabel,
 } from '@/app/products/_utils/product-format';
 import {
   AlertDialog,
@@ -21,8 +21,8 @@ import { productCategoryChipClass } from '@/app/_utils/category-color';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { CheapestStoreResultDto, ProductDto } from '@cookpit/application';
-import { ChevronLeft, Pencil } from 'lucide-react';
+import type { CheapestStoreResultDto, PriceRecordDto, ProductDto } from '@cookpit/application';
+import { ChevronLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -37,6 +37,37 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
   const recentPriceHistory = sortPriceHistoryByObservedAt(product.priceHistory).slice(-5).reverse();
   const [deleting, setDeleting] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [pendingDeleteRecord, setPendingDeleteRecord] = useState<PriceRecordDto | null>(null);
+  const [deletingRecord, setDeletingRecord] = useState(false);
+  const [recordDeleteErrorMessage, setRecordDeleteErrorMessage] = useState<string | null>(null);
+
+  async function handleDeletePriceRecord(): Promise<void> {
+    if (pendingDeleteRecord === null) {
+      return;
+    }
+
+    setDeletingRecord(true);
+    setRecordDeleteErrorMessage(null);
+    try {
+      const response = await client.api.products[':id']['price-records'][':priceRecordId'].$delete({
+        param: { id: product.id, priceRecordId: pendingDeleteRecord.id },
+      });
+      // 404 は「既に消えている」＝目的達成なので成功として扱う（削除操作を冪等にする）。
+      // Hono RPC の型は 404 を知らない（共通 onError 由来で型に現れない）ため number へ広げる。
+      const status: number = response.status;
+      if (!response.ok && status !== 404) {
+        setRecordDeleteErrorMessage('記録の削除に失敗しました。');
+        return;
+      }
+
+      setPendingDeleteRecord(null);
+      router.refresh();
+    } catch {
+      setRecordDeleteErrorMessage('通信エラーが発生しました。');
+    } finally {
+      setDeletingRecord(false);
+    }
+  }
 
   async function handleDelete(): Promise<void> {
     setDeleting(true);
@@ -120,8 +151,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                   {cheapestStore.storeName === '' ? '店舗未設定' : cheapestStore.storeName}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatYen(cheapestStore.unitPrice)} /{' '}
-                  {unitPriceBasisLabel(cheapestStore.packageSizeUnit)}
+                  {formatUnitPrice(cheapestStore.unitPrice, cheapestStore.packageSizeUnit)}
                 </p>
               </>
             )}
@@ -155,11 +185,16 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
         {recentPriceHistory.length > 0 && (
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-medium text-foreground">最近の記録</h2>
+            {recordDeleteErrorMessage !== null && (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {recordDeleteErrorMessage}
+              </p>
+            )}
             <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
               {recentPriceHistory.map((record) => (
                 <div
-                  key={`${record.storeId}-${record.observedAt}`}
-                  className="grid grid-cols-[1fr_auto] gap-3 px-3 py-2.5 text-sm"
+                  key={record.id}
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-2.5 text-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">
@@ -170,12 +205,28 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-foreground">{formatYen(record.priceAmount)}</p>
+                    <p className="font-medium text-foreground">
+                      {formatYen(record.priceAmount)}
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        {record.packageSizeValue}
+                        {record.packageSizeUnit}
+                      </span>
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatYen(record.unitPriceAmount)} /{' '}
-                      {unitPriceBasisLabel(record.packageSizeUnit)}
+                      {formatUnitPrice(record.unitPriceAmount, record.packageSizeUnit)}
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPendingDeleteRecord(record)}
+                    disabled={deletingRecord}
+                    aria-label={`${formatDateTime(record.observedAt)}の記録を削除`}
+                    className="text-muted-foreground"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -223,6 +274,48 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
           </AlertDialog>
         </div>
       </div>
+
+      <AlertDialog
+        open={pendingDeleteRecord !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteRecord(null);
+          }
+        }}
+      >
+        {pendingDeleteRecord !== null && (
+          <AlertDialogContent>
+            <AlertDialogTitle>この価格記録を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteRecord.storeName === '' ? '店舗未設定' : pendingDeleteRecord.storeName}{' '}
+              / {formatYen(pendingDeleteRecord.priceAmount)} /{' '}
+              {pendingDeleteRecord.packageSizeValue}
+              {pendingDeleteRecord.packageSizeUnit} /{' '}
+              {formatDateTime(pendingDeleteRecord.observedAt)}
+              <br />
+              削除すると元に戻せません。正しい内容で記録し直してください。
+            </AlertDialogDescription>
+            <div className="mt-4 flex justify-end gap-2">
+              <AlertDialogClose
+                render={
+                  <Button type="button" variant="outline" className="h-9">
+                    キャンセル
+                  </Button>
+                }
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeletePriceRecord}
+                disabled={deletingRecord}
+                className="h-9"
+              >
+                {deletingRecord ? '削除中' : '削除する'}
+              </Button>
+            </div>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </main>
   );
 }

@@ -175,6 +175,13 @@ export class Pantry {
     this.pantryStocks = this.pantryStocks.filter((candidate) => !candidate.id.equals(stockId));
   }
 
+  /** 買い物完了の再実行時、同一 ShoppingItem 由来の Stock 追加をスキップする判定に使う（S-3）。 */
+  hasStockFromShoppingItem(itemId: ShoppingItemId): boolean {
+    return this.pantryStocks.some(
+      (stock) => stock.sourceShoppingItemId !== null && stock.sourceShoppingItemId.equals(itemId),
+    );
+  }
+
   get id(): PantryId {
     return this.pantryId;
   }

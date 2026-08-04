@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // 作業ログ（logs/YYYY-MM-DD.md）の「所要時間」欄を自動推定する。
 //
+// 層: harness-core（Plugin 分割時）。write-work-log（core）の雛形にある「所要時間」節を
+// 埋めるため core に置く。メトリクスの*集計*側は improvement 層。
+//
 // 使い方:
 //   node .claude/scripts/estimate-session-time.mjs [YYYY-MM-DD]
-//   （日付省略時は COOKPIT_TZ（既定 Asia/Tokyo）での今日）
+//   （日付省略時は HARNESS_TZ（旧 COOKPIT_TZ・既定 Asia/Tokyo）での今日）
 //
 // 入力ソース（あるものだけ使う。どれも無ければ「記録なし」を出力して正常終了）:
 //   1. .claude/state/activity-log.jsonl — record-activity.mjs Hook の活動タイムスタンプ
@@ -18,10 +21,14 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { resolveReadablePath } from '../lib/harness-paths.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const TZ = process.env.COOKPIT_TZ || 'Asia/Tokyo';
-const GAP_CAP_MIN = Number(process.env.COOKPIT_GAP_CAP_MIN || 30);
+// COOKPIT_* は旧名（後方互換）。新規は HARNESS_* を使う。
+const TZ = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
+const GAP_CAP_MIN = Number(
+  process.env.HARNESS_GAP_CAP_MIN || process.env.COOKPIT_GAP_CAP_MIN || 30,
+);
 
 function dayInTz(date) {
   // en-CA ロケールは YYYY-MM-DD 形式を返す
@@ -46,9 +53,9 @@ const timestamps = [];
 let activityCount = 0;
 let commitCount = 0;
 
-// 1. 活動ログ（Hook）
-const activityLog = join(ROOT, '.claude/state/activity-log.jsonl');
-if (existsSync(activityLog)) {
+// 1. 活動ログ（Hook）。永続領域を優先し、旧 .claude/state/ もフォールバックで読む
+const activityLog = resolveReadablePath('activity-log.jsonl') ?? '';
+if (activityLog !== '' && existsSync(activityLog)) {
   for (const line of readFileSync(activityLog, 'utf8').split('\n')) {
     if (!line.trim()) continue;
     try {

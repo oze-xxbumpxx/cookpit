@@ -14,15 +14,14 @@ CLAUDE.md には常時必要な原則だけを置き、工程の詳細はこの�
   ▼
 Orchestrator … 変更レベル判定（L1/L2/L3）・タスク分解・委譲計画
   │
-  ├─(L3・必要なL2)→ requirements-analyst … 要求整理・既存調査・観点抽出
-  ├─(L2/L3)→ architecture-designer … 技術設計 → docs/designs/<feature>.md
+  ├─(L2/L3)→ architecture-designer …（L3 は requirements も）技術設計 → docs/designs/<feature>.md
   ├─(契約変更時)→ contract-designer … 契約設計（orchestration-policy.md §必須起動トリガー）
   ├─(L2/L3)→ implementation-planner … 実装計画 → docs/implementation-plans/<feature>.md
   ├─(L2/L3)→ test-designer … 試験観点 → docs/tests/<feature>.md
-  ├────────→ implementer … 実装 + 単体テスト + lint/型チェック/テスト
+  ├────────→ implementer … 実装 + 単体テスト +〔L3・基盤ありなら E2E〕+ lint/型チェック/テスト
   │           （実装ルートが Codex 委譲の場合はこの工程のみ Codex + review-codex-implementation
   │             で代替する。正典は orchestration-policy.md §実装ルートの分岐）
-  ├─(L2/L3)→ reviewer … 整合性・品質のレビュー
+  ├─(L2/L3)→ reviewer … 整合性・品質・文書観点のレビュー
   ├─(L2/L3)→ security-reviewer … セキュリティ専門レビュー（L2 は省略条件あり・正典は orchestration-policy）
   └─(L2/L3)→ reflection-agent … 振り返り → improvements/candidates/<task-id>.md
   │

@@ -20,6 +20,9 @@ jobs:
   quality:
     name: Quality Gates
     runs-on: ubuntu-latest
+    # 通常 5〜12 分程度（install + lint + type-check + build + test + audit）。
+    # ハングや暴走を打ち切るための上限で、通常実行を切らない余裕を持たせている。
+    timeout-minutes: 30
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
     env:
@@ -71,6 +74,13 @@ jobs:
 
           echo "docs_only=${docs_only}" >> "${GITHUB_OUTPUT}"
           echo "deps_changed=${deps_changed}" >> "${GITHUB_OUTPUT}"
+
+      # ハーネスの安全境界（承認検証・状態永続化・保護対象判定・E2E 判定）の回帰テスト。
+      # ローカル Hook を回避（--no-verify / LEFTHOOK=0）してもここは必ず実行されるため、
+      # 保護機構を骨抜きにする変更はサーバ側で検出される。docs のみの変更でも実行する
+      # （数秒で終わる・Node 標準ランナーのみで追加依存なし）。
+      - name: Harness tests
+        run: pnpm test:harness
 
       # format:check は Markdown も対象のため、ドキュメントだけの変更でも必ず実行する
       - name: Format check
@@ -158,28 +168,77 @@ jobs:
 
   e2e:
     name: E2E Smoke
-    # PR 時のみ実行。smoke は自己完結型 CRUD だが実 DB（DATABASE_URL）に書き込むため、
-    # secret 未設定なら明示的にスキップする。専用の Neon ブランチ DB の利用を推奨。
-    # ドキュメントのみの変更では画面もサーバーも変わらないため、ジョブごとスキップする。
+    # PR 時のみ実行。ドキュメントのみの変更では画面もサーバーも変わらないためジョブごとスキップする。
+    #
+    # 「未実行」を「成功」として扱わない（旧実装は DATABASE_URL secret が無いと全 step を
+    # スキップしたうえでジョブが success になっていた）。
+    # - secret があれば従来どおり実 DB（Neon）で実行する。
+    # - secret が無ければ PGlite（apps/web/scripts/setup-pglite-dev.mjs）で**実際に実行する**。
+    # - どちらの経路でも最後に assert-e2e-results.mjs が「1 件以上実行され全件成功」を検証する。
+    #   テスト 0 件・全件 skip・レポート欠落（＝ランナー未起動）はすべて失敗になる。
     needs: quality
     if: github.event_name == 'pull_request' && needs.quality.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
+    # 通常 5〜15 分程度（install + browser install + dev サーバー起動 + smoke 1 本）。
+    timeout-minutes: 30
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Playwright の JSON レポート出力先（apps/web からの相対）
+      PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-report.json
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Skip (DATABASE_URL secret not configured)
-        if: env.DATABASE_URL == ''
-        run: echo "DATABASE_URL が未設定のため E2E smoke をスキップします"
-      - name: Apply DB migrations
+
+      - name: DB 経路を決定
+        id: db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DATABASE_URL:-}" ]; then
+            echo "secret あり: 実 DB（Neon）で E2E を実行します"
+            echo "mode=neon" >> "${GITHUB_OUTPUT}"
+          else
+            echo "secret なし: PGlite で E2E を実行します（スキップしません）"
+            echo "mode=pglite" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Apply DB migrations (Neon)
         # スキーマドリフト対策（例: 0004_add_recipe_servings 未適用で /recipes が 500）。
         # drizzle-kit migrate は適用済み分をスキップするため冪等
-        if: env.DATABASE_URL != ''
+        if: steps.db.outputs.mode == 'neon'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm --filter @cookpit/web db:migrate
+
+      - name: Seed PGlite database
+        # 実マイグレーション適用 + 最小シード。冪等（ON CONFLICT DO NOTHING）
+        if: steps.db.outputs.mode == 'pglite'
+        run: pnpm --filter @cookpit/web db:seed:pglite
+
       - name: Install Playwright Chromium
-        if: env.DATABASE_URL != ''
         run: pnpm --filter @cookpit/web exec playwright install --with-deps chromium
+
       - name: Run E2E smoke
-        if: env.DATABASE_URL != ''
-        run: pnpm --filter @cookpit/web e2e
+        env:
+          DATABASE_URL: ${{ steps.db.outputs.mode == 'neon' && secrets.DATABASE_URL || 'pglite://.pglite-dev' }}
+        run: pnpm --filter @cookpit/web exec playwright test --reporter=list,json
+
+      - name: E2E が実際に実行されたことを検証
+        # 前の step が落ちても必ず実行し、「未実行のまま緑」を構造的に不可能にする
+        if: always()
+        run: node .claude/scripts/assert-e2e-results.mjs apps/web/e2e-report.json --min-tests 1
+
+      - name: E2E 実行経路のサマリ
+        if: always()
+        env:
+          DB_MODE: ${{ steps.db.outputs.mode }}
+        run: |
+          {
+            echo "### E2E 実行経路"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| DB 経路 | ${DB_MODE:-unknown} |"
+            echo ""
+            echo "未実行・テスト0件・全件 skip はいずれも失敗として扱われます。"
+          } >> "${GITHUB_STEP_SUMMARY}"

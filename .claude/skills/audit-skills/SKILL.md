@@ -38,7 +38,7 @@ description: >
 
 横断チェック（毎回実施）: 同じルール・フロー・状態が複数文書に書かれていないか grep で確認し、
 食い違いがあれば正典を 1 つ決めて他を合わせる（実例: 委譲フローが 5 文書で不一致だった —
-`candidates/skills-inventory-audit.md` 事象 2）。
+`cookpit/skills-inventory-audit` 事象 2）。
 
 ## 攻め: 実績からの還流
 
@@ -49,7 +49,7 @@ description: >
    （発動条件・手順・完了条件のドラフトつき）。
 3. **ログの知識は現行コード・直近コミットで裏取りしてから還流する**（賞味期限切れの
    知識をそのまま定着させない。実例: 「--webpack 必須」は解消済みだった —
-   `candidates/skills-inventory-audit.md` 事象 4）。
+   `cookpit/skills-inventory-audit` 事象 4）。
 
 ## 変更の扱い（承認境界）
 
@@ -57,8 +57,9 @@ description: >
   できる例の追記。
 - **提案止まり**: 目的・判断基準・スコープを変えるもの、出典のない改善案、単発事象の
   ルール化（memory-policy の昇格条件に従う）、ファイルの削除・移設。各提案に選択肢と推奨を添える。
-- スキル・Agent・Rule・CLAUDE.md を含むコミットは**人間承認必須**（improvement-cycle
-  §承認境界）。承認済みバッチ中は `.claude/state/config-change-approved` を置き、終了後に削除。
+- スキル・Agent・Rule・CLAUDE.md を含む変更は作業ブランチへコミットしてよい。承認境界は
+  **PR レビュー**（improvement-cycle §承認境界）。`main` へ直接反映しない
+  （正典: docs/claude-code/harness-state.md）。
 
 ## 完了条件
 
@@ -71,4 +72,4 @@ description: >
 
 - 2026-07-02 の棚卸し（commit 8743e97 / b7ebf71 / c8ec43e）— ADR 採番の事実誤り
   （採番衝突）を発見・修正し、テスト基盤状態の鮮度切れ 8 箇所を一括解消。振り返りは
-  `docs/claude-code/improvements/candidates/skills-inventory-audit.md`。
+  `cookpit/skills-inventory-audit`。

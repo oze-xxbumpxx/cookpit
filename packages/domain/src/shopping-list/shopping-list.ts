@@ -119,6 +119,32 @@ export class ShoppingItem {
   }
 
   /**
+   * 指定した店舗への参照を外し、targetStore / actualStore を null へ戻す（ADR-0013）。
+   * 店舗が削除されたときの後始末専用で、ユーザーによる店舗変更ではない。
+   *
+   * actualPrice には触れない。status も変えない（`check()` が actualStore を伴わずに
+   * bought へ遷移させるため、bought かつ actualStore が null は既に正当な状態）。
+   * ただし未完了リストの bought 品目から actualStore が消えると、買い物完了時に
+   * その品目の価格記録はスキップされる（記録先の店舗が存在しないため意図した挙動）。
+   *
+   * @returns 実際に参照を外したかどうか。false なら保存の必要がない
+   */
+  unassignStore(storeId: StoreId): boolean {
+    let changed = false;
+
+    if (this.itemTargetStore !== null && this.itemTargetStore.equals(storeId)) {
+      this.itemTargetStore = null;
+      changed = true;
+    }
+    if (this.itemActualStore !== null && this.itemActualStore.equals(storeId)) {
+      this.itemActualStore = null;
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  /**
    * 価格・店舗を記録せずに購入済み（チェック済み）にする軽量操作。現状態を問わず 'bought' へ
    * 遷移する（markAsBought と同様、S-11 の「最新状態で上書き」思想を踏襲）。actualPrice /
    * actualStore には触れない。
@@ -203,7 +229,7 @@ export interface CreateShoppingListInput {
 }
 
 /**
- * 買い物リスト集約。すべての更新操作（addItem / markAsBought / reassignStore /
+ * 買い物リスト集約。すべての更新操作（addItem / removeItem / markAsBought / reassignStore /
  * markAsSkipped / complete）は active 状態でのみ可能で、completed では Error を投げる。
  * 例外として reopen() のみ completed 状態で呼べ、active に戻す（買い物の再開）。
  */
@@ -272,6 +298,40 @@ export class ShoppingList {
   uncheck(itemId: ShoppingItemId): void {
     this.assertActive('uncheck');
     this.findItem(itemId).uncheck();
+  }
+
+  /**
+   * 品目をリストから取り除く（物理削除。ADR-0011）。誤って追加した品目を消すための操作で、
+   * status / source を問わず削除できる。bought の品目を削除すると、その購入実績
+   * （actualPrice / actualStore）も一緒に失われる。
+   *
+   * @throws Error active でない、または itemId の品目が存在しない場合
+   */
+  removeItem(itemId: ShoppingItemId): void {
+    this.assertActive('removeItem');
+    // 存在しない ID の削除を黙って成功させない（呼び出し側の取り違えを検出する）。
+    this.findItem(itemId);
+    this.listItems = this.listItems.filter((candidate) => !candidate.id.equals(itemId));
+  }
+
+  /**
+   * 削除された店舗への参照を全品目から外す（ADR-0013 の店舗削除カスケード）。
+   *
+   * **`assertActive` を通さない。**他のすべての更新操作と異なり、これはユーザー操作ではなく
+   * 「店舗が消えた」という集約の外側の事情による後始末である。過去の買い物（completed）も
+   * 店舗を参照しているため、completed を除外すると宙ぶらりんの ID が残ってしまう。
+   * `reopen()` に次ぐ 2 例目の状態チェック非経由メソッド。
+   *
+   * @returns 1 品目でも参照を外したかどうか。false なら保存の必要がない
+   */
+  unassignStore(storeId: StoreId): boolean {
+    let changed = false;
+    for (const item of this.listItems) {
+      if (item.unassignStore(storeId)) {
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   complete(): void {
