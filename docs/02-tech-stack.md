@@ -2,20 +2,20 @@
 
 ## サマリ
 
-| レイヤー           | 技術                                             | バージョン目安       |
-| ------------------ | ------------------------------------------------ | -------------------- |
-| フロントエンド     | Next.js (App Router) + React                     | Next.js 16, React 19 |
-| バックエンド API   | Hono（Next.js 内マウント）                       | Hono 最新            |
-| API 通信（型安全） | Hono RPC + TanStack Query                        | TanStack Query v5    |
-| ORM                | Drizzle ORM                                      | 最新                 |
-| データベース       | Neon (Serverless PostgreSQL)                     | -                    |
-| 認証               | （MVP1 では未使用、Phase 2 で Better Auth 検討） | -                    |
-| スタイリング       | Tailwind CSS + shadcn/ui                         | Tailwind v4          |
-| クライアント状態   | Zustand                                          | 最新                 |
-| バリデーション     | Zod                                              | 最新                 |
-| PWA                | Serwist                                          | 最新                 |
-| モノレポ           | Turborepo + pnpm workspaces                      | 最新                 |
-| デプロイ           | Vercel + Neon                                    | -                    |
+| レイヤー           | 技術                                                 | バージョン目安       |
+| ------------------ | ---------------------------------------------------- | -------------------- |
+| フロントエンド     | Next.js (App Router) + React                         | Next.js 16, React 19 |
+| バックエンド API   | Hono（Next.js 内マウント）                           | Hono 最新            |
+| API 通信（型安全） | Hono RPC + `useApiAction` / React state              | Hono 最新            |
+| ORM                | Drizzle ORM                                          | 最新                 |
+| データベース       | Neon (Serverless PostgreSQL)                         | -                    |
+| 認証               | （MVP1 では未使用、Phase 2 で Better Auth 検討）     | -                    |
+| スタイリング       | Tailwind CSS + shadcn/ui                             | Tailwind v4          |
+| クライアント状態   | React `useState` / `useOptimistic`（Zustand 未使用） | React 19             |
+| バリデーション     | Zod                                                  | 最新                 |
+| PWA                | Serwist                                              | 最新                 |
+| モノレポ           | Turborepo + pnpm workspaces                          | 最新                 |
+| デプロイ           | Vercel + Neon                                        | -                    |
 
 ## 各技術の選定理由
 
@@ -37,7 +37,7 @@ Next.js の API Routes として Hono を埋め込む構成（`app/api/[[...rout
 
 完全分離（Cloudflare Workers + Vercel）ではなく中庸案を選んだ理由は [ADR-002](./decisions/ADR-0002-nextjs-hono-mounted.md) に記載。
 
-### Hono RPC + TanStack Query
+### Hono RPC + `useApiAction` / React state
 
 Hono の型をフロントから直接インポートして、エンドポイントの URL・パラメータ・レスポンスを完全に型安全に呼び出せる。GraphQL の Apollo codegen 相当の体験を、より軽量に得られる。
 
@@ -47,11 +47,17 @@ import { hc } from 'hono/client';
 import type { AppType } from '@/server/app';
 
 const client = hc<AppType>('/api');
-const res = await client.recipes.$get(); // 型補完される
+const res = await client.api.recipes.$get(); // 型補完される
 const recipes = await res.json(); // 型推論される
 ```
 
-TanStack Query でサーバー状態を管理（キャッシュ、再フェッチ、楽観的更新）。
+MVP1 のサーバー状態は次の組み合わせで管理する（TanStack Query / Zustand は未導入）。
+
+- 初期表示: Server Component が UseCase を直接呼び、Client へ `initial*` を渡す
+- 操作・再取得: Hono RPC + `apps/web/src/lib/use-api-action.ts`
+- 行単位の楽観的更新: `useOptimistic` + `startTransition`（必要な画面のみ）
+
+キャッシュ戦略やバックグラウンド再検証が複雑になった段階で、TanStack Query 等の再検討余地はある。
 
 ### Drizzle ORM
 
@@ -77,9 +83,10 @@ Phase 2 以降で Better Auth の導入を検討する。
 
 shadcn/ui は「コピーして所有する」コンポーネントライブラリ。デザインシステムの素振りにもなる。Tailwind は業務でも触る機会が増えており、習熟価値が高い。
 
-### Zustand
+### クライアント状態（MVP1）
 
-クライアント状態管理の軽量解。ボイラープレートが最小で、サーバー状態（TanStack Query）との役割分担が明確。
+グローバルストア（Zustand 等）は導入していない。画面ローカルの `useState` /
+`useOptimistic` で足りている。横断的なクライアント状態が増えたら再検討する。
 
 ### Zod
 
