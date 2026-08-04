@@ -17,7 +17,7 @@
     "@cookpit/config": "workspace:*",
     "@cookpit/domain": "workspace:*",
     "eslint": "^9.0.0",
-    "typescript": "^5.8.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^3.2.0"
   }
