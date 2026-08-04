@@ -1,6 +1,6 @@
 # Sprint 1 Recipe 編集 UI 実装計画
 
-- 前提となる指示書: `docs/tasks/sprint1-recipe-ui-edit.md`
+- 前提となる指示書: `docs/tasks/archive/sprint1-recipe-ui-edit.md`
 - レベル: L2
 - 対象スプリント: Sprint 1 Recipe CRUD
 

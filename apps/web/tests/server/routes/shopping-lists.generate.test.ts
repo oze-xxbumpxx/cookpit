@@ -32,9 +32,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
   it('POST /api/shopping-lists は新規生成時に 201 で ShoppingListDto を返す', async () => {
     const body = { mealPlanId: MEAL_PLAN_ID };
     const execute = vi.fn().mockResolvedValue({ shoppingList: shoppingListDto, created: true });
-    vi.mocked(GenerateShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GenerateShoppingListUseCase,
-    );
+    vi.mocked(GenerateShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GenerateShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists', {
       method: 'POST',
@@ -50,9 +50,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
   it('POST /api/shopping-lists は既存リスト返却時に 200 で ShoppingListDto を返す', async () => {
     const body = { mealPlanId: MEAL_PLAN_ID };
     const execute = vi.fn().mockResolvedValue({ shoppingList: shoppingListDto, created: false });
-    vi.mocked(GenerateShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GenerateShoppingListUseCase,
-    );
+    vi.mocked(GenerateShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GenerateShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists', {
       method: 'POST',
@@ -67,9 +67,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
 
   it('POST /api/shopping-lists は不正な mealPlanId で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(GenerateShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GenerateShoppingListUseCase,
-    );
+    vi.mocked(GenerateShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GenerateShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists', {
       method: 'POST',
@@ -83,9 +83,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
 
   it('POST /api/shopping-lists は MealPlanNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new MealPlanNotFoundError(MEAL_PLAN_ID));
-    vi.mocked(GenerateShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GenerateShoppingListUseCase,
-    );
+    vi.mocked(GenerateShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GenerateShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists', {
       method: 'POST',
@@ -101,9 +101,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidMealPlanStateError('shopping', 'generate a ShoppingList from'));
-    vi.mocked(GenerateShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GenerateShoppingListUseCase,
-    );
+    vi.mocked(GenerateShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GenerateShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists', {
       method: 'POST',
@@ -119,9 +119,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
 
   it('GET /api/shopping-lists/:id は 200 で ShoppingListDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingListDto);
-    vi.mocked(GetShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetShoppingListUseCase,
-    );
+    vi.mocked(GetShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetShoppingListUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}`);
 
@@ -132,9 +132,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
 
   it('GET /api/shopping-lists/:id は不正な id で 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(GetShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetShoppingListUseCase,
-    );
+    vi.mocked(GetShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetShoppingListUseCase;
+    });
 
     const res = await app.request('/api/shopping-lists/not-a-uuid');
 
@@ -144,9 +144,9 @@ describe('shoppingListsRoute（生成・取得）', () => {
 
   it('GET /api/shopping-lists/:id は ShoppingListNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new ShoppingListNotFoundError(SHOPPING_LIST_ID));
-    vi.mocked(GetShoppingListUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetShoppingListUseCase,
-    );
+    vi.mocked(GetShoppingListUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetShoppingListUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}`);
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { ProductId } from '../../src/product/product-id';
 import { Quantity } from '../../src/shared/quantity';
+import { StoreId } from '../../src/shared/store';
 import { RecipeIngredient } from '../../src/recipe/recipe-ingredient';
 
 describe('RecipeIngredient.create', () => {
@@ -83,12 +85,25 @@ describe('RecipeIngredient.create', () => {
 
   it('productRef が非 null のとき値を保持する (I-GAP-3)', () => {
     const ingredient = RecipeIngredient.create({
-      productRef: { value: 'prod-1' },
+      productRef: ProductId.fromString('prod-1'),
       displayName: '玉ねぎ',
       amount: Quantity.of(100, 'g'),
       amountNote: null,
     });
     expect(ingredient.productRef?.value).toBe('prod-1');
+  });
+
+  // 型の回帰テスト。@ts-expect-error は「エラーが出ないこと」を型チェックの失敗として
+  // 検出するため、productRef が構造的型へ戻ると pnpm type-check が落ちる。
+  it('別集約の ID は productRef に渡せない (I-GAP-4)', () => {
+    const ingredient = RecipeIngredient.create({
+      // @ts-expect-error StoreId は ProductId ではない（集約をまたぐ ID の混同を型で防ぐ）
+      productRef: StoreId.generate(),
+      displayName: '玉ねぎ',
+      amount: Quantity.of(100, 'g'),
+      amountNote: null,
+    });
+    expect(ingredient.displayName).toBe('玉ねぎ');
   });
 });
 
@@ -118,7 +133,7 @@ describe('RecipeIngredient.scale', () => {
 
   it('scale 後も productRef が引き継がれる (I-GAP-1)', () => {
     const ingredient = RecipeIngredient.create({
-      productRef: { value: 'prod-1' },
+      productRef: ProductId.fromString('prod-1'),
       displayName: '玉ねぎ',
       amount: Quantity.of(100, 'g'),
       amountNote: null,

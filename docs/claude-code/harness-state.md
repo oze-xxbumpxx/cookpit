@@ -97,25 +97,26 @@ node .claude/scripts/harness-run.mjs gate --name lint --result pass
 
 ## 5. 防御層と現在の強制力
 
-| 層                          | 役割                                                | 現在の位置づけ         |
-| --------------------------- | --------------------------------------------------- | ---------------------- |
-| `.claude/settings.json`     | Claude Code の秘密情報・危険コマンド権限を deny     | ローカルで有効         |
-| `guard-dangerous.mjs`       | 破壊的操作、秘密情報、Hook 回避を拒否               | ローカルで有効         |
-| `validate-agent-config.mjs` | Agent / Skill / 設定の構文・整合性を検証            | ローカルで有効         |
-| lefthook                    | format、lint、type-check、test、main 直コミット防止 | 明示的な回避は可能     |
-| Claude Code review          | 構成と実装の独立レビュー                            | コミット前に必須       |
-| GitHub Actions              | サーバー側の品質ゲート                              | 2026-08 の復旧確認待ち |
-| branch protection           | PR と required checks の強制                        | Actions 復旧後に設定   |
+| 層                          | 役割                                                | 現在の位置づけ                |
+| --------------------------- | --------------------------------------------------- | ----------------------------- |
+| `.claude/settings.json`     | Claude Code の秘密情報・危険コマンド権限を deny     | ローカルで有効                |
+| `guard-dangerous.mjs`       | 破壊的操作、秘密情報、Hook 回避を拒否               | ローカルで有効                |
+| `validate-agent-config.mjs` | Agent / Skill / 設定の構文・整合性を検証            | ローカルで有効                |
+| lefthook                    | format、lint、type-check、test、main 直コミット防止 | 明示的な回避は可能            |
+| Claude Code review          | 構成と実装の独立レビュー                            | コミット前に必須              |
+| GitHub Actions              | サーバー側の品質ゲート                              | **稼働中（2026-08-04 確認）** |
+| branch protection           | PR と required checks の強制                        | 未設定（着手可能）            |
 
-Actions と branch protection が揃うまでは、サーバー側の強制力がない。現在の安全性は、
-ローカルガード、専用ブランチ、レビュー、手動のマージ判断に依存する。
+GitHub Actions は復旧を確認済みで、PR ごとに Quality Gates と E2E Smoke が実行される。
+ただし **branch protection が未設定のため、赤い CI もマージを止めない**。強制力が働くのは
+ruleset を設定してからで、それまでは手動のマージ判断に依存する。
 
 ## 6. 既知の限界
 
 1. 正規表現ベースのコマンド検査は、任意シェルに対する完全なセキュリティ境界ではない。
 2. 同一 OS ユーザーが変更できるファイルや環境変数は、人間性を証明する認証要素にならない。
 3. リポジトリ内の状態フォールバックは、環境破棄後の永続性を保証しない。
-4. Actions 停止中は CI が実行されず、branch protection 未設定では失敗した CI もマージを止めない。
+4. branch protection が未設定のため、失敗した CI もマージを止めない（CI 自体は稼働中）。
 5. PR レビュー方式は個人開発における判断記録と事故防止の境界であり、組織的な職務分離ではない。
 
 Actions 復旧後の設定手順は

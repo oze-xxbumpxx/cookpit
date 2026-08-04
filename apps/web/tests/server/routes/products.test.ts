@@ -50,9 +50,9 @@ describe('productsRoute', () => {
 
   it('WH-P-01: GET /api/products は UseCase の返却値を 200 で返す', async () => {
     const execute = vi.fn().mockResolvedValue([productDto]);
-    vi.mocked(GetProductsUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetProductsUseCase,
-    );
+    vi.mocked(GetProductsUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetProductsUseCase;
+    });
 
     const res = await app.request('/api/products');
 
@@ -64,9 +64,9 @@ describe('productsRoute', () => {
   it('WH-P-02: POST /api/products はバリデーション通過時に UseCase を呼び 201 を返す', async () => {
     const body = { name: 'トマト', aliases: ['プチトマト'], category: '野菜', defaultUnit: '個' };
     const execute = vi.fn().mockResolvedValue(productDto);
-    vi.mocked(CreateProductUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateProductUseCase,
-    );
+    vi.mocked(CreateProductUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateProductUseCase;
+    });
 
     const res = await app.request('/api/products', {
       method: 'POST',
@@ -81,9 +81,9 @@ describe('productsRoute', () => {
 
   it('WH-P-03: POST /api/products は不正ボディで 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(CreateProductUseCase).mockImplementation(
-      () => ({ execute }) as unknown as CreateProductUseCase,
-    );
+    vi.mocked(CreateProductUseCase).mockImplementation(function () {
+      return { execute } as unknown as CreateProductUseCase;
+    });
 
     const res = await app.request('/api/products', {
       method: 'POST',
@@ -97,9 +97,9 @@ describe('productsRoute', () => {
 
   it('WH-P-04: GET /api/products/:id は ProductNotFoundError 時に 404 を返す', async () => {
     const execute = vi.fn().mockRejectedValue(new ProductNotFoundError(PRODUCT_ID));
-    vi.mocked(GetProductUseCase).mockImplementation(
-      () => ({ execute }) as unknown as GetProductUseCase,
-    );
+    vi.mocked(GetProductUseCase).mockImplementation(function () {
+      return { execute } as unknown as GetProductUseCase;
+    });
 
     const res = await app.request(`/api/products/${PRODUCT_ID}`);
 
@@ -109,9 +109,9 @@ describe('productsRoute', () => {
 
   it('WH-P-05: DELETE /api/products/:id は 204 を返す', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(DeleteProductUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DeleteProductUseCase,
-    );
+    vi.mocked(DeleteProductUseCase).mockImplementation(function () {
+      return { execute } as unknown as DeleteProductUseCase;
+    });
 
     const res = await app.request(`/api/products/${PRODUCT_ID}`, { method: 'DELETE' });
 
@@ -120,9 +120,9 @@ describe('productsRoute', () => {
   });
   it('WH-P-06: DELETE /api/products/:id/price-records/:priceRecordId は 204 を返す', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
-    );
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as DeletePriceRecordUseCase;
+    });
 
     const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
       method: 'DELETE',
@@ -138,9 +138,9 @@ describe('productsRoute', () => {
 
   it('WH-P-07: 価格記録の削除は PriceRecordNotFoundError 時に 404 を返す', async () => {
     const execute = vi.fn().mockRejectedValue(new PriceRecordNotFoundError(PRICE_RECORD_ID));
-    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
-    );
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as DeletePriceRecordUseCase;
+    });
 
     const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
       method: 'DELETE',
@@ -152,9 +152,9 @@ describe('productsRoute', () => {
 
   it('WH-P-08: 価格記録の削除は priceRecordId が UUID でなければ 400 を返す', async () => {
     const execute = vi.fn();
-    vi.mocked(DeletePriceRecordUseCase).mockImplementation(
-      () => ({ execute }) as unknown as DeletePriceRecordUseCase,
-    );
+    vi.mocked(DeletePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as DeletePriceRecordUseCase;
+    });
 
     const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/not-a-uuid`, {
       method: 'DELETE',

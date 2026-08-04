@@ -13,12 +13,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "@cookpit/application": "workspace:*",
     "@cookpit/config": "workspace:*",
     "@cookpit/domain": "workspace:*",
     "eslint": "^9.0.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.0.0",
-    "vitest": "^3.2.0"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
   }
 }

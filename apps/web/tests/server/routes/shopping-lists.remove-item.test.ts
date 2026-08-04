@@ -32,9 +32,9 @@ vi.mock('@cookpit/application', async (importOriginal) => {
 const REMOVE_PATH = `/api/shopping-lists/${SHOPPING_LIST_ID}/items/${SHOPPING_ITEM_ID}`;
 
 function mockRemoveItem(execute: ReturnType<typeof vi.fn>): void {
-  vi.mocked(RemoveItemUseCase).mockImplementation(
-    () => ({ execute }) as unknown as RemoveItemUseCase,
-  );
+  vi.mocked(RemoveItemUseCase).mockImplementation(function () {
+    return { execute } as unknown as RemoveItemUseCase;
+  });
 }
 
 describe('shoppingListsRoute（品目削除）', () => {
@@ -113,9 +113,9 @@ describe('shoppingListsRoute（品目削除）', () => {
   // DELETE の追加で、同じパス形の既存 POST ルートが食い合わないことを固定する。
   it('DELETE の追加後も POST /items/:itemId/checked は解決する', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingItemDto);
-    vi.mocked(SetItemCheckedUseCase).mockImplementation(
-      () => ({ execute }) as unknown as SetItemCheckedUseCase,
-    );
+    vi.mocked(SetItemCheckedUseCase).mockImplementation(function () {
+      return { execute } as unknown as SetItemCheckedUseCase;
+    });
 
     const res = await app.request(`${REMOVE_PATH}/checked`, {
       method: 'POST',

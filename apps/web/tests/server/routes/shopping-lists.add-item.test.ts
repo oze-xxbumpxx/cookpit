@@ -30,7 +30,9 @@ describe('shoppingListsRoute（品目追加）', () => {
 
   it('POST /api/shopping-lists/:id/items は 201 で ShoppingItemDto を返す', async () => {
     const execute = vi.fn().mockResolvedValue(shoppingItemDto);
-    vi.mocked(AddItemUseCase).mockImplementation(() => ({ execute }) as unknown as AddItemUseCase);
+    vi.mocked(AddItemUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddItemUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/items`, {
       method: 'POST',
@@ -79,7 +81,9 @@ describe('shoppingListsRoute（品目追加）', () => {
     ],
   ])('POST /api/shopping-lists/:id/items は%sで 400 を返す', async (_case, id, body) => {
     const execute = vi.fn();
-    vi.mocked(AddItemUseCase).mockImplementation(() => ({ execute }) as unknown as AddItemUseCase);
+    vi.mocked(AddItemUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddItemUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${id}/items`, {
       method: 'POST',
@@ -93,7 +97,9 @@ describe('shoppingListsRoute（品目追加）', () => {
 
   it('POST /api/shopping-lists/:id/items は ShoppingListNotFoundError を 404 に変換する', async () => {
     const execute = vi.fn().mockRejectedValue(new ShoppingListNotFoundError(SHOPPING_LIST_ID));
-    vi.mocked(AddItemUseCase).mockImplementation(() => ({ execute }) as unknown as AddItemUseCase);
+    vi.mocked(AddItemUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddItemUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/items`, {
       method: 'POST',
@@ -111,7 +117,9 @@ describe('shoppingListsRoute（品目追加）', () => {
     const execute = vi
       .fn()
       .mockRejectedValue(new InvalidShoppingListStateError('completed', 'addItem'));
-    vi.mocked(AddItemUseCase).mockImplementation(() => ({ execute }) as unknown as AddItemUseCase);
+    vi.mocked(AddItemUseCase).mockImplementation(function () {
+      return { execute } as unknown as AddItemUseCase;
+    });
 
     const res = await app.request(`/api/shopping-lists/${SHOPPING_LIST_ID}/items`, {
       method: 'POST',

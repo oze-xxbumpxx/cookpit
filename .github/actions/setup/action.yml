@@ -3,8 +3,8 @@ description: pnpm + Node（.nvmrc 準拠）+ 依存インストールの共通�
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@v4
-    - uses: actions/setup-node@v4
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
         cache: pnpm

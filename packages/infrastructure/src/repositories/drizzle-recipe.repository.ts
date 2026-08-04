@@ -1,5 +1,12 @@
 import { eq } from 'drizzle-orm';
-import { CookingStep, Quantity, Recipe, RecipeId, RecipeIngredient } from '@cookpit/domain';
+import {
+  CookingStep,
+  ProductId,
+  Quantity,
+  Recipe,
+  RecipeId,
+  RecipeIngredient,
+} from '@cookpit/domain';
 import type { RecipeRepository, RecipeTag } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { recipes, type NewRecipeRow, type RecipeRow } from '../db/schema';
@@ -66,7 +73,7 @@ export class DrizzleRecipeRepository implements RecipeRepository {
           : null;
 
       return RecipeIngredient.create({
-        productRef: ing.productRef !== null ? { value: ing.productRef } : null,
+        productRef: ing.productRef !== null ? ProductId.fromString(ing.productRef) : null,
         displayName: ing.displayName,
         amount,
         amountNote: ing.amountNote,

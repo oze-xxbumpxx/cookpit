@@ -1,15 +1,9 @@
+import type { ProductId } from '../product/product-id';
 import type { Quantity } from '../shared/quantity';
 
-/**
- * Recipe 集約が保持する商品への参照。`ProductId` 値オブジェクトそのものではなく
- * 構造的な最小形とし、Recipe から Product 集約への型依存を作らない。
- */
-export interface ProductRef {
-  readonly value: string;
-}
-
 export interface RecipeIngredientCreateProps {
-  productRef: ProductRef | null;
+  /** Product 集約への ID 参照。マスタ未登録の材料では null。 */
+  productRef: ProductId | null;
   displayName: string;
   amount: Quantity | null;
   amountNote: string | null;
@@ -17,7 +11,7 @@ export interface RecipeIngredientCreateProps {
 
 export class RecipeIngredient {
   private constructor(
-    private readonly productReference: ProductRef | null,
+    private readonly productReference: ProductId | null,
     private readonly ingredientDisplayName: string,
     private readonly ingredientAmount: Quantity | null,
     private readonly ingredientAmountNote: string | null,
@@ -56,7 +50,7 @@ export class RecipeIngredient {
     );
   }
 
-  get productRef(): ProductRef | null {
+  get productRef(): ProductId | null {
     return this.productReference;
   }
 

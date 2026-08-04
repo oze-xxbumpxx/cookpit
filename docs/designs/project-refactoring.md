@@ -44,7 +44,9 @@ MVP1 の機能追加を Sprint 1〜5 で積み上げた結果、機能そのも�
 
 ## 対象外
 
-- 観点 H（`docs/` の棚卸し・archive 化）— ユーザー判断で今回は対象外。
+- 観点 H（`docs/` の棚卸し・archive 化）— 本リファクタリング時点では対象外。
+  **追記（2026-07-25）**: `docs/tasks/sprint1-*` と `docs/sprints/sprint1-*` を
+  それぞれ `archive/` へ移動済み（週次レビューと `docs/tasks/codex/` は現行のまま）。
 - `source_shopping_item_id` 列の物理削除（破壊的スキーマ変更。2026-07-24 から継続の残置事項）。
 - TanStack Query の本格導入（観点 D の代替案。ユーザー確定で自前ヘルパを採用）。
 - `RecipeIngredient` が持つ商品参照を構造的 `interface` から `ProductId` 値オブジェクトへ

@@ -39,7 +39,7 @@ interface ApiResponseLike {
 type SuccessBodyOf<TResponse> =
   Extract<TResponse, { ok: true }> extends { json: () => Promise<infer TBody> } ? TBody : never;
 
-interface RunOptions<T> {
+interface RunOptionsBase {
   /**
    * 実行中であることを表す識別子。行単位の操作では行 ID を渡し、`isPending` と
    * 突き合わせて「操作中の行だけを disable」する。省略時は `'default'`。
@@ -56,18 +56,25 @@ interface RunOptions<T> {
    * バックグラウンド再取得（focus 時の同期など）で使う。
    */
   silent?: boolean;
-  /**
-   * 成功時に、レスポンス本文を受け取って呼ばれる。これを指定したときだけ
-   * `response.json()` を実行する。
-   */
-  onSuccess?: (body: T) => void | Promise<void>;
-  /**
-   * 成功時に、レスポンス本文を使わずに呼ばれる（再描画のトリガなど）。
-   * 本文を読まないため、ボディが JSON でない応答でも通信エラー扱いにならない。
-   * `onSuccess` とは排他で使う。
-   */
-  onSuccessWithoutBody?: () => void | Promise<void>;
 }
+
+/**
+ * 成功コールバックは排他。`onSuccess`（本文を読む）と `onSuccessWithoutBody`
+ * （本文を読まない）を同時指定すると型エラーになる。
+ */
+type RunOptions<T> =
+  | (RunOptionsBase & {
+      onSuccess: (body: T) => void | Promise<void>;
+      onSuccessWithoutBody?: never;
+    })
+  | (RunOptionsBase & {
+      onSuccessWithoutBody: () => void | Promise<void>;
+      onSuccess?: never;
+    })
+  | (RunOptionsBase & {
+      onSuccess?: never;
+      onSuccessWithoutBody?: never;
+    });
 
 export interface ApiAction {
   /** いずれかの操作が実行中か。 */
@@ -141,8 +148,7 @@ export function useApiAction(): ApiAction {
         // TResponse のままでは TS が絞り込めないため、ここだけ明示的に変換する。
         const body = (await response.json()) as SuccessBodyOf<TResponse>;
         await options.onSuccess(body);
-      }
-      if (options.onSuccessWithoutBody !== undefined) {
+      } else if (options.onSuccessWithoutBody !== undefined) {
         await options.onSuccessWithoutBody();
       }
     } catch {
