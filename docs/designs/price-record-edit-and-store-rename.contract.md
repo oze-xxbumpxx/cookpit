@@ -156,15 +156,15 @@ export type RenameStoreBody = z.infer<typeof renameStoreSchema>;
 
 ### 3.1 `PUT /api/products/:id/price-records/:priceRecordId`
 
-| 項目 | 内容 |
-| --- | --- |
-| ルーティング | `apps/web/src/server/routes/products.ts` に `.put('/:id/price-records/:priceRecordId', ...)` を追加 |
-| `zValidator('param', ...)` | `priceRecordIdParamSchema`（既存・再利用） |
-| `zValidator('json', ...)` | `updatePriceRecordSchema`（新規・§1.1） |
-| UseCase | `UpdatePriceRecordUseCase(productRepository(), storeRepository())` |
-| 成功ステータス | `200` |
-| 成功レスポンス | `ProductDto`（`c.json(product)`） |
-| 異常ステータス | `404`（`ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError`）、`400`（Zod） |
+| 項目                       | 内容                                                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| ルーティング               | `apps/web/src/server/routes/products.ts` に `.put('/:id/price-records/:priceRecordId', ...)` を追加 |
+| `zValidator('param', ...)` | `priceRecordIdParamSchema`（既存・再利用）                                                          |
+| `zValidator('json', ...)`  | `updatePriceRecordSchema`（新規・§1.1）                                                             |
+| UseCase                    | `UpdatePriceRecordUseCase(productRepository(), storeRepository())`                                  |
+| 成功ステータス             | `200`                                                                                               |
+| 成功レスポンス             | `ProductDto`（`c.json(product)`）                                                                   |
+| 異常ステータス             | `404`（`ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError`）、`400`（Zod）   |
 
 Hono ルート実装イメージ（設計書 §バックエンド設計と同一。参考のみ・実装はしない）:
 
@@ -185,15 +185,15 @@ Hono ルート実装イメージ（設計書 §バックエンド設計と同一
 
 ### 3.2 `PUT /api/stores/:id`
 
-| 項目 | 内容 |
-| --- | --- |
-| ルーティング | `apps/web/src/server/routes/stores.ts` に `.put('/:id', ...)` を追加 |
-| `zValidator('param', ...)` | `idParamSchema`（既存・再利用） |
-| `zValidator('json', ...)` | `renameStoreSchema`（新規・§1.2） |
-| UseCase | `RenameStoreUseCase(storeRepository())` |
-| 成功ステータス | `200` |
-| 成功レスポンス | `StoreDto`（`storeResponseSchema` 形。`c.json(store)`） |
-| 異常ステータス | `404`（`StoreNotFoundError`）、`422`（`DuplicateStoreNameError`）、`400`（Zod） |
+| 項目                       | 内容                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| ルーティング               | `apps/web/src/server/routes/stores.ts` に `.put('/:id', ...)` を追加            |
+| `zValidator('param', ...)` | `idParamSchema`（既存・再利用）                                                 |
+| `zValidator('json', ...)`  | `renameStoreSchema`（新規・§1.2）                                               |
+| UseCase                    | `RenameStoreUseCase(storeRepository())`                                         |
+| 成功ステータス             | `200`                                                                           |
+| 成功レスポンス             | `StoreDto`（`storeResponseSchema` 形。`c.json(store)`）                         |
+| 異常ステータス             | `404`（`StoreNotFoundError`）、`422`（`DuplicateStoreNameError`）、`400`（Zod） |
 
 Hono ルート実装イメージ（参考のみ・実装はしない）:
 
@@ -217,10 +217,10 @@ Hono ルート実装イメージ（参考のみ・実装はしない）:
 設計書 §Application 層で提案されている入力 DTO をそのまま採用してよいと判断する。api-contract 側の
 型と整合している。
 
-| DTO | フィールド | api-contract 側の対応 |
-| --- | --- | --- |
+| DTO                         | フィールド                                                                                                                                                       | api-contract 側の対応                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `UpdatePriceRecordInputDto` | `productId: string`（param）/ `priceRecordId: string`（param）/ `storeId: string` / `priceAmount: number` / `packageSizeValue: number` / `packageSizeUnit: Unit` | `priceRecordIdParamSchema` の `{id, priceRecordId}` + `updatePriceRecordSchema` の 4 フィールド。型は完全一致（`Unit` は `unitSchema` の推論型と同一） |
-| `RenameStoreInputDto` | `id: string`（param）/ `name: string` | `idParamSchema` の `{id}` + `renameStoreSchema` の `{name}`。完全一致 |
+| `RenameStoreInputDto`       | `id: string`（param）/ `name: string`                                                                                                                            | `idParamSchema` の `{id}` + `renameStoreSchema` の `{name}`。完全一致                                                                                  |
 
 戻り値は `UpdatePriceRecordUseCase.execute(): Promise<ProductDto>` /
 `RenameStoreUseCase.execute(): Promise<StoreDto>`。いずれも既存の `product.dto.ts` /
@@ -295,15 +295,15 @@ Hono ルート実装イメージ（参考のみ・実装はしない）:
 
 ### 5-2. エラークラスと HTTP ステータスのマッピング
 
-| エンドポイント | エラークラス | 継承元 | HTTP | メッセージ例 |
-| --- | --- | --- | --- | --- |
-| `PUT /price-records/:priceRecordId` | `ProductNotFoundError`（既存） | `NotFoundError` | 404 | `"Product not found: <id>"` |
-| 同上 | `PriceRecordNotFoundError`（既存） | `NotFoundError` | 404 | `"PriceRecord not found: <priceRecordId>"` |
-| 同上 | `StoreNotFoundError`（既存） | `NotFoundError` | 404 | `"Store not found: <storeId>"` |
-| 同上 | Zod バリデーション | — | 400 | `@hono/zod-validator` 標準形 |
-| `PUT /stores/:id` | `StoreNotFoundError`（既存） | `NotFoundError` | 404 | `"Store not found: <id>"` |
-| 同上 | `DuplicateStoreNameError`（既存） | `InvalidOperationError` | 422 | `"Cannot create Store: name '<name>' already exists"`（※後述 §5-3 参照） |
-| 同上 | Zod バリデーション | — | 400 | `@hono/zod-validator` 標準形 |
+| エンドポイント                      | エラークラス                       | 継承元                  | HTTP | メッセージ例                                                             |
+| ----------------------------------- | ---------------------------------- | ----------------------- | ---- | ------------------------------------------------------------------------ |
+| `PUT /price-records/:priceRecordId` | `ProductNotFoundError`（既存）     | `NotFoundError`         | 404  | `"Product not found: <id>"`                                              |
+| 同上                                | `PriceRecordNotFoundError`（既存） | `NotFoundError`         | 404  | `"PriceRecord not found: <priceRecordId>"`                               |
+| 同上                                | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <storeId>"`                                           |
+| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                             |
+| `PUT /stores/:id`                   | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <id>"`                                                |
+| 同上                                | `DuplicateStoreNameError`（既存）  | `InvalidOperationError` | 422  | `"Cannot create Store: name '<name>' already exists"`（※後述 §5-3 参照） |
+| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                             |
 
 `app.ts` への変更は不要。`NotFoundError` / `InvalidOperationError` の基底 2 分岐のみで両方とも
 自動的にマッピングされる（`ProductNotFoundError` 等 4 クラスはすべてこの 2 基底のどちらかを
@@ -338,12 +338,12 @@ UI エラー表示は raw `error.message` をそのまま出さず、`DuplicateS
 
 同一ボディを 2 回送信した場合:
 
-| 項目 | 1 回目 | 2 回目 | べき等か |
-| --- | --- | --- | --- |
-| `PriceRecord.id` | 維持 | 維持 | べき等 |
-| `PriceRecord.observedAt` | 元の値を維持（設計書 D-1・D-3、`Product.updatePriceRecord()` が `original.observedAt` を明示的に引き継ぐ） | 1 回目と同じ値を維持 | べき等 |
-| `PriceRecord.storeId` / `price` / `unitPrice` / `packageSize` | リクエストボディの値 | 同一ボディなら 1 回目と同じ値 | べき等 |
-| `Product.updatedAt` | `touch()` により更新時刻に変わる | `touch()` により**さらに新しい**更新時刻に変わる | **非べき等** |
+| 項目                                                          | 1 回目                                                                                                     | 2 回目                                           | べき等か     |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------ |
+| `PriceRecord.id`                                              | 維持                                                                                                       | 維持                                             | べき等       |
+| `PriceRecord.observedAt`                                      | 元の値を維持（設計書 D-1・D-3、`Product.updatePriceRecord()` が `original.observedAt` を明示的に引き継ぐ） | 1 回目と同じ値を維持                             | べき等       |
+| `PriceRecord.storeId` / `price` / `unitPrice` / `packageSize` | リクエストボディの値                                                                                       | 同一ボディなら 1 回目と同じ値                    | べき等       |
+| `Product.updatedAt`                                           | `touch()` により更新時刻に変わる                                                                           | `touch()` により**さらに新しい**更新時刻に変わる | **非べき等** |
 
 **契約としての表現方針**: 「`ProductDto.priceHistory` の内容（各 `PriceRecordDto` の全フィールド）
 は同一ボディでの再送に対してべき等。`ProductDto.updatedAt` のみ再送のたびに新しい値になる」と
@@ -358,12 +358,12 @@ UI エラー表示は raw `error.message` をそのまま出さず、`DuplicateS
 `Store` エンティティは `updatedAt` 相当のフィールドを持たない（`storeId` / `storeName` /
 `createdAt` のみ。`createdAt` は `rename()` で変更されない）。同一ボディを 2 回送信した場合:
 
-| 項目 | 1 回目 | 2 回目 | べき等か |
-| --- | --- | --- | --- |
-| `Store.id` | 維持 | 維持 | べき等 |
-| `Store.name` | リクエストボディの値 | 同一ボディなら 1 回目と同じ値 | べき等 |
-| `Store.createdAt` | 不変 | 不変 | べき等 |
-| 同名衝突判定 | `findByNormalizedName()` が自分自身をヒットしても除外（設計書 §Application 層） | 1 回目と同じロジックで除外 | べき等（N-08 で明示的にテストされる） |
+| 項目              | 1 回目                                                                          | 2 回目                        | べき等か                              |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------- |
+| `Store.id`        | 維持                                                                            | 維持                          | べき等                                |
+| `Store.name`      | リクエストボディの値                                                            | 同一ボディなら 1 回目と同じ値 | べき等                                |
+| `Store.createdAt` | 不変                                                                            | 不変                          | べき等                                |
+| 同名衝突判定      | `findByNormalizedName()` が自分自身をヒットしても除外（設計書 §Application 層） | 1 回目と同じロジックで除外    | べき等（N-08 で明示的にテストされる） |
 
 `StoreDto`（`{id, name, createdAt}`）のすべてのフィールドが 2 回目の呼び出しでも完全に同一の
 値になる。**`PUT /stores/:id` は `ProductDto` 側と異なり、レスポンスボディまで含めて完全に
@@ -506,13 +506,13 @@ PUT /api/stores/550e8400-e29b-41d4-a716-446655440010
 既存の `recordPriceSchema` describe ブロック（96-126 行目）と対になる形で
 `updatePriceRecordSchema` の describe ブロックを追加する。
 
-| 観点 | テスト値 | 期待結果 |
-| --- | --- | --- |
-| 正常な入力を受け入れる | `{storeId: <uuid>, priceAmount: 148, packageSizeValue: 1, packageSizeUnit: '個'}` | 成功・値がそのまま返る |
-| 不正な storeId を reject する | `storeId: 'not-a-uuid'` | 失敗 |
-| priceAmount が 0 / 負数を reject する | `priceAmount: 0` / `-1` | 失敗（`it.each` で `recordPriceSchema` と同じ 2 値を使う） |
-| packageSizeValue が 0 / 負数を reject する | `packageSizeValue: 0` / `-1` | 失敗 |
-| packageSizeUnit のプリセット外自由入力を受け入れ、空文字は reject する | `packageSizeUnit: '箱'` / `''` | 成功 / 失敗（`recordPriceSchema` の項目3ケースと同一観点） |
+| 観点                                                                                            | テスト値                                                                                                                                         | 期待結果                                                                                   |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| 正常な入力を受け入れる                                                                          | `{storeId: <uuid>, priceAmount: 148, packageSizeValue: 1, packageSizeUnit: '個'}`                                                                | 成功・値がそのまま返る                                                                     |
+| 不正な storeId を reject する                                                                   | `storeId: 'not-a-uuid'`                                                                                                                          | 失敗                                                                                       |
+| priceAmount が 0 / 負数を reject する                                                           | `priceAmount: 0` / `-1`                                                                                                                          | 失敗（`it.each` で `recordPriceSchema` と同じ 2 値を使う）                                 |
+| packageSizeValue が 0 / 負数を reject する                                                      | `packageSizeValue: 0` / `-1`                                                                                                                     | 失敗                                                                                       |
+| packageSizeUnit のプリセット外自由入力を受け入れ、空文字は reject する                          | `packageSizeUnit: '箱'` / `''`                                                                                                                   | 成功 / 失敗（`recordPriceSchema` の項目3ケースと同一観点）                                 |
 | `recordPriceSchema` と `updatePriceRecordSchema` が独立したスキーマであることの確認（退行防止） | 2 つのスキーマの `.shape` のキー集合が一致することを確認する軽量テスト、または片方だけ変更しても他方のテストが影響を受けないことをコメントで明示 | 将来 §2.1 の複製方針が崩れて誤って同一参照に統合されないことの記録目的（必須ではなく任意） |
 
 ### 9.2 `packages/api-contract/tests/store.schema.test.ts`（追記想定）
@@ -520,28 +520,28 @@ PUT /api/stores/550e8400-e29b-41d4-a716-446655440010
 既存の `createStoreSchema` describe ブロック（11-32 行目）と対になる形で `renameStoreSchema` の
 describe ブロックを追加する。
 
-| 観点 | テスト値 | 期待結果 |
-| --- | --- | --- |
-| 正常な name を受け入れる | `{name: 'スーパーA'}` | 成功 |
-| 空白のみの name を reject する | `''` / `'   '` | 失敗（`it.each`） |
-| 255 文字の name を受け入れる | `'あ'.repeat(255)` | 成功 |
-| 256 文字の name を reject する | `'あ'.repeat(256)` | 失敗 |
-| name キーの省略を reject する | `{}` | 失敗 |
+| 観点                           | テスト値              | 期待結果          |
+| ------------------------------ | --------------------- | ----------------- |
+| 正常な name を受け入れる       | `{name: 'スーパーA'}` | 成功              |
+| 空白のみの name を reject する | `''` / `'   '`        | 失敗（`it.each`） |
+| 255 文字の name を受け入れる   | `'あ'.repeat(255)`    | 成功              |
+| 256 文字の name を reject する | `'あ'.repeat(256)`    | 失敗              |
+| name キーの省略を reject する  | `{}`                  | 失敗              |
 
 ### 9.3 Hono ルート契約テスト（apps/web 既存パターンに倣う。詳細は test-designer）
 
-| 観点 | 確認内容 |
-| --- | --- |
-| `PUT /price-records/:priceRecordId` 200 | 更新後の `ProductDto` が返り、`priceHistory` 内の該当レコードが新しい値・同じ `id`・同じ `observedAt` を持つこと |
-| 同 404×3 | `ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError` それぞれが独立して発生することを、商品なし・記録なし・店舗なしの 3 パターンで確認 |
-| 同 400 | `priceAmount: 0` 等で `zValidator` が弾くこと |
-| 同 べき等性 | 同一ボディで 2 回連続 `PUT` し、両方 200・`priceHistory` の該当レコードの値が一致すること（`updatedAt` は異なってよい。§6-1） |
-| `PUT /stores/:id` 200 | 更新後の `StoreDto` が返ること |
-| 同 404 | 存在しない店舗 ID |
-| 同 422 | 自分以外の既存店舗と正規化後に名前が一致 |
-| 同 400 | name 空文字 |
-| 同 べき等性（N-08 対応） | 同一 name で 2 回連続 `PUT` し、両方 200・レスポンスが完全に一致すること（422 にならないこと。§6-2） |
-| 同 自己衝突除外（N-07 対応） | 大文字小文字だけ変えた name で `PUT` が成功すること |
+| 観点                                    | 確認内容                                                                                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PUT /price-records/:priceRecordId` 200 | 更新後の `ProductDto` が返り、`priceHistory` 内の該当レコードが新しい値・同じ `id`・同じ `observedAt` を持つこと                                             |
+| 同 404×3                                | `ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError` それぞれが独立して発生することを、商品なし・記録なし・店舗なしの 3 パターンで確認 |
+| 同 400                                  | `priceAmount: 0` 等で `zValidator` が弾くこと                                                                                                                |
+| 同 べき等性                             | 同一ボディで 2 回連続 `PUT` し、両方 200・`priceHistory` の該当レコードの値が一致すること（`updatedAt` は異なってよい。§6-1）                                |
+| `PUT /stores/:id` 200                   | 更新後の `StoreDto` が返ること                                                                                                                               |
+| 同 404                                  | 存在しない店舗 ID                                                                                                                                            |
+| 同 422                                  | 自分以外の既存店舗と正規化後に名前が一致                                                                                                                     |
+| 同 400                                  | name 空文字                                                                                                                                                  |
+| 同 べき等性（N-08 対応）                | 同一 name で 2 回連続 `PUT` し、両方 200・レスポンスが完全に一致すること（422 にならないこと。§6-2）                                                         |
+| 同 自己衝突除外（N-07 対応）            | 大文字小文字だけ変えた name で `PUT` が成功すること                                                                                                          |
 
 ### 9.4 型の往復・後方互換の確認観点
 
@@ -557,16 +557,16 @@ describe ブロックを追加する。
 
 ## 10. 実装ファイル一覧（参考・実装は implementer）
 
-| ファイル | 変更種別 | 内容 |
-| --- | --- | --- |
-| `packages/api-contract/src/product.schema.ts` | 追記 | `updatePriceRecordSchema` + 型（§1.1） |
-| `packages/api-contract/tests/product.schema.test.ts` | 追記 | §9.1 のテスト（test-designer 確定後に implementer が実装） |
-| `packages/api-contract/src/store.schema.ts` | 追記 | `renameStoreSchema` + 型（§1.2） |
-| `packages/api-contract/tests/store.schema.test.ts` | 追記 | §9.2 のテスト |
-| `apps/web/src/server/routes/products.ts` | 追記 | `.put('/:id/price-records/:priceRecordId', ...)`（§3.1） |
-| `apps/web/src/server/routes/stores.ts` | 追記 | `.put('/:id', ...)`（§3.2） |
-| `apps/web/src/server/app.ts` | **変更不要** | 既存 `NotFoundError`/`InvalidOperationError` 基底分岐がそのままカバーする（§5-2） |
-| `packages/api-contract/src/index.ts` | **変更不要** | 既存の `export *` がそのまま新規シンボルを公開する（§1.3） |
+| ファイル                                             | 変更種別     | 内容                                                                              |
+| ---------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
+| `packages/api-contract/src/product.schema.ts`        | 追記         | `updatePriceRecordSchema` + 型（§1.1）                                            |
+| `packages/api-contract/tests/product.schema.test.ts` | 追記         | §9.1 のテスト（test-designer 確定後に implementer が実装）                        |
+| `packages/api-contract/src/store.schema.ts`          | 追記         | `renameStoreSchema` + 型（§1.2）                                                  |
+| `packages/api-contract/tests/store.schema.test.ts`   | 追記         | §9.2 のテスト                                                                     |
+| `apps/web/src/server/routes/products.ts`             | 追記         | `.put('/:id/price-records/:priceRecordId', ...)`（§3.1）                          |
+| `apps/web/src/server/routes/stores.ts`               | 追記         | `.put('/:id', ...)`（§3.2）                                                       |
+| `apps/web/src/server/app.ts`                         | **変更不要** | 既存 `NotFoundError`/`InvalidOperationError` 基底分岐がそのままカバーする（§5-2） |
+| `packages/api-contract/src/index.ts`                 | **変更不要** | 既存の `export *` がそのまま新規シンボルを公開する（§1.3）                        |
 
 Application 層（`UpdatePriceRecordUseCase` / `RenameStoreUseCase` / DTO・mapper 拡張）・Domain 層
 （`Product.updatePriceRecord()` / `Store.rename()`）は設計書 §Application 層・§Domain 層の
