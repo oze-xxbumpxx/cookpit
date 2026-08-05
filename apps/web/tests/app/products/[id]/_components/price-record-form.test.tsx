@@ -3,16 +3,25 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { getStores, postStore, deleteStore, getStoreUsage, postPriceRecord, refresh, push } =
-  vi.hoisted(() => ({
-    getStores: vi.fn(),
-    postStore: vi.fn(),
-    deleteStore: vi.fn(),
-    getStoreUsage: vi.fn(),
-    postPriceRecord: vi.fn(),
-    refresh: vi.fn(),
-    push: vi.fn(),
-  }));
+const {
+  getStores,
+  postStore,
+  deleteStore,
+  putStore,
+  getStoreUsage,
+  postPriceRecord,
+  refresh,
+  push,
+} = vi.hoisted(() => ({
+  getStores: vi.fn(),
+  postStore: vi.fn(),
+  deleteStore: vi.fn(),
+  putStore: vi.fn(),
+  getStoreUsage: vi.fn(),
+  postPriceRecord: vi.fn(),
+  refresh: vi.fn(),
+  push: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push }),
@@ -26,6 +35,7 @@ vi.mock('@/lib/api-client', () => ({
         $post: (...args: unknown[]) => postStore(...args),
         ':id': {
           $delete: (...args: unknown[]) => deleteStore(...args),
+          $put: (...args: unknown[]) => putStore(...args),
           usage: {
             $get: (...args: unknown[]) => getStoreUsage(...args),
           },
@@ -364,5 +374,51 @@ describe('PriceRecordForm', () => {
 
     expect(await screen.findByText('店舗の削除に失敗しました。')).toBeDefined();
     expect(screen.getByRole('button', { name: '店舗Aを削除' })).toBeDefined();
+  });
+
+  it('PRF-15: リネームアイコンが表示される', async () => {
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    render(<PriceRecordForm product={createProductDto()} />);
+    await waitForStoresLoaded();
+
+    expect(screen.getByRole('button', { name: '店舗Aを編集' })).toBeDefined();
+  });
+
+  it('PRF-16: リネームアイコンから StoreRenameDialog を開く', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    getStoreUsage.mockResolvedValue({
+      ok: true,
+      json: async () => ({ priceRecordCount: 0, shoppingItemCount: 0 }),
+    });
+    render(<PriceRecordForm product={createProductDto()} />);
+    await waitForStoresLoaded();
+
+    await user.click(screen.getByRole('button', { name: '店舗Aを編集' }));
+
+    expect(await screen.findByText('店舗名を編集')).toBeDefined();
+  });
+
+  it('PRF-17: リネーム成功後、一覧の表示名が更新され選択は外れない（N-06）', async () => {
+    const user = userEvent.setup();
+    getStores.mockResolvedValue({ ok: true, json: async () => STORES });
+    getStoreUsage.mockResolvedValue({
+      ok: true,
+      json: async () => ({ priceRecordCount: 0, shoppingItemCount: 0 }),
+    });
+    putStore.mockResolvedValue({ ok: true, json: async () => ({ ...STORES[0], name: '店舗A改' }) });
+    render(<PriceRecordForm product={createProductDto()} />);
+    await waitForStoresLoaded();
+    expect(screen.getByRole('combobox', { name: '店舗' }).textContent).toContain('店舗A');
+
+    await user.click(screen.getByRole('button', { name: '店舗Aを編集' }));
+    const input = await screen.findByLabelText('店舗名');
+    await user.clear(input);
+    await user.type(input, '店舗A改');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: '店舗' }).textContent).toContain('店舗A改');
+    });
   });
 });

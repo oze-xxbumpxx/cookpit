@@ -11,13 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
+import { StoreRenameDialog } from '@/app/products/[id]/_components/store-rename-dialog';
 import { packageSizeExample } from '@/app/products/_utils/package-size-example';
 import { isDuplicateStoreName, STORE_LIMIT } from '@/app/products/_utils/store-name';
 import { client } from '@/lib/api-client';
 import { parseQuantity } from '@/lib/parse-quantity';
 import type { CreateStoreBody, RecordPriceBody } from '@cookpit/api-contract';
 import type { ProductDto, StoreDto, StoreUsageDto } from '@cookpit/application';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useEffect, useId, useState } from 'react';
@@ -67,6 +68,7 @@ export function PriceRecordForm({ product }: Props) {
   const [pendingDeleteStore, setPendingDeleteStore] = useState<StoreDto | null>(null);
   const [pendingDeleteUsage, setPendingDeleteUsage] = useState<StoreUsageDto | null>(null);
   const [deletingStore, setDeletingStore] = useState(false);
+  const [renamingStore, setRenamingStore] = useState<StoreDto | null>(null);
   const [storeId, setStoreId] = useState('');
   const [priceAmount, setPriceAmount] = useState('');
   const [packageSize, setPackageSize] = useState('');
@@ -382,17 +384,29 @@ export function PriceRecordForm({ product }: Props) {
                     className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5"
                   >
                     <span className="truncate text-sm text-foreground">{store.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => void requestDeleteStore(store)}
-                      disabled={deletingStore}
-                      aria-label={`${store.name}を削除`}
-                      className="text-muted-foreground"
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setRenamingStore(store)}
+                        aria-label={`${store.name}を編集`}
+                        className="text-muted-foreground"
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => void requestDeleteStore(store)}
+                        disabled={deletingStore}
+                        aria-label={`${store.name}を削除`}
+                        className="text-muted-foreground"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -538,6 +552,24 @@ export function PriceRecordForm({ product }: Props) {
           </AlertDialogContent>
         )}
       </AlertDialog>
+
+      <StoreRenameDialog
+        store={renamingStore}
+        existingStoreNames={
+          renamingStore === null
+            ? []
+            : stores.filter((s) => s.id !== renamingStore.id).map((s) => s.name)
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenamingStore(null);
+          }
+        }}
+        onRenamed={(updated) => {
+          setStores((current) => current.map((s) => (s.id === updated.id ? updated : s)));
+          setRenamingStore(null);
+        }}
+      />
     </form>
   );
 }
