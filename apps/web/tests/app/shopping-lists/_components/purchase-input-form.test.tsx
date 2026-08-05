@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PurchaseInputForm } from '../../../../src/app/shopping-lists/_components/purchase-input-form';
+import type { StoreUnitPriceBreakdown } from '../../../../src/app/shopping-lists/_utils/price-comparison';
 
 function createStoreDto(overrides: Partial<StoreDto> = {}): StoreDto {
   return {
@@ -50,6 +51,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -70,6 +72,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -90,6 +93,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -105,6 +109,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -121,6 +126,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -140,6 +146,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
@@ -160,6 +167,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={onCancel}
@@ -177,6 +185,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={true}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -196,6 +205,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -215,6 +225,7 @@ describe('PurchaseInputForm', () => {
       <PurchaseInputForm
         item={item}
         stores={STORES}
+        breakdown={null}
         submitting={false}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -226,5 +237,58 @@ describe('PurchaseInputForm', () => {
         '金額・店舗はあとから何度でも訂正できます。チェックを外すとこの記録も消えます。',
       ),
     ).toBeNull();
+  });
+
+  it('PF-09: breakdown が null のとき内訳セクションが表示されない', () => {
+    const item = createShoppingItemDto();
+    render(
+      <PurchaseInputForm
+        item={item}
+        stores={STORES}
+        breakdown={null}
+        submitting={false}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('店舗別の単価')).toBeNull();
+  });
+
+  it('PF-10: breakdown が非 null のとき内訳セクションが表示される', () => {
+    const item = createShoppingItemDto();
+    const breakdown: StoreUnitPriceBreakdown = {
+      basisLabel: '100g',
+      entries: [
+        {
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          isCheapest: true,
+          diffFromCheapestYen: 0,
+        },
+        {
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 80,
+          isCheapest: false,
+          diffFromCheapestYen: 30,
+        },
+      ],
+    };
+    render(
+      <PurchaseInputForm
+        item={item}
+        stores={STORES}
+        breakdown={breakdown}
+        submitting={false}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('店舗別の単価')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+30円')).toBeDefined();
   });
 });

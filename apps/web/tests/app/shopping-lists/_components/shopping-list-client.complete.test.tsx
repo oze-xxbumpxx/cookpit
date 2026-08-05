@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createShoppingItemDto,
   createShoppingListDto,
+  PRODUCTS,
   STORES,
 } from './shopping-list-test-fixtures';
 
@@ -53,6 +54,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -64,6 +66,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'completed' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -78,7 +81,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       ok: true,
       json: async () => createShoppingListDto({ status: 'completed' }),
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '買い物完了' }));
 
@@ -98,6 +101,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -120,6 +124,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -139,6 +144,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -157,6 +163,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -178,6 +185,7 @@ describe('ShoppingListClient（完了・再開）', () => {
           items: [createShoppingItemDto({ id: 'item-1', status: 'pending' })],
         })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -195,6 +203,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -214,6 +223,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
     const completeButton = screen.getByRole('button', { name: '買い物完了' });
@@ -244,6 +254,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active', items: [item] })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -269,6 +280,7 @@ describe('ShoppingListClient（完了・再開）', () => {
           items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' })],
         })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -294,6 +306,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'completed', items: [item] })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -320,6 +333,7 @@ describe('ShoppingListClient（完了・再開）', () => {
           items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
         })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -344,6 +358,7 @@ describe('ShoppingListClient（完了・再開）', () => {
           ],
         })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -368,6 +383,7 @@ describe('ShoppingListClient（完了・再開）', () => {
           items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
         })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -391,6 +407,7 @@ describe('ShoppingListClient（完了・再開）', () => {
         <ShoppingListClient
           shoppingList={createShoppingListDto({ status: 'active', items })}
           stores={STORES}
+          products={PRODUCTS}
         />,
       );
     }
@@ -524,7 +541,7 @@ describe('ShoppingListClient（完了・再開）', () => {
       status: 'completed',
       items: [createShoppingItemDto()],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     // 完了状態では追加・完了ボタンは無く、「買い物を再開」がある
     expect(screen.queryByRole('button', { name: '手動で追加' })).toBeNull();

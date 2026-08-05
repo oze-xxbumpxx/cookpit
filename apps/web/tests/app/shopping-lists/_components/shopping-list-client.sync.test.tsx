@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createShoppingItemDto,
   createShoppingListDto,
+  PRODUCTS,
   STORES,
 } from './shopping-list-test-fixtures';
 
@@ -41,6 +42,7 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -64,6 +66,7 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 
@@ -79,6 +82,7 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
       <ShoppingListClient
         shoppingList={createShoppingListDto({ status: 'completed' })}
         stores={STORES}
+        products={PRODUCTS}
       />,
     );
 

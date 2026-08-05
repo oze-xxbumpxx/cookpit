@@ -5,17 +5,27 @@ import { Input } from '@/components/ui/input';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
 import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { useId, useState } from 'react';
+import type { StoreUnitPriceBreakdown } from '../_utils/price-comparison';
+import { StoreUnitPriceList } from './store-unit-price-list';
 
 interface Props {
   item: ShoppingItemDto;
   stores: StoreDto[];
   submitting: boolean;
+  breakdown: StoreUnitPriceBreakdown | null;
   onSubmit: (actualPrice: number, actualStoreId: string) => void;
   onCancel: () => void;
 }
 
 /** 購入実績入力のインライン展開フォーム（D-5）。 */
-export function PurchaseInputForm({ item, stores, submitting, onSubmit, onCancel }: Props) {
+export function PurchaseInputForm({
+  item,
+  stores,
+  submitting,
+  breakdown,
+  onSubmit,
+  onCancel,
+}: Props) {
   const priceId = useId();
   const storeId = useId();
 
@@ -94,6 +104,13 @@ export function PurchaseInputForm({ item, stores, submitting, onSubmit, onCancel
           キャンセル
         </Button>
       </div>
+
+      {breakdown !== null && (
+        <div className="flex flex-col gap-1 border-t border-border pt-3">
+          <p className="text-xs font-medium text-foreground">店舗別の単価</p>
+          <StoreUnitPriceList basisLabel={breakdown.basisLabel} entries={breakdown.entries} />
+        </div>
+      )}
     </div>
   );
 }

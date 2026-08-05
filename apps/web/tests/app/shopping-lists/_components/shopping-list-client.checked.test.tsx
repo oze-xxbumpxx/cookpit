@@ -2,9 +2,12 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  createPriceRecordDto,
+  createProductDto,
   createShoppingItemDto,
   createShoppingListDto,
   fillPurchaseInputForm,
+  PRODUCTS,
   STORES,
 } from './shopping-list-test-fixtures';
 
@@ -53,7 +56,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
 
@@ -97,7 +100,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
@@ -132,7 +135,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
@@ -170,7 +173,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
@@ -214,7 +217,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     const priceInput = screen.getByLabelText('価格') as HTMLInputElement;
@@ -257,7 +260,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '店舗A' }));
     await user.click(screen.getByRole('combobox'));
@@ -295,7 +298,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '店舗A' }));
     await user.click(screen.getByRole('combobox'));
@@ -319,7 +322,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '店舗A' }));
     await user.click(screen.getByRole('combobox'));
@@ -355,7 +358,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getAllByRole('button', { name: '金額を記録' })[0]);
     await fillPurchaseInputForm('醤油', '198');
@@ -390,7 +393,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
@@ -430,7 +433,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
 
@@ -456,7 +459,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
 
@@ -489,7 +492,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
 
@@ -535,7 +538,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
@@ -558,7 +561,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     const checkbox = screen.getByRole('checkbox', { name: /醤油/ });
     await user.click(checkbox);
@@ -569,6 +572,186 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     // 保留中の Promise を解決し、他テストの startTransition/useOptimistic に影響を残さない
     await act(async () => {
       resolveChecked({ ok: false });
+    });
+  });
+
+  it('LC-31: 未購入の内訳パネルを開いた状態でチェックすると expandedItemId が保持されたまま PurchaseInputForm に切り替わる（P-4）', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          status: 'bought',
+        }),
+    });
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 80,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          status: 'pending',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    await user.click(screen.getByRole('button', { name: '店舗別の単価を見る' }));
+    expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
+    });
+  });
+
+  it('LC-33: 整合性: 店舗再割当は総額差・内訳の表示内容に影響しない', async () => {
+    const user = userEvent.setup();
+    postTargetStore.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+          targetStoreId: 'store-b',
+          status: 'pending',
+        }),
+    });
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 120,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+          targetStoreId: 'store-a',
+          status: 'pending',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    // 総額差は targetStoreId ではなく productId / priceHistory から決まる（設計書 P-2）
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '店舗別の単価を見る' }));
+    expect(screen.getByText('50円 / 100g')).toBeDefined();
+    expect(screen.getByText('120円 / 100g')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+70円')).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: '店舗A' }));
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '店舗B' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: '店舗B' })).toBeDefined();
+    });
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+    expect(screen.getByText('50円 / 100g')).toBeDefined();
+    expect(screen.getByText('120円 / 100g')).toBeDefined();
+    expect(screen.getByText('← 最安')).toBeDefined();
+    expect(screen.getByText('+70円')).toBeDefined();
+  });
+
+  it('LC-32: 回帰: bought item でチェックを外すと breakdown があってもパネルごと閉じる', async () => {
+    const user = userEvent.setup();
+    postChecked.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          status: 'pending',
+          actualPrice: null,
+          actualStoreId: null,
+        }),
+    });
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 80,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          status: 'bought',
+          actualPrice: { amount: 198, currency: 'JPY' },
+          actualStoreId: 'store-a',
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    await user.click(screen.getByRole('button', { name: '金額を記録' }));
+    expect(screen.getByRole('button', { name: '購入を記録' })).toBeDefined();
+    expect(screen.getByText('店舗別の単価')).toBeDefined();
+
+    await user.click(screen.getByRole('checkbox', { name: /醤油/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '購入を記録' })).toBeNull();
     });
   });
 });

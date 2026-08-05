@@ -3,10 +3,16 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SelectField, type SelectFieldOption } from '@/components/ui/select-field';
-import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import type { ProductDto, ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { Check, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
+import {
+  buildStoreUnitPriceBreakdown,
+  estimateItemPriceDiff,
+  formatEstimatedDiffMessage,
+} from '../_utils/price-comparison';
 import { PurchaseInputForm } from './purchase-input-form';
+import { StoreUnitPriceList } from './store-unit-price-list';
 
 interface Props {
   item: ShoppingItemDto;
@@ -24,6 +30,7 @@ interface Props {
   onReassignStore: (itemId: string, targetStoreId: string) => void;
   /** 削除の確認を親に要求する（削除そのものは親が確認ダイアログを挟んで実行する）。 */
   onRequestRemove: (itemId: string) => void;
+  productMap: Map<string, ProductDto>;
 }
 
 function resolveStoreName(storeId: string | null, stores: StoreDto[]): string {
@@ -45,6 +52,7 @@ export function ShoppingItemRow({
   onMarkAsBought,
   onReassignStore,
   onRequestRemove,
+  productMap,
 }: Props) {
   const storeSelectId = useId();
   const [storeEditing, setStoreEditing] = useState(false);
@@ -55,6 +63,11 @@ export function ShoppingItemRow({
     value: store.id,
     label: store.name,
   }));
+
+  const product = item.productId !== null ? productMap.get(item.productId) : undefined;
+  const priceDiff = estimateItemPriceDiff(item, product);
+  const breakdown = buildStoreUnitPriceBreakdown(product);
+  const hasBreakdown = breakdown !== null;
 
   function handleReassign(nextStoreId: string): void {
     setStoreEditing(false);
@@ -105,19 +118,22 @@ export function ShoppingItemRow({
               ? `${item.requiredAmount.value}${item.requiredAmount.unit}`
               : item.amountNote}
           </p>
+          {priceDiff !== null && (
+            <p className="text-xs text-muted-foreground">{formatEstimatedDiffMessage(priceDiff)}</p>
+          )}
           {bought && item.actualPrice !== null && (
             <p className="text-xs text-muted-foreground">
               ✓ {resolveStoreName(item.actualStoreId, stores)} で ¥{item.actualPrice.amount} 購入
             </p>
           )}
-          {bought && !readOnly && (
+          {(bought || hasBreakdown) && !readOnly && (
             <button
               type="button"
               onClick={() => onToggleExpand(item.id)}
               disabled={submitting}
               className="self-start text-xs text-muted-foreground underline-offset-2 hover:underline"
             >
-              金額を記録
+              {bought ? '金額を記録' : '店舗別の単価を見る'}
             </button>
           )}
         </div>
@@ -163,17 +179,25 @@ export function ShoppingItemRow({
         )}
       </div>
 
-      {bought && expanded && (
-        <PurchaseInputForm
-          item={item}
-          stores={stores}
-          submitting={submitting}
-          onSubmit={(actualPrice, actualStoreId) =>
-            onMarkAsBought(item.id, actualPrice, actualStoreId)
-          }
-          onCancel={() => onToggleExpand(item.id)}
-        />
-      )}
+      {expanded &&
+        (bought ? (
+          <PurchaseInputForm
+            item={item}
+            stores={stores}
+            submitting={submitting}
+            breakdown={breakdown}
+            onSubmit={(actualPrice, actualStoreId) =>
+              onMarkAsBought(item.id, actualPrice, actualStoreId)
+            }
+            onCancel={() => onToggleExpand(item.id)}
+          />
+        ) : (
+          breakdown !== null && (
+            <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+              <StoreUnitPriceList basisLabel={breakdown.basisLabel} entries={breakdown.entries} />
+            </div>
+          )
+        ))}
     </li>
   );
 }

@@ -2,9 +2,12 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  createPriceRecordDto,
+  createProductDto,
   createShoppingItemDto,
   createShoppingListDto,
   fillPurchaseInputForm,
+  PRODUCTS,
   STORES,
 } from './shopping-list-test-fixtures';
 
@@ -50,7 +53,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
         createShoppingItemDto({ id: 'item-2', displayName: '塩', targetStoreId: null }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings[0].textContent).toBe('店舗未定');
@@ -63,7 +66,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
         createShoppingItemDto({ id: 'item-2', displayName: '味噌', targetStoreId: 'store-b' }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     expect(screen.getByRole('heading', { name: '店舗A' })).toBeDefined();
     expect(screen.getByRole('heading', { name: '店舗B' })).toBeDefined();
@@ -73,7 +76,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
 
   it('LC-03: items 0 件のとき空状態が表示され追加フォームは操作可能', () => {
     const shoppingList = createShoppingListDto({ items: [] });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     expect(screen.getByText('リストにアイテムがありません')).toBeDefined();
     expect(screen.getByRole('button', { name: '手動で追加' }).hasAttribute('disabled')).toBe(false);
@@ -92,7 +95,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
         }),
     });
     const shoppingList = createShoppingListDto({ items: [] });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '手動で追加' }));
     await user.type(screen.getByLabelText('品目名', { exact: false }), '卵');
@@ -108,7 +111,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const user = userEvent.setup();
     postItem.mockResolvedValue({ ok: false });
     const shoppingList = createShoppingListDto({ items: [] });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '手動で追加' }));
     await user.type(screen.getByLabelText('品目名', { exact: false }), '卵');
@@ -140,7 +143,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await act(async () => {
       window.dispatchEvent(new Event('focus'));
@@ -174,7 +177,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'pending' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '更新' }));
 
@@ -191,7 +194,9 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
     });
-    const { unmount } = render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    const { unmount } = render(
+      <ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />,
+    );
 
     unmount();
 
@@ -204,7 +209,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
 
   it('LC-19: ヘッダーに戻る導線と買い物日が表示される', () => {
     const shoppingList = createShoppingListDto({ shoppingDate: '2026-07-11', items: [] });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     expect(screen.getByRole('link', { name: '戻る' }).getAttribute('href')).toBe('/meal-plans');
     expect(screen.getByText('7/11（土）の買い物リスト')).toBeDefined();
@@ -221,7 +226,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
         }),
       ],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     expect(screen.getByText('適量')).toBeDefined();
   });
@@ -239,7 +244,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油', status: 'bought' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await user.click(screen.getByRole('button', { name: '金額を記録' }));
     await fillPurchaseInputForm('醤油', '198');
@@ -260,7 +265,7 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     const shoppingList = createShoppingListDto({
       items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
     });
-    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} />);
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
 
     await act(async () => {
       window.dispatchEvent(new Event('focus'));
@@ -269,5 +274,118 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     expect(getShoppingList).toHaveBeenCalledTimes(1);
     const refreshButton = screen.getByRole('button', { name: '更新' }) as HTMLButtonElement;
     expect(refreshButton.disabled).toBe(false);
+  });
+
+  it('LC-29: products が productMap を経由して ShoppingItemRow まで届き総額差が表示される', () => {
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          priceAmount: 250,
+          unitPriceAmount: 50,
+          packageSizeValue: 500,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          priceAmount: 1200,
+          unitPriceAmount: 120,
+          packageSizeValue: 1,
+          packageSizeUnit: 'kg',
+        }),
+      ],
+    });
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+        }),
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+  });
+
+  it('LC-30: products が空配列でも例外なく描画される', () => {
+    const shoppingList = createShoppingListDto({
+      items: [
+        createShoppingItemDto({
+          id: 'item-1',
+          displayName: '醤油',
+          productId: 'product-1',
+          requiredAmount: { value: 0.3, unit: 'kg' },
+        }),
+      ],
+    });
+
+    expect(() =>
+      render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[]} />),
+    ).not.toThrow();
+    expect(screen.queryByText(/円安い/)).toBeNull();
+    expect(screen.queryByRole('button', { name: '店舗別の単価を見る' })).toBeNull();
+  });
+
+  it('LC-34: 回帰: フォーカス復帰 refetch は products を再取得せず総額差・内訳が変化しない', async () => {
+    const product = createProductDto({
+      id: 'product-1',
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'record-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 50,
+          packageSizeUnit: 'g',
+        }),
+        createPriceRecordDto({
+          id: 'record-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 120,
+          packageSizeUnit: 'g',
+        }),
+      ],
+    });
+    const item = {
+      id: 'item-1',
+      displayName: '醤油',
+      productId: 'product-1',
+      requiredAmount: { value: 0.3, unit: 'kg' },
+    };
+    // refetch は items のみを返す（products/priceHistory は API 契約上ここに含まれない）
+    getShoppingList.mockResolvedValue({
+      ok: true,
+      json: async () =>
+        createShoppingListDto({
+          items: [createShoppingItemDto({ ...item, status: 'bought' })],
+        }),
+    });
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ ...item, status: 'pending' })],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={[product]} />);
+
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    await waitFor(() => {
+      expect(getShoppingList).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
+        'true',
+      );
+    });
+    // products は props 由来のまま（再取得されていれば表示が消えるか変わる）
+    expect(screen.getByText('店舗Aの方が約210円安い')).toBeDefined();
   });
 });
