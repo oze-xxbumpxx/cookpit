@@ -3,7 +3,8 @@
 - ステータス: draft
 - レベル: L3
 - 関連: `docs/requirements/price-record-edit-and-store-rename.md` /
-  ADR-0015（起票予定・本書は論点整理のみ） / ADR-0012（superseded） / ADR-0013（accepted）
+  [ADR-0015](../decisions/ADR-0015-store-rename-for-typo-correction.md)（accepted・2026-08-05 起票済み） /
+  ADR-0012（superseded） / ADR-0013（accepted）
 
 ## 背景
 
@@ -11,7 +12,7 @@
 未達で残っている。現状、価格記録は追加・削除のみ、店舗名の更新 API・UI は存在しない
 （詳細は要件定義書 §背景）。
 
-### ADR-0015 で扱う決定事項（論点整理・本設計書では確定しない）
+### ADR-0015 で扱う決定事項（2026-08-05 起票済み・正典は ADR-0015）
 
 店舗のリネームは 2026-07-27 の ADR-0013 で一度検討され、却下されている
 （`docs/decisions/ADR-0013-store-limit-and-delete-cascade.md` §Alternatives 案C）。
@@ -21,7 +22,10 @@
 > リネーム単体では重複は解消しない（名前が同じ店舗が 2 つ残る）。
 
 この却下理由は**重複統合**という目的に対する評価であり、今回の目的（**打ち間違いの訂正**）とは
-別物である。ADR-0015 で次の論点を確定させる（本書では方向性の提示に留め、決定はしない）。
+別物である。次の 4 論点は
+[ADR-0015](../decisions/ADR-0015-store-rename-for-typo-correction.md)（Accepted・2026-08-05）で
+確定済みで、そちらが正典。ADR-0013 の Status は `accepted` のまま維持され、本タスクは
+ADR-0013 の結論を覆さない。
 
 1. ADR-0013 案C の却下理由の射程は「重複統合」に限られ、「誤字訂正」目的のリネームには
    当てはまらないこと（＝ADR-0013 の結論を覆すものではないこと）の明文化。
@@ -336,12 +340,12 @@ DTO 追加:
 
 ### `PUT /api/products/:id/price-records/:priceRecordId`（新設）
 
-| 項目 | 内容 |
-| --- | --- |
-| パスパラメータ | `id`（商品 UUID）、`priceRecordId`（価格記録 UUID）。既存 `priceRecordIdParamSchema` を再利用 |
-| リクエストボディ | `{ storeId: string(uuid), priceAmount: number(positive), packageSizeValue: number(positive), packageSizeUnit: Unit }`（`recordPriceSchema` と同形。最終形は contract-designer） |
-| レスポンス（成功） | `200` + 更新後の `ProductDto`（`priceHistory` を含む集約全体） |
-| レスポンス（異常） | `404`（`ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError`）、`400`（Zod バリデーション） |
+| 項目               | 内容                                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| パスパラメータ     | `id`（商品 UUID）、`priceRecordId`（価格記録 UUID）。既存 `priceRecordIdParamSchema` を再利用                                                                                   |
+| リクエストボディ   | `{ storeId: string(uuid), priceAmount: number(positive), packageSizeValue: number(positive), packageSizeUnit: Unit }`（`recordPriceSchema` と同形。最終形は contract-designer） |
+| レスポンス（成功） | `200` + 更新後の `ProductDto`（`priceHistory` を含む集約全体）                                                                                                                  |
+| レスポンス（異常） | `404`（`ProductNotFoundError` / `PriceRecordNotFoundError` / `StoreNotFoundError`）、`400`（Zod バリデーション）                                                                |
 
 **なぜ `ProductDto` を返すか**: 既存の `PUT /api/products/:id`
 （`UpdateProductUseCase` → `c.json(product)`）は更新後の資源全体を返す慣習であり、`PUT` の
@@ -354,12 +358,12 @@ DTO 追加:
 
 ### `PUT /api/stores/:id`（新設）
 
-| 項目 | 内容 |
-| --- | --- |
-| パスパラメータ | `id`（店舗 UUID）。既存 `idParamSchema` を再利用 |
-| リクエストボディ | `{ name: string(non-blank, max 255) }`（`createStoreSchema` と同形。最終形は contract-designer） |
-| レスポンス（成功） | `200` + 更新後の `StoreDto`（`storeResponseSchema` 形） |
-| レスポンス（異常） | `404`（`StoreNotFoundError`）、`422`（`DuplicateStoreNameError`）、`400`（Zod バリデーション） |
+| 項目               | 内容                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| パスパラメータ     | `id`（店舗 UUID）。既存 `idParamSchema` を再利用                                                 |
+| リクエストボディ   | `{ name: string(non-blank, max 255) }`（`createStoreSchema` と同形。最終形は contract-designer） |
+| レスポンス（成功） | `200` + 更新後の `StoreDto`（`storeResponseSchema` 形）                                          |
+| レスポンス（異常） | `404`（`StoreNotFoundError`）、`422`（`DuplicateStoreNameError`）、`400`（Zod バリデーション）   |
 
 `roadmap` の記載（`PUT /api/stores/:id`）どおりのメソッド・パスを採用する。
 
@@ -381,7 +385,8 @@ DTO 追加:
 **表示名が一斉に変わる**。これは「訂正」としては正しい挙動だが、「A店で買った記録のつもりが
 リネームでB店表示に変わった」という誤用（間違った店舗を選んでリネームした場合）のリスクがある。
 
-**採用案**: リネームダイアログを開いた時点で `GET /api/stores/:id/usage` を呼び、
+**採用案（ユーザー確定・2026-08-05。U-2 解消）**: リネームダイアログを開いた時点で
+`GET /api/stores/:id/usage` を呼び、
 `priceRecordCount > 0` のときだけインライン警告文を表示する。
 
 ```
@@ -490,16 +495,16 @@ DTO 追加:
 
 ### 論点5: エラー設計（UI 側）
 
-| エラー | HTTP | 画面表示 |
-| --- | --- | --- |
-| `ProductNotFoundError` | 404 | 通常発生しない（同じ商品詳細画面からの操作のため）。汎用エラー文言「記録の更新に失敗しました。」を表示 |
-| `PriceRecordNotFoundError` | 404 | 「この記録はすでに削除されています。」→ ダイアログを閉じて `router.refresh()`（削除の 404 と同じ「既に無ければ成功扱い」に倣うが、編集は不可逆な削除ではないため、成功扱いにはせず再読み込みを促す） |
-| `StoreNotFoundError`（編集で指定した店舗が存在しない） | 404 | 「選択した店舗が見つかりません。店舗一覧を確認してください。」+ 店舗一覧を再取得 |
-| Zod バリデーション（価格・内容量） | 400 | 既存 `PriceRecordForm` と同じフィールドレベルのエラー表示（`FieldErrors` パターンを流用） |
-| `StoreNotFoundError`（リネーム対象） | 404 | 「この店舗はすでに削除されています。」→ ダイアログを閉じて `router.refresh()` |
-| `DuplicateStoreNameError` | 422 | 「同じ名前の店舗がすでに登録されています。」（`PriceRecordForm` の `DUPLICATE_STORE_MESSAGE` と同文言で統一） |
-| Zod バリデーション（店舗名） | 400 | 「店舗名を入力してください。」 |
-| 通信エラー・タイムアウト | - | 「通信エラーが発生しました。」ダイアログは閉じずフォームの入力値を保持する（既存の他フォームと同じ方針） |
+| エラー                                                 | HTTP | 画面表示                                                                                                                                                                                             |
+| ------------------------------------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProductNotFoundError`                                 | 404  | 通常発生しない（同じ商品詳細画面からの操作のため）。汎用エラー文言「記録の更新に失敗しました。」を表示                                                                                               |
+| `PriceRecordNotFoundError`                             | 404  | 「この記録はすでに削除されています。」→ ダイアログを閉じて `router.refresh()`（削除の 404 と同じ「既に無ければ成功扱い」に倣うが、編集は不可逆な削除ではないため、成功扱いにはせず再読み込みを促す） |
+| `StoreNotFoundError`（編集で指定した店舗が存在しない） | 404  | 「選択した店舗が見つかりません。店舗一覧を確認してください。」+ 店舗一覧を再取得                                                                                                                     |
+| Zod バリデーション（価格・内容量）                     | 400  | 既存 `PriceRecordForm` と同じフィールドレベルのエラー表示（`FieldErrors` パターンを流用）                                                                                                            |
+| `StoreNotFoundError`（リネーム対象）                   | 404  | 「この店舗はすでに削除されています。」→ ダイアログを閉じて `router.refresh()`                                                                                                                        |
+| `DuplicateStoreNameError`                              | 422  | 「同じ名前の店舗がすでに登録されています。」（`PriceRecordForm` の `DUPLICATE_STORE_MESSAGE` と同文言で統一）                                                                                        |
+| Zod バリデーション（店舗名）                           | 400  | 「店舗名を入力してください。」                                                                                                                                                                       |
+| 通信エラー・タイムアウト                               | -    | 「通信エラーが発生しました。」ダイアログは閉じずフォームの入力値を保持する（既存の他フォームと同じ方針）                                                                                             |
 
 いずれも既存の共通 `onError`（`apps/web/src/server/app.ts:24-33`）が
 `NotFoundError` → 404、`InvalidOperationError` → 422 に変換する既存の仕組みをそのまま使う。
@@ -508,14 +513,14 @@ DTO 追加:
 
 ### 論点6: 層ごとの変更範囲（まとめ）
 
-| 層 | 変更内容 | 変更不要の根拠 |
-| --- | --- | --- |
-| Domain | `Product.updatePriceRecord()` 追加、`Store.rename()` 追加（`storeName` の `readonly` を外す） | - |
-| Application | `UpdatePriceRecordUseCase`・`RenameStoreUseCase` 新設、DTO・mapper 拡張 | - |
-| api-contract | 価格記録更新・店舗リネームの Zod スキーマ（方針まで） | - |
-| Presentation | Hono ルート 2 本追加、`PriceRecordEditDialog`・`StoreRenameDialog` 新設、`product-detail-client.tsx` / `price-record-form.tsx` に編集導線を追加 | - |
-| Infrastructure | **変更不要** | `save()` が既存 ID を維持した `onConflictDoUpdate` upsert をすでに実装済み（`IR-P-06`・`IR-P-08` で担保） |
-| DB スキーマ | **変更不要** | 上記と同じ理由。新しいカラム・テーブルは不要 |
+| 層             | 変更内容                                                                                                                                        | 変更不要の根拠                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Domain         | `Product.updatePriceRecord()` 追加、`Store.rename()` 追加（`storeName` の `readonly` を外す）                                                   | -                                                                                                         |
+| Application    | `UpdatePriceRecordUseCase`・`RenameStoreUseCase` 新設、DTO・mapper 拡張                                                                         | -                                                                                                         |
+| api-contract   | 価格記録更新・店舗リネームの Zod スキーマ（方針まで）                                                                                           | -                                                                                                         |
+| Presentation   | Hono ルート 2 本追加、`PriceRecordEditDialog`・`StoreRenameDialog` 新設、`product-detail-client.tsx` / `price-record-form.tsx` に編集導線を追加 | -                                                                                                         |
+| Infrastructure | **変更不要**                                                                                                                                    | `save()` が既存 ID を維持した `onConflictDoUpdate` upsert をすでに実装済み（`IR-P-06`・`IR-P-08` で担保） |
+| DB スキーマ    | **変更不要**                                                                                                                                    | 上記と同じ理由。新しいカラム・テーブルは不要                                                              |
 
 ## バックエンド設計
 
@@ -662,9 +667,13 @@ DB スキーマ変更が無いためデータ移行は不要。新設する `PUT
 ## 未決事項
 
 - 要件定義書 §未決事項 U-1〜U-3 を参照。
-  - U-1: `PUT /price-records/:id` のレスポンスボディを `ProductDto` とする提案（§API 設計）の
-    最終確定は contract-designer との合意が必要。
-  - U-2: リネーム時の注意喚起の強さ（インライン警告のみ、提案どおりで良いか）はユーザー確認が必要。
-  - U-3: ADR-0015 本文は Orchestrator が別途起票する。
+  - **U-1（contract-designer へ委譲中）**: `PUT /price-records/:priceRecordId` のレスポンスボディを
+    `ProductDto` とする提案（§API 設計）の最終確定。契約設計書
+    `price-record-edit-and-store-rename.contract.md` の結論を正典とする。
+  - **U-2（解消・2026-08-05 ユーザー確定）**: リネーム時の注意喚起はインライン警告のみとする
+    （二段階確認は設けない）。§フロントエンド設計 論点1 のとおり。
+  - **U-3（解消・2026-08-05）**: ADR-0015 を
+    [`docs/decisions/ADR-0015-store-rename-for-typo-correction.md`](../decisions/ADR-0015-store-rename-for-typo-correction.md)
+    として起票済み（Status: Accepted）。
 - `PriceRecordEditDialog` のコンポーネント名・ファイル配置（本書の提案どおりで良いか）は
   実装時に implementer が最終決定してよい規模の粒度と考えるが、念のため確認を残す。
