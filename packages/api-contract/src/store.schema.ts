@@ -9,6 +9,14 @@ export const createStoreSchema = z.object({
   name: nonBlankString,
 });
 
+// 店舗リネームリクエストボディ。createStoreSchema と同形だが、意図的に別スキーマとして
+// 新設する（契約設計書 §2.2）。id は URL param（idParamSchema）由来のため body に含めない。
+export const renameStoreSchema = z.object({
+  name: nonBlankString,
+});
+
+export type RenameStoreBody = z.infer<typeof renameStoreSchema>;
+
 export const storeResponseSchema = z.object({
   id: z.string(),
   name: z.string(),

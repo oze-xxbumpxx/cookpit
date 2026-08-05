@@ -40,15 +40,15 @@
 | N-04    | 記録日時が編集前後で同じ値のまま                                                 | D-PUR-04, A-UPU-04（critical）                              |
 | N-05    | 編集後、最安店舗・グラフ・買い物リスト単価比較が再計算される                     | D-PUR-11, D-PUR-12, A-UPU-16, PC-EDIT-01, PC-EDIT-02, MB-05 |
 | N-06    | 店舗名編集後、一覧・プルダウン・価格記録の表示が新名になる                       | A-RSU-01, PRF-17, MB-05                                     |
-| N-07    | 正規化後に異なる名前（大文字小文字違い等）へ変更でき、同名エラーにならない       | A-RSU-03, A-RSU-04, A-RSU-06, SRD-09, WH-S-11               |
-| N-08    | 同じ文字列のまま保存しても自分自身との重複で拒否されない（冪等）                 | A-RSU-02, D-SRN-06, SRD-08, WH-S-10                         |
+| N-07    | 正規化後に異なる名前（大文字小文字違い等）へ変更でき、同名エラーにならない       | A-RSU-03, A-RSU-04, A-RSU-06, SRD-09, WH-S-13               |
+| N-08    | 同じ文字列のまま保存しても自分自身との重複で拒否されない（冪等）                 | A-RSU-02, D-SRN-06, SRD-08, WH-S-12                         |
 | E-01    | 存在しない商品 ID → 404（`ProductNotFoundError`）                                | A-UPU-09, WH-P-10                                           |
 | E-02    | 存在しない・削除済みの価格記録 ID → 404（`PriceRecordNotFoundError`）            | A-UPU-10, WH-P-11, PRED-05                                  |
 | E-03    | 存在しない店舗 ID → 404（`StoreNotFoundError`）                                  | A-UPU-11, WH-P-12, PRED-06                                  |
 | E-04    | 価格 0 以下・内容量 0 以下 → 400（Zod）                                          | A-UPU-12, A-UPU-13, Z-UPR-03〜06, WH-P-13                   |
-| E-05    | 存在しない店舗 ID（リネーム） → 404（`StoreNotFoundError`）                      | A-RSU-08, WH-S-06, SRD-10                                   |
-| E-06    | 正規化後、自分以外の既存店舗と一致 → 422（`DuplicateStoreNameError`）            | A-RSU-05, A-RSU-07, WH-S-07, SRD-11                         |
-| E-07    | 空文字列・空白のみ・256 文字以上 → 400（Zod）                                    | Z-RSN-02, Z-RSN-04, WH-S-08, SRD-12                         |
+| E-05    | 存在しない店舗 ID（リネーム） → 404（`StoreNotFoundError`）                      | A-RSU-08, WH-S-08, SRD-10                                   |
+| E-06    | 正規化後、自分以外の既存店舗と一致 → 422（`DuplicateStoreNameError`）            | A-RSU-05, A-RSU-07, WH-S-09, SRD-11                         |
+| E-07    | 空文字列・空白のみ・256 文字以上 → 400（Zod）                                    | Z-RSN-02, Z-RSN-04, WH-S-10, SRD-12                         |
 | E-08    | 価格記録編集で通信エラー → エラー表示・値保持                                    | PRED-08                                                     |
 | E-09    | 店舗名編集で通信エラー → エラー表示・値保持                                      | SRD-13                                                      |
 | E-10    | 「最近の記録」に出ない 6 件目以降は編集の導線が無い                              | PDC-11, MB-02（=B-05 と同一事象）                           |
@@ -106,7 +106,7 @@ DTO 追加（`UpdatePriceRecordInputDto` / `RenameStoreInputDto`）は型のみ�
 | コンポーネント                                                                    | 変更種別                                                     | 対応する試験観点 No                                     |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
 | `PUT /api/products/:id/price-records/:priceRecordId`（`routes/products.ts` 追加） | 新設                                                         | WH-P-09〜WH-P-15                                        |
-| `PUT /api/stores/:id`（`routes/stores.ts` 追加）                                  | 新設                                                         | WH-S-05〜WH-S-11                                        |
+| `PUT /api/stores/:id`（`routes/stores.ts` 追加）                                  | 新設                                                         | WH-S-07〜WH-S-13                                        |
 | `PriceRecordEditDialog`（新設ファイル）                                           | 新設                                                         | PRED-01〜PRED-10                                        |
 | `StoreRenameDialog`（新設ファイル）                                               | 新設                                                         | SRD-01〜SRD-13                                          |
 | `ProductDetailClient`（編集アイコン追加）                                         | 変更                                                         | PDC-09〜PDC-12                                          |
@@ -250,15 +250,22 @@ UseCase は `vi.mock('@cookpit/application', ...)` でスタブする既存パ�
 
 ### 6-2. `PUT /api/stores/:id`（`stores.test.ts` 追記）
 
+> **採番の注記（2026-08-05 実装時に是正）**: 本節は当初 `WH-S-05` から始めていたが、
+> `WH-S-05` / `WH-S-06` は先行タスクで既に使用済みだった
+> （`docs/tests/store-delete-and-unit-price-basis.md` の WH-S-04〜06。うち `WH-S-06` =
+> DELETE の UUID 検証は `stores.test.ts:176` に現存し、`WH-S-05` = `StoreInUseError` → 422 は
+> ADR-0013 のカスケード削除化で退役済み）。同名の試験 ID が 2 つ存在すると追跡できなくなるため、
+> 本節の ID を **`WH-S-07`〜`WH-S-13`** へ繰り下げた。既存 `WH-S-01`〜`WH-S-06` は変更していない。
+
 | #       | 観点                                              | 前提                                              | 操作                                                                                                                                   | 期待結果                                                                          | 分類               |
 | ------- | ------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| WH-S-05 | 200: UseCase の返却値をそのまま返す               | `RenameStoreUseCase.execute` が `StoreDto` を解決 | `PUT /api/stores/:id` に正常なボディで送信                                                                                             | `200`、レスポンスボディが `StoreDto` と一致、`execute` が `{id, name}` で呼ばれる | 正常               |
-| WH-S-06 | 404: `StoreNotFoundError`                         | `execute` が `StoreNotFoundError` を reject       | 同上                                                                                                                                   | `404`、`{ error: 'Store not found: <id>' }`                                       | 異常（E-05）       |
-| WH-S-07 | 422: `DuplicateStoreNameError`                    | `execute` が `DuplicateStoreNameError` を reject  | 同上                                                                                                                                   | `422`                                                                             | 異常（E-06）       |
-| WH-S-08 | 400: name 空文字                                  | —                                                 | `{ name: '' }` で送信                                                                                                                  | `400`、`execute` は呼ばれない                                                     | 異常・境界（E-07） |
-| WH-S-09 | 400: id が UUID でない                            | —                                                 | パスの `id` を `'not-a-uuid'` にして送信                                                                                               | `400`、`execute` は呼ばれない                                                     | 境界               |
-| WH-S-10 | 冪等性（N-08）: 同一 name で 2 回連続 PUT         | `execute` が同じ `StoreDto` を解決                | 同一ボディで 2 回連続送信                                                                                                              | 両方とも `200`（422 にならない）、`execute` が同一引数で 2 回呼ばれる             | 冪等性             |
-| WH-S-11 | N-07 の疎通: 大文字小文字だけ変えた name でも 200 | `execute` が `StoreDto` を解決するようモック      | `{ name: 'life' }` で送信（実際の自己衝突除外ロジックは A-RSU-03 で担保済み。ここではルーティングが 422 を誤って返さないことのみ確認） | `200`                                                                             | 正常               |
+| WH-S-07 | 200: UseCase の返却値をそのまま返す               | `RenameStoreUseCase.execute` が `StoreDto` を解決 | `PUT /api/stores/:id` に正常なボディで送信                                                                                             | `200`、レスポンスボディが `StoreDto` と一致、`execute` が `{id, name}` で呼ばれる | 正常               |
+| WH-S-08 | 404: `StoreNotFoundError`                         | `execute` が `StoreNotFoundError` を reject       | 同上                                                                                                                                   | `404`、`{ error: 'Store not found: <id>' }`                                       | 異常（E-05）       |
+| WH-S-09 | 422: `DuplicateStoreNameError`                    | `execute` が `DuplicateStoreNameError` を reject  | 同上                                                                                                                                   | `422`                                                                             | 異常（E-06）       |
+| WH-S-10 | 400: name 空文字                                  | —                                                 | `{ name: '' }` で送信                                                                                                                  | `400`、`execute` は呼ばれない                                                     | 異常・境界（E-07） |
+| WH-S-11 | 400: id が UUID でない                            | —                                                 | パスの `id` を `'not-a-uuid'` にして送信                                                                                               | `400`、`execute` は呼ばれない                                                     | 境界               |
+| WH-S-12 | 冪等性（N-08）: 同一 name で 2 回連続 PUT         | `execute` が同じ `StoreDto` を解決                | 同一ボディで 2 回連続送信                                                                                                              | 両方とも `200`（422 にならない）、`execute` が同一引数で 2 回呼ばれる             | 冪等性             |
+| WH-S-13 | N-07 の疎通: 大文字小文字だけ変えた name でも 200 | `execute` が `StoreDto` を解決するようモック      | `{ name: 'life' }` で送信（実際の自己衝突除外ロジックは A-RSU-03 で担保済み。ここではルーティングが 422 を誤って返さないことのみ確認） | `200`                                                                             | 正常               |
 
 ---
 
@@ -362,7 +369,7 @@ UseCase は `vi.mock('@cookpit/application', ...)` でスタブする既存パ�
 - **データ整合性**: A-UPU-17（`storeName` が編集後の `storeId` に対応）、D-PUR-10〜12、
   PC-EDIT-01/02、A-RSU-10（店舗件数不変）。
 - **冪等性**: A-UPU-15（`PUT /price-records` は `priceHistory` の内容がべき等・`updatedAt` のみ非べき等）、
-  A-RSU-09（`PUT /stores/:id` は `StoreDto` 全体が完全にべき等）、WH-P-15、WH-S-10、SRD-08、A-RSU-02。
+  A-RSU-09（`PUT /stores/:id` は `StoreDto` 全体が完全にべき等）、WH-P-15、WH-S-12、SRD-08、A-RSU-02。
 - **障害系（外部 I/O）**: 対象外。新規の外部 API・外部ストレージ I/O は無く、既存の DB `save()`
   upsert 経路をそのまま使う（設計書 §エラー処理）。通信エラーへの対処は「フロントエンド固有」
   区分の PRED-08・SRD-13 で扱う。
@@ -451,7 +458,7 @@ UseCase は `vi.mock('@cookpit/application', ...)` でスタブする既存パ�
 - [ ] api-contract: `updatePriceRecordSchema`（Z-UPR-01〜08）、`renameStoreSchema`
       （Z-RSN-01〜05）が実装され全件 pass
 - [ ] Presentation（Hono）: `PUT /price-records/:priceRecordId`（WH-P-09〜15）、
-      `PUT /stores/:id`（WH-S-05〜11）が実装され全件 pass
+      `PUT /stores/:id`（WH-S-07〜13）が実装され全件 pass
 - [ ] Presentation（RTL）: `PriceRecordEditDialog`（PRED-01〜10）、`StoreRenameDialog`
       （SRD-01〜13）、`ProductDetailClient` 追加分（PDC-09〜12）、`PriceRecordForm` 追加分
       （PRF-15〜17）が実装され全件 pass

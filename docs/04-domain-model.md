@@ -156,6 +156,11 @@ export class Store {
 >
 > どちらも単一の `Store` では判定できないコレクション制約なので、Entity ではなく
 > `CreateStoreUseCase` / `DeleteStoreUseCase`（Application 層）が担う。
+>
+> 2026-08 に [ADR-0015](./decisions/ADR-0015-store-rename-for-typo-correction.md) で
+> `rename(name: string): void` が追加された（誤字訂正用。`_name` の `readonly` は外れている）。
+> 同名検査（自分自身を除く既存店舗との一致判定）は `Store.rename()` 単体では行わず、
+> `RenameStoreUseCase` が担う（`CreateStoreUseCase` と同じ責務分担）。
 
 ## 集約詳細
 
@@ -334,6 +339,11 @@ export type ProductCategory = '野菜' | '肉' | '魚' | '調味料' | '乾物' 
 - 履歴が増え続けると集約が肥大化する懸念があるが、2人利用・週1回の買い物では数年運用しても問題なし
 - パフォーマンスが課題になったら、履歴を別の読み取りモデルに切り出す
 - `unitPrice`（100g あたり等）が地味に重要。「1袋300g 500円」と「1袋500g 700円」を比較するのに必要
+
+> 上記コードは `recordPrice()` / `removePriceRecord()` を反映していない既知のギャップに加えて、
+> 2026-08 に `updatePriceRecord(priceRecordId, props): void` が追加された（誤字訂正・単位変更
+> 用途。ADR-0015 と同時期の Sprint 7 タスク2）。`id` と `observedAt` は編集前後で維持し、
+> 内部では新しい `PriceRecord` を生成して配列内の該当要素を置換する（`PriceRecord` は不変）。
 
 ### MealPlan 集約
 

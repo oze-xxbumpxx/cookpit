@@ -1,9 +1,10 @@
-import { createStoreSchema, idParamSchema } from '@cookpit/api-contract';
+import { createStoreSchema, idParamSchema, renameStoreSchema } from '@cookpit/api-contract';
 import {
   CreateStoreUseCase,
   DeleteStoreUseCase,
   GetStoresUseCase,
   GetStoreUsageUseCase,
+  RenameStoreUseCase,
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
@@ -21,6 +22,18 @@ export const storesRoute = new Hono()
     const store = await usecase.execute(body);
     return c.json(store, 201);
   })
+  .put(
+    '/:id',
+    zValidator('param', idParamSchema),
+    zValidator('json', renameStoreSchema),
+    async (c) => {
+      const { id } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new RenameStoreUseCase(storeRepository());
+      const store = await usecase.execute({ id, ...body });
+      return c.json(store);
+    },
+  )
   // 削除で失われる件数の事前提示用（ADR-0013）。削除の可否判定には使わない。
   .get('/:id/usage', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');

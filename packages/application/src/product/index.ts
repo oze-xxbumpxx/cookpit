@@ -5,6 +5,7 @@ export * from './update-product.use-case';
 export * from './delete-product.use-case';
 export * from './delete-price-record.use-case';
 export * from './record-price.use-case';
+export * from './update-price-record.use-case';
 export * from './get-cheapest-store.use-case';
 export * from './product.dto';
 export * from './product-not-found.error';

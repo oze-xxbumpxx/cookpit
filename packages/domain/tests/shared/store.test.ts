@@ -69,6 +69,49 @@ describe('Store', () => {
   });
 });
 
+describe('Store.rename', () => {
+  it('D-SRN-01: 名前が差し替わる', () => {
+    const store = Store.reconstruct({
+      id: StoreId.fromString('store-1'),
+      name: '業務スーパ',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    store.rename('業務スーパー');
+
+    expect(store.name).toBe('業務スーパー');
+  });
+
+  it.each(['', '   '])('D-SRN-02/03: 空文字・空白のみ %j を拒否する', (name) => {
+    const store = Store.create({ name: 'ライフ' });
+    expect(() => store.rename(name)).toThrow('Store name is required');
+    expect(store.name).toBe('ライフ');
+  });
+
+  it('D-SRN-04: id は不変', () => {
+    const store = Store.create({ name: 'ライフ' });
+    const before = store.id.value;
+    store.rename('新名前');
+    expect(store.id.value).toBe(before);
+  });
+
+  it('D-SRN-05: createdAt は不変', () => {
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    const store = Store.reconstruct({
+      id: StoreId.fromString('store-1'),
+      name: 'ライフ',
+      createdAt,
+    });
+    store.rename('新名前');
+    expect(store.createdAt.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('D-SRN-06: 同じ名前で rename しても例外を投げない（冪等）', () => {
+    const store = Store.create({ name: 'ライフ' });
+    expect(() => store.rename('ライフ')).not.toThrow();
+  });
+});
+
 describe('normalizeStoreName', () => {
   it.each([
     ['ライフ', 'ライフ', 'NSN-01 正常系'],

@@ -1,7 +1,7 @@
 import { InvalidOperationError } from '../shared/errors';
 
 /**
- * 既存店舗と同名の店舗を作成しようとしたときのエラー（ADR-0013）。
+ * 既存店舗と同名の店舗を作成・リネームしようとしたときのエラー（ADR-0013・ADR-0015）。
  * `InvalidOperationError` を継承しているため HTTP では 422 になる。
  *
  * 同名判定は `normalizeStoreName()`（前後空白除去 + NFKC）後の完全一致。`attemptedName` には
@@ -12,6 +12,6 @@ import { InvalidOperationError } from '../shared/errors';
  */
 export class DuplicateStoreNameError extends InvalidOperationError {
   constructor(readonly attemptedName: string) {
-    super(`Cannot create Store: name '${attemptedName}' already exists`);
+    super(`Store name '${attemptedName}' already exists`);
   }
 }

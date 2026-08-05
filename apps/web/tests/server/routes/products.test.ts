@@ -8,6 +8,8 @@ import {
   GetProductsUseCase,
   PriceRecordNotFoundError,
   ProductNotFoundError,
+  StoreNotFoundError,
+  UpdatePriceRecordUseCase,
 } from '@cookpit/application';
 import type { ProductDto } from '@cookpit/application';
 import type * as ApplicationModule from '@cookpit/application';
@@ -26,6 +28,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     GetProductUseCase: vi.fn(),
     DeleteProductUseCase: vi.fn(),
     DeletePriceRecordUseCase: vi.fn(),
+    UpdatePriceRecordUseCase: vi.fn(),
   };
 });
 
@@ -162,5 +165,143 @@ describe('productsRoute', () => {
 
     expect(res.status).toBe(400);
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  const validUpdateBody = {
+    storeId: '11111111-1111-4111-8111-111111111111',
+    priceAmount: 148,
+    packageSizeValue: 1,
+    packageSizeUnit: '個',
+  };
+
+  it('WH-P-09: PUT /price-records/:priceRecordId は 200 で UseCase の返却値を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(productDto);
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validUpdateBody),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(productDto);
+    expect(execute).toHaveBeenCalledWith({
+      productId: PRODUCT_ID,
+      priceRecordId: PRICE_RECORD_ID,
+      ...validUpdateBody,
+    });
+  });
+
+  it('WH-P-10: ProductNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new ProductNotFoundError(PRODUCT_ID));
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validUpdateBody),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `Product not found: ${PRODUCT_ID}` });
+  });
+
+  it('WH-P-11: PriceRecordNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new PriceRecordNotFoundError(PRICE_RECORD_ID));
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validUpdateBody),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `PriceRecord not found: ${PRICE_RECORD_ID}` });
+  });
+
+  it('WH-P-12: StoreNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new StoreNotFoundError(validUpdateBody.storeId));
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validUpdateBody),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `Store not found: ${validUpdateBody.storeId}` });
+  });
+
+  it('WH-P-13: priceAmount が 0 なら 400 を返し、execute は呼ばれない', async () => {
+    const execute = vi.fn();
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validUpdateBody, priceAmount: 0 }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('WH-P-14: priceRecordId が UUID でなければ 400 を返し、execute は呼ばれない', async () => {
+    const execute = vi.fn();
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    const res = await app.request(`/api/products/${PRODUCT_ID}/price-records/not-a-uuid`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validUpdateBody),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('WH-P-15: 同一ボディで 2 回連続 PUT しても両方 200（冪等性の疎通確認）', async () => {
+    const execute = vi.fn().mockResolvedValue(productDto);
+    vi.mocked(UpdatePriceRecordUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdatePriceRecordUseCase;
+    });
+
+    for (let i = 0; i < 2; i += 1) {
+      const res = await app.request(
+        `/api/products/${PRODUCT_ID}/price-records/${PRICE_RECORD_ID}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(validUpdateBody),
+        },
+      );
+      expect(res.status).toBe(200);
+    }
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenNthCalledWith(1, {
+      productId: PRODUCT_ID,
+      priceRecordId: PRICE_RECORD_ID,
+      ...validUpdateBody,
+    });
+    expect(execute).toHaveBeenNthCalledWith(2, {
+      productId: PRODUCT_ID,
+      priceRecordId: PRICE_RECORD_ID,
+      ...validUpdateBody,
+    });
   });
 });

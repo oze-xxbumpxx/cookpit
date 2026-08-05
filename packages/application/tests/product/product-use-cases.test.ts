@@ -20,11 +20,13 @@ import { GetProductUseCase } from '../../src/product/get-product.use-case';
 import { GetProductsUseCase } from '../../src/product/get-products.use-case';
 import { ProductNotFoundError } from '../../src/product/product-not-found.error';
 import { RecordPriceUseCase } from '../../src/product/record-price.use-case';
+import { UpdatePriceRecordUseCase } from '../../src/product/update-price-record.use-case';
 import { StoreNotFoundError } from '../../src/store/store-not-found.error';
 import { UpdateProductUseCase } from '../../src/product/update-product.use-case';
 import type {
   CreateProductInputDto,
   RecordPriceInputDto,
+  UpdatePriceRecordInputDto,
   UpdateProductInputDto,
 } from '../../src/product/product.dto';
 
@@ -357,6 +359,292 @@ describe('RecordPriceUseCase', () => {
       }),
     ).rejects.toThrow('Package size must be positive');
     expect(productRepository.saveCount).toBe(0);
+  });
+});
+
+describe('UpdatePriceRecordUseCase', () => {
+  const baseInput: UpdatePriceRecordInputDto = {
+    productId: 'product-1',
+    priceRecordId: 'record-1',
+    storeId: 'store-b',
+    priceAmount: 300,
+    packageSizeValue: 3,
+    packageSizeUnit: '個',
+  };
+
+  function seedBase(): void {
+    storeRepository.seed(seededStore('store-a', '西友'));
+    storeRepository.seed(seededStore('store-b', 'ライフ'));
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord(
+          'record-1',
+          StoreId.fromString('store-a'),
+          300,
+          100,
+          new Date('2026-06-01T10:00:00.000Z'),
+        ),
+      ]),
+    );
+  }
+
+  it('A-UPU-01: 店舗のみ変更する', async () => {
+    seedBase();
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      ...baseInput,
+      priceAmount: 300,
+      packageSizeValue: 3,
+      packageSizeUnit: '個',
+    });
+
+    expect(dto.priceHistory[0]?.storeId).toBe('store-b');
+    expect(dto.priceHistory[0]?.storeName).toBe('ライフ');
+    expect(dto.priceHistory[0]?.priceAmount).toBe(300);
+    expect(dto.priceHistory[0]?.packageSizeValue).toBe(3);
+  });
+
+  it('A-UPU-02: 価格のみ変更する', async () => {
+    seedBase();
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      ...baseInput,
+      storeId: 'store-a',
+      priceAmount: 450,
+      packageSizeValue: 3,
+      packageSizeUnit: '個',
+    });
+
+    expect(dto.priceHistory[0]?.priceAmount).toBe(450);
+    expect(dto.priceHistory[0]?.unitPriceAmount).toBe(150);
+    expect(dto.priceHistory[0]?.storeId).toBe('store-a');
+    expect(dto.priceHistory[0]?.packageSizeValue).toBe(3);
+  });
+
+  it('A-UPU-03: 内容量のみ変更する（単位は同じ）', async () => {
+    seedBase();
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      ...baseInput,
+      storeId: 'store-a',
+      priceAmount: 300,
+      packageSizeValue: 6,
+      packageSizeUnit: '個',
+    });
+
+    expect(dto.priceHistory[0]?.packageSizeValue).toBe(6);
+    expect(dto.priceHistory[0]?.unitPriceAmount).toBe(50);
+  });
+
+  it('A-UPU-04: id と observedAt は編集前後で同一値である（critical）', async () => {
+    seedBase();
+    const before = (await productRepository.findById(ProductId.fromString('product-1')))
+      ?.priceHistory[0];
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(
+      baseInput,
+    );
+
+    expect(dto.priceHistory[0]?.id).toBe(before?.id.value);
+    expect(dto.priceHistory[0]?.observedAt).toBe(before?.observedAt.toISOString());
+  });
+
+  it.each([
+    [
+      'kg→g',
+      {
+        priceAmount: 1000,
+        from: { value: 1, unit: 'kg' as const },
+        to: { value: 500, unit: 'g' as const },
+      },
+      200,
+    ],
+    [
+      'g→kg',
+      {
+        priceAmount: 200,
+        from: { value: 200, unit: 'g' as const },
+        to: { value: 2, unit: 'kg' as const },
+      },
+      10,
+    ],
+    [
+      'l→ml',
+      {
+        priceAmount: 180,
+        from: { value: 2, unit: 'l' as const },
+        to: { value: 900, unit: 'ml' as const },
+      },
+      20,
+    ],
+    [
+      'ml→l',
+      {
+        priceAmount: 250,
+        from: { value: 500, unit: 'ml' as const },
+        to: { value: 2.5, unit: 'l' as const },
+      },
+      10,
+    ],
+  ])(
+    'A-UPU-05〜08: 単位換算 %s 方向で単価が再計算される（critical）',
+    async (_label, fixture, expected) => {
+      storeRepository.seed(seededStore('store-a', '西友'));
+      productRepository.seed(
+        seededProduct('product-1', '玉ねぎ', [
+          seededPriceRecord(
+            'record-1',
+            StoreId.fromString('store-a'),
+            fixture.priceAmount,
+            100,
+            new Date('2026-06-01T10:00:00.000Z'),
+          ),
+        ]),
+      );
+
+      const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+        productId: 'product-1',
+        priceRecordId: 'record-1',
+        storeId: 'store-a',
+        priceAmount: fixture.priceAmount,
+        packageSizeValue: fixture.to.value,
+        packageSizeUnit: fixture.to.unit,
+      });
+
+      expect(dto.priceHistory[0]?.unitPriceAmount).toBe(expected);
+    },
+  );
+
+  it('A-UPU-09: 商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
+    await expect(
+      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+    ).rejects.toBeInstanceOf(ProductNotFoundError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
+  it('A-UPU-10: 価格記録が存在しなければ PriceRecordNotFoundError を投げ、保存しない', async () => {
+    storeRepository.seed(seededStore('store-b', 'ライフ'));
+    productRepository.seed(seededProduct('product-1'));
+
+    await expect(
+      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+    ).rejects.toBeInstanceOf(PriceRecordNotFoundError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
+  it('A-UPU-11: 店舗が存在しなければ StoreNotFoundError を投げ、保存しない', async () => {
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord('record-1', StoreId.fromString('store-a'), 300, 100, new Date()),
+      ]),
+    );
+
+    await expect(
+      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+    ).rejects.toBeInstanceOf(StoreNotFoundError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
+  it.each([0, -1])(
+    'A-UPU-12: priceAmount が %d なら例外を投げ、保存しない',
+    async (priceAmount) => {
+      seedBase();
+
+      await expect(
+        new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+          ...baseInput,
+          priceAmount,
+        }),
+      ).rejects.toThrow();
+      expect(productRepository.saveCount).toBe(0);
+    },
+  );
+
+  it.each([0, -1])(
+    'A-UPU-13: packageSizeValue が %d なら例外を投げ、保存しない',
+    async (packageSizeValue) => {
+      seedBase();
+
+      await expect(
+        new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+          ...baseInput,
+          packageSizeValue,
+        }),
+      ).rejects.toThrow();
+      expect(productRepository.saveCount).toBe(0);
+    },
+  );
+
+  it('A-UPU-14: price が 1 円（下限）なら成功する', async () => {
+    seedBase();
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      ...baseInput,
+      priceAmount: 1,
+    });
+
+    expect(dto.priceHistory[0]?.priceAmount).toBe(1);
+  });
+
+  it('A-UPU-15: 同一入力で 2 回連続 execute しても priceHistory の内容は一致する（冪等性）', async () => {
+    seedBase();
+    const usecase = new UpdatePriceRecordUseCase(productRepository, storeRepository);
+
+    const first = await usecase.execute(baseInput);
+    const second = await usecase.execute(baseInput);
+
+    expect(second.priceHistory[0]).toEqual(first.priceHistory[0]);
+    expect(new Date(second.updatedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(first.updatedAt).getTime(),
+    );
+  });
+
+  it('A-UPU-16: 編集後、最安店舗が再計算される（N-05統合）', async () => {
+    storeRepository.seed(seededStore('store-a', '西友'));
+    storeRepository.seed(seededStore('store-b', 'ライフ'));
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord(
+          'record-a',
+          StoreId.fromString('store-a'),
+          200,
+          80,
+          new Date('2026-06-01T10:00:00.000Z'),
+        ),
+        seededPriceRecord(
+          'record-b',
+          StoreId.fromString('store-b'),
+          300,
+          100,
+          new Date('2026-06-01T11:00:00.000Z'),
+        ),
+      ]),
+    );
+
+    await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      productId: 'product-1',
+      priceRecordId: 'record-b',
+      storeId: 'store-b',
+      priceAmount: 60,
+      packageSizeValue: 3,
+      packageSizeUnit: '個',
+    });
+
+    const result = await new GetCheapestStoreUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+
+    expect(result?.storeId).toBe('store-b');
+  });
+
+  it('A-UPU-17: 戻り値の storeName は編集後の storeId に対応する', async () => {
+    seedBase();
+
+    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(
+      baseInput,
+    );
+
+    expect(dto.priceHistory[0]?.storeName).toBe('ライフ');
   });
 });
 

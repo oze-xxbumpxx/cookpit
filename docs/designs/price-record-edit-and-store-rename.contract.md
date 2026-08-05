@@ -295,37 +295,35 @@ Hono ルート実装イメージ（参考のみ・実装はしない）:
 
 ### 5-2. エラークラスと HTTP ステータスのマッピング
 
-| エンドポイント                      | エラークラス                       | 継承元                  | HTTP | メッセージ例                                                             |
-| ----------------------------------- | ---------------------------------- | ----------------------- | ---- | ------------------------------------------------------------------------ |
-| `PUT /price-records/:priceRecordId` | `ProductNotFoundError`（既存）     | `NotFoundError`         | 404  | `"Product not found: <id>"`                                              |
-| 同上                                | `PriceRecordNotFoundError`（既存） | `NotFoundError`         | 404  | `"PriceRecord not found: <priceRecordId>"`                               |
-| 同上                                | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <storeId>"`                                           |
-| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                             |
-| `PUT /stores/:id`                   | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <id>"`                                                |
-| 同上                                | `DuplicateStoreNameError`（既存）  | `InvalidOperationError` | 422  | `"Cannot create Store: name '<name>' already exists"`（※後述 §5-3 参照） |
-| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                             |
+| エンドポイント                      | エラークラス                       | 継承元                  | HTTP | メッセージ例                                                                |
+| ----------------------------------- | ---------------------------------- | ----------------------- | ---- | --------------------------------------------------------------------------- |
+| `PUT /price-records/:priceRecordId` | `ProductNotFoundError`（既存）     | `NotFoundError`         | 404  | `"Product not found: <id>"`                                                 |
+| 同上                                | `PriceRecordNotFoundError`（既存） | `NotFoundError`         | 404  | `"PriceRecord not found: <priceRecordId>"`                                  |
+| 同上                                | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <storeId>"`                                              |
+| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                                |
+| `PUT /stores/:id`                   | `StoreNotFoundError`（既存）       | `NotFoundError`         | 404  | `"Store not found: <id>"`                                                   |
+| 同上                                | `DuplicateStoreNameError`（既存）  | `InvalidOperationError` | 422  | `"Store name '<name>' already exists"`（実装時に是正済み。※後述 §5-3 参照） |
+| 同上                                | Zod バリデーション                 | —                       | 400  | `@hono/zod-validator` 標準形                                                |
 
 `app.ts` への変更は不要。`NotFoundError` / `InvalidOperationError` の基底 2 分岐のみで両方とも
 自動的にマッピングされる（`ProductNotFoundError` 等 4 クラスはすべてこの 2 基底のどちらかを
 継承済み。§参照した既存契約で確認済み）。
 
-### 5-3. 申し送り: `DuplicateStoreNameError` のメッセージ文言が「作成」を指す
+### 5-3. 実装時に是正済み: `DuplicateStoreNameError` のメッセージ文言
 
-`DuplicateStoreNameError`（`packages/application/src/store/duplicate-store-name.error.ts:15`）の
-メッセージは `` `Cannot create Store: name '${attemptedName}' already exists` `` で固定されており、
-`RenameStoreUseCase` から投げても文言は変わらない（設計書 §Application 層はこのクラスを無変更で
-再利用する方針）。
+本書の起票時点では、`DuplicateStoreNameError`
+（`packages/application/src/store/duplicate-store-name.error.ts:15`）のメッセージが
+`` `Cannot create Store: name '${attemptedName}' already exists` `` のままで、
+`RenameStoreUseCase` から投げても「作成（create）」表記が残る点を申し送り事項として記録していた
+（実装時にリファクタリングとして是正するか Orchestrator の判断を仰ぐ、としていた）。
 
-これは**実害が小さいため契約としては許容する**（理由: 設計書 §フロントエンド設計 論点5の
-UI エラー表示は raw `error.message` をそのまま出さず、`DuplicateStoreNameError` → 422 に対して
-「同じ名前の店舗がすでに登録されています。」という固定文言を表示する設計になっており、
-リネーム操作でユーザーに「作成」という誤った文言が見えることはない）。
+実装時（実装計画 Step 14・Orchestrator 追加スコープ）に、メッセージを
+`` `Store name '${attemptedName}' already exists` `` という作成・リネームどちらの操作にも
+中立な文言へ修正した。同名判定のロジック・HTTP ステータス（422）・レスポンス形といった契約上の
+決定内容は変更していない。§5-2 の「メッセージ例」列と §7.2 のサンプルペイロードは修正後の文言に
+更新済み（本節末尾を参照）。
 
-ただし、生の JSON レスポンス（`curl` での動作確認・将来の別クライアント・ログ）には
-「Cannot **create** Store」という、実際にはリネーム操作なのに作成と読める文言がそのまま残る。
-`DuplicateStoreNameError` はプロダクションコード（`packages/application`）であり本書の変更対象
-外のため、ここでは事実として記録し、implementer/レビュアーへの申し送りとする（§11 参照）。
-契約（HTTP ステータス・レスポンス形）自体は変わらないため、本書の確定判断には影響しない。
+修正後のメッセージ例: `"Store name '<name>' already exists"`
 
 ---
 
@@ -469,8 +467,8 @@ PUT /api/stores/550e8400-e29b-41d4-a716-446655440010
 { "error": "Store not found: 550e8400-e29b-41d4-a716-446655440010" }
 
 // 422 DuplicateStoreNameError（自分以外の既存店舗と正規化後に一致）
-// 文言は「作成」表記のまま（§5-3 の申し送り参照）
-{ "error": "Cannot create Store: name 'ライフ' already exists" }
+// 実装時に「作成」表記の文言を是正済み（§5-3 参照）
+{ "error": "Store name 'ライフ' already exists" }
 
 // 400 Zod（name が空白のみ、または 256 文字以上）
 ```

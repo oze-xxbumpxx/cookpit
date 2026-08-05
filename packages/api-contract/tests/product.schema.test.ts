@@ -4,6 +4,7 @@ import {
   priceRecordIdParamSchema,
   productCategorySchema,
   recordPriceSchema,
+  updatePriceRecordSchema,
   updateProductSchema,
 } from '../src/product.schema';
 
@@ -122,6 +123,52 @@ describe('recordPriceSchema', () => {
       '箱',
     );
     expect(() => recordPriceSchema.parse({ ...VALID_PRICE, packageSizeUnit: '' })).toThrow();
+  });
+});
+
+describe('updatePriceRecordSchema', () => {
+  const VALID_UPDATE = {
+    storeId: VALID_STORE_ID,
+    priceAmount: 148,
+    packageSizeValue: 1,
+    packageSizeUnit: '個',
+  };
+
+  it('Z-UPR-01: 正常な入力を受け入れる', () => {
+    expect(updatePriceRecordSchema.parse(VALID_UPDATE)).toEqual(VALID_UPDATE);
+  });
+
+  it('Z-UPR-02: 不正な storeId を reject する', () => {
+    expect(() =>
+      updatePriceRecordSchema.parse({ ...VALID_UPDATE, storeId: 'not-a-uuid' }),
+    ).toThrow();
+  });
+
+  it.each([0, -1])('Z-UPR-03/04: priceAmount が %d の入力を reject する', (priceAmount) => {
+    expect(() => updatePriceRecordSchema.parse({ ...VALID_UPDATE, priceAmount })).toThrow();
+  });
+
+  it.each([0, -1])(
+    'Z-UPR-05/06: packageSizeValue が %d の入力を reject する',
+    (packageSizeValue) => {
+      expect(() => updatePriceRecordSchema.parse({ ...VALID_UPDATE, packageSizeValue })).toThrow();
+    },
+  );
+
+  it('Z-UPR-07: packageSizeUnit の自由入力を受け入れ、空文字は reject する', () => {
+    expect(
+      updatePriceRecordSchema.parse({ ...VALID_UPDATE, packageSizeUnit: '箱' }).packageSizeUnit,
+    ).toBe('箱');
+    expect(() => updatePriceRecordSchema.parse({ ...VALID_UPDATE, packageSizeUnit: '' })).toThrow();
+  });
+
+  it('Z-UPR-08: recordPriceSchema とは独立したスキーマである（退行防止）', () => {
+    // 現時点ではキー集合が一致するが、片方だけ変更しても他方は影響を受けない
+    // （契約設計書 §2.1 の「複製する」判断が誤って同一参照へ統合されないことの記録目的）。
+    expect(Object.keys(updatePriceRecordSchema.shape).sort()).toEqual(
+      Object.keys(recordPriceSchema.shape).sort(),
+    );
+    expect(updatePriceRecordSchema).not.toBe(recordPriceSchema);
   });
 });
 

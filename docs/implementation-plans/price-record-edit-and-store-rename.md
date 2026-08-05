@@ -50,7 +50,7 @@ Red の時点でテストを実行し、**実装前は該当試験が失敗す�
 | E-18 | `packages/api-contract/tests/product.schema.test.ts`                          | `Z-UPR-01〜08` 追加                                              |
 | E-19 | `packages/api-contract/tests/store.schema.test.ts`                            | `Z-RSN-01〜05` 追加                                              |
 | E-20 | `apps/web/tests/server/routes/products.test.ts`                               | `WH-P-09〜15` 追加、`vi.mock` に `UpdatePriceRecordUseCase` 追加 |
-| E-21 | `apps/web/tests/server/routes/stores.test.ts`                                 | `WH-S-05〜11` 追加、`vi.mock` に `RenameStoreUseCase` 追加       |
+| E-21 | `apps/web/tests/server/routes/stores.test.ts`                                 | `WH-S-07〜13` 追加、`vi.mock` に `RenameStoreUseCase` 追加       |
 | E-22 | `apps/web/tests/app/products/[id]/_components/product-detail-client.test.tsx` | `PDC-09〜12` 追加、`vi.mock('@/lib/api-client')` に `$put` 追加  |
 | E-23 | `apps/web/tests/app/products/[id]/_components/price-record-form.test.tsx`     | `PRF-15〜17` 追加、`vi.mock('@/lib/api-client')` に `$put` 追加  |
 | E-24 | `apps/web/tests/app/shopping-lists/_utils/price-comparison.node.test.ts`      | `PC-EDIT-01/02` 追加                                             |
@@ -84,7 +84,7 @@ Step 2  Domain: Store.rename()                        [D-SRN-01〜06]
         └─→ Step 5  api-contract: updatePriceRecordSchema  [Z-UPR-01〜08]
         └─→ Step 6  api-contract: renameStoreSchema        [Z-RSN-01〜05]
               └─→ Step 7  Presentation Hono: PUT /price-records/:priceRecordId [WH-P-09〜15]
-              └─→ Step 8  Presentation Hono: PUT /stores/:id                  [WH-S-05〜11]
+              └─→ Step 8  Presentation Hono: PUT /stores/:id                  [WH-S-07〜13]
                     └─→ Step 9  UI: PriceRecordEditDialog（新規）  [PRED-01〜10]
                     └─→ Step 10 UI: StoreRenameDialog（新規）      [SRD-01〜13]
                           └─→ Step 11 UI: ProductDetailClient 配線 [PDC-09〜12]
@@ -1061,7 +1061,7 @@ import {
 
 **Red**
 
-試験 ID: `WH-S-05`〜`WH-S-11`（契約設計書 §9.3・試験計画 §6-2 の表が正典）。
+試験 ID: `WH-S-07`〜`WH-S-13`（契約設計書 §9.3・試験計画 §6-2 の表が正典）。
 
 対象ファイル: `apps/web/tests/server/routes/stores.test.ts`（既存ファイルに追記）。
 
@@ -1069,7 +1069,7 @@ import {
 追加し、import 文にも `RenameStoreUseCase` を追加する。
 
 ```typescript
-it('WH-S-05: PUT /api/stores/:id は 200 で UseCase の返却値を返す', async () => {
+it('WH-S-07: PUT /api/stores/:id は 200 で UseCase の返却値を返す', async () => {
   const execute = vi.fn().mockResolvedValue(storeDto);
   vi.mocked(RenameStoreUseCase).mockImplementation(function () {
     return { execute } as unknown as RenameStoreUseCase;
@@ -1086,7 +1086,7 @@ it('WH-S-05: PUT /api/stores/:id は 200 で UseCase の返却値を返す', asy
   expect(execute).toHaveBeenCalledWith({ id: STORE_ID, name: '西友 高円寺店' });
 });
 
-it('WH-S-07: DuplicateStoreNameError 時に 422 を返す', async () => {
+it('WH-S-09: DuplicateStoreNameError 時に 422 を返す', async () => {
   const execute = vi.fn().mockRejectedValue(new DuplicateStoreNameError('西友'));
   vi.mocked(RenameStoreUseCase).mockImplementation(function () {
     return { execute } as unknown as RenameStoreUseCase;
@@ -1101,7 +1101,7 @@ it('WH-S-07: DuplicateStoreNameError 時に 422 を返す', async () => {
   expect(res.status).toBe(422);
 });
 
-it('WH-S-10: 同一 name で 2 回連続 PUT しても両方 200（N-08）', async () => {
+it('WH-S-12: 同一 name で 2 回連続 PUT しても両方 200（N-08）', async () => {
   const execute = vi.fn().mockResolvedValue(storeDto);
   vi.mocked(RenameStoreUseCase).mockImplementation(function () {
     return { execute } as unknown as RenameStoreUseCase;
@@ -1119,8 +1119,8 @@ it('WH-S-10: 同一 name で 2 回連続 PUT しても両方 200（N-08）', asy
 });
 ```
 
-`WH-S-06`（`StoreNotFoundError`）・`WH-S-08`（name 空文字）・`WH-S-09`（id が UUID でない）・
-`WH-S-11`（大文字小文字だけ変えた name で 200）は試験計画 §6-2 表のとおりに追加する。
+`WH-S-08`（`StoreNotFoundError`）・`WH-S-10`（name 空文字）・`WH-S-11`（id が UUID でない）・
+`WH-S-13`（大文字小文字だけ変えた name で 200）は試験計画 §6-2 表のとおりに追加する。
 
 **Green**
 
@@ -1169,7 +1169,7 @@ export const storesRoute = new Hono()
 
 **完了条件**
 
-- `WH-S-05`〜`WH-S-11` が全件 pass する。
+- `WH-S-07`〜`WH-S-13` が全件 pass する。
 - 既存の `WH-S-01`〜`WH-S-04`・`WH-01`〜`WH-06` が無変更のまま pass する。
 
 ---
@@ -2361,7 +2361,7 @@ pnpm test
   - Domain: `D-PUR-01〜12`, `D-SRN-01〜06`
   - Application: `A-UPU-01〜17`, `A-RSU-01〜10`
   - api-contract: `Z-UPR-01〜08`, `Z-RSN-01〜05`
-  - Presentation（Hono）: `WH-P-09〜15`, `WH-S-05〜11`
+  - Presentation（Hono）: `WH-P-09〜15`, `WH-S-07〜13`
   - Presentation（RTL）: `PRED-01〜10`, `SRD-01〜13`, `PDC-09〜12`, `PRF-15〜17`
   - `PC-EDIT-01/02` と既存回帰（REG-01〜06）
 - 試験計画 §1（要件書観点対応表）の全 N-xx/E-xx/B-xx に対応する試験が実装されている。
@@ -2398,7 +2398,7 @@ pnpm test
 | api-contract              | `packages/api-contract/tests/product.schema.test.ts`                             | `Z-UPR-01〜08`  |
 | api-contract              | `packages/api-contract/tests/store.schema.test.ts`                               | `Z-RSN-01〜05`  |
 | Presentation（Hono）      | `apps/web/tests/server/routes/products.test.ts`                                  | `WH-P-09〜15`   |
-| Presentation（Hono）      | `apps/web/tests/server/routes/stores.test.ts`                                    | `WH-S-05〜11`   |
+| Presentation（Hono）      | `apps/web/tests/server/routes/stores.test.ts`                                    | `WH-S-07〜13`   |
 | Presentation（RTL・新規） | `apps/web/tests/app/products/[id]/_components/price-record-edit-dialog.test.tsx` | `PRED-01〜10`   |
 | Presentation（RTL・新規） | `apps/web/tests/app/products/[id]/_components/store-rename-dialog.test.tsx`      | `SRD-01〜13`    |
 | Presentation（RTL）       | `apps/web/tests/app/products/[id]/_components/product-detail-client.test.tsx`    | `PDC-09〜12`    |
