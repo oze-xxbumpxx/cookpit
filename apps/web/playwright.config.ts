@@ -1,18 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // E2E スモーク設定。
-// - 実行（緑判定）はアプリ + DB が必要なため、原則ローカルで `pnpm e2e` を回す。
+// - ローカルでは Neon または PGlite、CI では DATABASE_URL secret の有無に応じて Neon / PGlite で実行する。
 // - baseURL は既定で localhost:3000。`E2E_BASE_URL` で上書き可。
 // - webServer は未起動なら `pnpm dev` を自動起動する（既に起動済みなら再利用）。
-//   ローカルでは `.env`（DATABASE_URL）が必要。
+//   ローカルでは `.env` の DATABASE_URL、または `pglite://.pglite-dev` を使用できる。
 // - ブラウザがプリインストール済みの環境では `PLAYWRIGHT_CHROMIUM_EXECUTABLE` で実体を指定できる
 //   （未設定ならローカルの Playwright が自前で用意したブラウザを使う）。
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+const usesPGlite = process.env.DATABASE_URL?.startsWith('pglite://') ?? false;
 
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
+  // ファイル DB を複数 worker から同時に開くと PGlite の WASM ランタイムが競合するため直列化する。
+  workers: usesPGlite ? 1 : undefined,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: 'list',

@@ -1,45 +1,51 @@
 # E2E スモークテスト（Playwright）
 
-レシピ CRUD のハッピーパス（一覧 → 作成 → 詳細 → 編集 → 削除）を1本だけ自動化した
-**critical-path スモーク**。回帰の「アプリが丸ごと壊れた」を安く検知するための型。
+実装本体は `apps/web/tests/e2e/` に置く。現在は、壊れたときの利用者影響が大きい次の 2 本を
+critical-path スモークとして自動化している。
 
-## 方針（なぜ薄いか）
+- `recipe-crud.smoke.spec.ts`: レシピの作成 → 詳細 → 編集 → 削除
+- `saturday-flow.spec.ts`: 献立作成 → 買い物リスト → 購入記録 → 在庫化 → 消費
 
-- 個人開発・2人利用のため、E2E は網羅せず**ハッピーパス1本**に絞る。維持コストを最小化する。
-- ビジネスロジックは domain / application の Vitest 単体テストで担保済み。E2E は
-  Presentation の配線（フォーム・Hono RPC・Server Component）が通ることだけを見る。
-- 追加観点が必要になったら（Sprint 3〜4 で画面が増える頃）ここに足す。
+ビジネスロジックの境界値・異常系は Domain / Application / Hono route / RTL の Vitest が担い、
+Playwright は画面と API、DB をまたぐ主要導線の配線確認に絞る。
 
-## 実行（ローカル）
+## ローカル実行
 
-アプリ起動 + DB が必要なため、**手元の開発環境で**実行する。
-
-```bash
-# 前提: apps/web/.env に DATABASE_URL（Neon）が設定済み
-pnpm --filter @cookpit/web e2e        # ヘッドレス実行
-pnpm --filter @cookpit/web e2e:ui     # UI モード（デバッグ向け）
-```
-
-- `playwright.config.ts` の `webServer` が未起動なら `pnpm dev` を自動起動する
-  （既に `pnpm dev` 起動済みならそれを再利用）。
-- 別ポートや起動済みアプリに当てる場合は `E2E_BASE_URL` で上書き：
-  `E2E_BASE_URL=http://localhost:3001 pnpm --filter @cookpit/web e2e`
-
-## ブラウザのプリインストール環境（CI / リモート）
-
-Chromium がプリインストールされた環境では `playwright install` は不要。実体パスを
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE` で渡すと、その実体を使う：
+Neon を使う場合は `apps/web/.env` に `DATABASE_URL` を設定して実行する。
 
 ```bash
-PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome pnpm --filter @cookpit/web e2e
+pnpm --filter @cookpit/web e2e
+pnpm --filter @cookpit/web e2e:ui
 ```
 
-未設定ならローカルの Playwright が自前で用意したブラウザを使う（通常はこちら）。
+PGlite を使う場合は、テスト用DBを初期化してから同じスモークを実行できる。
 
-## 注意
+```bash
+pnpm --filter @cookpit/web db:seed:pglite
+DATABASE_URL=pglite://.pglite-dev pnpm --filter @cookpit/web e2e
+```
 
-- このリポジトリのリモート実行環境では DB（Neon）へ到達できないため、CRUD スモークの
-  **緑判定はローカル限定**。ツール（Playwright + Chromium）自体は環境にプリインストール
-  済みで動作する。
-- セレクタは実 UI（`recipe-form-client` / `recipe-detail-client` / `recipe-list-client` /
-  `recipe-edit-form-client`）に合わせている。UI のラベル・aria を変えたら追従させる。
+`playwright.config.ts` の `webServer` は、未起動なら `pnpm dev` を自動起動する。別ポートや
+起動済みアプリに当てる場合は `E2E_BASE_URL` で上書きする。
+
+```bash
+E2E_BASE_URL=http://localhost:3001 pnpm --filter @cookpit/web e2e
+```
+
+## CI
+
+Pull Request のコード変更では E2E を必ず実行する。`DATABASE_URL` secret があれば Neon、
+無ければ fresh な PGlite を使う。JSON レポートを検査し、2 本未満・全件 skip・失敗を成功扱い
+しない。
+
+Chromium の実体を指定する環境では `PLAYWRIGHT_CHROMIUM_EXECUTABLE` を利用できる。未指定なら
+Playwright が管理するブラウザを使う。
+
+## テストデータ
+
+- レシピ名などは実行ごとに一意化する。
+- 土曜フローは一意な未来週を使い、共有 Neon 上の既存献立と衝突させない。
+- 作成した在庫は UI で全量消費し、レシピは DELETE API で削除する。
+- MealPlan / ShoppingList には削除 API がないため、土曜フローの未来週データは共有 Neon に残る。
+
+UI のラベル・aria を変更した場合は、実装と spec を同じ変更で追従させる。

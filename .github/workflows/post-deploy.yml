@@ -1,0 +1,97 @@
+name: Post-deploy readiness
+
+on:
+  repository_dispatch:
+    types: [vercel.deployment.success]
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: Vercel deployment URL
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-deploy-readiness-${{ github.event.client_payload.url || inputs.deployment_url }}
+  cancel-in-progress: true
+
+jobs:
+  readiness:
+    name: Verify API and database readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEPLOYMENT_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.deployment_url || github.event.client_payload.url }}
+      DEPLOYMENT_ENVIRONMENT: ${{ github.event.client_payload.environment || 'manual' }}
+    steps:
+      - name: Check /api/health
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const rawUrl = process.env.DEPLOYMENT_URL;
+          if (!rawUrl) {
+            throw new Error('Deployment URL is missing.');
+          }
+
+          const deploymentUrl = new URL(rawUrl.includes('://') ? rawUrl : `https://${rawUrl}`);
+          if (deploymentUrl.protocol !== 'https:' || !deploymentUrl.hostname.endsWith('.vercel.app')) {
+            throw new Error(`Only HTTPS vercel.app deployment URLs are allowed: ${deploymentUrl.origin}`);
+          }
+
+          const healthUrl = new URL('/api/health', deploymentUrl);
+          const delays = [0, 5_000, 10_000, 15_000, 20_000, 30_000];
+          let lastError = new Error('Readiness check did not run.');
+
+          const wait = (milliseconds) =>
+            new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+          async function checkReadiness() {
+            for (const [index, delay] of delays.entries()) {
+              if (delay > 0) {
+                await wait(delay);
+              }
+
+              try {
+                const response = await fetch(healthUrl, {
+                  headers: { accept: 'application/json' },
+                  signal: AbortSignal.timeout(10_000),
+                });
+                const body = await response.json();
+                const ready =
+                  response.ok &&
+                  typeof body === 'object' &&
+                  body !== null &&
+                  body.status === 'ok' &&
+                  body.db === 'connected';
+
+                if (ready) {
+                  const environment = process.env.DEPLOYMENT_ENVIRONMENT || 'unknown';
+                  fs.appendFileSync(
+                    process.env.GITHUB_STEP_SUMMARY,
+                    `### Post-deploy readiness\n\n- Environment: ${environment}\n- URL: ${deploymentUrl.origin}\n- API: ok\n- Database: connected\n`,
+                  );
+                  console.log(`Ready: ${healthUrl}`);
+                  return;
+                }
+
+                lastError = new Error(
+                  `Attempt ${index + 1}: HTTP ${response.status}, payload ${JSON.stringify(body)}`,
+                );
+              } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+              }
+
+              console.warn(lastError.message);
+            }
+
+            throw lastError;
+          }
+
+          checkReadiness().catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
