@@ -8,6 +8,11 @@ export interface CreateStoreInputDto {
   name: string;
 }
 
+export interface RenameStoreInputDto {
+  id: string;
+  name: string;
+}
+
 /**
  * 店舗を削除したときに影響を受けるデータの件数（ADR-0013）。
  *

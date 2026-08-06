@@ -1053,3 +1053,63 @@ describe('防御性', () => {
     ).toBe('+30円');
   });
 });
+
+describe('編集シナリオ（price-record-edit-and-store-rename）', () => {
+  it('PC-EDIT-01: 編集で同一店舗の記録が複数になっても最新 1 件に絞られる', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-a',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 100,
+          observedAt: '2026-06-01T00:00:00.000Z',
+        }),
+        // 編集で storeId が store-a に変わった元 store-b の記録（observedAt はより新しい）
+        createPriceRecordDto({
+          id: 'r-b',
+          storeId: 'store-a',
+          storeName: '店舗A',
+          unitPriceAmount: 80,
+          observedAt: '2026-06-02T00:00:00.000Z',
+        }),
+        createPriceRecordDto({
+          id: 'r-c',
+          storeId: 'store-c',
+          storeName: '店舗C',
+          unitPriceAmount: 90,
+          observedAt: '2026-06-01T00:00:00.000Z',
+        }),
+      ],
+    });
+
+    const breakdown = buildStoreUnitPriceBreakdown(product);
+
+    const storeAEntries = breakdown?.entries.filter((e) => e.storeId === 'store-a') ?? [];
+    expect(storeAEntries).toHaveLength(1);
+    expect(storeAEntries[0]?.unitPriceAmount).toBe(80);
+  });
+
+  it('PC-EDIT-02: 編集で店舗の記録が無くなると候補から自然に除外される', () => {
+    const product = createProductDto({
+      priceHistory: [
+        createPriceRecordDto({
+          id: 'r-b',
+          storeId: 'store-b',
+          storeName: '店舗B',
+          unitPriceAmount: 80,
+        }),
+        createPriceRecordDto({
+          id: 'r-c',
+          storeId: 'store-c',
+          storeName: '店舗C',
+          unitPriceAmount: 90,
+        }),
+      ],
+    });
+
+    const breakdown = buildStoreUnitPriceBreakdown(product);
+
+    expect(breakdown?.entries.some((e) => e.storeId === 'store-a')).toBe(false);
+  });
+});

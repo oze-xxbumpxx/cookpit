@@ -11,6 +11,7 @@ import { DeleteStoreUseCase } from '../../src/store/delete-store.use-case';
 import { DuplicateStoreNameError } from '../../src/store/duplicate-store-name.error';
 import { GetStoreUsageUseCase } from '../../src/store/get-store-usage.use-case';
 import { GetStoresUseCase } from '../../src/store/get-stores.use-case';
+import { RenameStoreUseCase } from '../../src/store/rename-store.use-case';
 import { STORE_LIMIT, StoreLimitExceededError } from '../../src/store/store-limit-exceeded.error';
 import { StoreNotFoundError } from '../../src/store/store-not-found.error';
 
@@ -391,6 +392,101 @@ describe('DeleteStoreUseCase', () => {
     await context.usecase.execute('id-1');
 
     expect(context.calls.filter((call) => call === 'saveShoppingList')).toHaveLength(2);
+  });
+});
+
+describe('RenameStoreUseCase', () => {
+  it('A-RSU-01: 名前が変わる', async () => {
+    repository.seed(seededStore('id-1', '業務スーパ'));
+
+    const dto = await new RenameStoreUseCase(repository).execute({
+      id: 'id-1',
+      name: '業務スーパー',
+    });
+
+    expect(dto.name).toBe('業務スーパー');
+    expect(repository.saveCount).toBe(1);
+  });
+
+  it('A-RSU-02: 同じ文字列のまま保存し直しても成功する（N-08・冪等）', async () => {
+    repository.seed(seededStore('id-1', 'ライフ'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: 'ライフ' }),
+    ).resolves.toMatchObject({ name: 'ライフ' });
+  });
+
+  it('A-RSU-03: 大文字小文字だけ変える（N-07/B-04）', async () => {
+    repository.seed(seededStore('id-1', 'Life'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: 'life' }),
+    ).resolves.toMatchObject({ name: 'life' });
+  });
+
+  it('A-RSU-04: 全角/半角違いを自分自身に適用しても成功する（自己衝突除外）', async () => {
+    repository.seed(seededStore('id-1', '業務スーパー'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: '業務ｽｰﾊﾟｰ' }),
+    ).resolves.toMatchObject({ name: '業務ｽｰﾊﾟｰ' });
+  });
+
+  it('A-RSU-05: 全角/半角違いが自分以外の既存店舗と一致すると DuplicateStoreNameError', async () => {
+    repository.seed(seededStore('id-1', '業務スーパー'));
+    repository.seed(seededStore('id-2', 'コンビニ'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-2', name: '業務ｽｰﾊﾟｰ' }),
+    ).rejects.toBeInstanceOf(DuplicateStoreNameError);
+    expect(repository.saveCount).toBe(0);
+  });
+
+  it('A-RSU-06: 前後空白のみの違いを自分自身に適用しても成功し、原文をそのまま保存する', async () => {
+    repository.seed(seededStore('id-1', 'ライフ'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: '  ライフ  ' }),
+    ).resolves.toMatchObject({ name: '  ライフ  ' });
+  });
+
+  it('A-RSU-07: 前後空白のみの違いが自分以外の既存店舗と一致すると DuplicateStoreNameError', async () => {
+    repository.seed(seededStore('id-1', 'ライフ'));
+    repository.seed(seededStore('id-2', 'コンビニ'));
+
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'id-2', name: '  ライフ  ' }),
+    ).rejects.toBeInstanceOf(DuplicateStoreNameError);
+    expect(repository.saveCount).toBe(0);
+  });
+
+  it('A-RSU-08: 店舗が存在しなければ StoreNotFoundError を投げる', async () => {
+    await expect(
+      new RenameStoreUseCase(repository).execute({ id: 'missing', name: 'ライフ' }),
+    ).rejects.toBeInstanceOf(StoreNotFoundError);
+    expect(repository.saveCount).toBe(0);
+  });
+
+  it('A-RSU-09: 同一 name で 2 回連続 execute しても StoreDto が完全一致する（冪等性）', async () => {
+    repository.seed(seededStore('id-1', '西友'));
+    const usecase = new RenameStoreUseCase(repository);
+
+    const first = await usecase.execute({ id: 'id-1', name: '西友' });
+    const second = await usecase.execute({ id: 'id-1', name: '西友' });
+
+    expect(second).toEqual(first);
+  });
+
+  it('A-RSU-10: リネームは店舗件数に影響しない（B-07）', async () => {
+    seedStores(repository, STORE_LIMIT);
+    const target = (await repository.findAll())[0];
+    if (target === undefined) {
+      throw new Error('test setup failed: no seeded store found');
+    }
+
+    await new RenameStoreUseCase(repository).execute({ id: target.id.value, name: '新名前' });
+
+    expect((await repository.findAll()).length).toBe(STORE_LIMIT);
   });
 });
 

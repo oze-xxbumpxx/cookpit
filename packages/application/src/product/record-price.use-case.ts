@@ -10,6 +10,7 @@ import {
 import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import type { RecordPriceInputDto } from './product.dto';
 import { ProductNotFoundError } from './product-not-found.error';
+import { UnitPriceNotPositiveError } from './unit-price-not-positive.error';
 import { StoreNotFoundError } from '../store/store-not-found.error';
 
 export class RecordPriceUseCase {
@@ -40,11 +41,20 @@ export class RecordPriceUseCase {
 
     const price = Money.of(input.priceAmount, 'JPY');
     const packageSize = Quantity.of(input.packageSizeValue, input.packageSizeUnit);
+    const unitPrice = UnitPriceCalculator.calculate(price, packageSize);
+    if (unitPrice.amount <= 0) {
+      throw new UnitPriceNotPositiveError(
+        input.priceAmount,
+        input.packageSizeValue,
+        input.packageSizeUnit,
+      );
+    }
+
     const record = PriceRecord.create({
       id: PriceRecordId.generate(),
       storeId,
       price,
-      unitPrice: UnitPriceCalculator.calculate(price, packageSize),
+      unitPrice,
       packageSize,
       observedAt: new Date(),
     });

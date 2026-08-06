@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createStoreSchema,
+  renameStoreSchema,
   storeResponseSchema,
   storeSchema,
   storeUsageResponseSchema,
@@ -28,6 +29,29 @@ describe('createStoreSchema', () => {
 
   it('name キーの省略を reject する', () => {
     expect(() => createStoreSchema.parse({})).toThrow();
+  });
+});
+
+describe('renameStoreSchema', () => {
+  it('Z-RSN-01: 正常な name を受け入れる', () => {
+    expect(renameStoreSchema.parse({ name: 'スーパーA' })).toEqual({ name: 'スーパーA' });
+  });
+
+  it.each(['', '   '])('Z-RSN-02: 空白の name %j を reject する', (name) => {
+    expect(() => renameStoreSchema.parse({ name })).toThrow();
+  });
+
+  it('Z-RSN-03: 255 文字の name を受け入れる', () => {
+    const name = 'あ'.repeat(255);
+    expect(renameStoreSchema.parse({ name })).toEqual({ name });
+  });
+
+  it('Z-RSN-04: 256 文字の name を reject する', () => {
+    expect(() => renameStoreSchema.parse({ name: 'あ'.repeat(256) })).toThrow();
+  });
+
+  it('Z-RSN-05: name キーの省略を reject する', () => {
+    expect(() => renameStoreSchema.parse({})).toThrow();
   });
 });
 

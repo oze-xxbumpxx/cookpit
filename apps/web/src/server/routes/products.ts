@@ -3,6 +3,7 @@ import {
   idParamSchema,
   priceRecordIdParamSchema,
   recordPriceSchema,
+  updatePriceRecordSchema,
   updateProductSchema,
 } from '@cookpit/api-contract';
 import {
@@ -13,6 +14,7 @@ import {
   GetProductUseCase,
   GetProductsUseCase,
   RecordPriceUseCase,
+  UpdatePriceRecordUseCase,
   UpdateProductUseCase,
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
@@ -65,6 +67,18 @@ export const productsRoute = new Hono()
       const usecase = new RecordPriceUseCase(productRepository(), storeRepository());
       await usecase.execute({ productId: id, ...body });
       return c.body(null, 200);
+    },
+  )
+  .put(
+    '/:id/price-records/:priceRecordId',
+    zValidator('param', priceRecordIdParamSchema),
+    zValidator('json', updatePriceRecordSchema),
+    async (c) => {
+      const { id, priceRecordId } = c.req.valid('param');
+      const body = c.req.valid('json');
+      const usecase = new UpdatePriceRecordUseCase(productRepository(), storeRepository());
+      const product = await usecase.execute({ productId: id, priceRecordId, ...body });
+      return c.json(product);
     },
   )
   .delete(

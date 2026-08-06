@@ -6,6 +6,7 @@ import {
   DuplicateStoreNameError,
   GetStoresUseCase,
   GetStoreUsageUseCase,
+  RenameStoreUseCase,
   StoreLimitExceededError,
   StoreNotFoundError,
 } from '@cookpit/application';
@@ -25,6 +26,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     GetStoreUsageUseCase: vi.fn(),
     CreateStoreUseCase: vi.fn(),
     DeleteStoreUseCase: vi.fn(),
+    RenameStoreUseCase: vi.fn(),
   };
 });
 
@@ -181,5 +183,117 @@ describe('storesRoute', () => {
 
     expect(res.status).toBe(400);
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('WH-S-07: PUT /api/stores/:id は 200 で UseCase の返却値を返す', async () => {
+    const execute = vi.fn().mockResolvedValue(storeDto);
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request(`/api/stores/${STORE_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友 高円寺店' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(storeDto);
+    expect(execute).toHaveBeenCalledWith({ id: STORE_ID, name: '西友 高円寺店' });
+  });
+
+  it('WH-S-08: PUT /api/stores/:id は StoreNotFoundError 時に 404 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new StoreNotFoundError(STORE_ID));
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request(`/api/stores/${STORE_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友' }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `Store not found: ${STORE_ID}` });
+  });
+
+  it('WH-S-09: DuplicateStoreNameError 時に 422 を返す', async () => {
+    const execute = vi.fn().mockRejectedValue(new DuplicateStoreNameError('西友'));
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request(`/api/stores/${STORE_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友' }),
+    });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('WH-S-10: name 空文字なら 400 を返し、execute は呼ばれない', async () => {
+    const execute = vi.fn();
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request(`/api/stores/${STORE_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '' }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('WH-S-11: id が UUID でなければ 400 を返し、execute は呼ばれない', async () => {
+    const execute = vi.fn();
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request('/api/stores/not-a-uuid', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '西友' }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('WH-S-12: 同一 name で 2 回連続 PUT しても両方 200（N-08）', async () => {
+    const execute = vi.fn().mockResolvedValue(storeDto);
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    for (let i = 0; i < 2; i += 1) {
+      const res = await app.request(`/api/stores/${STORE_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '西友' }),
+      });
+      expect(res.status).toBe(200);
+    }
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it('WH-S-13: 大文字小文字だけ変えた name でも 200', async () => {
+    const execute = vi.fn().mockResolvedValue(storeDto);
+    vi.mocked(RenameStoreUseCase).mockImplementation(function () {
+      return { execute } as unknown as RenameStoreUseCase;
+    });
+
+    const res = await app.request(`/api/stores/${STORE_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'life' }),
+    });
+
+    expect(res.status).toBe(200);
   });
 });

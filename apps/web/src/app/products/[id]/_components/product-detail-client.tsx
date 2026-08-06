@@ -1,6 +1,7 @@
 'use client';
 
 import { PriceHistoryChart } from '@/app/products/[id]/_components/price-history-chart';
+import { PriceRecordEditDialog } from '@/app/products/[id]/_components/price-record-edit-dialog';
 import { PriceRecordForm } from '@/app/products/[id]/_components/price-record-form';
 import {
   findLatestPriceRecord,
@@ -40,6 +41,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
   const [pendingDeleteRecord, setPendingDeleteRecord] = useState<PriceRecordDto | null>(null);
   const [deletingRecord, setDeletingRecord] = useState(false);
   const [recordDeleteErrorMessage, setRecordDeleteErrorMessage] = useState<string | null>(null);
+  const [editingRecord, setEditingRecord] = useState<PriceRecordDto | null>(null);
 
   async function handleDeletePriceRecord(): Promise<void> {
     if (pendingDeleteRecord === null) {
@@ -216,17 +218,29 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                       {formatUnitPrice(record.unitPriceAmount, record.packageSizeUnit)}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setPendingDeleteRecord(record)}
-                    disabled={deletingRecord}
-                    aria-label={`${formatDateTime(record.observedAt)}の記録を削除`}
-                    className="text-muted-foreground"
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingRecord(record)}
+                      aria-label={`${formatDateTime(record.observedAt)}の記録を編集`}
+                      className="text-muted-foreground"
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPendingDeleteRecord(record)}
+                      disabled={deletingRecord}
+                      aria-label={`${formatDateTime(record.observedAt)}の記録を削除`}
+                      className="text-muted-foreground"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -316,6 +330,16 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
           </AlertDialogContent>
         )}
       </AlertDialog>
+
+      <PriceRecordEditDialog
+        product={product}
+        record={editingRecord}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingRecord(null);
+          }
+        }}
+      />
     </main>
   );
 }

@@ -58,3 +58,12 @@ export interface RecordPriceInputDto {
   packageSizeValue: number;
   packageSizeUnit: Unit;
 }
+
+export interface UpdatePriceRecordInputDto {
+  productId: string;
+  priceRecordId: string;
+  storeId: string;
+  priceAmount: number;
+  packageSizeValue: number;
+  packageSizeUnit: Unit;
+}

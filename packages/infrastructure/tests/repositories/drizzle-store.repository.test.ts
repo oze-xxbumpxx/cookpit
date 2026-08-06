@@ -83,6 +83,19 @@ describe('DrizzleStoreRepository', () => {
     await expect(repository.delete(StoreId.generate())).resolves.toBeUndefined();
   });
 
+  it('IR-S-06: save() の name 更新（upsert）を検証する', async () => {
+    const store = Store.create({ name: '業務スーパ' });
+    await repository.save(store);
+
+    const reloaded = await repository.findById(store.id);
+    reloaded?.rename('業務スーパー');
+    await repository.save(reloaded as Store);
+
+    const found = await repository.findById(store.id);
+    expect(found?.name).toBe('業務スーパー');
+    expect(found?.createdAt.getTime()).toBe(store.createdAt.getTime());
+  });
+
   it('IR-01: findByNormalizedName() は完全一致で 1 件返す', async () => {
     const store = Store.create({ name: 'ライフ' });
     await repository.save(store);

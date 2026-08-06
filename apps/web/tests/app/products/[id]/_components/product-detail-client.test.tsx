@@ -3,13 +3,16 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { deletePriceRecord, deleteProduct, getStores, refresh, push } = vi.hoisted(() => ({
-  deletePriceRecord: vi.fn(),
-  deleteProduct: vi.fn(),
-  getStores: vi.fn(),
-  refresh: vi.fn(),
-  push: vi.fn(),
-}));
+const { deletePriceRecord, putPriceRecord, deleteProduct, getStores, refresh, push } = vi.hoisted(
+  () => ({
+    deletePriceRecord: vi.fn(),
+    putPriceRecord: vi.fn(),
+    deleteProduct: vi.fn(),
+    getStores: vi.fn(),
+    refresh: vi.fn(),
+    push: vi.fn(),
+  }),
+);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push }),
@@ -30,6 +33,7 @@ vi.mock('@/lib/api-client', () => ({
             $post: vi.fn(),
             ':priceRecordId': {
               $delete: (...args: unknown[]) => deletePriceRecord(...args),
+              $put: (...args: unknown[]) => putPriceRecord(...args),
             },
           },
         },
@@ -174,5 +178,40 @@ describe('ProductDetailClient', () => {
     renderDetail([]);
 
     expect(screen.queryByText('最近の記録')).toBeNull();
+  });
+
+  it('PDC-09: 編集アイコンが表示される', () => {
+    renderDetail();
+    expect(screen.getByRole('button', { name: /の記録を編集$/ })).toBeDefined();
+  });
+
+  it('PDC-10: 編集アイコンから PriceRecordEditDialog を開く', async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole('button', { name: /の記録を編集$/ }));
+
+    expect(await screen.findByText('価格記録を編集')).toBeDefined();
+  });
+
+  it('PDC-11: 6 件中、直近 5 件のみに編集アイコンが表示される（B-05/E-10）', () => {
+    const records = Array.from({ length: 6 }, (_, i) =>
+      createPriceRecord({ id: `record-${i}`, observedAt: `2026-06-0${i + 1}T09:00:00.000Z` }),
+    );
+    renderDetail(records);
+
+    expect(screen.getAllByRole('button', { name: /の記録を編集$/ })).toHaveLength(5);
+  });
+
+  it('PDC-12: 編集成功後、router.refresh() が呼ばれる', async () => {
+    const user = userEvent.setup();
+    putPriceRecord.mockResolvedValue({ ok: true });
+    renderDetail();
+
+    await user.click(screen.getByRole('button', { name: /の記録を編集$/ }));
+    await screen.findByText('価格記録を編集');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 });

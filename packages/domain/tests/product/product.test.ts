@@ -329,6 +329,210 @@ describe('Product.removePriceRecord', () => {
   });
 });
 
+describe('Product.updatePriceRecord', () => {
+  const storeA = StoreId.fromString('store-1');
+  const storeB = StoreId.fromString('store-2');
+
+  function seededProduct(): Product {
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('record-1', storeA, 100, new Date('2026-06-01T10:00:00.000Z'), 300),
+    );
+    return product;
+  }
+
+  it('D-PUR-01: 店舗のみ変更する', () => {
+    const product = seededProduct();
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(300, 'JPY'),
+      unitPrice: Money.of(100, 'JPY'),
+      packageSize: Quantity.of(3, '個'),
+    });
+
+    expect(product.priceHistory[0]?.storeId.equals(storeB)).toBe(true);
+    expect(product.priceHistory[0]?.price.amount).toBe(300);
+    expect(product.priceHistory[0]?.unitPrice.amount).toBe(100);
+    expect(product.priceHistory[0]?.packageSize.value).toBe(3);
+  });
+
+  it('D-PUR-02: 価格のみ変更する', () => {
+    const product = seededProduct();
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeA,
+      price: Money.of(500, 'JPY'),
+      unitPrice: Money.of(100, 'JPY'),
+      packageSize: Quantity.of(3, '個'),
+    });
+
+    expect(product.priceHistory[0]?.price.amount).toBe(500);
+    expect(product.priceHistory[0]?.storeId.equals(storeA)).toBe(true);
+    expect(product.priceHistory[0]?.packageSize.value).toBe(3);
+  });
+
+  it('D-PUR-03: 内容量のみ変更する', () => {
+    const product = seededProduct();
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeA,
+      price: Money.of(300, 'JPY'),
+      unitPrice: Money.of(100, 'JPY'),
+      packageSize: Quantity.of(5, '個'),
+    });
+
+    expect(product.priceHistory[0]?.packageSize.value).toBe(5);
+    expect(product.priceHistory[0]?.storeId.equals(storeA)).toBe(true);
+    expect(product.priceHistory[0]?.price.amount).toBe(300);
+  });
+
+  it('D-PUR-04: id と observedAt は編集前後で同一値である（critical）', () => {
+    const product = seededProduct();
+    const before = product.priceHistory[0];
+
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(500, 'JPY'),
+      unitPrice: Money.of(200, 'JPY'),
+      packageSize: Quantity.of(1, 'kg'),
+    });
+
+    expect(product.priceHistory[0]?.id.value).toBe(before?.id.value);
+    expect(product.priceHistory[0]?.observedAt.toISOString()).toBe(
+      before?.observedAt.toISOString(),
+    );
+  });
+
+  it('D-PUR-05: 存在しない ID は Error を投げ、priceHistory は変化しない', () => {
+    const product = seededProduct();
+    expect(() =>
+      product.updatePriceRecord(PriceRecordId.fromString('missing'), {
+        storeId: storeB,
+        price: Money.of(300, 'JPY'),
+        unitPrice: Money.of(100, 'JPY'),
+        packageSize: Quantity.of(3, '個'),
+      }),
+    ).toThrow('Price record not found: missing');
+    expect(product.priceHistory).toHaveLength(1);
+  });
+
+  it('D-PUR-06: price が 0 なら Error（PriceRecord.create 由来）', () => {
+    const product = seededProduct();
+    expect(() =>
+      product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+        storeId: storeA,
+        price: Money.of(0, 'JPY'),
+        unitPrice: Money.of(100, 'JPY'),
+        packageSize: Quantity.of(3, '個'),
+      }),
+    ).toThrow('Price record price must be positive');
+  });
+
+  it('D-PUR-07: packageSize が 0 なら Error（PriceRecord.create 由来）', () => {
+    const product = seededProduct();
+    expect(() =>
+      product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+        storeId: storeA,
+        price: Money.of(300, 'JPY'),
+        unitPrice: Money.of(100, 'JPY'),
+        packageSize: Quantity.of(0, 'g'),
+      }),
+    ).toThrow('Price record package size must be positive');
+  });
+
+  it('D-PUR-08: updatePriceRecord 後に updatedAt が進む', () => {
+    const product = seededProduct();
+    const before = product.updatedAt.getTime();
+
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(400, 'JPY'),
+      unitPrice: Money.of(150, 'JPY'),
+      packageSize: Quantity.of(2, '個'),
+    });
+
+    expect(product.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('D-PUR-09: 更新後もゲッターは防御的コピーを返す', () => {
+    const product = seededProduct();
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(400, 'JPY'),
+      unitPrice: Money.of(150, 'JPY'),
+      packageSize: Quantity.of(2, '個'),
+    });
+
+    product.priceHistory.push(
+      createPriceRecord('injected', storeA, 100, new Date('2026-01-01T00:00:00.000Z')),
+    );
+
+    expect(product.priceHistory).toHaveLength(1);
+  });
+
+  it('D-PUR-10: 対象外の記録は変化しない', () => {
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('record-1', storeA, 100, new Date('2026-06-01T10:00:00.000Z'), 300),
+    );
+    product.recordPrice(
+      createPriceRecord('record-2', storeB, 90, new Date('2026-06-02T10:00:00.000Z'), 270),
+    );
+    const untouchedBefore = product.priceHistory.find((record) => record.id.value === 'record-2');
+
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(999, 'JPY'),
+      unitPrice: Money.of(333, 'JPY'),
+      packageSize: Quantity.of(9, '個'),
+    });
+
+    const untouchedAfter = product.priceHistory.find((record) => record.id.value === 'record-2');
+    expect(untouchedAfter?.id.value).toBe(untouchedBefore?.id.value);
+    expect(untouchedAfter?.storeId.equals(storeB)).toBe(true);
+    expect(untouchedAfter?.price.amount).toBe(270);
+    expect(untouchedAfter?.observedAt.toISOString()).toBe(
+      untouchedBefore?.observedAt.toISOString(),
+    );
+  });
+
+  it('D-PUR-11: 編集で同一店舗の記録が複数になっても最新の記録が候補になる', () => {
+    const product = createProduct();
+    const t1 = new Date('2026-06-01T00:00:00.000Z');
+    const t2 = new Date('2026-06-02T00:00:00.000Z');
+    product.recordPrice(createPriceRecord('record-a', storeA, 100, t1, 300));
+    product.recordPrice(createPriceRecord('record-b', storeB, 80, t2, 240));
+
+    // record-b（store-B、より新しい observedAt）を store-A に変更する
+    product.updatePriceRecord(PriceRecordId.fromString('record-b'), {
+      storeId: storeA,
+      price: Money.of(240, 'JPY'),
+      unitPrice: Money.of(80, 'JPY'),
+      packageSize: Quantity.of(3, '個'),
+    });
+
+    expect(product.cheapestStoreAt(t2)?.equals(storeA)).toBe(true);
+    expect(product.latestPriceRecordAt(storeA)?.id.value).toBe('record-b');
+  });
+
+  it('D-PUR-12: 編集で店舗の記録が無くなると候補から外れる', () => {
+    const product = createProduct();
+    product.recordPrice(
+      createPriceRecord('record-1', storeA, 100, new Date('2026-06-01T00:00:00.000Z'), 300),
+    );
+
+    product.updatePriceRecord(PriceRecordId.fromString('record-1'), {
+      storeId: storeB,
+      price: Money.of(300, 'JPY'),
+      unitPrice: Money.of(100, 'JPY'),
+      packageSize: Quantity.of(3, '個'),
+    });
+
+    expect(product.cheapestStoreAt(new Date('2026-06-01T00:00:00.000Z'))?.equals(storeB)).toBe(
+      true,
+    );
+    expect(product.latestPriceRecordAt(storeA)).toBeNull();
+  });
+});
+
 describe('Product.latestPriceAt', () => {
   it('単一の最新価格を返す (P7)', () => {
     const product = createProduct();

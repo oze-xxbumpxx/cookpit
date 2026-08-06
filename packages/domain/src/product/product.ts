@@ -186,6 +186,39 @@ export class Product {
     this.touch();
   }
 
+  /**
+   * 価格記録の店舗・価格・単価・内容量を差し替える。ID と記録日時（observedAt）は
+   * 元の記録から維持し、変更できない（履歴グラフ上の位置を動かさないため）。
+   * PriceRecord は不変なので、新しい PriceRecord を内部で生成して配列内の該当要素を置換する。
+   *
+   * @throws Error 指定 ID の価格記録が存在しない場合
+   * @throws Error price / unitPrice / packageSize が正数でない場合（PriceRecord.create() 由来）
+   */
+  updatePriceRecord(
+    priceRecordId: PriceRecordId,
+    props: { storeId: StoreId; price: Money; unitPrice: Money; packageSize: Quantity },
+  ): void {
+    const original =
+      this.productPriceHistory.find((record) => record.id.equals(priceRecordId)) ?? null;
+    if (original === null) {
+      throw new Error(`Price record not found: ${priceRecordId.value}`);
+    }
+
+    const updated = PriceRecord.create({
+      id: priceRecordId,
+      storeId: props.storeId,
+      price: props.price,
+      unitPrice: props.unitPrice,
+      packageSize: props.packageSize,
+      observedAt: original.observedAt,
+    });
+
+    this.productPriceHistory = this.productPriceHistory.map((record) =>
+      record.id.equals(priceRecordId) ? updated : record,
+    );
+    this.touch();
+  }
+
   latestPriceAt(storeId: StoreId): Money | null {
     return this.latestPriceRecordAt(storeId)?.price ?? null;
   }

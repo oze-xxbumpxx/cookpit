@@ -44,7 +44,7 @@ export interface StoreProps {
 export class Store {
   private constructor(
     private readonly storeId: StoreId,
-    private readonly storeName: string,
+    private storeName: string,
     private readonly createdDate: Date,
   ) {}
 
@@ -58,6 +58,20 @@ export class Store {
 
   static reconstruct(props: StoreProps): Store {
     return new Store(props.id, props.name, new Date(props.createdAt));
+  }
+
+  /**
+   * 店舗名を変更する。空文字列・空白のみは拒否する（create() と同じ制約）。
+   * 名前の一意性検査（同名禁止・自分自身の除外）はコレクション制約のため、
+   * Entity ではなく RenameStoreUseCase が担う（CreateStoreUseCase と同じ責務分担、ADR-0013）。
+   *
+   * @throws Error name が空文字列・空白のみの場合
+   */
+  rename(name: string): void {
+    if (name.trim() === '') {
+      throw new Error('Store name is required');
+    }
+    this.storeName = name;
   }
 
   get id(): StoreId {
