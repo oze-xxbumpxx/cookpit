@@ -274,4 +274,57 @@ describe('PriceRecordEditDialog', () => {
 
     expect(screen.queryByLabelText(/記録日時/)).toBeNull();
   });
+
+  // PRED-11 / PRED-12: 店舗一覧（補助情報）の取得に失敗しても縮退して操作を継続できること。
+  // StoreRenameDialog の SRD-05・既存 PriceRecordForm と同じ縮退方針（レビュー S-1）。
+  it.each([
+    ['例外', () => getStores.mockRejectedValue(new Error('network down'))],
+    ['!response.ok', () => getStores.mockResolvedValue({ ok: false, json: async () => ({}) })],
+  ])('PRED-11: 店舗一覧の取得が %s で失敗するとエラー文言を表示する', async (_label, arrange) => {
+    arrange();
+    render(
+      <PriceRecordEditDialog
+        product={createProductDto()}
+        record={createRecord()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('店舗の取得に失敗しました。')).toBeTruthy();
+    // 一覧が取れなくても、記録が指す店舗が選択済みとして表示され「未選択」に見えない。
+    expect(screen.getByText('店舗A')).toBeTruthy();
+    expect(screen.queryByText('店舗を選択')).toBeNull();
+  });
+
+  it('PRED-12: 店舗一覧の取得に失敗しても価格・内容量の編集と保存は継続できる', async () => {
+    getStores.mockRejectedValue(new Error('network down'));
+    putPriceRecord.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const user = userEvent.setup();
+    render(
+      <PriceRecordEditDialog
+        product={createProductDto()}
+        record={createRecord()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+    await screen.findByText('店舗の取得に失敗しました。');
+
+    const priceInput = screen.getByLabelText('価格');
+    await user.clear(priceInput);
+    await user.type(priceInput, '400');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    // 店舗一覧が取れなくても、記録が元々持っていた storeId で保存できる。
+    await waitFor(() => {
+      expect(putPriceRecord).toHaveBeenCalledWith({
+        param: { id: 'product-1', priceRecordId: 'record-1' },
+        json: {
+          storeId: 'store-a',
+          priceAmount: 400,
+          packageSizeValue: 3,
+          packageSizeUnit: '個',
+        },
+      });
+    });
+  });
 });

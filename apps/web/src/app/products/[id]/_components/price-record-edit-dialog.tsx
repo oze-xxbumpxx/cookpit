@@ -47,6 +47,7 @@ export function PriceRecordEditDialog({ product, record, onOpenChange }: Props) 
 
   const [stores, setStores] = useState<StoreDto[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
+  const [storesErrorMessage, setStoresErrorMessage] = useState<string | null>(null);
   const [storeId, setStoreId] = useState('');
   const [priceAmount, setPriceAmount] = useState('');
   const [packageSize, setPackageSize] = useState('');
@@ -63,8 +64,21 @@ export function PriceRecordEditDialog({ product, record, onOpenChange }: Props) 
     parsedPackageSize.kind === 'amount' &&
     parsedPackageSize.value > 0 &&
     !submitting;
+  // 編集対象の記録が指す店舗は、店舗一覧の取得に失敗しても選択肢として出す。出さないと
+  // storeId に値が入っているのに選択肢が無く、select が「店舗を選択」と表示して
+  // 未選択に見えてしまう（レビュー S-1）。取得成功時は一覧側に含まれるので重複させない。
+  const missingCurrentStore =
+    record !== null && !stores.some((store) => store.id === record.storeId)
+      ? [
+          {
+            value: record.storeId,
+            label: record.storeName === '' ? '店舗未設定' : record.storeName,
+          },
+        ]
+      : [];
   const storeOptions: SelectFieldOption[] = [
     { value: '', label: storesLoading ? '読み込み中' : '店舗を選択', disabled: true },
+    ...missingCurrentStore,
     ...stores.map((store) => ({ value: store.id, label: store.name })),
   ];
 
@@ -83,12 +97,24 @@ export function PriceRecordEditDialog({ product, record, onOpenChange }: Props) 
       setPriceAmount(String(targetRecord.priceAmount));
       setPackageSize(`${targetRecord.packageSizeValue}${targetRecord.packageSizeUnit}`);
       setErrorMessage(null);
+      setStoresErrorMessage(null);
       setFieldErrors(emptyFieldErrors());
       setStoresLoading(true);
+      // 店舗一覧は補助情報。取得に失敗しても価格・内容量の編集と保存は継続させ、
+      // 理由だけ提示する（StoreRenameDialog の usage 取得と同じ縮退方針）。
       try {
         const response = await client.api.stores.$get();
-        if (response.ok && !cancelled) {
-          setStores(await response.json());
+        if (cancelled) {
+          return;
+        }
+        if (!response.ok) {
+          setStoresErrorMessage('店舗の取得に失敗しました。');
+          return;
+        }
+        setStores(await response.json());
+      } catch {
+        if (!cancelled) {
+          setStoresErrorMessage('店舗の取得に失敗しました。');
         }
       } finally {
         if (!cancelled) {
@@ -198,9 +224,9 @@ export function PriceRecordEditDialog({ product, record, onOpenChange }: Props) 
         <AlertDialogContent>
           <AlertDialogTitle>価格記録を編集</AlertDialogTitle>
           <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-3">
-            {errorMessage !== null && (
+            {(errorMessage ?? storesErrorMessage) !== null && (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {errorMessage}
+                {errorMessage ?? storesErrorMessage}
               </p>
             )}
             <div className="flex flex-col gap-2">

@@ -5,6 +5,8 @@
   `3a30be2`（UI）。差分は `git diff 0e33f7e..3a30be2`
 - 変更レベル: L3（Sprint 7 タスク2「価格記録の編集」+ タスク3「店舗のリネーム」）
 - 判定: **Must 0 / Should 3 / Nice 4**。マージブロッカーなし
+- 対応状況: **Should 3 件すべて対応済み**（2026-08-06・コミット後述）。Nice は N-3 のみ
+  S-3 の対応に付随して解消、N-1/N-2/N-4 は申し送り
 
 > **本レビューの実施者と限界**: reviewer Subagent を起動したが、13 時間超走った末に
 > タスクレジストリから消え成果物を出さずに失われた（46 ツール呼び出しまでは進行を確認）。
@@ -41,7 +43,7 @@
 
 ## Should（マージ前の対応を推奨。ブロッカーではない）
 
-### S-1: `PriceRecordEditDialog` の店舗一覧取得が失敗しても縮退しない
+### S-1: `PriceRecordEditDialog` の店舗一覧取得が失敗しても縮退しない — ✅ 対応済み
 
 - 根拠: `apps/web/src/app/products/[id]/_components/price-record-edit-dialog.tsx:88-97`
 - `initialize()` が `try` / `finally` のみで **`catch` を持たない**。結果として 2 つの穴がある。
@@ -66,7 +68,7 @@
   併せて試験計画 §8-1 に `PRED-11`（取得失敗時にエラー文言が出て、価格・内容量の編集と保存は
   継続できる）を追加する。
 
-### S-2: 試験計画 §8-1 に店舗一覧取得失敗の観点が無い（S-1 の上流原因）
+### S-2: 試験計画 §8-1 に店舗一覧取得失敗の観点が無い（S-1 の上流原因） — ✅ 対応済み
 
 - 根拠: `docs/tests/price-record-edit-and-store-rename.md` §8-1（PRED-01〜10）
 - `StoreRenameDialog` 側には SRD-05 として縮退観点があるのに、`PriceRecordEditDialog` 側は
@@ -74,7 +76,7 @@
   **試験計画にも観点を戻さないと同じ抜けが再発する**（試験計画が正典なので）。
 - 修正案: S-1 の修正案に含めた `PRED-11` を追加する。
 
-### S-3: `it.each` の範囲表記タイトルが試験 ID の追跡を壊す
+### S-3: `it.each` の範囲表記タイトルが試験 ID の追跡を壊す — ✅ 対応済み
 
 - 根拠: `packages/application/tests/product/product-use-cases.test.ts:490`（`'A-UPU-05〜08: …'`）、
   `packages/domain/tests/shared/store.test.ts:85`（`'D-SRN-02/03: …'`）
@@ -129,3 +131,46 @@ react-hooks/exhaustive-deps` がある（依存は `[record?.id]`）。同じ記
   （試験計画の PASS 基準の甘さ、確認項目の前提データ不足）が見つかっている。
 - security-reviewer による専門レビュー。MVP1 は認証なし（ADR-0003）で新たな攻撃面も
   無い想定だが、L3 なので実施が望ましい。
+
+## Should の対応記録（2026-08-06）
+
+### S-1 の対応
+
+`price-record-edit-dialog.tsx` に `storesErrorMessage` state と `catch` を追加し、
+例外・`!response.ok` の両方で「店舗の取得に失敗しました。」を表示するようにした。
+さらに**編集対象の記録が指す店舗を選択肢のフォールバックとして出す**ようにした
+（`missingCurrentStore`）。これがないと `storeId` に値があるのに選択肢が無く、
+select が「店舗を選択」と表示して未選択に見える状態が残るため。
+
+試験は `PRED-11`（2 パターンの `it.each`）・`PRED-12` を追加。Red で 3 件の失敗を確認して
+から実装した。
+
+### S-2 の対応
+
+試験計画 §8-1 に `PRED-11` / `PRED-12` を追加し、§1 対応表の E-08 行・§2 の網羅表・
+§14-1 の完了条件の `PRED-01〜10` を `PRED-01〜12` へ更新した。
+
+### S-3 の対応
+
+`it.each` の fixture に**試験 ID を literal で持たせ**、タイトルを `'%s: …'` に変えた
+（`['A-UPU-05', 'kg→g', …]` / `['D-SRN-02', '']`）。
+
+当初は `'A-UPU-%s'` + `['05', …]` の形にしたが、**これでは不十分だった** —
+`%s` の展開は実行時に起きるので、ソースには `A-UPU-05` という文字列が現れず
+grep で追跡できないままだった。ID 全体を fixture 側に置くことで、実行時の表示名と
+ソース検索の両方で一致するようになった。
+
+対応後、試験計画の 102 件すべてがソース検索で実装済みと確認できる
+（`comm -23` の差分が空）。
+
+### N-3 の解消（S-3 の対応に付随）
+
+`A-UPU-05〜08` の fixture から未使用の `from`（編集前の単位）を削除した。
+併せて、seed される記録の `packageSize` が `3個` 固定で編集後の単位（kg/g/l/ml）とは
+**意図的に別次元**であり、単価の再計算が「保存済みの単位」ではなく「渡された単位」を
+使うことを担保している、という意図をコメントで明示した。
+
+### 対応後の品質ゲート
+
+lint 0 error（既存警告 1 件は未変更ファイル）/ type-check 5-5（キャッシュ無効で実行）/
+domain 408・application 275・api-contract 251・web **757**（754 → +3）・infrastructure 79。

@@ -82,7 +82,12 @@ describe('Store.rename', () => {
     expect(store.name).toBe('業務スーパー');
   });
 
-  it.each(['', '   '])('D-SRN-02/03: 空文字・空白のみ %j を拒否する', (name) => {
+  // 試験 ID は fixture に literal で持たせる（%s 展開や範囲表記だと ID 単体を
+  // ソース検索で追跡できないため。レビュー S-3）。
+  it.each([
+    ['D-SRN-02', ''],
+    ['D-SRN-03', '   '],
+  ])('%s: 空文字・空白のみ %j を拒否する', (_id, name) => {
     const store = Store.create({ name: 'ライフ' });
     expect(() => store.rename(name)).toThrow('Store name is required');
     expect(store.name).toBe('ライフ');

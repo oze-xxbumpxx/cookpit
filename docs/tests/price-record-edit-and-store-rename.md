@@ -49,7 +49,7 @@
 | E-05    | 存在しない店舗 ID（リネーム） → 404（`StoreNotFoundError`）                      | A-RSU-08, WH-S-08, SRD-10                                   |
 | E-06    | 正規化後、自分以外の既存店舗と一致 → 422（`DuplicateStoreNameError`）            | A-RSU-05, A-RSU-07, WH-S-09, SRD-11                         |
 | E-07    | 空文字列・空白のみ・256 文字以上 → 400（Zod）                                    | Z-RSN-02, Z-RSN-04, WH-S-10, SRD-12                         |
-| E-08    | 価格記録編集で通信エラー → エラー表示・値保持                                    | PRED-08                                                     |
+| E-08    | 価格記録編集で通信エラー → エラー表示・値保持                                    | PRED-08, PRED-11, PRED-12                                   |
 | E-09    | 店舗名編集で通信エラー → エラー表示・値保持                                      | SRD-13                                                      |
 | E-10    | 「最近の記録」に出ない 6 件目以降は編集の導線が無い                              | PDC-11, MB-02（=B-05 と同一事象）                           |
 | B-01    | 価格：1 円以上の整数                                                             | A-UPU-14（下限 1 円）, Z-UPR-03/04                          |
@@ -107,7 +107,7 @@ DTO 追加（`UpdatePriceRecordInputDto` / `RenameStoreInputDto`）は型のみ�
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
 | `PUT /api/products/:id/price-records/:priceRecordId`（`routes/products.ts` 追加） | 新設                                                         | WH-P-09〜WH-P-15                                        |
 | `PUT /api/stores/:id`（`routes/stores.ts` 追加）                                  | 新設                                                         | WH-S-07〜WH-S-13                                        |
-| `PriceRecordEditDialog`（新設ファイル）                                           | 新設                                                         | PRED-01〜PRED-10                                        |
+| `PriceRecordEditDialog`（新設ファイル）                                           | 新設                                                         | PRED-01〜PRED-12                                        |
 | `StoreRenameDialog`（新設ファイル）                                               | 新設                                                         | SRD-01〜SRD-13                                          |
 | `ProductDetailClient`（編集アイコン追加）                                         | 変更                                                         | PDC-09〜PDC-12                                          |
 | `PriceRecordForm`（リネームアイコン追加）                                         | 変更                                                         | PRF-15〜PRF-17                                          |
@@ -285,18 +285,20 @@ UseCase は `vi.mock('@cookpit/application', ...)` でスタブする既存パ�
 
 ### 8-1. `PriceRecordEditDialog`（新設。`apps/web/tests/app/products/[id]/_components/price-record-edit-dialog.test.tsx`）
 
-| #       | 観点                                    | 前提                                                           | 操作                         | 期待結果                                                                                                                                                               | 分類               |
-| ------- | --------------------------------------- | -------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| PRED-01 | 初期値表示                              | 対象記録（店舗A・298円・3個）を props で渡してダイアログを開く | render                       | 店舗プルダウンに店舗Aが選択済み、価格欄に `298`、内容量欄に `3個` が表示される                                                                                         | 正常               |
-| PRED-02 | 開くたびに最新の店舗一覧を取得する      | —                                                              | ダイアログを開く             | `GET /api/stores` が呼ばれる                                                                                                                                           | 正常               |
-| PRED-03 | 保存で PUT が正しいボディで呼ばれる     | フォームに入力済み                                             | 「保存」をクリック           | `PUT /api/products/:id/price-records/:priceRecordId` が `{storeId, priceAmount, packageSizeValue, packageSizeUnit}` で呼ばれる（`observedAt` を含まない）              | 正常               |
-| PRED-04 | 成功後の遷移                            | `PUT` が 200 を返す                                            | 保存                         | ダイアログが閉じ、`router.refresh()` が呼ばれる                                                                                                                        | 正常               |
-| PRED-05 | `PriceRecordNotFoundError`（E-02）      | `PUT` が 404 を返す                                            | 保存                         | 「この記録はすでに削除されています。」が表示され、ダイアログが閉じて `router.refresh()` が呼ばれる                                                                     | 異常               |
-| PRED-06 | `StoreNotFoundError`（E-03）            | `PUT` が 404 を返す（店舗側の理由）                            | 保存                         | 「選択した店舗が見つかりません。店舗一覧を確認してください。」が表示され、店舗一覧が再取得される（`GET /api/stores` が再度呼ばれる）                                   | 異常               |
-| PRED-07 | Zod バリデーション（E-04）              | `PUT` が 400 を返す                                            | 保存                         | フィールドレベルのエラー表示（既存 `PriceRecordForm` の `FieldErrors` パターンに準拠）                                                                                 | 異常・境界         |
-| PRED-08 | 通信エラー（E-08）                      | `PUT` が例外を投げる（`fetch` reject）                         | 保存                         | 「通信エラーが発生しました。」が表示され、**ダイアログは閉じずフォームの入力値が保持される**（価格欄・内容量欄の入力値が保存操作前と同じであることを直接アサートする） | 異常               |
-| PRED-09 | ローディング状態                        | 保存処理中                                                     | 保存ボタンをクリックした直後 | 保存ボタンが `disabled` になり、「保存中」等のラベルに変わる                                                                                                           | フロントエンド固有 |
-| PRED-10 | B-06 の UI 確認: 記録日時の入力欄が無い | ダイアログを開く                                               | render                       | `observedAt`（記録日時）を入力するフォーム要素が存在しない                                                                                                             | 境界（UI）         |
+| #       | 観点                                                        | 前提                                                                  | 操作                         | 期待結果                                                                                                                                                                                 | 分類               |
+| ------- | ----------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| PRED-01 | 初期値表示                                                  | 対象記録（店舗A・298円・3個）を props で渡してダイアログを開く        | render                       | 店舗プルダウンに店舗Aが選択済み、価格欄に `298`、内容量欄に `3個` が表示される                                                                                                           | 正常               |
+| PRED-02 | 開くたびに最新の店舗一覧を取得する                          | —                                                                     | ダイアログを開く             | `GET /api/stores` が呼ばれる                                                                                                                                                             | 正常               |
+| PRED-03 | 保存で PUT が正しいボディで呼ばれる                         | フォームに入力済み                                                    | 「保存」をクリック           | `PUT /api/products/:id/price-records/:priceRecordId` が `{storeId, priceAmount, packageSizeValue, packageSizeUnit}` で呼ばれる（`observedAt` を含まない）                                | 正常               |
+| PRED-04 | 成功後の遷移                                                | `PUT` が 200 を返す                                                   | 保存                         | ダイアログが閉じ、`router.refresh()` が呼ばれる                                                                                                                                          | 正常               |
+| PRED-05 | `PriceRecordNotFoundError`（E-02）                          | `PUT` が 404 を返す                                                   | 保存                         | 「この記録はすでに削除されています。」が表示され、ダイアログが閉じて `router.refresh()` が呼ばれる                                                                                       | 異常               |
+| PRED-06 | `StoreNotFoundError`（E-03）                                | `PUT` が 404 を返す（店舗側の理由）                                   | 保存                         | 「選択した店舗が見つかりません。店舗一覧を確認してください。」が表示され、店舗一覧が再取得される（`GET /api/stores` が再度呼ばれる）                                                     | 異常               |
+| PRED-07 | Zod バリデーション（E-04）                                  | `PUT` が 400 を返す                                                   | 保存                         | フィールドレベルのエラー表示（既存 `PriceRecordForm` の `FieldErrors` パターンに準拠）                                                                                                   | 異常・境界         |
+| PRED-08 | 通信エラー（E-08）                                          | `PUT` が例外を投げる（`fetch` reject）                                | 保存                         | 「通信エラーが発生しました。」が表示され、**ダイアログは閉じずフォームの入力値が保持される**（価格欄・内容量欄の入力値が保存操作前と同じであることを直接アサートする）                   | 異常               |
+| PRED-09 | ローディング状態                                            | 保存処理中                                                            | 保存ボタンをクリックした直後 | 保存ボタンが `disabled` になり、「保存中」等のラベルに変わる                                                                                                                             | フロントエンド固有 |
+| PRED-10 | B-06 の UI 確認: 記録日時の入力欄が無い                     | ダイアログを開く                                                      | render                       | `observedAt`（記録日時）を入力するフォーム要素が存在しない                                                                                                                               | 境界（UI）         |
+| PRED-11 | 店舗一覧の取得失敗時の縮退（レビュー S-1 で追加）           | `GET /api/stores` が例外を投げる／`!response.ok` を返す（2 パターン） | ダイアログを開く             | 「店舗の取得に失敗しました。」が表示され、**かつ編集対象の記録が指す店舗が選択済みとして表示される**（`storeId` に値があるのに選択肢が無く「店舗を選択」と表示される状態にならないこと） | 異常・防御性       |
+| PRED-12 | 店舗一覧の取得に失敗しても保存できる（レビュー S-1 で追加） | `GET /api/stores` が例外を投げる                                      | 価格を変更して保存           | `PUT` が記録の元の `storeId` を含む正しいボディで呼ばれる（補助情報の取得失敗が保存操作をブロックしない）                                                                                | 異常・防御性       |
 
 ### 8-2. `StoreRenameDialog`（新設。`apps/web/tests/app/products/[id]/_components/store-rename-dialog.test.tsx`）
 
@@ -459,7 +461,7 @@ UseCase は `vi.mock('@cookpit/application', ...)` でスタブする既存パ�
       （Z-RSN-01〜05）が実装され全件 pass
 - [ ] Presentation（Hono）: `PUT /price-records/:priceRecordId`（WH-P-09〜15）、
       `PUT /stores/:id`（WH-S-07〜13）が実装され全件 pass
-- [ ] Presentation（RTL）: `PriceRecordEditDialog`（PRED-01〜10）、`StoreRenameDialog`
+- [ ] Presentation（RTL）: `PriceRecordEditDialog`（PRED-01〜12）、`StoreRenameDialog`
       （SRD-01〜13）、`ProductDetailClient` 追加分（PDC-09〜12）、`PriceRecordForm` 追加分
       （PRF-15〜17）が実装され全件 pass
 - [ ] `price-comparison.node.test.ts` の PC-EDIT-01/02 が実装され pass、既存観点も無変更で pass

@@ -449,46 +449,18 @@ describe('UpdatePriceRecordUseCase', () => {
     expect(dto.priceHistory[0]?.observedAt).toBe(before?.observedAt.toISOString());
   });
 
+  // seed する記録の packageSize は seededPriceRecord() が `3個` 固定で作る。編集後の単位
+  // （kg/g/l/ml）とは意図的に別次元にしてあり、単価の再計算が「保存済みの単位」ではなく
+  // 「渡された単位」を使うことを担保する。試験 ID は fixture に literal で持たせる
+  // （%s 展開だとソース検索で ID 単体を追跡できないため。レビュー S-3）。
   it.each([
-    [
-      'kg→g',
-      {
-        priceAmount: 1000,
-        from: { value: 1, unit: 'kg' as const },
-        to: { value: 500, unit: 'g' as const },
-      },
-      200,
-    ],
-    [
-      'g→kg',
-      {
-        priceAmount: 200,
-        from: { value: 200, unit: 'g' as const },
-        to: { value: 2, unit: 'kg' as const },
-      },
-      10,
-    ],
-    [
-      'l→ml',
-      {
-        priceAmount: 180,
-        from: { value: 2, unit: 'l' as const },
-        to: { value: 900, unit: 'ml' as const },
-      },
-      20,
-    ],
-    [
-      'ml→l',
-      {
-        priceAmount: 250,
-        from: { value: 500, unit: 'ml' as const },
-        to: { value: 2.5, unit: 'l' as const },
-      },
-      10,
-    ],
+    ['A-UPU-05', 'kg→g', { priceAmount: 1000, to: { value: 500, unit: 'g' as const } }, 200],
+    ['A-UPU-06', 'g→kg', { priceAmount: 200, to: { value: 2, unit: 'kg' as const } }, 10],
+    ['A-UPU-07', 'l→ml', { priceAmount: 180, to: { value: 900, unit: 'ml' as const } }, 20],
+    ['A-UPU-08', 'ml→l', { priceAmount: 250, to: { value: 2.5, unit: 'l' as const } }, 10],
   ])(
-    'A-UPU-05〜08: 単位換算 %s 方向で単価が再計算される（critical）',
-    async (_label, fixture, expected) => {
+    '%s: 単位換算 %s 方向で単価が再計算される（critical）',
+    async (_id, _label, fixture, expected) => {
       storeRepository.seed(seededStore('store-a', '西友'));
       productRepository.seed(
         seededProduct('product-1', '玉ねぎ', [
