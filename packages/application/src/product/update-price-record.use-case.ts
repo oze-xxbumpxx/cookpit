@@ -11,6 +11,7 @@ import type { ProductDto, UpdatePriceRecordInputDto } from './product.dto';
 import { PriceRecordNotFoundError } from './price-record-not-found.error';
 import { toProductDto, toStoreNameMap } from './product.mapper';
 import { ProductNotFoundError } from './product-not-found.error';
+import { UnitPriceNotPositiveError } from './unit-price-not-positive.error';
 import { StoreNotFoundError } from '../store/store-not-found.error';
 
 /**
@@ -50,6 +51,15 @@ export class UpdatePriceRecordUseCase {
     const price = Money.of(input.priceAmount, 'JPY');
     const packageSize = Quantity.of(input.packageSizeValue, input.packageSizeUnit);
     const unitPrice = UnitPriceCalculator.calculate(price, packageSize);
+    // 上限内でも内容量が価格に対して極端に大きいと丸めで 0 になる。素の Error のまま
+    // PriceRecord.create() へ渡すと 500 になるため、ドメイン境界で 422 相当へ変換する。
+    if (unitPrice.amount <= 0) {
+      throw new UnitPriceNotPositiveError(
+        input.priceAmount,
+        input.packageSizeValue,
+        input.packageSizeUnit,
+      );
+    }
 
     product.updatePriceRecord(priceRecordId, { storeId, price, unitPrice, packageSize });
     await this.productRepository.save(product);

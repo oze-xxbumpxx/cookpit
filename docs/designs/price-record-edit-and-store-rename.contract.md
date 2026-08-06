@@ -47,13 +47,27 @@
 // フィールド自体が存在しない。
 export const updatePriceRecordSchema = z.object({
   storeId: z.uuid(),
-  priceAmount: z.number().positive(),
-  packageSizeValue: z.number().positive(),
+  priceAmount: priceAmountSchema, // z.number().positive().max(999_999_999)
+  packageSizeValue: packageSizeValueSchema, // z.number().positive().max(9_999_999)
   packageSizeUnit: unitSchema,
 });
 
 export type UpdatePriceRecordBody = z.infer<typeof updatePriceRecordSchema>;
 ```
+
+> **上限の追加（2026-08-06・セキュリティレビュー Medium 1 の対応）**: 当初は
+> `z.number().positive()` のみとしていたが、上限が無いと検証を通った値が
+> **HTTP 500 になる**ことが実 API で確認された。DB 精度
+> （`price_amount` / `unit_price_amount` = `numeric(10,1)`、
+> `package_size_value` = `numeric(10,3)`）に合わせた上限を共有定数
+> `priceAmountSchema` / `packageSizeValueSchema` として切り出し、
+> **`recordPriceSchema`（既存 POST）にも同じ上限を適用した**（ユーザー確定。
+> 片方だけ直すと同じ入力で POST は 500・PUT は 400 という非対称が残るため）。
+>
+> 上限内でも「内容量が価格に対して極端に大きく単価が丸めで 0 になる」組み合わせは成立するため、
+> Application 層に `UnitPriceNotPositiveError`（`InvalidOperationError` 派生 → **422**）を
+> 新設し、`RecordPriceUseCase` / `UpdatePriceRecordUseCase` の両方で単価計算直後に検査する。
+> 検証後の実測: ゼロ丸め → 422 / DB 精度超え → 400 / 正常値 → 200。
 
 配置位置: `recordPriceSchema`（33-38 行目）の直後、`priceRecordIdParamSchema`（41-43 行目）の
 前後どちらでもよいが、「価格記録の入力系スキーマをまとめる」観点で `recordPriceSchema` の直後を

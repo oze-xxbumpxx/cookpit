@@ -156,10 +156,87 @@ PGlite dev + Playwright / 390px。詳細と是正内容は試験計画 §13 の�
   同じ記録の編集前後を目で比較しにくい。編集機能が入って初めて「同じ記録の単位を変える」
   経路が生まれたため記録する（試験計画 §11 にも申し送り済み）。
 
-## 未実施
+## セキュリティレビュー（2026-08-06 実施・security-reviewer）
 
-- security-reviewer による専門レビュー。MVP1 は認証なし（ADR-0003）で新たな攻撃面も
-  無い想定だが、L3 なので実施が望ましい。
+**Critical 0 / High 0 / Medium 2 / Low 3。依存パッケージの追加はゼロ**
+（`git diff 0e33f7e..HEAD -- '**/package.json' 'pnpm-lock.yaml'` が空）。
+
+### 問題なしと確認された観点
+
+- **エラーメッセージからの情報漏洩なし**。`NotFoundError` の書式
+  `${label} not found: ${id}` に含まれる UUID は**クライアント自身が送った値**で、
+  攻撃者が知らない情報は増えない。DB 名・スキーマ・スタックも含まれない。
+  UI 側も生メッセージを表示せず固定の日本語へマップしている。
+  接頭辞判定（R-1）は堅牢性の課題でセキュリティ問題ではない（接頭辞は固定リテラルで
+  ユーザー入力を含まないため、メッセージ偽装による分岐操作もできない）。
+- **XSS なし**。変更範囲に `dangerouslySetInnerHTML` / `innerHTML` / `eval` /
+  `new Function` はゼロ。店舗名は JSX の子要素と `aria-label` でしか使われず、
+  どちらも React が自動エスケープする。`href` / `src` / `style` へは流れない。
+  「原文保存 + 比較用のみ正規化」という設計は正しく、`normalizeStoreName` は
+  `trim().normalize('NFKC')` のみで ReDoS もない。
+- **マスアサインメント不成立**。`z.object()` が未知キーを strip するため、
+  ルート側の `{ productId: id, priceRecordId, ...body }` スプレッドで
+  `observedAt` や `id` を注入できない（設計意図どおり）。
+- **IDOR 型の操作が塞がれている**。`update-price-record.use-case.ts` が
+  「その `priceRecordId` が当該 product の履歴に属すること」を検証している。
+  認証導入時のオーナーチェックもここが自然な差し込み位置。
+- **冪等性が良好**。`id` と `observedAt` を維持するため同一ボディの再送は同じ状態に収束し、
+  破壊範囲は 1 レコードに限定。更新時は ID が変わらないので `notInArray` 削除が
+  該当レコードを消さず、後続 insert が失敗しても既存データは残る。
+- **CSRF**: Cookie も認証も無く乗っ取る資格情報が無い。`hono/cors` 未使用なので
+  `application/json` の cross-origin PUT はプリフライトで遮断される。
+  → **申し送り: 認証を入れる際は、CORS を緩める前に CSRF 対策を入れること。**
+  現状の安全性が「CORS 未設定」という暗黙の前提に依存している。
+
+### Medium 1: 数値の上限が無く、スキーマを通る入力で 500 になる — ✅ 対応済み
+
+- 根拠: `packages/api-contract/src/product.schema.ts` の `updatePriceRecordSchema`
+  （`priceAmount` / `packageSizeValue` が `z.number().positive()` のみ）
+- **Orchestrator が実 API で再現を確認済み**（2026-08-06）:
+
+| 入力                                                                    | 結果         |
+| ----------------------------------------------------------------------- | ------------ |
+| `{priceAmount:1, packageSizeValue:1000000000, packageSizeUnit:'個'}`    | **HTTP 500** |
+| `{priceAmount:1000000000000, packageSizeValue:3, packageSizeUnit:'個'}` | **HTTP 500** |
+| 正常値（対照）                                                          | HTTP 200     |
+
+- 機構は 2 つ。(1) `UnitPriceCalculator.calculate()` が `Math.round(1e-9 * 10) / 10 = 0` を
+  返し、`PriceRecord.create()` が `'Price record unit price must be positive'` を
+  **素の `Error`** で投げる。(2) `price_amount` / `unit_price_amount` は
+  `numeric(10, 1)`（上限 999999999.9）なので Postgres 22003。
+  どちらも `NotFoundError` / `InvalidOperationError` ではないため `onError` の
+  404/422 変換に載らず 500 + `console.error` でスタックが出る。
+- データ破壊は無い（更新時は ID が変わらないので `notInArray` 削除が該当レコードを消さない）。
+- **同型の穴は既存 `recordPriceSchema`（POST）にもある**。今回は同じ形を複製したため
+  PUT でも再現する、という位置づけ。
+
+### Medium 2: 集約丸ごとの read-modify-write が非トランザクション（既存・スコープ外）
+
+- 根拠: `packages/infrastructure/src/repositories/drizzle-product.repository.ts` の `save()` が
+  「`notInArray(currentIds)` で削除 → 全件 upsert」を `db.transaction` で囲んでいない。
+- ロストアップデートが成立する: T1 が `[A,B]` を読み込む → T2 が C を追加してコミット →
+  T1 の `save()` が `DELETE ... WHERE id NOT IN (A,B)` で **C を消す**。
+- 既存の POST / DELETE も同じパターンなので**新規の欠陥ではない**が、無認証の `PUT` が
+  2 本増えたことで RMW 窓を持つ書き込み経路は増えた。窓はミリ秒単位で 2 人運用では実害は限定的。
+- 最小対応は `save()` 全体を `this.db.transaction()` で囲むこと。将来は `updatedAt` による
+  楽観ロックか価格記録単位の部分更新。**別タスク化を推奨**。
+
+### Low（いずれも既存挙動・申し送り）
+
+- **L-1**: `packageSizeUnit` は許可リストでなく自由文字列（`unitSchema` =
+  `z.string().trim().min(1).max(20)`。ADR-0008 の自由記述単位方針）。新 PUT で既存記録の
+  単位を任意テキストへ書き換えられる。XSS は安全だがデータ整合性としては弱い。既存 POST と同仕様。
+- **L-2**: `Store.rename()` に長さ上限が無く、`.max(255)` は Zod だけが担保（DB は `text`）。
+  HTTP 以外の呼び出し元が増えると無制限長が入り得る。`create()` も同じ状態。
+- **L-3**: `app.ts` の `console.error(err)` が失敗クエリのバインド値を含み得る。
+  現状のデータ（店舗名・価格）は低機微だが、**認証・個人情報が入る段階でサニタイズが必要**。
+
+### 依存パッケージの既存脆弱性（今回の変更とは無関係）
+
+`pnpm audit` は 6 件（high 4 / moderate 1 / low 1）。`brace-expansion` / `js-yaml` /
+`esbuild` は dev 依存のみで本番バンドル外。`hono` (<4.12.34) の ReDoS は **CORS
+ミドルウェアの脆弱性で `hono/cors` 未使用のため到達不能**だが、ランタイム依存なので
+`pnpm up hono` での追随を推奨（独立した依存更新タスク）。
 
 ## Should の対応記録（2026-08-06）
 
@@ -203,3 +280,37 @@ grep で追跡できないままだった。ID 全体を fixture 側に置くこ
 
 lint 0 error（既存警告 1 件は未変更ファイル）/ type-check 5-5（キャッシュ無効で実行）/
 domain 408・application 275・api-contract 251・web **757**（754 → +3）・infrastructure 79。
+
+## Medium 1 の対応記録（2026-08-06）
+
+**ユーザー確定: PUT と POST の両方を直す**（片方だけだと同じ入力で POST は 500・
+PUT は 400 という非対称が残るため）。2 層で対応した。
+
+1. **api-contract の上限**: `priceAmountSchema`（`.max(999_999_999)`）/
+   `packageSizeValueSchema`（`.max(9_999_999)`）を共有定数として切り出し、
+   `updatePriceRecordSchema` と **`recordPriceSchema`（既存 POST）の両方**に適用。
+   上限は DB 精度（`numeric(10,1)` / `numeric(10,3)`）に一致させた。
+   試験: `Z-UPR-09/10/11`・`Z-PR-09/10` を Red 確認の上で追加。
+2. **Application 層の 422 マッピング**: 上限内でも単価が丸めで 0 になる組み合わせは残るため
+   （`1 / 9,999,999` → `0`）、`UnitPriceNotPositiveError`（`InvalidOperationError` 派生）を
+   新設し、`RecordPriceUseCase` / `UpdatePriceRecordUseCase` の両方で単価計算直後に検査する。
+   試験: `A-UPU-18` と RecordPriceUseCase 側の同型ケースを Red 確認の上で追加。
+
+**対応後の実 API 検証**（PGlite dev）:
+
+| 入力                                                       | 対応前 | 対応後                                    |
+| ---------------------------------------------------------- | ------ | ----------------------------------------- |
+| `priceAmount:1, packageSizeValue:9999999`（ゼロ丸め・PUT） | —      | **422** `Unit price rounds to zero for …` |
+| 同上（POST）                                               | 500    | **422**                                   |
+| `priceAmount:1e12`（DB 精度超え）                          | 500    | **400**                                   |
+| `packageSizeValue:1e9`                                     | 500    | **400**                                   |
+| 正常値（対照）                                             | 200    | 200                                       |
+
+品質ゲート: lint 0 error / type-check 5-5 / domain 408・application **277**（275 → +2）・
+api-contract **256**（251 → +5）・web 757。
+
+### Medium 2 / Low 1〜3 の扱い
+
+いずれも**既存コードの是正でスコープ外**のため、本タスクでは対応しない。
+Medium 2（`save()` のトランザクション化）は別タスク化を推奨。`hono` のパッチ適用
+（CORS 未使用のため到達不能だがランタイム依存）も独立した依存更新タスクとする。

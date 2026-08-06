@@ -30,10 +30,19 @@ export const updateProductSchema = z.object({
   defaultUnit: unitSchema,
 });
 
+/**
+ * 価格・内容量の上限は DB の numeric 精度に合わせる
+ * （`price_amount` / `unit_price_amount` = numeric(10,1) → 999,999,999.9、
+ * `package_size_value` = numeric(10,3) → 9,999,999.999）。
+ * 上限が無いと検証を通った値が Postgres 22003 を起こし、素の Error として 500 になる。
+ */
+const priceAmountSchema = z.number().positive().max(999_999_999);
+const packageSizeValueSchema = z.number().positive().max(9_999_999);
+
 export const recordPriceSchema = z.object({
   storeId: z.uuid(),
-  priceAmount: z.number().positive(),
-  packageSizeValue: z.number().positive(),
+  priceAmount: priceAmountSchema,
+  packageSizeValue: packageSizeValueSchema,
   packageSizeUnit: unitSchema,
 });
 
@@ -43,8 +52,8 @@ export const recordPriceSchema = z.object({
 // observedAt は編集対象外（D-1）のためフィールド自体が存在しない。
 export const updatePriceRecordSchema = z.object({
   storeId: z.uuid(),
-  priceAmount: z.number().positive(),
-  packageSizeValue: z.number().positive(),
+  priceAmount: priceAmountSchema,
+  packageSizeValue: packageSizeValueSchema,
   packageSizeUnit: unitSchema,
 });
 

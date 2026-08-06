@@ -9,5 +9,6 @@ export * from './update-price-record.use-case';
 export * from './get-cheapest-store.use-case';
 export * from './product.dto';
 export * from './product-not-found.error';
+export * from './unit-price-not-positive.error';
 export * from './price-record-not-found.error';
 export * from './product.mapper';

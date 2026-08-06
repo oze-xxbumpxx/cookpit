@@ -14,6 +14,7 @@ import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import { CreateProductUseCase } from '../../src/product/create-product.use-case';
 import { DeletePriceRecordUseCase } from '../../src/product/delete-price-record.use-case';
 import { DeleteProductUseCase } from '../../src/product/delete-product.use-case';
+import { InvalidOperationError } from '../../src/shared/errors';
 import { PriceRecordNotFoundError } from '../../src/product/price-record-not-found.error';
 import { GetCheapestStoreUseCase } from '../../src/product/get-cheapest-store.use-case';
 import { GetProductUseCase } from '../../src/product/get-product.use-case';
@@ -317,6 +318,20 @@ describe('RecordPriceUseCase', () => {
     expect(record?.packageSize.value).toBe(3);
   });
 
+  it('単価が丸めで 0 になる入力を InvalidOperationError 派生で拒否し、保存しない', async () => {
+    productRepository.seed(seededProduct('product-1'));
+    storeRepository.seed(seededStore('store-1', '西友'));
+
+    await expect(
+      new RecordPriceUseCase(productRepository, storeRepository).execute({
+        ...input,
+        priceAmount: 1,
+        packageSizeValue: 9_999_999,
+      }),
+    ).rejects.toBeInstanceOf(InvalidOperationError);
+    expect(productRepository.saveCount).toBe(0);
+  });
+
   it('商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
     storeRepository.seed(seededStore('store-1', '西友'));
 
@@ -486,6 +501,22 @@ describe('UpdatePriceRecordUseCase', () => {
       expect(dto.priceHistory[0]?.unitPriceAmount).toBe(expected);
     },
   );
+
+  // A-UPU-18: 単価が丸めで 0 になる入力は 422 相当（InvalidOperationError 派生）で拒否する。
+  // 素の Error のままだと onError が 500 + スタック出力にする（セキュリティレビュー Medium 1）。
+  it('A-UPU-18: 単価が丸めで 0 になる入力を InvalidOperationError 派生で拒否し、保存しない', async () => {
+    seedBase();
+
+    const promise = new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      ...baseInput,
+      priceAmount: 1,
+      packageSizeValue: 9_999_999,
+      packageSizeUnit: '個',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(InvalidOperationError);
+    expect(productRepository.saveCount).toBe(0);
+  });
 
   it('A-UPU-09: 商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
     await expect(
