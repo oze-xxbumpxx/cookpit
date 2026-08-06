@@ -174,12 +174,12 @@ jobs:
     # スキップしたうえでジョブが success になっていた）。
     # - secret があれば従来どおり実 DB（Neon）で実行する。
     # - secret が無ければ PGlite（apps/web/scripts/setup-pglite-dev.mjs）で**実際に実行する**。
-    # - どちらの経路でも最後に assert-e2e-results.mjs が「1 件以上実行され全件成功」を検証する。
+    # - どちらの経路でも最後に assert-e2e-results.mjs が「2 件以上実行され全件成功」を検証する。
     #   テスト 0 件・全件 skip・レポート欠落（＝ランナー未起動）はすべて失敗になる。
     needs: quality
     if: github.event_name == 'pull_request' && needs.quality.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    # 通常 5〜15 分程度（install + browser install + dev サーバー起動 + smoke 1 本）。
+    # 通常 5〜15 分程度（install + browser install + dev サーバー起動 + smoke 2 本）。
     timeout-minutes: 30
     env:
       # Playwright の JSON レポート出力先（apps/web からの相対）
@@ -226,7 +226,7 @@ jobs:
       - name: E2E が実際に実行されたことを検証
         # 前の step が落ちても必ず実行し、「未実行のまま緑」を構造的に不可能にする
         if: always()
-        run: node .claude/scripts/assert-e2e-results.mjs apps/web/e2e-report.json --min-tests 1
+        run: node .claude/scripts/assert-e2e-results.mjs apps/web/e2e-report.json --min-tests 2
 
       - name: E2E 実行経路のサマリ
         if: always()

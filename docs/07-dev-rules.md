@@ -207,7 +207,8 @@ Codex はプロジェクト起動時に `AGENTS.md` を自動で読み込む。
 テストランナーは **Vitest**。全層に導入済み — Domain（単体テスト）/
 Application（UseCase テスト）/ Infrastructure（PGlite Repository テスト）/ apps/web
 （Hono ルート + RTL。2026-07-01 PR #21）。`pnpm test`（= `turbo test`）で実行する。
-E2E は Playwright で、シナリオは feature 単位で整備する。
+E2E は Playwright で、主要導線を feature 単位で整備する。現在はレシピ CRUD と土曜運用フローを
+`apps/web/tests/e2e/` で自動化し、Pull Request の CI では Neon または PGlite を使って実行する。
 
 ### テスト配置
 

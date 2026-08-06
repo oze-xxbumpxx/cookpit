@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // レシピ CRUD のハッピーパス・スモーク（一覧 → 作成 → 詳細 → 編集 → 削除）。
-// アプリ + DB が必要なため、原則ローカル（`pnpm e2e`）で実行する。
+// アプリ + DB が必要。ローカルに加えて、CI では Neon または PGlite で実行する。
 // セレクタは実 UI（recipe-form/detail/list/edit クライアント）に合わせている。
 // 名前は実行ごとに一意化し、並列・再実行での衝突を避ける。
 test('レシピを作成・編集・削除できる', async ({ page }) => {
