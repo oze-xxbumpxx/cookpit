@@ -1,10 +1,11 @@
 # 設計書: stock-edit
 
-- ステータス: draft
+- ステータス: confirmed（P-1〜P-6 ユーザー確定・2026-08-07）
 - レベル: L3
 - 関連:
   - `docs/requirements/stock-edit.md`（本設計の要件定義書）
-  - `docs/designs/pantry-core.md` S-4 案 α（Stock の不変性方針の元の決定。本設計はこれを覆す）
+  - `docs/designs/pantry-core.md` S-4 案 α（Stock の不変性方針の元の決定。本設計はこれを覆す。
+    P-5 で ADR-0016 に記録することを確定）
   - `docs/designs/pantry-screens.md` P-3・「将来課題」（保存場所の設定・編集 UI/API の新設は
     本ユニット相当として申し送られていた）
   - `docs/designs/shopping-complete-stock-selection.md` Q-1（完了パネルの期限入力を見送った
@@ -20,35 +21,46 @@ Q-1）と既存 Stock の編集不可（Domain が readonly・pantry-core S-4 �
 
 ## 目的
 
-- 既存 Stock の賞味期限・保存場所を事後編集できるようにする（roadmap タスク 1）。
+- 既存 Stock の賞味期限・保存場所・数量を事後編集できるようにする（roadmap タスク 1。
+  数量を含めることは P-1 のユーザー確定による）。
 - 買い物完了時に品目ごとに賞味期限を任意入力できるようにする（roadmap タスク 2）。
 
 ## 要件
 
-`docs/requirements/stock-edit.md` の FR-1〜FR-6、正常系 N-1〜N-6、異常系 E-1〜E-5、
-境界条件 B-1〜B-4 を参照。
+`docs/requirements/stock-edit.md` の FR-1〜FR-8、正常系 N-1〜N-9、異常系 E-1〜E-6、
+境界条件 B-1〜B-6 を参照。
 
 ## 対象範囲
 
-- Domain（`packages/domain/src/pantry/pantry.ts`）: `Stock` の期限・保存場所を変更する
+- Domain（`packages/domain/src/pantry/pantry.ts`）: `Stock` の数量・期限・保存場所を変更する
   メソッド追加、`Pantry` の委譲メソッド追加。
 - Application（`packages/application/src/pantry/`）: 既存 Stock を更新する新規 UseCase。
-- api-contract（`packages/api-contract/src/pantry.schema.ts`）: 更新用スキーマ追加。
+- api-contract（`packages/api-contract/src/pantry.schema.ts`）: 更新用スキーマ追加（数量を含む）。
 - Presentation route（`apps/web/src/server/routes/pantry.ts`）: 新規エンドポイント。
 - Infrastructure（`packages/infrastructure/src/repositories/drizzle-pantry.repository.ts`）:
-  `save()` の `onConflictDoUpdate.set` 拡張（実装上の罠の解消。本ユニットの必須スコープ）。
-- UI（`apps/web/src/app/pantry/`・`apps/web/src/app/shopping-lists/`）: 編集ダイアログ新設、
-  編集導線追加、完了パネルへの期限入力追加。
+  `save()` の `onConflictDoUpdate.set` を 4 列（`amountValue` / `amountUnit` / `expiresAt` /
+  `storedLocation`）に拡張（実装上の罠の解消。本ユニットの必須スコープ）。
+- UI（`apps/web/src/app/pantry/`・`apps/web/src/app/shopping-lists/`・
+  `apps/web/src/app/_utils/`）: 編集ダイアログ新設（数量・保存場所・賞味期限）、編集導線追加、
+  完了パネルへの期限入力追加、`/pantry` カードへの保存場所ラベル・緊急度チップ追加、期限
+  緊急度ユーティリティの共通化（`expiry.ts` 新設）。
 
 ## 対象外
 
+- `displayName`（品目名）の編集（確定・対象外。誤字修正ニーズはあるが、Product 連携時の
+  整合性検討・表示専用文字列を超えた設計が必要になるため別ユニットで再検討する）。
+- `purchasedAt`（購入日時）の編集（対象外。消費順序等の暗黙の前提に影響するため据え置く）。
+- `productId` / `sourceShoppingItemId` の編集（対象外。集約間の ID 参照・冪等ガード
+  （`hasStockFromShoppingItem` / DB の UNIQUE 制約）に関わるため変更しない）。
+- これら 4 項目は Repository の `onConflictDoUpdate.set` にも追加しない。追加すると
+  「実装上の罠」と同種の問題（フィールドを増やしたのに `set` 句の更新を忘れる）が再発する
+  リスクがあるため、対象外である間は触れないことを明示しておく（「将来課題」参照）。
 - 賞味期限アラート / Web Push（Unit B。Sprint 8 タスク 3）。
 - 消費・廃棄の取り消し（undo）・履歴テーブル（Unit C。Sprint 8 タスク 4）。
-- DB スキーマ変更・マイグレーション（`stocks.expires_at` / `stored_location` は既存の
-  nullable 列をそのまま使う。新規インデックスも本ユニットでは追加しない）。
-- 在庫引き算（`GenerateShoppingListUseCase.applyPantryDeduction`）の挙動変更。
+- DB スキーマ変更・マイグレーション（`stocks` の既存 nullable 列をそのまま使う）。
+- 在庫引き算（`GenerateShoppingListUseCase.applyPantryDeduction`）の挙動変更（数量の単位編集が
+  この経路に与える影響は「リスク」節で扱うが、ロジック自体は変更しない）。
 - 認証・ユーザー概念（ADR-0003 / ADR-0004）。
-- ダッシュボードの緊急度チップ表示ロジック自体の変更（P-4 で `/pantry` への追加要否のみ検討）。
 
 ## 現状構成
 
@@ -85,7 +97,7 @@ export class Stock {
 **この不変性は明示的な設計判断**: `docs/designs/pantry-core.md` S-4 案 α で「`expiresAt` /
 `storedLocation` は不変。値の後付け（在庫編集操作）は Unit B / Phase 2 の検討事項として
 申し送る」と決めている（同書 L313-315 / L796-797 / L1117-1118）。本設計はこの判断を覆す
-（P-5・ADR-0016 で扱う）。
+（P-5・ADR-0016 で扱う。ユーザー確定済み）。
 
 ### Application — `packages/application/src/pantry/`
 
@@ -175,7 +187,7 @@ export const addStockSchema = z.object({
   `UNSET_LOCATION_VALUE`・`groupStocksByLocation`・`formatExpiresAt`。
 - `stock-row.tsx` の表示: 品目名 / 数量 / `expiresAt !== null` のとき `〜7/12まで`。
   ボタンは「消費」「廃棄」（確認ダイアログ無し = `pantry-screens.md` P-6 の確定）。**編集導線は
-  無い。** 保存場所はカードに出ず `LocationGroup` の見出しでのみ表現。
+  無い。** 保存場所はカードに出ず `LocationGroup` の見出しでのみ表現。**緊急度チップも無い。**
 - `add-stock-form.tsx`（展開パネル方式・ダイアログではない）: 品目名 `Input` / 分量
   `QuantityField` / 保存場所 `SelectField` + `LOCATION_SELECT_OPTIONS` / 賞味期限
   `Input type="date"`（空文字→null）。
@@ -192,9 +204,16 @@ export const addStockSchema = z.object({
   `QuantityField`/`SelectField` 行が縦に積まれている（横 1 行に詰め込んでいるのはこの 2 つの
   フィールドのみ）。
 - ダッシュボード `apps/web/src/app/_components/dashboard.tsx` + `_utils/dashboard-view.ts`:
-  `selectExpiringStocks(stocks, asOf, 3)` / `getExpiryRemainingDays` / `getExpiryUrgency`
-  （`overdue`/`critical`/`soon`）/ `formatExpiryUrgencyLabel` / `expiryUrgencyChipClass`。
-  **保存場所アイコンと緊急度チップはダッシュボードにだけあり `/pantry` には無い**（非対称）。
+  `selectExpiringStocks(stocks, asOf, withinDays)` / `getExpiryRemainingDays` / `getExpiryUrgency`
+  （`overdue`/`critical`/`soon`）/ `formatExpiryUrgencyLabel`（`期限切れ`/`本日まで`/`明日まで`/
+  `あとN日`）/ `expiryUrgencyChipClass`（`apps/web/src/app/_utils/category-color.ts`）。
+  `apps/web/src/app/page.tsx` が `EXPIRY_WITHIN_DAYS = 3` というローカル定数（未 export）で
+  `selectExpiringStocks(pantry.stocks, now, EXPIRY_WITHIN_DAYS)` を呼び、
+  `Dashboard` に `expiringStocks` と `asOf={now}`（Server Component 側で生成した `new Date()`）を
+  props で渡している。`getExpiryUrgency` は「`selectExpiringStocks` の閾値日数以内でフィルタ
+  済みの値を渡す前提」で、閾値を超える残日数（例: 10 日）を渡しても `'soon'` に収束してしまう
+  実装であることに注意（`dashboard-view.ts:53-65` のコメント）。**保存場所アイコンと緊急度
+  チップはダッシュボードにだけあり `/pantry` には無い**（非対称。P-4 で解消する）。
 
 ### 再利用できる既存 UI 資産
 
@@ -249,46 +268,83 @@ async save(pantry: Pantry): Promise<void> {
 }
 ```
 
-既存行の `expires_at` / `stored_location` / `display_name` は **UPDATE されない**。Domain と
-ルートを正しく実装しても DB に反映されず、しかも **API は 200 を返し、画面はレスポンス DTO
-（メモリ上の集約）を描画するので一見成功して見える**。リロードして初めて消えたと分かる型の
-欠陥であり、単体テスト（UseCase 層）やコンポーネントテストでは検出できない
-（PGlite を使った Infrastructure 層の回帰テストでのみ検出できる）。
+既存行の `expires_at` / `stored_location` / `amount_unit` / `display_name` は **UPDATE
+されない**。Domain とルートを正しく実装しても DB に反映されず、しかも **API は 200 を返し、
+画面はレスポンス DTO（メモリ上の集約）を描画するので一見成功して見える**。リロードして
+初めて消えたと分かる型の欠陥であり、単体テスト（UseCase 層）やコンポーネントテストでは検出
+できない（PGlite を使った Infrastructure 層の回帰テストでのみ検出できる）。
 
-**対応**: `set` 句に `expiresAt: sql\`excluded.expires_at\``と`storedLocation: sql\`excluded.stored_location\``を追加する。`displayName`/`purchasedAt`/`productId`/`sourceShoppingItemId`は本ユニットでは
-編集対象に含めない（P-1 推奨案）ため`set` 句に追加しない。ただし、これらを将来編集対象に
+**この罠には 2 つの顔がある点に注意（P-1 確定で数量が編集対象に入ったため顕在化）**:
+
+1. `expires_at` / `stored_location` が丸ごと `set` 句に無い（元々の罠）。
+2. `amount_value` は `set` 句にあるが **`amount_unit` は無い**。つまり「数量の**値**は
+   反映されるが、**単位**を変えると反映されない」という、外見上はより気づきにくい罠が
+   もう 1 つ存在する（値が変わって見えるぶん、動作しているように誤認しやすい）。
+
+**対応**: `set` 句を次の 4 列に拡張する。
+
+```ts
+set: {
+  amountValue: sql`excluded.amount_value`,
+  amountUnit: sql`excluded.amount_unit`,
+  expiresAt: sql`excluded.expires_at`,
+  storedLocation: sql`excluded.stored_location`,
+}
+```
+
+`displayName` / `purchasedAt` / `productId` / `sourceShoppingItemId` は本ユニットでは
+編集対象に含めない（確定・対象外）ため `set` 句に追加しない。ただし、これらを将来編集対象に
 含める場合は同じ罠が再発するため、この節を将来課題としても申し送る。
 
 **完了条件に含める回帰テスト**: `packages/infrastructure/tests/` に、Stock を編集 →
-`save()` → 新しい Repository インスタンスで `find()` → `expiresAt` / `storedLocation` が
-更新後の値であることを確認するテストを追加する（既存の PGlite テスト基盤を再利用）。
+`save()` → 新しい Repository インスタンスで `find()` → `amount`（値・単位）/ `expiresAt` /
+`storedLocation` が更新後の値であることを確認するテストを追加する。**単位のみを変更する
+ケース**（値は据え置き、単位だけ変えるリクエスト）を必ずテストケースに含める（罠 2 の
+再発防止。値だけ変えるテストでは罠 2 を検出できない）。既存の PGlite テスト基盤を再利用する。
 
 ## 変更後構成
 
 ### Domain
 
-`Stock` に以下を追加（P-6 推奨: 一括 props 版）。
+`Stock` に以下を追加（P-6 確定: 一括 props 版）。
 
 ```ts
+/**
+ * 数量・賞味期限・保存場所を編集する。`create()` と同じ制約（amount.value <= 0 は throw）を
+ * 適用する。在庫 0 は `consume()` が集約から除去する概念であり、編集で 0 を設定することは
+ * 許さない（正数のみ）。単位変更は許可する（例: 個 → g）。ただし単位変更は
+ * `GenerateShoppingListUseCase.applyPantryDeduction` の在庫引き算の噛み合いに影響し得る
+ * （リスク参照。本メソッド自体は在庫引き算のロジックを意識しない）。
+ * @throws Error amount.value が 0 以下の場合
+ */
 Stock.updateDetails(props: {
+  amount: Quantity;
   expiresAt: Date | null;
   storedLocation: StorageLocation | null;
 }): void
 ```
 
+バリデーションは `create()` と揃える。`Quantity.of(value, unit)` の生成自体が非正数を弾く
+（`AddStockUseCase` と同じ経路）想定であれば `Stock.updateDetails` 内で明示的な再チェックは
+不要だが、`Quantity` が非正数を許容する実装になっている場合は `Stock.create()` と同様に
+Domain 側で `amount.value <= 0` を throw することを必須とする（実装計画フェーズで
+`Quantity` の実装を確認して確定する）。
+
 `Pantry` に委譲メソッドを追加。
 
 ```ts
+/** @throws StockNotFoundError 指定した stockId の在庫が存在しない場合 */
 Pantry.updateStockDetails(
   stockId: StockId,
-  props: { expiresAt: Date | null; storedLocation: StorageLocation | null },
+  props: { amount: Quantity; expiresAt: Date | null; storedLocation: StorageLocation | null },
 ): void
 ```
 
 `consumeStock` / `discardStock` と同型（対象 Stock を検索 → 見つからなければ
-`StockNotFoundError` → 対象 Stock のメソッドを呼ぶ）。バリデーションは無し
-（`expiresAt` は Date 型で受け取る時点で不正日付は Application 層の変換で弾かれている前提。
-`storedLocation` は enum 型で受け取るため不正値は型レベルで排除される）。
+`StockNotFoundError` → 対象 Stock のメソッドを呼ぶ）。
+
+**単位変更を許可する前提の注記**: 単位変更自体をブロックする理由は無い（打ち間違いの訂正
+ニーズが P-1 確定の主目的）。ただし単位変更は在庫引き算に波及し得るため「リスク」節で扱う。
 
 ### Application
 
@@ -297,6 +353,7 @@ Pantry.updateStockDetails(
 ```ts
 export interface UpdateStockDetailsInputDto {
   stockId: string;
+  amount: { value: number; unit: Unit };
   expiresAt: string | null; // YYYY-MM-DD。add-stock と同じ往復規約
   storedLocation: StorageLocation | null;
 }
@@ -304,10 +361,14 @@ export interface UpdateStockDetailsInputDto {
 export class UpdateStockDetailsUseCase {
   constructor(private readonly pantryRepository: PantryRepository) {}
 
-  /** @throws StockNotFoundError 指定した stockId の在庫が存在しない場合 */
+  /**
+   * @throws StockNotFoundError 指定した stockId の在庫が存在しない場合
+   * @throws InvalidStockOperationError amount.value が 0 以下の場合
+   */
   async execute(input: UpdateStockDetailsInputDto): Promise<PantryDto> {
     const pantry = await this.pantryRepository.find();
     pantry.updateStockDetails(StockId.fromString(input.stockId), {
+      amount: Quantity.of(input.amount.value, input.amount.unit),
       expiresAt: input.expiresAt === null ? null : new Date(`${input.expiresAt}T00:00:00`),
       storedLocation: input.storedLocation,
     });
@@ -319,6 +380,8 @@ export class UpdateStockDetailsUseCase {
 
 `Pantry.updateStockDetails` が `StockId` を見つけられない場合に `StockNotFoundError` を
 throw する前提（`ConsumeStockUseCase` / `DiscardStockUseCase` と同じ責務分担）。
+`amount.value <= 0` の拒否は `Quantity.of()` または `Stock.updateDetails()` 内で行い、
+UseCase 層に業務ロジックを持たせない（ドメイン層の責務）。
 
 `complete-shopping.use-case.ts` は変更不要（`StockAdditionInputDto.expiresAt` は既に
 受け取れる形であり、UseCase 内部の `Stock.create()` 呼び出しにもそのまま渡っている想定）。
@@ -329,14 +392,19 @@ throw する前提（`ConsumeStockUseCase` / `DiscardStockUseCase` と同じ責�
 
 ```ts
 export const updateStockSchema = z.object({
-  expiresAt: z.iso.date().nullable(),
+  amount: z.object({ value: z.number().positive(), unit: unitSchema }),
   storedLocation: storageLocationSchema.nullable(),
+  expiresAt: z.iso.date().nullable(),
 });
 export type UpdateStockBody = z.infer<typeof updateStockSchema>;
 ```
 
-`addStockSchema` と同じプリミティブ（`z.iso.date().nullable()` / `storageLocationSchema`）を
-再利用し、契約の一貫性を保つ。`stockIdParamSchema` は既存のものをそのまま使う。
+`addStockSchema` から `displayName` を除いた形になる（`amount` / `storedLocation` /
+`expiresAt` はプリミティブを共有）。`amount.value` は `addStockSchema` と同じく
+`z.number().positive()` で 0 以下を境界で弾く（Domain 側の再チェックと二重防御になるが、
+`zValidator` はリクエスト境界での早期拒否として機能し、Domain 側のチェックは
+UseCase から直接呼ばれるケース・将来の呼び出し元追加に備えた最終防御線として残す）。
+`stockIdParamSchema` は既存のものをそのまま使う。
 
 ### Presentation route
 
@@ -356,11 +424,12 @@ export type UpdateStockBody = z.infer<typeof updateStockSchema>;
 ```
 
 `apps/web/src/server/app.ts` の変更は不要（`StockNotFoundError` は既存の `onError` が
-`NotFoundError` 継承として拾う）。
+`NotFoundError` 継承として拾い、`InvalidStockOperationError` は `InvalidOperationError` 継承
+として拾う）。
 
 ### Infrastructure
 
-`drizzle-pantry.repository.ts` の `save()` の `set` 句を拡張（詳細は「実装上の罠」節）。
+`drizzle-pantry.repository.ts` の `save()` の `set` 句を 4 列に拡張（詳細は「実装上の罠」節）。
 
 ### UI
 
@@ -368,46 +437,57 @@ export type UpdateStockBody = z.infer<typeof updateStockSchema>;
 
 ## データフロー
 
-### フロー 1: `/pantry` での在庫編集
+### フロー 1: `/pantry` での在庫編集（数量・保存場所・賞味期限）
 
 1. ユーザーが `stock-row.tsx` の編集ボタンを押す。
 2. `pantry-client.tsx` が編集対象の `StockDto` を state に持ち、`StockEditDialog` を開く
    （`record` props パターン。`price-record-edit-dialog.tsx` と同型）。
-3. ダイアログのフォームに現在の `expiresAt` / `storedLocation` を初期値投入。
+3. ダイアログのフォームに現在の `amount` / `expiresAt` / `storedLocation` を初期値投入。
 4. ユーザーが値を変更し保存 → `client.api.pantry.stocks[':stockId'].$put({ param, json })`。
 5. Hono ルート → `UpdateStockDetailsUseCase` → `Pantry.updateStockDetails()` →
-   `PantryRepository.save()`（DB UPDATE を含む）→ `PantryDto` を 200 で返却。
+   `PantryRepository.save()`（DB UPDATE を含む。4 列すべて）→ `PantryDto` を 200 で返却。
 6. ダイアログが閉じ、`router.refresh()` で Server Component 経由の一覧を再取得
    （`price-record-edit-dialog.tsx` と同じ C パターン）。
 
 ### フロー 2: 買い物完了時の賞味期限入力
 
 1. `/shopping-lists/[id]` で「買い物完了」操作 → `CompleteShoppingPanel` が表示される。
-2. 各行で数量・保存場所に加え、任意で賞味期限を入力（P-3 の UI 案）。
+2. 各行で数量・保存場所に加え、任意で賞味期限を入力（P-3 確定案: 行ごと折りたたみ／任意展開）。
 3. 「完了する」→ `stockAdditions: StockAdditionInputDto[]`（`expiresAt` に入力値 or `null`）を
    組み立てて `CompleteShoppingUseCase` を呼ぶ既存フローにそのまま乗る（Application/Domain の
    変更は無し）。
 
+### フロー 3: `/pantry` の在庫カード表示（保存場所ラベル・緊急度チップ）
+
+1. `page.tsx`（Server）が `GetPantryUseCase` の結果に加え `now = new Date()` を生成し、
+   `PantryClient` に `pantry` と `asOf={now}` を props で渡す（`page.tsx`（ダッシュボード）と
+   同型のパターン）。
+2. `PantryClient` → `LocationGroup` → `StockRow` へ `asOf` を伝播する。
+3. `StockRow` が `stock.expiresAt !== null` のとき `getExpiryRemainingDays` /
+   `getExpiryUrgency`（`expiry.ts` に共通化。後述）で緊急度を算出し、確定した閾値
+   （後述）以内の場合のみチップを表示する。保存場所ラベルは `expiresAt` の有無に関わらず
+   常時表示する。
+
 ## API 設計
 
-| メソッド | パス                          | リクエスト                                                               | レスポンス                              | ステータス      |
-| -------- | ----------------------------- | ------------------------------------------------------------------------ | --------------------------------------- | --------------- |
-| PUT      | `/api/pantry/stocks/:stockId` | `{ expiresAt: string \| null; storedLocation: StorageLocation \| null }` | `PantryDto`（`{ stocks: StockDto[] }`） | 200 / 404 / 422 |
+| メソッド | パス                          | リクエスト                                                                                                      | レスポンス                              | ステータス      |
+| -------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------- | --------------- |
+| PUT      | `/api/pantry/stocks/:stockId` | `{ amount: { value: number; unit: Unit }; storedLocation: StorageLocation \| null; expiresAt: string \| null }` | `PantryDto`（`{ stocks: StockDto[] }`） | 200 / 404 / 422 |
 
-- `expiresAt` / `storedLocation` は両方とも必須キー（`nullable()` であって `optional()` では
-  ない）。クリアは明示的に `null` を送る（P-2 推奨案。詳細は「未決事項」）。
+- `amount` / `storedLocation` / `expiresAt` はすべて必須キー（`storedLocation` / `expiresAt` は
+  `nullable()` であって `optional()` ではない）。クリアは明示的に `null` を送る（P-2 確定）。
 - 買い物完了 API（`POST /api/shopping-lists/:id/complete` 相当。既存）は契約変更なし。
 
 ## DB 設計
 
 スキーマ変更なし。`packages/infrastructure/src/db/schema.ts:144-162` の `expires_at`
 （`date()`・nullable・インデックス無し）・`stored_location`（`text()`・nullable・enum 制約は
-アプリ側の `toStorageLocation` で検証）をそのまま使う。インデックスは既存の
-`stocks_product_id_idx` のみで変更なし（本ユニットは単一行の UPDATE のみで、一覧取得の
-クエリパターン自体は変わらないため新規インデックスは不要）。
+アプリ側の `toStorageLocation` で検証）・`amount_value` / `amount_unit` をそのまま使う。
+インデックスは既存の `stocks_product_id_idx` のみで変更なし（本ユニットは単一行の UPDATE の
+みで、一覧取得のクエリパターン自体は変わらないため新規インデックスは不要）。
 
-Repository の `save()` 内の `onConflictDoUpdate.set` を拡張する必要がある点は「実装上の罠」
-節を参照。
+Repository の `save()` 内の `onConflictDoUpdate.set` を 4 列に拡張する必要がある点は
+「実装上の罠」節を参照。
 
 ## フロントエンド設計
 
@@ -419,26 +499,36 @@ Repository の `save()` 内の `onConflictDoUpdate.set` を拡張する必要が
 
 `price-record-edit-dialog.tsx` の構造をそのまま踏襲する。
 
-- Props: `{ stock: StockDto | null, onOpenChange: (open: boolean) => void, onUpdated: () => void }`。
+- Props: `{ stock: StockDto | null, onOpenChange: (open: boolean) => void }`。
   `open = stock !== null`。
-- `useEffect([stock?.id])` で `expiresAt` / `storedLocation` の初期値を state に投入
-  （`price-record-edit-dialog.tsx` L85-131 と同型。ただし本ダイアログは補助データ取得
-  （店舗一覧相当）が無いため `storesLoading` 相当は不要）。
-- フィールド: 賞味期限 `Input type="date"`（`add-stock-form.tsx` と同じ部品。空文字 → `null`）、
-  保存場所 `SelectField` + `LOCATION_SELECT_OPTIONS`（`pantry-view.ts` を再利用）。
+- `useEffect([stock?.id])` で `amount`（`QuantityField` 用の文字列表現）/ `expiresAt` /
+  `storedLocation` の初期値を state に投入（`price-record-edit-dialog.tsx` L85-131 と同型。
+  補助データ取得（店舗一覧相当）は無いため `loading` 相当は不要）。
+- フィールドは **数量 / 保存場所 / 賞味期限の 3 つ**（確定・P-1）:
+  - 数量: `QuantityField` + `parseQuantity`（`add-stock-form.tsx` と同じ部品・パース関数）。
+    `parseQuantity` の結果が `kind !== 'amount'` または `value <= 0` の場合は送信前に
+    `fieldErrors` へ反映し、クライアント側で弾く（`price-record-edit-dialog.tsx` の
+    `packageSizeValue` フィールドと同じ検証パターン）。
+  - 保存場所: `SelectField` + `LOCATION_SELECT_OPTIONS`（`pantry-view.ts` を再利用）。
+  - 賞味期限: `Input type="date"`（`add-stock-form.tsx` と同じ部品。空文字 → `null`）。
 - 送信: `client.api.pantry.stocks[':stockId'].$put({ param: { stockId: stock.id }, json: body })`。
   `response.ok` で成功、`onOpenChange(false)` → `router.refresh()`。404 は
   「この在庫はすでに削除されています」を表示して閉じる（`price-record-edit-dialog.tsx` の
-  404 分岐と同型）。422 は `fieldErrors` に反映。
+  404 分岐と同型）。422（数量 0 以下等、クライアント検証をすり抜けたケース）は
+  `fieldErrors` に反映。
 - 起動導線: `stock-row.tsx` に「編集」ボタンを追加（既存の「消費」「廃棄」ボタンの並びに
   1 つ増やす）。`pantry-client.tsx` が編集対象の `StockDto` を state で保持し、
   `StockEditDialog` に渡す（`pantry-client.tsx` は `consume`/`discard` の送信中 state を
   `useApiAction` で管理しているが、編集ダイアログはパターン C（ローカル `useState` +
   `router.refresh()`）を使うため、既存の `useApiAction` 呼び出しとは独立させる）。
 
-### 買い物完了パネルの改修（P-3）
+### 買い物完了パネルの改修（P-3 確定: 行ごと任意展開）
 
-「未決事項」節で比較・推奨を記載する。推奨案（行ごと任意展開）を採用する場合の変更点:
+現在の行は `flex gap-2` で `QuantityField`（`flex-1`）と `SelectField`（`w-28`）が横並びに
+なっている（`complete-shopping-panel.tsx` L241-268）。この行に日付入力を追加で並べると
+モバイル幅（375px 目安）で破綻するリスクが高いため、日付入力は**独立した行として追加**する。
+
+変更点:
 
 - `RowState` に `expiresAt: string`（date input の値）と `expiresAtExpanded: boolean` を追加。
 - `StockAdditionRow` に「賞味期限を設定」ボタン（テキストリンク調、数量/保存場所の行の下）を
@@ -446,32 +536,78 @@ Repository の `save()` 内の `onConflictDoUpdate.set` を拡張する必要が
   変わり、押すと値をクリアして折りたたむ。
 - `handleComplete` の `additions.push(...)` の `expiresAt: null` を
   `expiresAt: row.expiresAt === '' ? null : row.expiresAt` に変更。
-- モバイル幅（375px 想定）で既存の `QuantityField`（`flex-1`）+ `SelectField`（`w-28`）の
-  横並び行に日付入力を追加で並べると破綻するため、日付入力は独立した行として追加する
-  （3 つ目のコントロールを同じ横並びには入れない）。
+- 既定は非表示（Q-1 の「全品目に入れるのは負荷が高い」「縦に長くなる」という懸念への対処）。
+  展開した行だけパネルの高さが増える。
 
-### `/pantry` カードへの保存場所表示（P-4）
+### `/pantry` カードへの保存場所ラベル・緊急度チップ追加（P-4 確定: 両方追加）
 
-「未決事項」節で扱う。
+**表示方針**: 保存場所ラベルは全カードに常時表示する（`LocationGroup` の見出しに加えて、
+個々のカードにも小さく表示。グルーピングが将来崩れた場合や、フィルタ表示を追加する場合に
+備えた保守的な選択）。緊急度チップは**ダッシュボードと同じ閾値（既定 3 日以内）以内の在庫
+にのみ**表示する。閾値外（4 日以上先）の在庫は、既存通り `formatExpiresAt` によるプレーンな
+日付表示（`〜7/12まで`）のみとし、チップは出さない。
 
-## バックエンド設計
+**閾値をこのように扱う理由**: `getExpiryUrgency` は「`selectExpiringStocks` の閾値日数以内で
+フィルタ済みの値を渡す前提」の実装で、4 日以上先の残日数を渡しても `'soon'` に収束してしまう
+（`dashboard-view.ts:53-65`）。`/pantry` は全在庫を表示する一覧画面であり、ダッシュボードのように
+事前に「近い順」でフィルタされていない。したがって `/pantry` 側で `getExpiryRemainingDays`
+の結果を閾値と比較し、**閾値以内の場合にのみ** `getExpiryUrgency` の結果をチップとして表示
+する（閾値超のカードにチップを出さない）。これによりダッシュボードとの表現の意味は完全に
+一致し、`getExpiryUrgency` の実装（4 日以上も `'soon'` に収束する前提）を変更する必要が無い。
 
-「変更後構成」の Application / Presentation route / Infrastructure を参照。UseCase は
-1 ユースケース = 1 クラス・`execute()` のみ（`UpdateStockDetailsUseCase`）。DI は手動 DI
-（`pantryRepository()` をコンストラクタに渡す既存パターンをそのまま踏襲）。
+**ダッシュボードとの役割重複について**: ダッシュボードは「直近の要注意在庫」を上位数件
+サマリするウィジェット、`/pantry` は全在庫の一覧という役割分担は変わらない。`/pantry` では
+閾値以内の在庫にだけ同じ意味のチップを出すことで、一覧画面の中でも要注意在庫が視覚的に
+目立つようにする（一覧の「どれが優先か」をユーザーがスクロールして探す負担を減らす）。
+
+**実装方針**: `page.tsx`（`/pantry`）がダッシュボードの `page.tsx` と同じパターンで
+`now = new Date()` を生成し、`PantryClient` に `asOf` として渡す（フロー 3 参照）。
+
+### 期限緊急度ユーティリティの共通化（`expiry.ts` 新設）
+
+`getExpiryRemainingDays` / `getExpiryUrgency`（`ExpiryUrgency` 型を含む）/
+`formatExpiryUrgencyLabel` および、これらが依存する非公開ヘルパー（ローカル日付 0 時基準の
+パース関数）を `apps/web/src/app/_utils/dashboard-view.ts` から
+`apps/web/src/app/_utils/expiry.ts`（新設）へ**純粋な移動**として切り出す。ロジックは一切
+変更しない。`dashboard-view.ts` は `expiry.ts` からこれらを re-import し、
+`selectExpiringStocks` の実装（引き続き `dashboard-view.ts` に残す。ダッシュボード固有の
+「上位 N 件選出」の責務のため）はそのまま維持する。`page.tsx`（ダッシュボード）のローカル
+定数 `EXPIRY_WITHIN_DAYS = 3` も `expiry.ts` に `export const EXPIRY_URGENCY_WITHIN_DAYS = 3`
+として切り出し、ダッシュボードの `page.tsx` と `/pantry` の `page.tsx` の両方から参照する
+（値は変わらないため挙動不変。「同じ閾値を 2 箇所に別々の名前・別々の値でハードコードしてしまう」
+将来のドリフトを防ぐ）。
+
+`expiryUrgencyChipClass` は `category-color.ts` に既存の同型関数（`mealPlanStatusChipClass`
+等）と並んでいるため、`category-color.ts` から**動かさない**（「配色はここだけに置く」という
+同ファイルの既存方針を尊重する）。`/pantry` 側は `expiry.ts` から緊急度算出関数を、
+`category-color.ts` から配色関数を、それぞれ個別に import する（ダッシュボードの既存の
+import 構成と同じ形になる）。
+
+**移設に伴う注意（実装計画・試験計画への申し送り）**:
+
+- 移動は挙動不変のため新規テストは不要だが、既存の `dashboard-view.ts` に対するテストが
+  `expiry.ts` 由来の関数を re-export 経由でテストする形になる場合、import パスの追随が
+  必要になる（テストファイルが直接 `dashboard-view.ts` から該当関数を import している場合は
+  `expiry.ts` からの import に変更する）。
+- `parseExpiryDate` / `toLocalMidnight` 相当の非公開ヘルパーは、移動後は `expiry.ts` 内に
+  閉じる（`dashboard-view.ts` の `selectExpiringStocks` からは `expiry.ts` の公開関数
+  （`getExpiryRemainingDays`）経由で利用する形に整理してよいが、既存の直接比較ロジックを
+  そのまま残す場合は該当ヘルパーも `expiry.ts` から export する。いずれを選ぶかは実装時に
+  「挙動不変」を最優先して判断する）。
 
 ## エラー処理
 
 - 404（`StockNotFoundError`）: 存在しない `stockId` を指定した場合。既存の `app.onError` が
   `NotFoundError` 継承で拾うため追加実装不要。UI は「この在庫はすでに削除されています」を
   表示してダイアログを閉じ、`router.refresh()` で一覧を最新化する。
-- 422: `updateStockSchema` の Zod バリデーション（`expiresAt` が `YYYY-MM-DD` 形式でない、
-  `storedLocation` が enum 外）。`zValidator` がリクエスト受付時点で弾くため UseCase 内部の
-  バリデーションは不要。UI は `fieldErrors` に反映（`price-record-edit-dialog.tsx` の
-  `buildBody()` パターンではなく、日付・enum はブラウザ入力（`type="date"` / `<select>`）で
-  形式自体は担保されるため、フィールド単位のクライアントバリデーションは薄くてよい）。
+- 422: `updateStockSchema` の Zod バリデーション（`amount.value` が正数でない、`expiresAt` が
+  `YYYY-MM-DD` 形式でない、`storedLocation` が enum 外）。`zValidator` がリクエスト受付時点で
+  弾くため UseCase 内部の重複バリデーションは最小限でよいが、Domain 層（`Stock.updateDetails`）
+  でも `amount.value <= 0` を最終防御線として拒否する（契約層をバイパスする将来の呼び出し元に
+  備える。ドメイン境界の原則）。UI は `fieldErrors` に反映（数量は `parseQuantity` による
+  クライアント側検証で大半は事前に弾かれる想定）。
 - ネットワークエラー: `try/catch` で「通信エラーが発生しました」を表示（既存ダイアログと同型）。
-- 買い物完了パネル側の異常系（E-5）: 日付は `type="date"` のブラウザ標準バリデーションに
+- 買い物完了パネル側の異常系（E-6）: 日付は `type="date"` のブラウザ標準バリデーションに
   委ね、追加のクライアント側チェックは行わない。API 側の 422 は完了操作全体を失敗させ
   （既存の完了 API と同じ扱い）、品目単位の部分失敗は扱わない（`complete-shopping.use-case.ts`
   が単一トランザクションでない点は既存の制約であり本ユニットで変更しない）。
@@ -488,8 +624,8 @@ Cookpit MVP1 には専用のログ基盤・APM は導入されていない。本
 ## セキュリティ
 
 - 認証・認可は対象外（ADR-0003 / ADR-0004。単一世帯前提が継続）。
-- 入力値は `zValidator` による Zod スキーマ検証を境界で行う（`expiresAt` の日付形式・
-  `storedLocation` の enum 制約）。
+- 入力値は `zValidator` による Zod スキーマ検証を境界で行う（`amount.value` の正数制約・
+  `expiresAt` の日付形式・`storedLocation` の enum 制約）。
 - DB アクセスは Drizzle のパラメータ化クエリのみで、SQL インジェクションのリスクは無い
   （既存の `save()` 実装のパターンを踏襲）。
 
@@ -499,50 +635,70 @@ Cookpit MVP1 には専用のログ基盤・APM は導入されていない。本
 変更も無く、明示された性能要件も無い（`docs/requirements/stock-edit.md` 非機能要件）。
 したがって性能セクションは簡潔にとどめる。
 
-- 想定負荷: 1 リクエストあたり Stock 1 件の UPDATE。`Pantry.find()` は既存同様、世帯全体の
-  Stock 一覧を毎回取得してから集約内で更新するため、Stock 件数が極端に多い場合（数百件超）は
-  読み込みコストが線形に増える可能性があるが、MVP1 の単一世帯利用ではこの規模には達しない
-  想定（推定。実測データなし）。
+- 想定負荷: 1 リクエストあたり Stock 1 件の UPDATE（4 列）。`Pantry.find()` は既存同様、
+  世帯全体の Stock 一覧を毎回取得してから集約内で更新するため、Stock 件数が極端に多い場合
+  （数百件超）は読み込みコストが線形に増える可能性があるが、MVP1 の単一世帯利用ではこの
+  規模には達しない想定（推定。実測データなし）。
 - レスポンスタイム: 既存の `POST /api/pantry/stocks/:stockId/consume` と同等の処理量
   （1 件の集約更新）であり、同程度の応答時間になる見込み（確認推奨。既存エンドポイントの
   実測値がドキュメント化されていないため、本設計では数値を断定しない）。
+- `/pantry` カードでの緊急度チップ算出（`getExpiryRemainingDays` 等）は純粋関数によるクライアント
+  側計算であり、追加のサーバー I/O は発生しない。Stock 件数分のループ計算のみで、MVP1 の
+  規模では無視できるコスト（推定）。
 - 将来課題: Unit B で「賞味期限が近い順」のクエリが増える場合、`expires_at` へのインデックス
   追加を検討する（本ユニットでは不要）。
 
 ## テスト方針
 
-- Domain（`packages/domain/tests/pantry/`）: `Stock.updateDetails()` の単体テスト
-  （expiresAt/storedLocation の設定・変更・null クリアの組み合わせ）、`Pantry.updateStockDetails()`
-  の単体テスト（対象 Stock が無い場合に `StockNotFoundError`）。
+- Domain（`packages/domain/tests/pantry/`）:
+  - `Stock.updateDetails()` の単体テスト: 数量の値変更、単位変更、期限の設定・変更・null
+    クリア、保存場所の設定・変更・null クリア、**数量 0 以下の拒否**（境界: 0 と負値の両方）。
+  - `Pantry.updateStockDetails()` の単体テスト: 対象 Stock が無い場合に `StockNotFoundError`。
 - Application（`packages/application/tests/pantry/`）: `UpdateStockDetailsUseCase` のテスト
-  （正常系・404）。
-- api-contract（該当パッケージに tests があれば）: `updateStockSchema` のバリデーションテスト
-  （不正日付・enum 外の値で reject されることの確認）。
+  （正常系・404・数量 0 以下で 422 相当のエラー）。
+- api-contract: `updateStockSchema` のバリデーションテスト（不正日付・enum 外の値・
+  `amount.value` が 0 以下で reject されることの確認）。
 - Infrastructure（`packages/infrastructure/tests/repositories/`）: PGlite を使い、
   Stock を編集 → `save()` → 新しい Repository インスタンスで `find()` → 値が保持されている
-  ことを確認する回帰テスト（「実装上の罠」の再発防止。**この観点は必須**）。
+  ことを確認する回帰テスト。**以下のケースを個別に含める（「実装上の罠」の再発防止の核）**:
+  - 数量の値のみ変更（単位は据え置き）。
+  - **数量の単位のみ変更**（値は据え置き。罠 2 の直接の検出ケース）。
+  - 賞味期限のみ変更・null クリア。
+  - 保存場所のみ変更・null クリア。
+  - 4 項目すべてを同時に変更。
 - apps/web:
-  - ルートテスト（`apps/web/tests/server/routes/pantry.test.ts` 相当）: PUT の 200/404/422。
-  - コンポーネントテスト: `stock-edit-dialog.tsx` の初期値投入・保存・404/422 ハンドリング、
-    `complete-shopping-panel.tsx` の賞味期限展開・入力・送信ペイロードへの反映（既存テストの
-    回帰確認を含む）。
+  - ルートテスト（`apps/web/tests/server/routes/pantry.test.ts` 相当）: PUT の 200/404/422
+    （数量 0 以下・不正日付・enum 外を含む）。
+  - コンポーネントテスト: `stock-edit-dialog.tsx` の初期値投入・保存（数量/保存場所/期限）・
+    404/422 ハンドリング、`complete-shopping-panel.tsx` の賞味期限展開・入力・送信ペイロード
+    への反映（既存テストの回帰確認を含む）、`stock-row.tsx` の保存場所ラベル常時表示・
+    緊急度チップの閾値内外での出し分け。
+  - 在庫引き算への影響の観点（B-5）: 本ユニットでは `applyPantryDeduction` 自体のテストは
+    追加しないが、単位変更が既存の在庫引き算テスト（`pantry-shopping-integration` 系）に
+    悪影響を与えないこと（回帰）を確認する。単位変更後の在庫引き算の新規シナリオ自体は
+    Unit A の対象外（在庫引き算ロジックの変更ではないため）。
 
 ## 移行とリリース
 
 DB マイグレーションは不要。リリース順序に依存関係がある点のみ注意する。
 
-1. Infrastructure の `save()` 修正（実装上の罠の解消）を先に、または同一 PR で必ず含める。
+1. Infrastructure の `save()` 修正（実装上の罠の解消・4 列）を先に、または同一 PR で必ず含める。
    UI・API だけ先にリリースすると「保存したのに消える」不具合が本番で発生する。
-2. Domain/Application/api-contract/route/Infrastructure/UI は 1 ユニットとしてまとめて
+2. `expiry.ts` への切り出し（純粋な移動）は、ダッシュボードの既存表示に回帰が無いことを
+   確認してから `/pantry` 側の利用を追加する順序で進める（移動 → 動作確認 → 新規利用、の
+   3 ステップに分けるとレビューしやすい）。
+3. Domain/Application/api-contract/route/Infrastructure/UI は 1 ユニットとしてまとめて
    リリースする（機能フラグは導入しない。MVP1 の他機能と同様、単一 PR/デプロイでよい規模）。
 
 ## リスク
 
-| #                                            | リスク                                                        | 影響                              | 対策 |
-| -------------------------------------------- | ------------------------------------------------------------- | --------------------------------- | ---- |
-| R-1                                          | Repository の `onConflictDoUpdate.set` 拡張漏れ（実装上の罠） | 編集が見かけ上成功し              |
-| リロードで消える。ユーザー体験を著しく損なう | PGlite 回帰テストを完了条件の必須項目にする                   |
-| R-2                                          | 完了パネルの改修（P-3）でモバイル幅が崩れる                   | 主要導線の 1 つが視覚的に破綻する | 日付 |
+| #                                          | リスク                                                                             | 影響                              | 対策 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------- | --------------------------------- | ---- |
+| R-1                                        | Repository の `onConflictDoUpdate.set` 拡張漏れ（実装上の罠。特に `amount_unit` の |
+| 漏れは値が変わって見えるため気づきにくい） | 編集が見かけ上成功しリロードで消える。                                             |
+| ユーザー体験を著しく損なう                 | PGlite 回帰テストを完了条件の必須項目にする。単位のみ変更する                      |
+| ケースを個別テストとして必須化する         |
+| R-2                                        | 完了パネルの改修（P-3）でモバイル幅が崩れる                                        | 主要導線の 1 つが視覚的に破綻する | 日付 |
 
 入力を既存の横並び行に追加せず独立行にする（UI 設計節）。実装後に 375px 幅での目視確認を
 実装計画・試験計画に含める |
@@ -554,82 +710,95 @@ pantry-core.md 該当箇所への参照を残し、pantry-core.md 側にも「st
 ファイルであり、改修が既存テストの回帰を招く可能性 | 既存の完了フローが壊れる | 追記は
 新規 state（`expiresAt` 関連）・新規 UI（展開ボタン）に限定し、既存の
 `checked`/`amountText`/`storedLocation` のロジックには手を入れない |
-| R-5 | 数量・品目名を編集対象に含めない（P-1 推奨）ことへの実運用上の不満（打ち間違いを
-直せない） | ユーザー体験上の小さな不満が残る可能性 | 「将来課題・申し送り」に明記し、
-実データでの困りごととして観測されたら別ユニットで再検討する |
+| R-5 | **数量の単位を編集で変更すると、在庫引き算（`GenerateShoppingListUseCase.
+  applyPantryDeduction`）の噛み合いが変わる**。同 UseCase は「単位不一致は差し引かず全量購入
+（`pantry-shopping-integration.md` D-1）」「数えられる単位（`isCountableUnit`）のみ切り上げ
+（P-1）」で動くため、在庫の単位を `個` → `g` のように編集すると、それまで差し引けていた
+食材が差し引けなくなる（またはその逆）ことがある | 献立作成時の買い物リスト生成結果が、
+ユーザーが在庫編集した直後に意図せず変わる可能性 | 本ユニットで `applyPantryDeduction` の
+ロジック自体は変更しない（対象外）。単位変更 UI にはこの影響を説明する注記を付けるかは
+実装計画フェーズの判断に委ねるが、試験観点として回帰テスト（B-5）に含めることを必須とする |
+| R-6 | 数量を編集で 0 に設定しようとする操作 | `consumeStock` が「0 になったら集約から除去」する
+概念と衝突し、Stock の意味論が曖昧になる | Domain 層で 0 以下を明示的に拒否する
+（`Stock.updateDetails` の契約として JSDoc に明記。テストで境界値を確認） |
+| R-7 | `expiry.ts` への切り出しがダッシュボードの表示に意図せぬ回帰を起こす | ダッシュボードの
+賞味期限表示が壊れる | 純粋な移動（ロジック不変）に限定し、移動直後にダッシュボードの
+既存テストが全て通ることを確認してから `/pantry` 側の新規利用に進む（移行とリリース節） |
 
-## 未決事項
+## 確定事項（旧: 未決事項）
 
-以下 P-1〜P-6 はいずれも複数案を比較した上での推奨案であり、**確定はユーザー確認を経て
-行う**（Orchestrator 経由）。
+P-1〜P-6 はすべて **2026-08-07 にユーザー確定済み**（Orchestrator 経由の確認）。以下に確定
+内容と、比較検討した非採用案の記録を残す（`shopping-complete-stock-selection.md` の書式に
+倣う）。
 
-### P-1: 編集できる項目の範囲
+| #                                                                              | 論点                                                 | 確定                                                        |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------- |
+| P-1                                                                            | 編集できる項目の範囲                                 | **期限・保存場所 + 数量**（`displayName` は対象外）。推奨案 |
+| （期限・保存場所のみ）とは異なる。打ち間違いの訂正ニーズを踏まえた実用上の判断 |
+| P-2                                                                            | HTTP メソッドと部分更新のセマンティクス              | `PUT /api/pantry/stocks/:stockId`・全項目                   |
+| 必須・`null` でクリア（推奨どおり）                                            |
+| P-3                                                                            | 完了パネルの賞味期限入力 UI                          | 行ごと折りたたみ／任意展開（推奨どおり）                    |
+| P-4                                                                            | `/pantry` カードへの保存場所ラベル・緊急度チップ追加 | **両方追加**。推奨案（保存場所                              |
+| ラベルのみ）とは異なる                                                         |
+| P-5                                                                            | Domain 不変性方針の変更                              | ADR-0016 で記録する（推奨どおり）                           |
+| P-6                                                                            | Domain API の形                                      | `Stock.updateDetails(props)` 一括（推奨どおり）             |
 
-- 案 A: 期限・保存場所のみ。
+### P-1 の詳細（確定: 案 B 相当・ただし displayName を除く）
+
+比較した案:
+
+- 案 A（推奨だった案）: 期限・保存場所のみ。
 - 案 B: 期限・保存場所 + 数量・品目名も含む。
-  - 数量は `consume` で減らせるが増やせない・打ち間違いを直せない、という実態には対応できる。
-  - ただし `displayName` の編集は表示専用文字列の変更にとどまらず、将来 Product 連携が入る
-    場合の整合性検討が必要になり、`amount` の編集も単位変更時の意味論（Quantity VO の
-    再構築）を新たに設計する必要が生じる。
 
-**推奨: 案 A**。roadmap の完了条件はこの 2 項目のみであり、Domain の不変性緩和
-（P-5）は最小限にとどめるべき。数量・品目名の編集ニーズは実データで困りごとが顕在化して
-から別ユニットとして扱う（「将来課題」参照）。
+**確定**: 期限・保存場所 + **数量**を編集対象に含める。**品目名（`displayName`）は対象外の
+まま**とする（案 B の一部のみ採用）。数量は `consume` で減らせるが増やせない・打ち間違いを
+直せないという実態への対応を優先する一方、`displayName` の編集は Product 連携時の整合性
+検討・表示専用文字列を超えた設計判断が必要になるため、今回は見送り別ユニットで再検討する。
 
-### P-2: HTTP メソッドと部分更新のセマンティクス
+この確定に伴う波及（Domain のバリデーション拡張・Repository の罠の拡大・在庫引き算への
+影響）は「実装上の罠」「変更後構成」「リスク」の各節に反映済み。
 
-- 案 A: `PUT /api/pantry/stocks/:stockId`。`expiresAt` / `storedLocation` を両方とも必須キーで
-  送り、`null` でクリアを表現する（`addStockSchema` と同じ形。`price-record-edit-and-store-rename`
-  の PUT 先例を踏襲）。
-- 案 B: `PATCH` で各フィールドを `optional().nullable()` にし、「キー省略＝変更しない」
-  「`null` 明示＝クリア」を区別する。
+### P-2 の詳細（確定: 案 A）
 
-**推奨: 案 A（PUT・全項目必須）**。「省略と null の違い」をクライアント・サーバー双方で
-常に正しく扱う実装コストを避けられる。編集ダイアログの UI は元々 2 フィールドを常に一緒に
-表示・編集する設計（P-3 と同様に UI 設計節で確定）であるため、全項目送信のデメリットは
-実質無い。既存の `UpdatePriceRecordUseCase` / `updatePriceRecordSchema` とも構造が揃う。
+比較した案:
 
-### P-3: 完了パネルの賞味期限入力 UI（本ユニットの核）
+- 案 A: `PUT`。両フィールド必須・`null` でクリア。
+- 案 B: `PATCH`。各フィールド `optional().nullable()` で「省略＝変更しない」「`null`＝クリア」
+  を区別。
 
-現在の行は `flex gap-2` で `QuantityField`（`flex-1`）と `SelectField`（`w-28`）が横並びに
-なっている（`complete-shopping-panel.tsx` L241-268）。
+**確定: 案 A**。「省略と null の違い」を常に正しく扱う実装コストを避けられる。編集ダイアログの
+UI は 3 フィールド（数量・保存場所・期限）を常に一緒に表示・編集する設計であるため、全項目
+送信のデメリットは実質無い。既存の `UpdatePriceRecordUseCase` / `updatePriceRecordSchema` とも
+構造が揃う。
 
-- 案 A: 行ごと常時表示。数量・保存場所と同じ行に日付入力を追加する。
-  - 実装は単純だが、モバイル幅（375px 目安）で 3 つのコントロールを 1 行に収めるのは既に
-    厳しい 2 コントロールにさらに足すことになり、破綻するリスクが高い。
-- 案 B: 行ごと折りたたみ／任意展開。各行に「賞味期限を設定」ボタンを置き、押した行だけ
-  日付入力を展開する。
-  - Q-1 の却下理由（「全品目に入れるのは負荷が高い」「縦に長くなる」）に直接対処できる。
-    既定は非表示のため、通常時のパネル高さは変わらない。展開時は独立した行として追加する
-    ためモバイル幅の破綻を避けられる。
-- 案 C: 一括既定値 + 行上書き。パネル上部に共通の賞味期限入力を 1 つ置き、選択中の全行に
-  適用。個別に変えたい行だけ上書きする。
-  - タップ数は最小になり得るが、生鮮食品と乾物では期限の性質が大きく異なり、一括値の
-    有用性が低い。誤って一律適用してしまうリスクもある。
-- 案 D: パネルには出さず、完了後に Unit A の編集ダイアログ（本ユニットの機能）に委ねる
-  （Q-1 の元の結論の維持）。
-  - roadmap の完了条件「買い物完了時に賞味期限を入力できる」を満たさないため不採用。
+### P-3 の詳細（確定: 案 B）
 
-**推奨: 案 B（行ごと折りたたみ／任意展開）**。Q-1 の懸念に対処しつつ roadmap の完了条件を
-満たせる。実装コストは `RowState` に `expiresAt` と `expiresAtExpanded` を足す程度で
-既存の `updateRow` パターンに乗せられる。モバイル幅の問題は「独立行として追加する」ことで
-回避する（UI 設計節に反映済み）。
+比較した案:
 
-### P-4: `/pantry` の在庫カードに保存場所ラベル・緊急度チップを足すか
+- 案 A: 行ごと常時表示。モバイル幅で 3 コントロールが 1 行に収まらず破綻するリスクが高い。
+- 案 B: 行ごと折りたたみ／任意展開。
+- 案 C: 一括既定値 + 行上書き。生鮮と乾物で期限の性質が大きく異なり誤適用のリスクがある。
+- 案 D: パネルに出さず Unit A の編集ダイアログに委ねる。roadmap の完了条件を満たさず不採用。
 
-ダッシュボードにはある（`expiryUrgencyChipClass` 等）が `/pantry` には無い非対称が既存。
+**確定: 案 B**。Q-1 の懸念（負荷・縦の長さ）に対処しつつ roadmap の完了条件を満たせる。
+実装コストは `RowState` に `expiresAt` と `expiresAtExpanded` を足す程度で既存の `updateRow`
+パターンに乗せられる。モバイル幅の問題は日付入力を独立行として追加することで回避する。
 
-- 案 A: 両方足す（表示の非対称を完全に解消）。
-- 案 B: 保存場所ラベルのみ足す（緊急度チップは対象外）。
-- 案 C: どちらも足さない（編集導線の追加のみに集中）。
+### P-4 の詳細（確定: 両方追加。案 A 相当）
 
-**推奨: 案 B**。保存場所は本ユニットで編集可能になるため、編集した値がカードに見えないと
-機能の価値検証がしづらい（現状は `LocationGroup` の見出しでのみ表現されており、グルーピング
-崩れ時の視認性が低い）。一方、緊急度チップはダッシュボード（サマリ）と `/pantry`（一覧）の
-役割分担を崩す可能性があり、Unit B（アラート実装）のタイミングで一覧側の要否も含めて
-再検討する方が段階的でリスクが低い。
+比較した案:
 
-### P-5: Domain の不変性方針の変更（pantry-core.md S-4 の再検討）
+- 案 A: 保存場所ラベル・緊急度チップの両方を追加。
+- 案 B（推奨だった案）: 保存場所ラベルのみ追加。
+- 案 C: どちらも追加しない。
+
+**確定: 案 A（両方追加）**。保存場所は編集可能になるため一覧でも見える必要があり、緊急度
+チップもダッシュボードとの表示の非対称を解消する目的で追加する。実装上の論点（共通化の
+方法・閾値の扱い）は「UI 設計」節の「`/pantry` カードへの保存場所ラベル・緊急度チップ追加」
+「期限緊急度ユーティリティの共通化」に記載済み（`expiry.ts` への切り出しは案 A を採用、
+`expiryUrgencyChipClass` は `category-color.ts` から動かさない）。
+
+### P-5 の詳細（確定: ADR-0016 で記録）
 
 `pantry-core.md` S-4 案 α は「値の後付け（在庫編集操作）は Unit B / Phase 2 の検討事項として
 申し送る」としていた。`shopping-complete-stock-selection.md` Q-1 も「期限管理を使いたくなった
@@ -639,22 +808,28 @@ pantry-core.md 該当箇所への参照を残し、pantry-core.md 側にも「st
 当時は編集ニーズ自体が顕在化しておらず、不変性を維持するコスト（実装しない選択）が
 妥当だったが、現時点では roadmap の完了条件として明示されたため転換が必要と判断する。
 
-本書では判断の妥当性のみ示し、正式な記録は **ADR-0016 で行う**（別途起票）。ADR-0016 には
-「Stock のどのフィールドを可変にするか（P-1 の確定内容）」「なぜ `amount` だけが元々可変
-だったか（`consume` のドメインロジックとの整合）との関係」を含めることを申し送る。
+正式な記録は **[ADR-0016](../decisions/ADR-0016-stock-details-mutable.md) で行う。作成済み**
+（2026-08-07）。P-1 の確定内容（数量・期限・保存場所を可変にし `displayName` /
+`purchasedAt` / `productId` / `sourceShoppingItemId` は不変のまま）、`amount` が元々
+`consume()` のために唯一の可変フィールドだったこととの関係、非採用案（廃棄して作り直す運用 /
+`expiresAt` のみ可変 / `PATCH` / 差し替え方式）を同 ADR に記録している。
 
-### P-6: Domain API の形
+### P-6 の詳細（確定: 案 B）
 
-- 案 A: 個別メソッド `Stock.changeExpiresAt(expiresAt)` / `Stock.changeStoredLocation(location)`。
-  単一責任だが、Pantry 側の委譲メソッドも 2 つになり、1 リクエストで両方変える場合の
-  呼び出し調整が必要になる。
-- 案 B: `Stock.updateDetails(props: { expiresAt, storedLocation }): void` 一括。
+比較した案:
 
-**推奨: 案 B**。P-2（PUT・全項目送信）と自然に対応し、`Product.updatePriceRecord(id, props)`
+- 案 A: 個別メソッド `Stock.changeExpiresAt(expiresAt)` / `Stock.changeStoredLocation(location)`
+  （+ 数量が入ったことで `Stock.changeAmount(amount)` も追加が必要になる）。単一責任だが、
+  `Pantry` 側の委譲メソッドも増え、1 リクエストで複数フィールドを変える場合の呼び出し調整が
+  必要になる。
+- 案 B: `Stock.updateDetails(props: { amount, expiresAt, storedLocation }): void` 一括。
+
+**確定: 案 B**。P-2（PUT・全項目送信）と自然に対応し、`Product.updatePriceRecord(id, props)`
 という既存の一括更新の先例（`packages/domain/src/product/product.ts:197-`）と構造が揃う。
 `Pantry` 側は `updateStockDetails(stockId, props): void` という 1 つの委譲メソッドを追加し、
 `consumeStock`/`discardStock` と同じ「対象 Stock を検索 → 無ければ `StockNotFoundError`」の
-形に揃える。
+形に揃える。数量が編集対象に加わったことで案 A のメソッド数がさらに増える点も、案 B を選ぶ
+理由を補強する。
 
 ## 将来課題・申し送り
 
@@ -664,8 +839,12 @@ pantry-core.md 該当箇所への参照を残し、pantry-core.md 側にも「st
 - Unit C（消費・廃棄の取り消し・履歴）: 本ユニットは在庫の「詳細編集」のみを扱い、
   消費・廃棄の取り消しは扱わない。編集ダイアログと undo は別の操作系統として今後も分離する
   想定。
-- P-1 で対象外とした数量・品目名の編集は、実データで打ち間違い等の困りごとが観測された
-  場合に別ユニットとして再検討する。
-- P-4 で対象外とした緊急度チップの `/pantry` への追加は、Unit B 実装時に一覧側での要否を
-  含めて再検討する。
-- ADR-0016（Domain 不変性方針の変更）の起票は本ユニットの実装と並行、または直後に行う。
+- `displayName`（品目名）の編集は対象外のまま。実データで打ち間違い等の困りごとが観測された
+  場合に別ユニットとして再検討する（P-1 確定時の申し送り）。
+- 数量の単位編集が在庫引き算（`applyPantryDeduction`）に与える影響（R-5）は、本ユニットでは
+  ロジック変更をしないが、実運用で「編集したら買い物リストの生成結果が変わった」という
+  困りごとが観測された場合、在庫引き算側のユニットで再検討する。
+- ADR-0016（Domain 不変性方針の変更）は**設計フェーズで作成済み**
+  （[ADR-0016-stock-details-mutable.md](../decisions/ADR-0016-stock-details-mutable.md)）。
+- `pantry-core.md` S-4 案 α の記述に「stock-edit で覆された」旨の注記を追記する
+  （R-3。実装計画フェーズでの軽微なドキュメント更新として扱う）。
