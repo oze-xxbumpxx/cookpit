@@ -1,9 +1,7 @@
 import {
-  GetCheapestStoreUseCase,
-  GetProductUseCase,
+  GetProductDetailUseCase,
   ProductNotFoundError,
-  type CheapestStoreResultDto,
-  type ProductDto,
+  type ProductDetailResultDto,
 } from '@cookpit/application';
 import { productRepository, storeRepository } from '@/server/repositories';
 import { notFound } from 'next/navigation';
@@ -17,14 +15,10 @@ interface Props {
 
 export default async function ProductDetailPage({ params }: Props) {
   const { id } = await params;
-  let product: ProductDto;
-  let cheapestStore: CheapestStoreResultDto | null;
+  let result: ProductDetailResultDto;
   try {
-    const getProduct = new GetProductUseCase(productRepository(), storeRepository());
-    product = await getProduct.execute(id);
-
-    const getCheapestStore = new GetCheapestStoreUseCase(productRepository(), storeRepository());
-    cheapestStore = await getCheapestStore.execute(id);
+    const getProductDetail = new GetProductDetailUseCase(productRepository(), storeRepository());
+    result = await getProductDetail.execute(id);
   } catch (error) {
     if (error instanceof ProductNotFoundError) {
       notFound();
@@ -32,5 +26,5 @@ export default async function ProductDetailPage({ params }: Props) {
     throw error;
   }
 
-  return <ProductDetailClient product={product} cheapestStore={cheapestStore} />;
+  return <ProductDetailClient product={result.product} cheapestStore={result.cheapestStore} />;
 }

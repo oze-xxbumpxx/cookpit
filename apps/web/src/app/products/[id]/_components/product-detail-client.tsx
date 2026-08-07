@@ -1,6 +1,6 @@
 'use client';
 
-import { PriceHistoryChart } from '@/app/products/[id]/_components/price-history-chart';
+import { PriceHistoryChartSkeleton } from '@/app/products/[id]/_components/price-history-chart-skeleton';
 import { PriceRecordEditDialog } from '@/app/products/[id]/_components/price-record-edit-dialog';
 import { PriceRecordForm } from '@/app/products/[id]/_components/price-record-form';
 import {
@@ -24,8 +24,20 @@ import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { CheapestStoreResultDto, PriceRecordDto, ProductDto } from '@cookpit/application';
 import { ChevronLeft, Pencil, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+const PriceHistoryChart = dynamic(
+  () =>
+    import('@/app/products/[id]/_components/price-history-chart').then(
+      (mod) => mod.PriceHistoryChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <PriceHistoryChartSkeleton />,
+  },
+);
 
 interface Props {
   product: ProductDto;

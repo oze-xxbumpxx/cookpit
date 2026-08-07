@@ -214,4 +214,27 @@ describe('ProductDetailClient', () => {
 
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
+
+  it('PDC-13: 遅延読み込みされたチャートが最終的に描画される', async () => {
+    const { container } = render(
+      <ProductDetailClient
+        product={createProductDto([createPriceRecord()])}
+        cheapestStore={CHEAPEST_STORE}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="chart"]')).not.toBeNull();
+    });
+  });
+
+  it('PDC-14: 価格記録 0 件でも遅延読み込み後に空状態文言が描画される', async () => {
+    renderDetail([]);
+
+    expect(await screen.findByText('価格記録がありません')).toBeDefined();
+  });
+
+  it.todo(
+    'PDC-15: チャート以外の既存表示は next/dynamic 化後も無修正で pass する（PDC-01・02・08 で確認）',
+  );
 });
