@@ -234,7 +234,8 @@ describe('ProductDetailClient', () => {
     expect(await screen.findByText('価格記録がありません')).toBeDefined();
   });
 
-  it.todo(
-    'PDC-15: チャート以外の既存表示は next/dynamic 化後も無修正で pass する（PDC-01・02・08 で確認）',
-  );
+  // PDC-15 は PDC-01・02・08 が無修正で pass することで担保される（実体のテストはそちら）。
+  // PDC-16 は「0 件時に遅延読み込みを経由しない」ことの検証で、同一ファイル内では
+  // 先行テストのモジュールキャッシュで誤って通るため、別ファイル
+  // （product-detail-client.lazy-chart.test.tsx）に分離した。
 });

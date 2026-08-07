@@ -1,6 +1,9 @@
 'use client';
 
-import { PriceHistoryChartSkeleton } from '@/app/products/[id]/_components/price-history-chart-skeleton';
+import {
+  PriceHistoryChartSkeleton,
+  PriceHistoryEmpty,
+} from '@/app/products/[id]/_components/price-history-chart-skeleton';
 import { PriceRecordEditDialog } from '@/app/products/[id]/_components/price-record-edit-dialog';
 import { PriceRecordForm } from '@/app/products/[id]/_components/price-record-form';
 import {
@@ -193,7 +196,13 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
 
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-medium text-foreground">価格推移</h2>
-          <PriceHistoryChart priceHistory={product.priceHistory} />
+          {/* 0 件では遅延読み込みを行わない。スケルトン（256px）と空状態（約 86px）の
+              高さが違うためシフトが起きるうえ、recharts の 373 KB を取る意味も無い（M-1）。 */}
+          {product.priceHistory.length === 0 ? (
+            <PriceHistoryEmpty />
+          ) : (
+            <PriceHistoryChart priceHistory={product.priceHistory} />
+          )}
         </section>
 
         {recentPriceHistory.length > 0 && (
