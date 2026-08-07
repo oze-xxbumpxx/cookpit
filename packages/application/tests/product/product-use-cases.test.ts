@@ -17,6 +17,7 @@ import { DeleteProductUseCase } from '../../src/product/delete-product.use-case'
 import { InvalidOperationError } from '../../src/shared/errors';
 import { PriceRecordNotFoundError } from '../../src/product/price-record-not-found.error';
 import { GetCheapestStoreUseCase } from '../../src/product/get-cheapest-store.use-case';
+import { GetProductDetailUseCase } from '../../src/product/get-product-detail.use-case';
 import { GetProductUseCase } from '../../src/product/get-product.use-case';
 import { GetProductsUseCase } from '../../src/product/get-products.use-case';
 import { ProductNotFoundError } from '../../src/product/product-not-found.error';
@@ -37,8 +38,10 @@ class InMemoryProductRepository implements ProductRepository {
   private readonly map = new Map<string, Product>();
   public saveCount = 0;
   public deletedIds: string[] = [];
+  public findByIdCallCount = 0;
 
   async findById(id: ProductId): Promise<Product | null> {
+    this.findByIdCallCount += 1;
     return this.map.get(id.value) ?? null;
   }
 
@@ -86,12 +89,16 @@ class InMemoryProductRepository implements ProductRepository {
 class InMemoryStoreRepository implements StoreRepository {
   private readonly map = new Map<string, Store>();
   public saveCount = 0;
+  public findAllCallCount = 0;
+  public findByIdCallCount = 0;
 
   async findById(id: StoreId): Promise<Store | null> {
+    this.findByIdCallCount += 1;
     return this.map.get(id.value) ?? null;
   }
 
   async findAll(): Promise<Store[]> {
+    this.findAllCallCount += 1;
     return [...this.map.values()];
   }
 
@@ -713,6 +720,95 @@ describe('GetCheapestStoreUseCase', () => {
       unitPrice: 100,
       packageSizeUnit: '個',
     });
+  });
+});
+
+describe('GetProductDetailUseCase', () => {
+  function seedCheapestStoreFixture(): void {
+    const storeA = StoreId.fromString('store-a');
+    const storeB = StoreId.fromString('store-b');
+    storeRepository.seed(seededStore('store-a', '西友'));
+    storeRepository.seed(seededStore('store-b', 'ライフ'));
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord('store-a-old', storeA, 240, 80, new Date('2026-01-01T00:00:00.000Z')),
+        seededPriceRecord('store-a-new', storeA, 360, 120, new Date('2026-01-02T00:00:00.000Z')),
+        seededPriceRecord('store-b-new', storeB, 270, 90, new Date('2026-01-02T00:00:00.000Z')),
+      ]),
+    );
+  }
+
+  it('GPD-01: productRepository.findById 1 回・storeRepository.findAll 1 回のみ発行し、storeRepository.findById は呼ばない', async () => {
+    seedCheapestStoreFixture();
+
+    await new GetProductDetailUseCase(productRepository, storeRepository).execute('product-1');
+
+    expect(productRepository.findByIdCallCount).toBe(1);
+    expect(storeRepository.findAllCallCount).toBe(1);
+    expect(storeRepository.findByIdCallCount).toBe(0);
+  });
+
+  it('GPD-02: product が GetProductUseCase.execute() の戻り値と一致する', async () => {
+    seedCheapestStoreFixture();
+
+    const expected = await new GetProductUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+    const result = await new GetProductDetailUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+
+    expect(result.product).toEqual(expected);
+  });
+
+  it('GPD-03: cheapestStore が GetCheapestStoreUseCase.execute() の戻り値と一致する', async () => {
+    seedCheapestStoreFixture();
+
+    const expected = await new GetCheapestStoreUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+    const result = await new GetProductDetailUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+
+    expect(result.cheapestStore).toEqual(expected);
+  });
+
+  it('GPD-04: 価格記録0件の商品は cheapestStore が null で、storeRepository.findAll は呼ばれる', async () => {
+    productRepository.seed(seededProduct('product-1'));
+
+    const result = await new GetProductDetailUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+
+    expect(result.cheapestStore).toBeNull();
+    expect(storeRepository.findAllCallCount).toBe(1);
+  });
+
+  it('GPD-05: 最安店舗 ID に対応する Store が無くても storeName を空文字に縮退させる', async () => {
+    const storeId = StoreId.fromString('store-1');
+    productRepository.seed(
+      seededProduct('product-1', '玉ねぎ', [
+        seededPriceRecord('record-1', storeId, 300, 100, new Date('2026-01-01T00:00:00.000Z')),
+      ]),
+    );
+
+    const result = await new GetProductDetailUseCase(productRepository, storeRepository).execute(
+      'product-1',
+    );
+
+    expect(result.cheapestStore?.storeName).toBe('');
+    expect(result.product.priceHistory[0]?.storeName).toBe('');
+  });
+
+  it('GPD-06: 商品が存在しなければ ProductNotFoundError を投げ、storeRepository には一切アクセスしない', async () => {
+    storeRepository.seed(seededStore('store-1', '西友'));
+
+    await expect(
+      new GetProductDetailUseCase(productRepository, storeRepository).execute('missing'),
+    ).rejects.toBeInstanceOf(ProductNotFoundError);
+    expect(storeRepository.findAllCallCount).toBe(0);
+    expect(storeRepository.findByIdCallCount).toBe(0);
   });
 });
 

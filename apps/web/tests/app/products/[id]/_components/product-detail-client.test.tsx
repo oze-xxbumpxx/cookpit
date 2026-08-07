@@ -214,4 +214,28 @@ describe('ProductDetailClient', () => {
 
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
+
+  it('PDC-13: 遅延読み込みされたチャートが最終的に描画される', async () => {
+    const { container } = render(
+      <ProductDetailClient
+        product={createProductDto([createPriceRecord()])}
+        cheapestStore={CHEAPEST_STORE}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="chart"]')).not.toBeNull();
+    });
+  });
+
+  it('PDC-14: 価格記録 0 件でも遅延読み込み後に空状態文言が描画される', async () => {
+    renderDetail([]);
+
+    expect(await screen.findByText('価格記録がありません')).toBeDefined();
+  });
+
+  // PDC-15 は PDC-01・02・08 が無修正で pass することで担保される（実体のテストはそちら）。
+  // PDC-16 は「0 件時に遅延読み込みを経由しない」ことの検証で、同一ファイル内では
+  // 先行テストのモジュールキャッシュで誤って通るため、別ファイル
+  // （product-detail-client.lazy-chart.test.tsx）に分離した。
 });

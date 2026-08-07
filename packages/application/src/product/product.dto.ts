@@ -31,6 +31,11 @@ export interface CheapestStoreResultDto {
   packageSizeUnit: Unit;
 }
 
+export interface ProductDetailResultDto {
+  product: ProductDto;
+  cheapestStore: CheapestStoreResultDto | null;
+}
+
 export interface CreateProductInputDto {
   name: string;
   aliases: string[];

@@ -3,6 +3,15 @@ import type { ProductRepository, StoreRepository } from '@cookpit/domain';
 import type { CheapestStoreResultDto } from './product.dto';
 import { ProductNotFoundError } from './product-not-found.error';
 
+/**
+ * 単一商品の最安店舗を返す。`GET /api/products/:id/cheapest-store` が使用する。
+ *
+ * **`CheapestStoreResultDto` の組み立ては `GetProductDetailUseCase` にも存在する**
+ * （商品詳細画面はクエリ削減のためそちらを使う。設計書
+ * `docs/designs/product-detail-performance.md` §変更後構成）。
+ * **片方だけ変えると等価性が崩れる。** 等価性は試験 `GPD-03` / 縮退は `GPD-05` が
+ * 担保している（レビュー S-1）。
+ */
 export class GetCheapestStoreUseCase {
   constructor(
     private readonly productRepository: ProductRepository,

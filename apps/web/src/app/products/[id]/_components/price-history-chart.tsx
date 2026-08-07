@@ -13,6 +13,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
+import {
+  PriceHistoryEmpty,
+  PRICE_HISTORY_CHART_HEIGHT_CLASS,
+} from '@/app/products/[id]/_components/price-history-chart-skeleton';
 import type { PriceRecordDto } from '@cookpit/application';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 
@@ -89,12 +93,11 @@ function formatYAxisTick(value: number | string): string {
 }
 
 export function PriceHistoryChart({ priceHistory }: Props) {
+  // 0 件の空状態は呼び出し側（product-detail-client.tsx）が PriceHistoryEmpty で描画する。
+  // ここは遅延読み込みされるので、0 件をここで扱うとスケルトンとの高さ差でシフトする（M-1）。
+  // 防御的にガードは残す（直接呼ばれた場合に recharts へ空データを渡さないため）。
   if (priceHistory.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-border bg-card px-3 py-8 text-center text-sm text-muted-foreground">
-        価格記録がありません
-      </p>
-    );
+    return <PriceHistoryEmpty />;
   }
 
   const series = buildSeries(priceHistory);
@@ -102,7 +105,10 @@ export function PriceHistoryChart({ priceHistory }: Props) {
   const chartConfig = buildChartConfig(series);
 
   return (
-    <ChartContainer config={chartConfig} className="h-64 w-full aspect-auto rounded-xl bg-card p-2">
+    <ChartContainer
+      config={chartConfig}
+      className={`${PRICE_HISTORY_CHART_HEIGHT_CLASS} w-full aspect-auto rounded-xl bg-card p-2`}
+    >
       <LineChart data={chartData} margin={{ top: 12, right: 12, bottom: 6, left: 0 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
