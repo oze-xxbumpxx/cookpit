@@ -241,3 +241,17 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
 - **リモート（エフェメラル）環境では `DATABASE_URL` 未設定のため live DB 経路は動かない**。
   画面の手動確認は確認できた項目と BLOCKED（理由つき）を分けて報告し、コードリーディングで
   補完する（出典: `logs/2026-06-26.md` タスク3）。
+- **PGlite の dev DB（`.pglite-dev`）を再シードするときは dev サーバーを止めてから行う**。
+  起動中に `rm -rf .pglite-dev` して作り直すと、サーバーが削除済みディレクトリのハンドルを
+  掴んだまま**古い状態を返し続ける**。「編集前の前提を満たしていないのに PASS に見える」
+  という**偽の PASS** を作る（出典: `docs/tests/price-record-edit-and-store-rename.md` §13
+  の実施結果。2026-08-06 に実際に誤判定した）。
+- **`next build` を実行した後に `next dev` を起動するなら、先に `.next` を消す**。
+  本番ビルド成果物が残ったまま dev を起動すると、**実在するページが 404 を返す**
+  （ファイルを 1 度触って再コンパイルさせると解消する）。旧経路のページだけが 200 になるため
+  **「新しく追加したコードの欠陥」に見える偽の FAIL** を作る（出典:
+  `docs/tests/product-detail-performance.md` §手動試験 の実施結果。2026-08-07 に実際に誤診しかけた）。
+- **`pnpm build`（`next build --webpack`）の Route 表にはサイズ列（First Load JS）が出ない**。
+  バンドルサイズを前後比較するときは `.next/static/chunks/` のファイルを直接測り、
+  `client-reference-manifest` の参照有無で初期ロード対象かを判定する（手順は
+  `docs/designs/product-detail-performance.md` §バンドルサイズ削減の検証）。
