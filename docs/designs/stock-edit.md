@@ -522,9 +522,30 @@ UseCase から直接呼ばれるケース・将来の呼び出し元追加に備
    同型のパターン）。
 2. `PantryClient` → `LocationGroup` → `StockRow` へ `asOf` を伝播する。
 3. `StockRow` が `stock.expiresAt !== null` のとき `getExpiryRemainingDays` /
-   `getExpiryUrgency`（`expiry.ts` に共通化。後述）で緊急度を算出し、確定した閾値
-   （後述）以内の場合のみチップを表示する。保存場所ラベルは `expiresAt` の有無に関わらず
-   常時表示する。
+   `getExpiryUrgency`（`expiry.ts` に共通化。後述）で緊急度を算出し、閾値
+   `EXPIRY_URGENCY_WITHIN_DAYS`（= 3）以内の場合のみチップを表示する。保存場所ラベルは
+   `expiresAt` の有無に関わらず常時表示する。
+
+#### チップの表示条件・文言・レイアウト（レビュー M-1 / M-2 / M-3 を受けて確定・2026-08-07）
+
+- **表示条件は `getExpiryRemainingDays(expiresAt, asOf) <= EXPIRY_URGENCY_WITHIN_DAYS`。**
+  つまり**残日数が負（期限切れ）も表示対象に含める**。`0 <= remainingDays && remainingDays <= 3`
+  と書くと期限切れが非表示になり、ダッシュボードの `selectExpiringStocks`
+  （`dashboard-view.ts:36-39`。期限切れを含める）と意味がずれる。
+  **期限切れこそ最も目立つべき**なので含める。
+- **文言は `formatExpiryUrgencyLabel(remainingDays)`**（`期限切れ` / `本日まで` / `明日まで` /
+  `あとN日`）をそのまま使う。ダッシュボードと同じ文言にする。
+  既存のプレーンな日付表示（`〜7/12まで` = `formatExpiresAt`）は**残す**
+  （チップは緊急度、日付表示は事実。役割が違う）。
+- **レイアウト（M-3）**: `stock-row.tsx` の現在の構造は
+  `<li className="flex items-center gap-3">` の中に「情報側 `flex-1`」と
+  「ボタン側 `shrink-0` に 2 個」が並ぶ。ここへ**編集ボタン（3 個目）+ 保存場所ラベル +
+  緊急度チップ**を同時に足すため、375px 幅で破綻する危険が完了パネル（R-2）より高い。
+  - 保存場所ラベルと緊急度チップは**情報側（`flex-1` の列）**に置く。ボタン側には足さない。
+  - ボタンが 3 個になるため、`shrink-0` の横並びのままだと情報側が潰れる。
+    **ボタン行を情報行の下へ折り返すか、ボタンをアイコンのみに縮めるか**を実装時に選ぶ
+    （どちらでもよいが、375px で情報側のテキストが 1 文字も切れないことを基準にする）。
+  - **実画面確認 MB 項目に `/pantry` の 375px 目視を必ず含める**（完了パネルの MB-14 と同様）。
 
 ## API 設計
 
