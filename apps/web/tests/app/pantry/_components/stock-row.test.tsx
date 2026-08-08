@@ -20,7 +20,9 @@ function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
 function renderRow(props: Partial<Parameters<typeof StockRow>[0]> = {}) {
   const defaults = {
     stock: createStockDto(),
+    asOf: new Date('2026-08-08T09:00:00'),
     submitting: false,
+    onEdit: vi.fn(),
     onConsume: vi.fn(),
     onDiscard: vi.fn(),
   };
@@ -97,5 +99,59 @@ describe('StockRow', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onConsume).toHaveBeenCalledTimes(1);
     expect(onDiscard).toHaveBeenCalledTimes(1);
+  });
+
+  it('SR-EDIT-01: 保存場所ラベルを常時表示する', () => {
+    renderRow({ stock: createStockDto({ storedLocation: 'fridge' }) });
+    expect(screen.getByText('保存場所: 冷蔵')).toBeDefined();
+  });
+
+  it('SR-EDIT-02: 保存場所が null でも未設定ラベルを表示する', () => {
+    renderRow({ stock: createStockDto({ storedLocation: null }) });
+    expect(screen.getByText('保存場所: 保存場所未設定')).toBeDefined();
+  });
+
+  it('SR-EDIT-06: 編集ボタンで onEdit に stock を渡す', async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const stock = createStockDto({ id: '10000000-0000-4000-8000-000000000008' });
+    renderRow({ stock, onEdit });
+
+    await user.click(screen.getByRole('button', { name: '編集' }));
+
+    expect(onEdit).toHaveBeenCalledWith(stock);
+  });
+
+  it('SR-EDIT-03: 閾値内の賞味期限に緊急度チップを表示する', () => {
+    renderRow({ stock: createStockDto({ expiresAt: '2026-08-10' }) });
+
+    expect(screen.getByText('あと2日')).toBeDefined();
+  });
+
+  it('SR-EDIT-04: 閾値外の賞味期限には緊急度チップを表示しない', () => {
+    renderRow({ stock: createStockDto({ expiresAt: '2026-08-18' }) });
+
+    expect(screen.queryByText('あと10日')).toBeNull();
+  });
+
+  it('SR-EDIT-05: 賞味期限が null なら緊急度チップを表示しない', () => {
+    renderRow({ stock: createStockDto({ expiresAt: null }) });
+
+    expect(screen.queryByText(/期限切れ|本日まで|明日まで|あと\d+日/)).toBeNull();
+  });
+
+  it('SR-EDIT-BND: 閾値ちょうど3日では表示し、4日では表示しない', () => {
+    renderRow({ stock: createStockDto({ expiresAt: '2026-08-11' }) });
+    expect(screen.getByText('あと3日')).toBeDefined();
+    cleanup();
+
+    renderRow({ stock: createStockDto({ expiresAt: '2026-08-12' }) });
+    expect(screen.queryByText('あと4日')).toBeNull();
+  });
+
+  it('SR-EDIT-07: 期限切れの在庫に「期限切れ」チップを表示する', () => {
+    renderRow({ stock: createStockDto({ expiresAt: '2026-08-07' }) });
+
+    expect(screen.getByText('期限切れ')).toBeDefined();
   });
 });

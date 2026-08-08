@@ -3,12 +3,16 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { getPantry, postConsume, postDiscard, postAddStock } = vi.hoisted(() => ({
+const { getPantry, postConsume, postDiscard, postAddStock, putStock, refresh } = vi.hoisted(() => ({
   getPantry: vi.fn(),
   postConsume: vi.fn(),
   postDiscard: vi.fn(),
   postAddStock: vi.fn(),
+  putStock: vi.fn(),
+  refresh: vi.fn(),
 }));
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 
 vi.mock('@/lib/api-client', () => ({
   client: {
@@ -18,6 +22,7 @@ vi.mock('@/lib/api-client', () => ({
         stocks: {
           $post: (...args: unknown[]) => postAddStock(...args),
           ':stockId': {
+            $put: (...args: unknown[]) => putStock(...args),
             consume: {
               $post: (...args: unknown[]) => postConsume(...args),
             },
@@ -32,6 +37,8 @@ vi.mock('@/lib/api-client', () => ({
 }));
 
 import { PantryClient } from '../../../../src/app/pantry/_components/pantry-client';
+
+const AS_OF = new Date('2026-08-08T09:00:00');
 
 function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
   return {
@@ -73,7 +80,7 @@ describe('PantryClient', () => {
   });
 
   it('PC-01: stocks が空のとき空状態を表示する', () => {
-    render(<PantryClient pantry={createPantryDto()} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto()} />);
 
     expect(screen.getByText('在庫がありません')).toBeDefined();
   });
@@ -81,6 +88,7 @@ describe('PantryClient', () => {
   it('PC-02: 保存場所ごとに対応 stock のみを固定順で表示する', () => {
     render(
       <PantryClient
+        asOf={AS_OF}
         pantry={createPantryDto([
           createStockDto({
             id: '30000000-0000-4000-8000-000000000002',
@@ -118,6 +126,7 @@ describe('PantryClient', () => {
   it('PC-03: 全件 location 未設定なら単一グループを表示する', () => {
     render(
       <PantryClient
+        asOf={AS_OF}
         pantry={createPantryDto([
           createStockDto({
             id: '30000000-0000-4000-8000-000000000005',
@@ -151,7 +160,7 @@ describe('PantryClient', () => {
       ok: true,
       json: async () => createPantryDto([egg]),
     });
-    render(<PantryClient pantry={createPantryDto([milk, egg])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, egg])} />);
 
     await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
@@ -171,7 +180,7 @@ describe('PantryClient', () => {
       ok: true,
       json: async () => createPantryDto(),
     });
-    render(<PantryClient pantry={createPantryDto([stock])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([stock])} />);
 
     await user.click(screen.getByRole('button', { name: '消費' }));
 
@@ -196,7 +205,7 @@ describe('PantryClient', () => {
       ok: true,
       json: async () => createPantryDto([egg]),
     });
-    render(<PantryClient pantry={createPantryDto([milk, egg])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, egg])} />);
 
     await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '廃棄' }));
 
@@ -209,7 +218,7 @@ describe('PantryClient', () => {
   it('PC-07: consume 失敗時に操作エラーを表示して一覧を維持する', async () => {
     const user = userEvent.setup();
     postConsume.mockResolvedValue({ ok: false });
-    render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />);
 
     await user.click(screen.getByRole('button', { name: '消費' }));
 
@@ -222,7 +231,7 @@ describe('PantryClient', () => {
   it('PC-08: discard 失敗時に操作エラーを表示して一覧を維持する', async () => {
     const user = userEvent.setup();
     postDiscard.mockResolvedValue({ ok: false });
-    render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />);
 
     await user.click(screen.getByRole('button', { name: '廃棄' }));
 
@@ -235,7 +244,7 @@ describe('PantryClient', () => {
   it('PC-09: RPC が reject したとき通信エラーを表示する', async () => {
     const user = userEvent.setup();
     postConsume.mockRejectedValue(new Error('network error'));
-    render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />);
 
     await user.click(screen.getByRole('button', { name: '消費' }));
 
@@ -256,7 +265,7 @@ describe('PantryClient', () => {
       displayName: '卵',
       amount: { value: 6, unit: '個' },
     });
-    render(<PantryClient pantry={createPantryDto([milk, egg])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, egg])} />);
 
     await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
@@ -279,7 +288,7 @@ describe('PantryClient', () => {
   it('PC-11: 同一 stock を連打しても consume は 1 回だけ送信する', async () => {
     const user = userEvent.setup();
     postConsume.mockReturnValue(new Promise(() => {}));
-    render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />);
     const consumeButton = screen.getByRole('button', { name: '消費' });
 
     await user.click(consumeButton);
@@ -302,7 +311,7 @@ describe('PantryClient', () => {
       ok: true,
       json: async () => createPantryDto([egg]),
     });
-    render(<PantryClient pantry={createPantryDto([milk])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk])} />);
 
     await act(async () => {
       window.dispatchEvent(new Event('focus'));
@@ -320,7 +329,7 @@ describe('PantryClient', () => {
   it('PC-13: 手動更新の失敗時に操作エラーを表示する', async () => {
     const user = userEvent.setup();
     getPantry.mockResolvedValue({ ok: false });
-    render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />);
 
     await user.click(screen.getByRole('button', { name: '更新' }));
 
@@ -332,7 +341,9 @@ describe('PantryClient', () => {
 
   it('PC-14: unmount 後の focus では refetch しない', async () => {
     getPantry.mockResolvedValue({ ok: true, json: async () => createPantryDto() });
-    const { unmount } = render(<PantryClient pantry={createPantryDto([createStockDto()])} />);
+    const { unmount } = render(
+      <PantryClient asOf={AS_OF} pantry={createPantryDto([createStockDto()])} />,
+    );
 
     unmount();
     await act(async () => {
@@ -343,7 +354,7 @@ describe('PantryClient', () => {
   });
 
   it('PC-15: ヘッダーに在庫タイトル・更新ボタンを表示する（画面間の導線はボトムナビ）', () => {
-    render(<PantryClient pantry={createPantryDto()} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto()} />);
 
     expect(screen.getByRole('heading', { level: 1, name: '在庫' })).toBeDefined();
     expect(screen.getByRole('button', { name: '更新' })).toBeDefined();
@@ -365,7 +376,7 @@ describe('PantryClient', () => {
       ok: true,
       json: async () => createPantryDto([updatedJuice]),
     });
-    render(<PantryClient pantry={createPantryDto([milk, juice])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, juice])} />);
 
     await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
 
@@ -388,7 +399,7 @@ describe('PantryClient', () => {
           }),
         ]),
     });
-    render(<PantryClient pantry={createPantryDto()} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto()} />);
 
     await user.click(screen.getByRole('button', { name: '在庫を追加' }));
     await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
@@ -412,7 +423,7 @@ describe('PantryClient', () => {
   it('PC-19: 在庫追加が失敗したときエラーを表示する', async () => {
     const user = userEvent.setup();
     postAddStock.mockResolvedValue({ ok: false });
-    render(<PantryClient pantry={createPantryDto()} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto()} />);
 
     await user.click(screen.getByRole('button', { name: '在庫を追加' }));
     await user.type(screen.getByLabelText(/品目名/), '玉ねぎ');
@@ -438,7 +449,7 @@ describe('PantryClient', () => {
     postConsume
       .mockResolvedValueOnce({ ok: false })
       .mockResolvedValueOnce({ ok: true, json: async () => createPantryDto([milk]) });
-    render(<PantryClient pantry={createPantryDto([milk, egg])} />);
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, egg])} />);
 
     await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
     await waitFor(() => {
@@ -450,5 +461,39 @@ describe('PantryClient', () => {
     await waitFor(() => {
       expect(screen.queryByText('操作に失敗しました。')).toBeNull();
     });
+  });
+
+  it('PC-EDIT-01: consume pending 中でも別 stock の編集ダイアログを開ける', async () => {
+    const user = userEvent.setup();
+    postConsume.mockReturnValue(new Promise(() => {}));
+    const milk = createStockDto({
+      id: '30000000-0000-4000-8000-000000000021',
+      displayName: '牛乳',
+    });
+    const egg = createStockDto({
+      id: '30000000-0000-4000-8000-000000000022',
+      displayName: '卵',
+      amount: { value: 6, unit: '個' },
+    });
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([milk, egg])} />);
+
+    await user.click(within(getStockRow('牛乳')).getByRole('button', { name: '消費' }));
+    await user.click(within(getStockRow('卵')).getByRole('button', { name: '編集' }));
+
+    expect(screen.getByRole('heading', { name: '在庫を編集' })).toBeDefined();
+    await waitFor(() => {
+      expect((screen.getByLabelText('数量') as HTMLInputElement).value).toBe('6個');
+    });
+  });
+
+  it('PC-EDIT-02: asOf を在庫行へ伝播し期限3日のチップを表示する', () => {
+    render(
+      <PantryClient
+        asOf={AS_OF}
+        pantry={createPantryDto([createStockDto({ expiresAt: '2026-08-11' })])}
+      />,
+    );
+
+    expect(screen.getByText('あと3日')).toBeDefined();
   });
 });

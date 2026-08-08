@@ -10,18 +10,21 @@ import { useEffect, useState } from 'react';
 import { groupStocksByLocation } from '../_utils/pantry-view';
 import { AddStockForm, type AddStockFormInput } from './add-stock-form';
 import { LocationGroup } from './location-group';
+import { StockEditDialog } from './stock-edit-dialog';
 
 interface Props {
   pantry: PantryDto;
+  asOf: Date;
 }
 
 /** 在庫追加・再取得を表す実行中キー。在庫行の操作は stockId をキーにする。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
-export function PantryClient({ pantry }: Props) {
+export function PantryClient({ pantry, asOf }: Props) {
   const [stocks, setStocks] = useState<StockDto[]>(pantry.stocks);
   const [addFormOpen, setAddFormOpen] = useState(false);
+  const [editingStock, setEditingStock] = useState<StockDto | null>(null);
   // 在庫行の操作・追加・再取得はエラーバナーを共有するため 1 インスタンスにまとめ、
   // 「どれが実行中か」は キーごとの isPending で区別する。
   const action = useApiAction();
@@ -122,9 +125,11 @@ export function PantryClient({ pantry }: Props) {
                 key={group.location ?? 'unset'}
                 location={group.location}
                 stocks={group.stocks}
+                asOf={asOf}
                 submittingStockId={
                   group.stocks.find((stock) => action.isPending(stock.id))?.id ?? null
                 }
+                onEdit={setEditingStock}
                 onConsume={(stockId) => void handleConsume(stockId)}
                 onDiscard={(stockId) => void handleDiscard(stockId)}
               />
@@ -148,6 +153,15 @@ export function PantryClient({ pantry }: Props) {
             在庫を追加
           </Button>
         )}
+
+        <StockEditDialog
+          stock={editingStock}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingStock(null);
+            }
+          }}
+        />
       </div>
     </main>
   );

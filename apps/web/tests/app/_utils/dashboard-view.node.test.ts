@@ -2,11 +2,14 @@ import type { StockDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
 import {
   MEAL_PLAN_STATUS_LABELS,
+  selectExpiringStocks,
+} from '../../../src/app/_utils/dashboard-view';
+import {
+  EXPIRY_URGENCY_WITHIN_DAYS,
   formatExpiryUrgencyLabel,
   getExpiryRemainingDays,
   getExpiryUrgency,
-  selectExpiringStocks,
-} from '../../../src/app/_utils/dashboard-view';
+} from '../../../src/app/_utils/expiry';
 
 function createStock(overrides: Partial<StockDto> = {}): StockDto {
   return {
@@ -120,6 +123,12 @@ describe('getExpiryRemainingDays', () => {
   it('EU-08: 不正な expiresAt 文字列でも例外を投げない', () => {
     expect(() => getExpiryRemainingDays('', asOf)).not.toThrow();
     expect(Number.isNaN(getExpiryRemainingDays('', asOf))).toBe(true);
+  });
+});
+
+describe('EXPIRY_URGENCY_WITHIN_DAYS', () => {
+  it('EXP-03: 共有閾値は 3 日', () => {
+    expect(EXPIRY_URGENCY_WITHIN_DAYS).toBe(3);
   });
 });
 

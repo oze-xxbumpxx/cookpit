@@ -29,6 +29,14 @@ export interface AddStockInputDto {
   expiresAt: string | null;
 }
 
+export interface UpdateStockDetailsInputDto {
+  stockId: string;
+  amount: { value: number; unit: Unit };
+  /** ローカル日付文字列 `YYYY-MM-DD`。値なしは `null`。 */
+  expiresAt: string | null;
+  storedLocation: StorageLocation | null;
+}
+
 export interface DiscardStockInputDto {
   stockId: string;
 }

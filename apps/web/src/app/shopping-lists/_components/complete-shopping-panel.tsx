@@ -6,6 +6,7 @@ import {
   toStorageLocation,
 } from '@/app/pantry/_utils/pantry-view';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { QuantityField } from '@/components/ui/quantity-field';
 import { SelectField } from '@/components/ui/select-field';
 import { parseQuantity } from '@/lib/parse-quantity';
@@ -18,6 +19,8 @@ interface RowState {
   checked: boolean;
   amountText: string;
   storedLocation: string;
+  expiresAt: string;
+  expiresAtExpanded: boolean;
 }
 
 interface Props {
@@ -52,6 +55,8 @@ function initialRows(items: ShoppingItemDto[]): Record<string, RowState> {
       checked: isAmountValid(amountText),
       amountText,
       storedLocation: UNSET_LOCATION_VALUE,
+      expiresAt: '',
+      expiresAtExpanded: false,
     };
   }
   return rows;
@@ -59,7 +64,7 @@ function initialRows(items: ShoppingItemDto[]): Record<string, RowState> {
 
 /**
  * 買い物完了時に、購入した品目のうち在庫へ追加するものを選ぶパネル。
- * 賞味期限は入力させず常に null を送る（Q-1）。
+ * 賞味期限は必要な品目だけ行ごとに任意入力できる。
  */
 export function CompleteShoppingPanel({ items, submitting, onCancel, onComplete }: Props) {
   const headingId = useId();
@@ -100,7 +105,7 @@ export function CompleteShoppingPanel({ items, submitting, onCancel, onComplete 
         itemId: item.id,
         amount: { value: parsed.value, unit: parsed.unit },
         storedLocation: toStorageLocation(row.storedLocation),
-        expiresAt: null,
+        expiresAt: row.expiresAt === '' ? null : row.expiresAt,
       });
     }
     onComplete(additions);
@@ -150,12 +155,21 @@ export function CompleteShoppingPanel({ items, submitting, onCancel, onComplete 
               item={item}
               amountText={row.amountText}
               storedLocation={row.storedLocation}
+              expiresAt={row.expiresAt}
+              expiresAtExpanded={row.expiresAtExpanded}
               checked={isRowSelected(row)}
               amountValid={isAmountValid(row.amountText)}
               disabled={submitting}
               onToggle={() => updateRow(item.id, { checked: !isRowSelected(row) })}
               onAmountChange={(amountText) => updateRow(item.id, { amountText })}
               onLocationChange={(storedLocation) => updateRow(item.id, { storedLocation })}
+              onExpiresAtChange={(expiresAt) => updateRow(item.id, { expiresAt })}
+              onExpiresAtExpandedChange={(expiresAtExpanded) =>
+                updateRow(item.id, {
+                  expiresAt: expiresAtExpanded ? row.expiresAt : '',
+                  expiresAtExpanded,
+                })
+              }
             />
           );
         })}
@@ -188,27 +202,36 @@ interface RowProps {
   item: ShoppingItemDto;
   amountText: string;
   storedLocation: string;
+  expiresAt: string;
+  expiresAtExpanded: boolean;
   checked: boolean;
   amountValid: boolean;
   disabled: boolean;
   onToggle: () => void;
   onAmountChange: (amountText: string) => void;
   onLocationChange: (storedLocation: string) => void;
+  onExpiresAtChange: (expiresAt: string) => void;
+  onExpiresAtExpandedChange: (expanded: boolean) => void;
 }
 
 function StockAdditionRow({
   item,
   amountText,
   storedLocation,
+  expiresAt,
+  expiresAtExpanded,
   checked,
   amountValid,
   disabled,
   onToggle,
   onAmountChange,
   onLocationChange,
+  onExpiresAtChange,
+  onExpiresAtExpandedChange,
 }: RowProps) {
   const amountId = useId();
   const locationId = useId();
+  const expiresAtId = useId();
   const hintId = useId();
 
   return (
@@ -266,6 +289,32 @@ function StockAdditionRow({
           />
         </div>
       </div>
+
+      <button
+        type="button"
+        aria-expanded={expiresAtExpanded}
+        onClick={() => onExpiresAtExpandedChange(!expiresAtExpanded)}
+        disabled={disabled}
+        className="w-fit text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+      >
+        {expiresAtExpanded ? '賞味期限を削除' : '賞味期限を設定'}
+      </button>
+
+      {expiresAtExpanded && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor={expiresAtId} className="text-xs text-muted-foreground">
+            賞味期限
+          </label>
+          <Input
+            id={expiresAtId}
+            type="date"
+            value={expiresAt}
+            onChange={(event) => onExpiresAtChange(event.currentTarget.value)}
+            disabled={disabled}
+            className="h-11 rounded-xl bg-background"
+          />
+        </div>
+      )}
 
       {!amountValid && (
         <p id={hintId} className="text-xs text-muted-foreground">
