@@ -28,7 +28,7 @@ Q-1）と既存 Stock の編集不可（Domain が readonly・pantry-core S-4 �
 
 ## 要件
 
-`docs/requirements/stock-edit.md` の FR-1〜FR-8、正常系 N-1〜N-9、異常系 E-1〜E-6、
+`docs/requirements/stock-edit.md` の FR-1〜FR-8、正常系 N-1〜N-9、異常系 E-1〜E-7、
 境界条件 B-1〜B-6 を参照。
 
 ## 対象範囲
