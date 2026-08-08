@@ -88,10 +88,18 @@ roadmap の Sprint 8 完了条件 2 件を満たせない。
 ## 異常系
 
 - E-1: 存在しない `stockId` を編集しようとすると 404（`StockNotFoundError`）。
-- E-2: 賞味期限に不正な日付文字列を送ると 422（バリデーションエラー）。
-- E-3: 保存場所に enum 外の値を送ると 422。
-- E-4: 数量に 0 以下の値を送ると 422（Domain のバリデーション。`Stock.create()` と同じ制約を
-  編集にも適用する）。
+- E-2: 賞味期限に不正な日付文字列を送ると **400**（`zValidator` の契約層バリデーション）。
+- E-3: 保存場所に enum 外の値を送ると **400**（同上）。
+- E-4: 数量に 0 以下の値を送ると **400**（契約層。`updateStockSchema` の `positive()`）。
+  契約層をバイパスした場合は Domain（`Stock.updateDetails`）が **422**
+  （`InvalidStockOperationError`）で拒否する。`Stock.create()` と同じ制約を編集にも適用する。
+- E-7: 必須キー（`amount` / `expiresAt` / `storedLocation`）を省略すると **400**。
+  部分更新は許さない（P-2 の確定と対になる）。
+
+> **400 と 422 は層が違う**（契約層 = `@hono/zod-validator` が `app.onError` を経由せず自前で
+> 返す / ドメイン層 = `InvalidOperationError` 継承を `onError` が 422 へ写像）。
+> 正典は `docs/designs/stock-edit.contract.md` §4。
+
 - E-5: 編集リクエスト送信中にネットワークエラーが起きると、画面はエラーメッセージを表示し
   一覧は変更前の状態のまま保たれる（楽観的更新をしない前提。設計側 UI 設計に準拠）。
 - E-6: 買い物完了パネルで不正な日付形式の賞味期限が入力された場合の扱い（クライアント側で

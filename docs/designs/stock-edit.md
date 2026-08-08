@@ -10,7 +10,8 @@
     本ユニット相当として申し送られていた）
   - `docs/designs/shopping-complete-stock-selection.md` Q-1（完了パネルの期限入力を見送った
     決定。本設計はその再訪）
-  - ADR-0016（Domain 不変性方針の変更を記録。別途起票・本書は参照のみ）
+  - [ADR-0016](../decisions/ADR-0016-stock-details-mutable.md)（Domain 不変性方針の変更。
+    設計フェーズで作成済み・2026-08-07）
 
 ## 背景
 
@@ -600,12 +601,19 @@ import 構成と同じ形になる）。
 - 404（`StockNotFoundError`）: 存在しない `stockId` を指定した場合。既存の `app.onError` が
   `NotFoundError` 継承で拾うため追加実装不要。UI は「この在庫はすでに削除されています」を
   表示してダイアログを閉じ、`router.refresh()` で一覧を最新化する。
-- 422: `updateStockSchema` の Zod バリデーション（`amount.value` が正数でない、`expiresAt` が
-  `YYYY-MM-DD` 形式でない、`storedLocation` が enum 外）。`zValidator` がリクエスト受付時点で
-  弾くため UseCase 内部の重複バリデーションは最小限でよいが、Domain 層（`Stock.updateDetails`）
-  でも `amount.value <= 0` を最終防御線として拒否する（契約層をバイパスする将来の呼び出し元に
-  備える。ドメイン境界の原則）。UI は `fieldErrors` に反映（数量は `parseQuantity` による
-  クライアント側検証で大半は事前に弾かれる想定）。
+- **400**: `updateStockSchema` の Zod バリデーション失敗（`amount.value` が正数でない、
+  `expiresAt` が `YYYY-MM-DD` 形式でない、`storedLocation` が enum 外、キー省略）。
+  `zValidator`（`@hono/zod-validator`）が**リクエスト受付時点で自前で 400 を返し、
+  `app.onError` を経由しない**。UseCase には到達しない（`apps/web/tests/server/routes/pantry.test.ts`
+  の既存テストで実測確認済み）。
+- 422（`InvalidStockOperationError`）: Domain 層（`Stock.updateDetails`）が `amount.value <= 0`
+  等の不変条件違反を拒否した場合。契約層の 400 で大半は事前に弾かれるため、これは**契約層を
+  バイパスする将来の呼び出し元に対する最終防御線**である（ドメイン境界の原則）。
+  UI は `fieldErrors` に反映（数量は `parseQuantity` によるクライアント側検証で大半は事前に
+  弾かれる想定）。
+  > 400 と 422 は**層が違う**（契約層 = `zValidator` / ドメイン層 = `InvalidOperationError`）。
+  > 実装時に混同しないこと。詳細は
+  > [stock-edit.contract.md](./stock-edit.contract.md) §4 を正典とする。
 - ネットワークエラー: `try/catch` で「通信エラーが発生しました」を表示（既存ダイアログと同型）。
 - 買い物完了パネル側の異常系（E-6）: 日付は `type="date"` のブラウザ標準バリデーションに
   委ね、追加のクライアント側チェックは行わない。API 側の 422 は完了操作全体を失敗させ
