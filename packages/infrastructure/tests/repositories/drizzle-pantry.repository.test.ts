@@ -108,7 +108,7 @@ describe('DrizzlePantryRepository', () => {
     await expect(repository.save(createPantry([first, second]))).rejects.toThrow();
   });
 
-  it('同一 id の再 save() は amountValue のみ更新し不変フィールドを維持する', async () => {
+  it('同一 id の再 save() は編集対象 4 列を更新し、対象外フィールドは維持する', async () => {
     const original = createStock();
     await repository.save(createPantry([original]));
 
@@ -128,11 +128,76 @@ describe('DrizzlePantryRepository', () => {
     expect(rows[0]?.productId).toBe('product-1');
     expect(rows[0]?.displayName).toBe('玉ねぎ');
     expect(Number(rows[0]?.amountValue)).toBe(1.25);
-    expect(rows[0]?.amountUnit).toBe('個');
+    expect(rows[0]?.amountUnit).toBe('g');
     expect(rows[0]?.purchasedAt).toEqual(PURCHASED_AT);
-    expect(rows[0]?.expiresAt).toBe('2026-07-18');
-    expect(rows[0]?.storedLocation).toBe('fridge');
+    expect(rows[0]?.expiresAt).toBe('2026-07-19');
+    expect(rows[0]?.storedLocation).toBe('freezer');
     expect(rows[0]?.sourceShoppingItemId).toBe('shopping-item-1');
+  });
+
+  it('再 save() で数量の値を据え置き、単位のみ変更できる', async () => {
+    await repository.save(createPantry([createStock()]));
+    await repository.save(createPantry([createStock({ amount: Quantity.of(2.5, 'g') })]));
+
+    const reloadedRepository = new DrizzlePantryRepository(db);
+    const found = requireStock((await reloadedRepository.find()).stocks[0]);
+    expect(found.amount.value).toBe(2.5);
+    expect(found.amount.unit).toBe('g');
+  });
+
+  it('再 save() で数量の値・単位・賞味期限・保存場所を同時に変更できる', async () => {
+    await repository.save(createPantry([createStock()]));
+    await repository.save(
+      createPantry([
+        createStock({
+          amount: Quantity.of(1.25, 'g'),
+          expiresAt: new Date('2026-07-19T00:00:00'),
+          storedLocation: 'freezer',
+        }),
+      ]),
+    );
+
+    const reloadedRepository = new DrizzlePantryRepository(db);
+    const found = requireStock((await reloadedRepository.find()).stocks[0]);
+    expect(found.amount.value).toBe(1.25);
+    expect(found.amount.unit).toBe('g');
+    expect(toLocalDateString(requireDate(found.expiresAt))).toBe('2026-07-19');
+    expect(found.storedLocation).toBe('freezer');
+  });
+
+  it('再 save() で賞味期限を null にクリアできる', async () => {
+    await repository.save(createPantry([createStock()]));
+    await repository.save(createPantry([createStock({ expiresAt: null })]));
+
+    const reloadedRepository = new DrizzlePantryRepository(db);
+    const found = requireStock((await reloadedRepository.find()).stocks[0]);
+    expect(found.expiresAt).toBeNull();
+  });
+
+  it('再 save() で保存場所を null にクリアできる', async () => {
+    await repository.save(createPantry([createStock()]));
+    await repository.save(createPantry([createStock({ storedLocation: null })]));
+
+    const reloadedRepository = new DrizzlePantryRepository(db);
+    const found = requireStock((await reloadedRepository.find()).stocks[0]);
+    expect(found.storedLocation).toBeNull();
+  });
+
+  it('再 save() で null の賞味期限と保存場所に値を設定できる', async () => {
+    await repository.save(createPantry([createStock({ expiresAt: null, storedLocation: null })]));
+    await repository.save(
+      createPantry([
+        createStock({
+          expiresAt: new Date('2026-07-19T00:00:00'),
+          storedLocation: 'freezer',
+        }),
+      ]),
+    );
+
+    const reloadedRepository = new DrizzlePantryRepository(db);
+    const found = requireStock((await reloadedRepository.find()).stocks[0]);
+    expect(toLocalDateString(requireDate(found.expiresAt))).toBe('2026-07-19');
+    expect(found.storedLocation).toBe('freezer');
   });
 
   it('再 save() で削除済み Stock を同期し、0 件では全削除する', async () => {
