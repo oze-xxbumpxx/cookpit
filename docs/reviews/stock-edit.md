@@ -256,6 +256,10 @@ Entity 同一性の観点で妥当。
 
 # 受け入れレビュー: Codex 実装（Task 1〜8）
 
+> 下記の「機械チェック」「品質ゲート」「チェックリスト 8 項目」「対象外の遵守」は
+> **全 Task 共通の証跡**。Task 単位の判定は本節の末尾（`## Task 1`〜`## Task 8`）に分けて記録する
+> （IMP-2026-026 の Task 網羅規約。一括記録だけでは個別 Task の欠落を見逃す）。
+
 - 実施日: 2026-08-07
 - 対象: `docs/tasks/codex/stock-edit/01-domain.md` 〜 `08-complete-panel.md`（全 8 Task）
 - ブランチ: `claude/sprint8-design-r6qn4z`
@@ -347,3 +351,149 @@ bash .claude/scripts/run-quality-gates.sh
 - **Codex のモデル / reasoning effort が未記入。**
   `docs/tasks/codex/stock-edit/README.md` の確定値表「モデル」行が空欄のまま。
   IMP-2026-025 の効果実測に必要なので、実施者による記入が残っている。
+
+---
+
+# Task 単位の判定
+
+共通の証跡（機械チェック FAIL 0 / 品質ゲート全 PASS / チェックリスト 8 項目 / 対象外の遵守）は
+上記を参照する。以下は **Task ごとに固有の完了条件**を照合した結果。
+
+## Task 1: Domain — `Stock.updateDetails` / `Pantry.updateStockDetails`
+
+- 指示書: `docs/tasks/codex/stock-edit/01-domain.md`
+- 実装: `packages/domain/src/pantry/pantry.ts` / `packages/domain/tests/pantry/pantry.test.ts`（+208 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                                               | 判定 | 根拠                                                                                                                              |
+| ---------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Stock.updateDetails` / `Pantry.updateStockDetails` がシグネチャどおり | PASS | `pantry.ts:99` / `pantry.ts:206`。props の 3 項目・戻り値 `void` が一致                                                           |
+| **`readonly` を外したのは 2 つだけ**                                   | PASS | `pantry.ts:37-38` が `private stockExpiresAt` / `private stockStoredLocation`。他 5 フィールドは `readonly` のまま                |
+| **`amount.value <= 0` の自前チェック**                                 | PASS | `updateDetails` 冒頭で `throw new Error('Stock amount must be positive')`。比較は `<= 0`（`Quantity.of` は 0 を許容するため必須） |
+| **`StockNotFoundError` を import していない**                          | PASS | `pantry.ts` は素の `Error`。`findStock`（既存 private）を再利用して `consumeStock` / `discardStock` と同型                        |
+| `packages/domain` が他パッケージを import していない                   | PASS | `grep -r "@cookpit/application" packages/domain/src` が 0 件                                                                      |
+| JSDoc が型に表せない契約情報のみ                                       | PASS | 全体置換であること・`@throws`・対象外フィールドを記載。型の言い換えなし                                                           |
+
+## Task 2: Infrastructure — `save()` の `set` 句を 4 列へ拡張
+
+- 指示書: `docs/tasks/codex/stock-edit/02-infrastructure.md`
+- 実装: `packages/infrastructure/src/repositories/drizzle-pantry.repository.ts` / 同 `tests/`（+73 行）
+- **判定: 受け入れ可（本ユニットの最重要 Task）**
+
+| 完了条件                                                       | 判定 | 根拠                                                                                                                                                  |
+| -------------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`set` 句が 4 列ちょうど**                                    | PASS | `amountValue` / `amountUnit` / `expiresAt` / `storedLocation`。`displayName` 等は含まれない                                                           |
+| 列名の camelCase / snake_case の対応                           | PASS | キーは Drizzle 定義名、`sql` 内は `excluded.amount_unit` 等の物理列名                                                                                 |
+| **既存テストを削除せず期待値を更新**                           | PASS | テスト名が `編集対象 4 列を更新し、対象外フィールドは維持する` に改称。`amountUnit`→`'g'` / `expiresAt`→`'2026-07-19'` / `storedLocation`→`'freezer'` |
+| **対象外フィールドの回帰ガードが残っている**                   | PASS | `productId` / `displayName` / `purchasedAt` / `sourceShoppingItemId` の 4 アサーションが維持されている                                                |
+| **「値は据え置き・単位のみ変更」の独立テスト**（罠 2 の検出）  | PASS | `再 save() で数量の値を据え置き、単位のみ変更できる`。値 2.5 固定で `個`→`g`                                                                          |
+| `find()` を新しい Repository インスタンスで実行                | PASS | `new DrizzlePantryRepository(db)` を都度生成。インスタンス内部状態に依存した偽の成功を排除                                                            |
+| 4 項目同時変更 / null クリア / null→値 の往復                  | PASS | 該当テスト 4 件を追加（計 6 件の新規往復テスト）                                                                                                      |
+| `notInArray` の削除同期・`toStockRows` / `toEntity` に差分なし | PASS | diff で確認                                                                                                                                           |
+| DB スキーマ・マイグレーションに差分なし                        | PASS | `schema.ts` 差分 0・migration 追加 0                                                                                                                  |
+
+> Step A（Red の確認）の実施記録は Codex の作業ログに残っていないが、**結果として
+> 期待値が正しく更新され回帰ガードも残っている**ため受け入れる。TDD 順を踏んだかは
+> 成果物からは検証できない（次回は報告に含めさせる）。
+
+## Task 3: api-contract — `updateStockSchema`
+
+- 指示書: `docs/tasks/codex/stock-edit/03-api-contract.md`
+- 実装: `packages/api-contract/src/pantry.schema.ts` / 同 `tests/`（+84 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                              | 判定 | 根拠                                                                                            |
+| ----------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------- |
+| `updateStockSchema` / `UpdateStockBody` の定義        | PASS | `addStockSchema` の直後。フィールド順も `amount` → `storedLocation` → `expiresAt`               |
+| **`optional()` を使っていない**（キー省略を許さない） | PASS | 3 項目とも `nullable()` のみ                                                                    |
+| `expiresAt` が `z.iso.date()`（datetime ではない）    | PASS | 同ファイルの `stockResponseSchema.purchasedAt`（`z.iso.datetime()`）と取り違えていない          |
+| `amount.value` が `positive()`（0 を reject）         | PASS | —                                                                                               |
+| **`.strict()` / `.passthrough()` を付けていない**     | PASS | `displayName` は strip される既定挙動のまま                                                     |
+| `addStockSchema` からの派生でなく独立定義             | PASS | `.omit()` を使っていない                                                                        |
+| `index.ts` に差分なし                                 | PASS | 既存の `export *` が自動公開                                                                    |
+| 既存スキーマに差分なし                                | PASS | `addStockSchema` / `consumeStockSchema` / `stockResponseSchema` / `pantryResponseSchema` 無変更 |
+
+## Task 4: Application — `UpdateStockDetailsUseCase`
+
+- 指示書: `docs/tasks/codex/stock-edit/04-application.md`
+- 実装: `packages/application/src/pantry/update-stock-details.use-case.ts`（新規）/ `pantry.dto.ts` / `index.ts` / テスト（+295 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                       | 判定 | 根拠                                                                                                                                             |
+| ---------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **404 は事前チェック・422 は try/catch 変換**  | PASS | `pantry.stocks.find(...)` で `null` なら `StockNotFoundError`、その後 `updateStockDetails` を try/catch して `InvalidStockOperationError` に変換 |
+| **404 が 422 より先**（複合ケースで 404 優先） | PASS | 事前チェックが try より前に置かれている                                                                                                          |
+| **エラークラスを新規作成していない**           | PASS | `./stock-not-found.error` / `./invalid-stock-operation.error` を import。新規 error ファイル 0                                                   |
+| `expiresAt` の往復規約                         | PASS | ``new Date(`${input.expiresAt}T00:00:00`)``。素の `new Date(str)` を使っていない                                                                 |
+| `catch` で `any` にキャストしていない          | PASS | `error instanceof Error ? error.message : 'Failed to update stock'`                                                                              |
+| UseCase にドメインロジックを書いていない       | PASS | `<= 0` 判定は Domain 側。UseCase はエラー型の写像のみ                                                                                            |
+| 戻り値が `PantryDto`                           | PASS | `toPantryDto(pantry)`                                                                                                                            |
+| テストファイルが独立                           | PASS | `update-stock-details.use-case.test.ts`（既存の `pantry-use-cases.test.ts` に追記していない）                                                    |
+| 既存 4 UseCase / `pantry.mapper.ts` に差分なし | PASS | diff で確認                                                                                                                                      |
+
+## Task 5: Presentation route — `PUT /api/pantry/stocks/:stockId`
+
+- 指示書: `docs/tasks/codex/stock-edit/05-route.md`
+- 実装: `apps/web/src/server/routes/pantry.ts` / `apps/web/tests/server/routes/pantry.test.ts`（+149 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                          | 判定 | 根拠                                                                               |
+| ------------------------------------------------- | ---- | ---------------------------------------------------------------------------------- |
+| `.put()`（`.patch()` ではない）                   | PASS | `discard` の直後にチェーン                                                         |
+| **`param` + `json` の 2 バリデータ**              | PASS | `stockIdParamSchema` と `updateStockSchema`。`discard`（param のみ）を真似ていない |
+| ステータス 200（201 ではない）                    | PASS | —                                                                                  |
+| `try/catch` を書いていない                        | PASS | `app.onError` に委ねる既存 4 ルートと同型                                          |
+| Repository は `pantryRepository()` ファクトリ経由 | PASS | 直書きしていない                                                                   |
+| **`apps/web/src/server/app.ts` に差分なし**       | PASS | diff 0                                                                             |
+| 既存 4 ルートのハンドラに差分なし                 | PASS | import 行の追加のみ                                                                |
+
+## Task 6: UI 基盤 — `expiry.ts` への切り出し
+
+- 指示書: `docs/tasks/codex/stock-edit/06-expiry-utils.md`
+- 実装: `apps/web/src/app/_utils/expiry.ts`（新規 51 行）/ `dashboard-view.ts` / `page.tsx` / `pantry/page.tsx`
+- **判定: 受け入れ可**
+
+| 完了条件                                                                           | 判定 | 根拠                                                                                  |
+| ---------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------- |
+| **純粋な移動（挙動不変）**                                                         | PASS | `dashboard-view.node.test.ts` / `dashboard.test.tsx` が回帰なし（品質ゲート全 green） |
+| `parseExpiryDate` / `toLocalMidnight` を export して `dashboard-view.ts` が import | PASS | 指示書の推奨方針どおり。`selectExpiringStocks` の比較ロジックは無変更                 |
+| `selectExpiringStocks` / `MEAL_PLAN_STATUS_LABELS` が `dashboard-view.ts` に残る   | PASS | —                                                                                     |
+| **`expiryUrgencyChipClass` を動かしていない**                                      | PASS | `category-color.ts` 差分 0                                                            |
+| `EXPIRY_URGENCY_WITHIN_DAYS = 3` の新設                                            | PASS | `page.tsx` のローカル定数 `EXPIRY_WITHIN_DAYS` は削除され、両画面が同じ定数を参照     |
+| `'use client'` を付けていない                                                      | PASS | `expiry.ts` は純関数モジュール                                                        |
+| `pantry/page.tsx` が `asOf={now}` を渡す                                           | PASS | ダッシュボードと同型のパターン                                                        |
+
+## Task 7: UI — 編集ダイアログと在庫カードの表示強化
+
+- 指示書: `docs/tasks/codex/stock-edit/07-pantry-screen.md`
+- 実装: `stock-edit-dialog.tsx`（新規 226 行）/ `stock-row.tsx` / `location-group.tsx` / `pantry-client.tsx` / テスト（+208 / +56 / +81 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                           | 判定                   | 根拠                                                                                                                                                                |
+| -------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **緊急度チップが期限切れでも出る**（レビュー M-1） | PASS                   | `remainingDays !== null && remainingDays <= EXPIRY_URGENCY_WITHIN_DAYS`。**下限なし**。`SR-EDIT-07` でテスト固定                                                    |
+| **閾値外にチップが出ない**                         | PASS                   | `SR-EDIT-04` + 境界テスト `SR-EDIT-BND`（3 日で表示 / 4 日で非表示）                                                                                                |
+| **チップの文言**（レビュー M-2）                   | PASS                   | `formatExpiryUrgencyLabel(remainingDays)`。既存の `〜M/Dまで` も残存                                                                                                |
+| **`getExpiryUrgency` を改造していない**            | PASS                   | 閾値判定は呼び出し側（`stock-row.tsx`）で実施                                                                                                                       |
+| 保存場所ラベルを常時表示（null でも）              | PASS                   | `SR-EDIT-01` / `SR-EDIT-02`                                                                                                                                         |
+| `onEdit` の結線                                    | PASS                   | `onClick={() => onEdit(stock)}`。`SR-EDIT-06` で `stock` オブジェクトが渡ることを固定                                                                               |
+| **375px のレイアウト対策**（レビュー M-3）         | PASS（実画面は未確認） | `<li>` を `flex items-center` → **`flex flex-col gap-3`** に変更しボタン行を下へ折り返す。ボタン行は `flex flex-wrap justify-end gap-2`。品目名の `truncate` は維持 |
+| `'use client'` の要否                              | PASS                   | ダイアログのみ付与。`stock-row.tsx` / `location-group.tsx` には付けていない                                                                                         |
+| ダイアログの 404 / 422 / 通信エラー分岐            | PASS                   | `SED` 系テストで固定                                                                                                                                                |
+| 編集ダイアログを `useApiAction` と独立させる       | PASS                   | ローカル `useState` + `router.refresh()`（パターン C）                                                                                                              |
+
+## Task 8: UI — 買い物完了パネルへの賞味期限入力
+
+- 指示書: `docs/tasks/codex/stock-edit/08-complete-panel.md`
+- 実装: `complete-shopping-panel.tsx` / テスト（+92 行）
+- **判定: 受け入れ可**
+
+| 完了条件                                     | 判定 | 根拠                                                                                    |
+| -------------------------------------------- | ---- | --------------------------------------------------------------------------------------- |
+| **既定で日付入力が非表示**（パネル高さ不変） | PASS | `expiresAtExpanded` 既定 `false`。展開時のみ独立行として描画                            |
+| `expiresAt: null` ハードコードの解除         | PASS | `expiresAt: row.expiresAt === '' ? null : row.expiresAt`                                |
+| **`isRowSelected` の判定式に差分なし**       | PASS | `row.checked && isAmountValid(row.amountText)` のまま。`expiresAt` の条件を足していない |
+| 折りたたみ解除で値がクリアされる             | PASS | `expiresAt: expiresAtExpanded ? row.expiresAt : ''`                                     |
+| `aria-expanded` の付与                       | PASS | 展開ボタンに付与済み                                                                    |
+| `useId()` の使用                             | PASS | `expiresAtId`。ハードコード id なし                                                     |
+| **契約・DTO・UseCase・ルートに差分なし**     | PASS | `packages/` と `apps/web/src/server/` に差分 0。コンポーネント 1 ファイル + テストのみ  |
