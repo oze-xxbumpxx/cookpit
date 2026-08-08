@@ -109,13 +109,13 @@ Entity 同一性の観点で妥当。
 
 - 対象: `docs/tests/stock-edit.md` §10-1 の「用途（どの確認項目のために必要か）」列。
 - 実際のずれ:
-  | シード | §10-1 が指す ID | §10-2 の同 ID の実際の内容 |
-  | --- | --- | --- |
-  | S-1 | MB-03（緊急度チップ表示） | MB-03 = 賞味期限を編集して保存 |
-  | S-2 | MB-04（チップ非表示） | MB-04 = 賞味期限を null クリア |
-  | S-3 | MB-05（期限なし表示） | MB-05 = 保存場所を編集 |
-  | S-4 | MB-06（期限切れラベル） | MB-06 = 保存場所を未設定にクリア |
-  | 完了パネル | MB-09〜11 | MB-09 = 期限切れラベル（完了パネルは MB-11〜13） |
+  | シード     | §10-1 が指す ID           | §10-2 の同 ID の実際の内容                       |
+  | ---------- | ------------------------- | ------------------------------------------------ |
+  | S-1        | MB-03（緊急度チップ表示） | MB-03 = 賞味期限を編集して保存                   |
+  | S-2        | MB-04（チップ非表示）     | MB-04 = 賞味期限を null クリア                   |
+  | S-3        | MB-05（期限なし表示）     | MB-05 = 保存場所を編集                           |
+  | S-4        | MB-06（期限切れラベル）   | MB-06 = 保存場所を未設定にクリア                 |
+  | 完了パネル | MB-09〜11                 | MB-09 = 期限切れラベル（完了パネルは MB-11〜13） |
 - なぜ Must 級に近いか: §10-2 手順 3 の「前提データ全消化チェック」は、この対応表を突き合わせて
   「未使用のシードが無いか」を確認する手順である。対応表が壊れていると、過去 3 回の false PASS を
   防ぐために導入した安全装置がそのまま機能しない。
@@ -251,3 +251,99 @@ Entity 同一性の観点で妥当。
 契約設計書（`stock-edit.contract.md`）は S-5・S-6 を除き指摘なし。ADR-0016 は指摘なし
 （lost update・単位編集の波及・`set` 句の罠まで Consequences に明記されており、
 むしろ設計書側がその一部を取りこぼしている ＝ N-5）。
+
+---
+
+# 受け入れレビュー: Codex 実装（Task 1〜8）
+
+- 実施日: 2026-08-07
+- 対象: `docs/tasks/codex/stock-edit/01-domain.md` 〜 `08-complete-panel.md`（全 8 Task）
+- ブランチ: `claude/sprint8-design-r6qn4z`
+- 対象コミット: `38dfbf1` fix(infra): persist editable stock details /
+  `62c18b1` feat(pantry): add stock detail editing
+- 差分規模: 28 ファイル・+1773 / -98
+- **総合判定: 受け入れ可（Must 0 / Should 0 / Nice 1）。差し戻しなし。**
+
+## 機械チェック
+
+```
+node .claude/scripts/check-codex-implementation.mjs --brief docs/tasks/codex/stock-edit
+→ 対象 17 ファイル / 指示書識別子 402 件
+→ FAIL: 0 / WARN: 8 / INFO: 0
+```
+
+WARN 8 件はすべて**誤検出**と判定した（根拠つき）。
+
+| WARN                                                      | 判定   | 根拠                                                                                                |
+| --------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| `dashboard.tsx:62` `Dashboard` が指示書に無い             | 誤検出 | 既存のコンポーネント名。指示書に出てこないのは当然                                                  |
+| `location-group.tsx:1` `'use client'` 無し                | 誤検出 | **指示書が明示的に「付けない」と指定**（純表示・hooks 不使用）。親 `pantry-client.tsx` が client    |
+| `stock-row.tsx:1` `'use client'` 無し                     | 誤検出 | 同上                                                                                                |
+| `pantry-client.tsx:43` `onSuccess` が要素に渡されていない | 誤検出 | `useApiAction.run()` の**オプション**であって React prop ではない。4 箇所すべてで実際に使われている |
+| `stock-edit-dialog.tsx:31` `FieldErrors`                  | 誤検出 | ローカル型名。`fieldErrors`（変数）とは別物                                                         |
+| `stock-edit-dialog.tsx:90` `errors`                       | 誤検出 | ローカル変数名                                                                                      |
+| `complete-shopping-panel.tsx:36,100` `parsed`             | 誤検出 | `parseQuantity` の戻り値を受けるローカル変数。既存コードでも同じ命名                                |
+
+## 品質ゲート
+
+```
+bash .claude/scripts/run-quality-gates.sh
+→ PASS: harness lint type-check test / FAIL: (none)
+→ RESULT: OK
+```
+
+- `@cookpit/web`: Test Files 69 passed / Tests **797 passed**
+- 事前に `pnpm install --frozen-lockfile` が必要だった（コンテナに `node_modules` が無かった。
+  実装の問題ではない）
+
+## チェックリスト 8 項目（docs/06-ai-tools.md）
+
+| 項目                                 | 判定                         | 根拠                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 識別子のタイポ                       | **PASS**                     | script の brief 突き合わせで FAIL 0。`UpdateStockDetailsUseCase` / `UpdateStockDetailsInputDto` / `updateStockSchema` / `UpdateStockBody` / `Stock.updateDetails` / `Pantry.updateStockDetails` / `EXPIRY_URGENCY_WITHIN_DAYS` を指示書のシグネチャと目視照合し全一致 |
+| Tailwind クラスのタイポ・連結        | **PASS**（実画面確認は保留） | script WARN 0。`stock-row.tsx` の新規クラスは既存トークン（`rounded-full px-2 py-0.5 text-xs font-medium` / `flex flex-wrap justify-end gap-2`）のみ。**実画面確認は未実施**（下記）                                                                                  |
+| イベントハンドラの結線漏れ           | **PASS**                     | `onEdit` は `onClick={() => onEdit(stock)}` に結線済み（`stock-row.tsx`）。`onExpiresAtChange` / `onExpiresAtExpandedChange` も `complete-shopping-panel.tsx` で結線済み。script の 1 件は誤検出（上表）                                                              |
+| `'use client'` の要否                | **PASS**                     | `stock-edit-dialog.tsx` に付与あり。`stock-row.tsx` / `location-group.tsx` は指示書どおり付けていない。`expiry.ts` も付けていない                                                                                                                                     |
+| `import type` 規約                   | **PASS**                     | 差分の全 import 行を目視。型のみ import は `import type`（`PantryRepository` / `PantryDto` / `UpdateStockDetailsInputDto` / `StockDto` 等）。値 import に `type` の誤付与も無し                                                                                       |
+| 命名の傾向ずれ                       | **PASS**                     | 新規テーブル無し。ファイル名は `update-stock-details.use-case.ts` / `stock-edit-dialog.tsx` で指示書と一致                                                                                                                                                            |
+| 差し戻しの部分反映                   | **N/A**                      | 差し戻し無し（初回で受け入れ）                                                                                                                                                                                                                                        |
+| バリデーションのエラーメッセージ分岐 | **PASS**                     | `UpdateStockDetailsUseCase` が 404（事前チェック）と 422（try/catch 変換）で別クラスを投げ分けている。`updateStockSchema` は 3 項目とも `nullable()` で `optional()` 無し（キー省略を許さない）                                                                       |
+
+## 設計の重点 3 点の確認（レビュー Must 由来）
+
+| 観点                                                          | 判定                     | 実装                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Repository の `set` 句が 4 列ちょうど**（罠 1・2）          | **PASS**                 | `amountValue` / `amountUnit` / `expiresAt` / `storedLocation` の 4 列。`displayName` 等は含まれていない                                                                                                                                                                                  |
+| **「値は据え置き・単位のみ変更」の独立テスト**（罠 2 の検出） | **PASS**                 | `再 save() で数量の値を据え置き、単位のみ変更できる`（値 2.5 固定・`個`→`g`）。`find()` は**新しい Repository インスタンス**で実行                                                                                                                                                       |
+| **既存テストが削除されず期待値更新で直っている**              | **PASS**                 | テスト名が `編集対象 4 列を更新し、対象外フィールドは維持する` に改称。`amountUnit`→`'g'` / `expiresAt`→`'2026-07-19'` / `storedLocation`→`'freezer'` に更新。**`productId` / `displayName` / `purchasedAt` / `sourceShoppingItemId` の 4 アサーションは維持**（回帰ガードが残っている） |
+| **緊急度チップが期限切れでも出る**（M-1）                     | **PASS**                 | `remainingDays !== null && remainingDays <= EXPIRY_URGENCY_WITHIN_DAYS`。**下限が無い**ので負値（期限切れ）も表示対象。`SR-EDIT-07: 期限切れの在庫に「期限切れ」チップを表示する` でテスト固定済み                                                                                       |
+| **チップの文言**（M-2）                                       | **PASS**                 | `formatExpiryUrgencyLabel(remainingDays)` を使用。既存の `〜M/Dまで`（`formatExpiresAt`）も残っている                                                                                                                                                                                    |
+| **`/pantry` カードのレイアウト**（M-3）                       | **PASS**（実画面は保留） | `<li>` を `flex items-center` → **`flex flex-col gap-3`** に変更し、ボタン行を情報行の下へ折り返す構成にした（設計で挙げた 2 案のうちの 1 つ）。ボタン行は `flex flex-wrap justify-end gap-2`。品目名の `truncate` は維持                                                                |
+
+## 対象外の遵守
+
+| 確認                                                | 結果                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `apps/web/src/server/app.ts`                        | **差分なし**                                                                                |
+| `apps/web/src/app/_utils/category-color.ts`         | **差分なし**（`expiryUrgencyChipClass` を動かしていない）                                   |
+| `packages/infrastructure/src/db/schema.ts`          | **差分なし**                                                                                |
+| `packages/application/src/pantry/pantry.mapper.ts`  | **差分なし**                                                                                |
+| マイグレーションファイル                            | **追加なし**                                                                                |
+| `StockNotFoundError` / `InvalidStockOperationError` | **新規作成なし**（既存を import）                                                           |
+| Domain の依存方向                                   | **PASS**（`pantry.ts` は素の `Error('Stock not found')`。Application を import していない） |
+
+## Nice（受け入れを妨げない申し送り）
+
+- **N-A**: `SR-EDIT-BND`（閾値ちょうど 3 日 / 4 日の境界）が観点 ID の採番規則から外れている
+  （試験計画は `SR-EDIT-01〜07`）。テスト内容自体は有益で、むしろ試験計画に無い境界を
+  補っている。次回の試験計画更新時に正式な ID を割り当てるか検討する。
+
+## 未実施（受け入れの条件にはしない）
+
+- **実画面確認（`manual-browser-verify` MB-01〜17）は未実施。**
+  試験計画 §10-1 のシードデータ S-1〜S-7 を投入した上で別途実施する。
+  特に **MB-02（単位のみ変更してリロード）**・**MB-08（閾値外にチップが出ない）**・
+  **MB-17（375px でのレイアウト）** は自動テストで代替できない。
+- **Codex のモデル / reasoning effort が未記入。**
+  `docs/tasks/codex/stock-edit/README.md` の確定値表「モデル」行が空欄のまま。
+  IMP-2026-025 の効果実測に必要なので、実施者による記入が残っている。
