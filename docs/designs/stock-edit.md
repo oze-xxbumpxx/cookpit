@@ -297,6 +297,26 @@ set: {
 編集対象に含めない（確定・対象外）ため `set` 句に追加しない。ただし、これらを将来編集対象に
 含める場合は同じ罠が再発するため、この節を将来課題としても申し送る。
 
+### ⚠️ 既存テストが罠を「正しい挙動」として固定している（実測・2026-08-07）
+
+`packages/infrastructure/tests/repositories/drizzle-pantry.repository.test.ts:111` の
+**`同一 id の再 save() は amountValue のみ更新し不変フィールドを維持する`** が、
+現在の `set` 句の挙動をそのままアサートしている。
+
+```ts
+expect(rows[0]?.amountUnit).toBe('個'); //         ← 変更後は 'g' になるべき
+expect(rows[0]?.expiresAt).toBe('2026-07-18'); //  ← 変更後は '2026-07-19' になるべき
+expect(rows[0]?.storedLocation).toBe('fridge'); // ← 変更後は 'freezer' になるべき
+```
+
+`set` 句を 4 列へ拡張すると**このテストが 3 つのアサーションで失敗する**。これは回帰ではなく
+**期待値の更新が必要な変更**であり、実装計画のタスク分解に「既存テスト 1 件の修正」を
+必ず含めること。テスト名も実態に合わせて改める（`amountValue のみ` → 4 列が更新される旨）。
+
+なお `productId` / `displayName` / `purchasedAt` / `sourceShoppingItemId` を維持することの
+アサーションは**そのまま残す**（本ユニットで編集対象外＝ `set` 句に追加しないことの
+回帰ガードとして引き続き有効）。
+
 **完了条件に含める回帰テスト**: `packages/infrastructure/tests/` に、Stock を編集 →
 `save()` → 新しい Repository インスタンスで `find()` → `amount`（値・単位）/ `expiresAt` /
 `storedLocation` が更新後の値であることを確認するテストを追加する。**単位のみを変更する
@@ -325,24 +345,35 @@ Stock.updateDetails(props: {
 }): void
 ```
 
-バリデーションは `create()` と揃える。`Quantity.of(value, unit)` の生成自体が非正数を弾く
-（`AddStockUseCase` と同じ経路）想定であれば `Stock.updateDetails` 内で明示的な再チェックは
-不要だが、`Quantity` が非正数を許容する実装になっている場合は `Stock.create()` と同様に
-Domain 側で `amount.value <= 0` を throw することを必須とする（実装計画フェーズで
-`Quantity` の実装を確認して確定する）。
+バリデーションは `create()` と揃える。**`Stock.updateDetails` 内で `amount.value <= 0` を
+throw することを必須とする**（実測確定・2026-08-07）。
+
+> `packages/domain/src/shared/quantity.ts` の `Quantity.of()` は **`value < 0` のみ reject** し、
+> **`0` は許容する**（`Quantity.of(0, unit)` は成功する。`consume()` が残量 0 を表現するために
+> 必要だから）。したがって「`Quantity.of` が非正数を弾くから再チェック不要」は成立しない。
+> `Stock.create()` が独自に `amount.value <= 0` を throw しているのと同じ理由で、
+> `updateDetails` にも同じチェックが要る。
 
 `Pantry` に委譲メソッドを追加。
 
 ```ts
-/** @throws StockNotFoundError 指定した stockId の在庫が存在しない場合 */
+/** @throws Error 指定した stockId の在庫が存在しない場合 */
 Pantry.updateStockDetails(
   stockId: StockId,
   props: { amount: Quantity; expiresAt: Date | null; storedLocation: StorageLocation | null },
 ): void
 ```
 
-`consumeStock` / `discardStock` と同型（対象 Stock を検索 → 見つからなければ
-`StockNotFoundError` → 対象 Stock のメソッドを呼ぶ）。
+`consumeStock` / `discardStock` と同型（対象 Stock を検索 → 見つからなければ throw →
+対象 Stock のメソッドを呼ぶ）。
+
+> **Domain 層は `StockNotFoundError` を throw できない**（実測確定・2026-08-07）。
+> `StockNotFoundError` は `packages/application/src/pantry/` にあり、Domain がこれを import すると
+> 依存方向（`Application → Domain`）に違反する。既存の `Pantry.consumeStock` は
+> `throw new Error('Stock not found')`（`pantry.ts:196`）という素の `Error` を投げており、
+> `StockNotFoundError` への変換は **UseCase 側の事前チェック**が担っている
+> （`consume-stock.use-case.ts:19-23` で `pantry.stocks.find(...)` して `null` なら throw）。
+> `updateStockDetails` も同じ責務分担に従う。
 
 **単位変更を許可する前提の注記**: 単位変更自体をブロックする理由は無い（打ち間違いの訂正
 ニーズが P-1 確定の主目的）。ただし単位変更は在庫引き算に波及し得るため「リスク」節で扱う。
@@ -368,21 +399,47 @@ export class UpdateStockDetailsUseCase {
    */
   async execute(input: UpdateStockDetailsInputDto): Promise<PantryDto> {
     const pantry = await this.pantryRepository.find();
-    pantry.updateStockDetails(StockId.fromString(input.stockId), {
-      amount: Quantity.of(input.amount.value, input.amount.unit),
-      expiresAt: input.expiresAt === null ? null : new Date(`${input.expiresAt}T00:00:00`),
-      storedLocation: input.storedLocation,
-    });
+    const stockId = StockId.fromString(input.stockId);
+
+    // 404 の判定は UseCase 側の事前チェックで行う（ConsumeStock / DiscardStock と同型）。
+    // Domain は Application の StockNotFoundError を import できないため。
+    const stock = pantry.stocks.find((candidate) => candidate.id.equals(stockId)) ?? null;
+    if (stock === null) {
+      throw new StockNotFoundError(input.stockId);
+    }
+
+    try {
+      pantry.updateStockDetails(stockId, {
+        amount: Quantity.of(input.amount.value, input.amount.unit),
+        expiresAt: input.expiresAt === null ? null : new Date(`${input.expiresAt}T00:00:00`),
+        storedLocation: input.storedLocation,
+      });
+    } catch (error) {
+      // Domain の素の Error（amount.value <= 0）を 422 へ写像する
+      throw new InvalidStockOperationError(
+        error instanceof Error ? error.message : 'Invalid stock update',
+      );
+    }
+
     await this.pantryRepository.save(pantry);
     return toPantryDto(pantry);
   }
 }
 ```
 
-`Pantry.updateStockDetails` が `StockId` を見つけられない場合に `StockNotFoundError` を
-throw する前提（`ConsumeStockUseCase` / `DiscardStockUseCase` と同じ責務分担）。
-`amount.value <= 0` の拒否は `Quantity.of()` または `Stock.updateDetails()` 内で行い、
-UseCase 層に業務ロジックを持たせない（ドメイン層の責務）。
+**404 / 422 の発生経路**（実測した既存 UseCase の慣行に合わせて確定・2026-08-07）:
+
+| 状況                   | 判定場所                                                       | 投げるもの                   | HTTP |
+| ---------------------- | -------------------------------------------------------------- | ---------------------------- | ---- |
+| `stockId` の在庫が無い | UseCase の**事前チェック**                                     | `StockNotFoundError`         | 404  |
+| `amount.value <= 0`    | Domain（`Stock.updateDetails`）が素の `Error` → UseCase が変換 | `InvalidStockOperationError` | 422  |
+
+`ConsumeStockUseCase` は事前チェック型（`consume-stock.use-case.ts:19-23`）、`AddStockUseCase` は
+try/catch 変換型で、`UpdateStockDetailsUseCase` は**両方を組み合わせる**。
+**存在しない `stockId` かつ数量 0 の複合ケースでは 404 が優先される**（事前チェックが先に走る）。
+業務ロジック（何が不正か）は Domain に置き、UseCase が担うのはドメイン境界での
+エラー型の写像だけである（`.claude/rules/domain-layer.md`「エラーハンドリングは UseCase の
+入口で行う」）。
 
 `complete-shopping.use-case.ts` は変更不要（`StockAdditionInputDto.expiresAt` は既に
 受け取れる形であり、UseCase 内部の `Stock.create()` 呼び出しにもそのまま渡っている想定）。
