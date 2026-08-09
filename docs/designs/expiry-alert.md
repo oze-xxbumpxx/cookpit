@@ -651,16 +651,39 @@ export const cronRoute = new Hono().get('/expiry-alerts', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
+  // P-12 確定「全エンドポイントで 500 フェイルクローズ」を VAPID 3 点にも適用する
+  // （要件 E-7）。`?? ''` で空文字を渡すと setVapidDetails の throw に依存した
+  // 「偶然の 500」になり、E-2 の「明示的にガードする」方針と矛盾する。
+  // 認証チェックの後に置くのは、未認証の呼び出し元へ設定状態を漏らさないため。
+  const vapid = readVapidConfig(); // { publicKey, privateKey, subject } | null
+  if (vapid === null) {
+    console.error('VAPID environment variables are not configured');
+    return c.json({ error: 'Server misconfigured' }, 500);
+  }
+
   const result = await new SendExpiryAlertsUseCase(
     pantryRepository(),
     pushSubscriptionRepository(),
-    pushSender(),
+    pushSender(vapid),
   ).execute(new Date());
 
   console.log('expiry-alerts cron result', result);
   return c.json(result, 200);
 });
 ```
+
+`readVapidConfig()` は `apps/web/src/server/repositories.ts`（手動 DI の置き場）に置き、
+`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` の**3 点すべて**が非空のときだけ
+値を返し、1 つでも欠けたら `null` を返す。`pushSender(vapid)` は検証済みの値を受け取るだけに
+して、`?? ''` のようなフォールバックを**実装のどこにも置かない**。
+
+> **なぜこれが要るか（reviewer M-3）**: 当初の設計は `pushSender()` の内部で
+> `process.env.VAPID_PRIVATE_KEY ?? ''` を使っており、**P-12 が `vapid-public-key`
+> エンドポイントから取り除いたのと同じパターン**が Cron 経路に残っていた。空文字を渡すと
+> `setVapidDetails` が throw して結果的に 500 にはなるが、それは**偶然の安全**であり、
+> 要件 E-2 の「比較の偶然の安全性に依存しない明示的なガード」と正反対である。
+> しかも `app.onError` 経由の `{ error: 'Internal Server Error' }` になるため、
+> 設定不備なのか実行時障害なのかがログから切り分けられない。
 
 `apps/web/src/server/app.ts` に `.route('/push', pushRoute)` と `.route('/cron',
 cronRoute)` を追加する（`app.onError` の変更は不要。本ルートは 401/500 を自前で返すのみで
@@ -681,22 +704,56 @@ cronRoute)` を追加する（`app.onError` の変更は不要。本ルートは
 として追記する（イベント種別が異なるため、Serwist の fetch/install/activate 処理とは
 競合しない）。
 
+> **型付けの制約（reviewer M-4。実測で確認済み）**: `apps/web/tsconfig.json` の `lib` は
+> `["dom", "dom.iterable", "esnext"]` で **`webworker` を含まない**。そのため素の
+> `self.addEventListener('push', ...)` は `self` が `Window` として解決され、
+> `PushEvent` / `self.registration` / `self.clients` がいずれも型エラーになる。
+> 既存の `sw.ts:10` が `const sw = self as unknown as WorkerGlobalScope & typeof globalThis;`
+> とわざわざキャストしているのはこのため。**追記も必ずこの `sw` を経由すること。**
+> Step の完了条件に `type-check` があるので、素の `self` で書くと着手直後に詰まる。
+> `lib` に `webworker` を足すのは `dom` と型が衝突するため採らない（既存の回避策を踏襲する）。
+
 ```ts
 // apps/web/src/app/sw.ts への追記（末尾。既存の serwist.addEventListeners() の後）
-self.addEventListener('push', (event) => {
-  const data = event.data?.json() as { title: string; body: string; url: string } | undefined;
-  if (data === undefined) return;
+// 既存の `sw`（L10 のキャスト済み参照）を使う。素の `self` は使わない。
+type PushDigestPayload = { title: string; body: string; url: string };
+
+// ペイロードは VAPID 秘密鍵と購読鍵の両方を持つ者しか注入できないが、
+// 型検証なしで openWindow に渡さない（security-reviewer L-3。多層防御）。
+function parseDigestPayload(event: PushEvent): PushDigestPayload | null {
+  try {
+    const raw: unknown = event.data?.json();
+    if (typeof raw !== 'object' || raw === null) return null;
+    const { title, body, url } = raw as Record<string, unknown>;
+    if (typeof title !== 'string' || typeof body !== 'string') return null;
+    // 外部サイトへ飛ばさないため相対パスのみ許可する
+    const safeUrl = typeof url === 'string' && url.startsWith('/') ? url : '/';
+    return { title, body, url: safeUrl };
+  } catch {
+    return null;
+  }
+}
+
+sw.addEventListener('push', (event) => {
+  const data = parseDigestPayload(event);
+  if (data === null) return;
   event.waitUntil(
-    self.registration.showNotification(data.title, { body: data.body, data: { url: data.url } }),
+    sw.registration.showNotification(data.title, { body: data.body, data: { url: data.url } }),
   );
 });
 
-self.addEventListener('notificationclick', (event) => {
+sw.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data as { url?: string } | undefined)?.url ?? '/';
-  event.waitUntil(self.clients.openWindow(url));
+  const raw = (event.notification.data as { url?: unknown } | undefined)?.url;
+  const url = typeof raw === 'string' && raw.startsWith('/') ? raw : '/';
+  event.waitUntil(sw.clients.openWindow(url));
 });
 ```
+
+`PushEvent` / `NotificationEvent` の型が `lib` から来ないため、`sw` のキャスト先
+（`WorkerGlobalScope & typeof globalThis`）で解決できるかは実装時に確認する。解決できない
+場合は `serwist` が再エクスポートする型を使うか、`declare global` の既存ブロックに
+最小限の型宣言を足す（**`lib` への `webworker` 追加はしない**）。
 
 #### 購読 UI（ダッシュボード。確定・P-3）
 
