@@ -6,7 +6,7 @@
 > 矛盾する記述は無効（矛盾に気づいた場合は Orchestrator へ差し戻す。本書末尾「本体設計書との
 > 差異メモ」に実測との差異を記録した）。
 
-- ステータス: **confirmed**（本体設計書 P-1〜P-6 が 2026-08-07 にユーザー確定済み。本書は
+- ステータス: **confirmed**（本体設計書 P-1〜P-6 が 2026-08-09 にユーザー確定済み。本書は
   その契約実装詳細のみを確定する。ユーザー確認を要する新規論点は無し）
 - 対象: `packages/api-contract/src/pantry.schema.ts`（Zod 追記）、
   Hono RPC（`apps/web/src/server/routes/pantry.ts` 追記）

@@ -1,6 +1,6 @@
 # 設計書: stock-edit
 
-- ステータス: confirmed（P-1〜P-6 ユーザー確定・2026-08-07）
+- ステータス: confirmed（P-1〜P-6 ユーザー確定・2026-08-09）
 - レベル: L3
 - 関連:
   - `docs/requirements/stock-edit.md`（本設計の要件定義書）
@@ -11,7 +11,7 @@
   - `docs/designs/shopping-complete-stock-selection.md` Q-1（完了パネルの期限入力を見送った
     決定。本設計はその再訪）
   - [ADR-0016](../decisions/ADR-0016-stock-details-mutable.md)（Domain 不変性方針の変更。
-    設計フェーズで作成済み・2026-08-07）
+    設計フェーズで作成済み・2026-08-09）
 
 ## 背景
 
@@ -297,7 +297,7 @@ set: {
 編集対象に含めない（確定・対象外）ため `set` 句に追加しない。ただし、これらを将来編集対象に
 含める場合は同じ罠が再発するため、この節を将来課題としても申し送る。
 
-### ⚠️ 既存テストが罠を「正しい挙動」として固定している（実測・2026-08-07）
+### ⚠️ 既存テストが罠を「正しい挙動」として固定している（実測・2026-08-09）
 
 `packages/infrastructure/tests/repositories/drizzle-pantry.repository.test.ts:111` の
 **`同一 id の再 save() は amountValue のみ更新し不変フィールドを維持する`** が、
@@ -346,7 +346,7 @@ Stock.updateDetails(props: {
 ```
 
 バリデーションは `create()` と揃える。**`Stock.updateDetails` 内で `amount.value <= 0` を
-throw することを必須とする**（実測確定・2026-08-07）。
+throw することを必須とする**（実測確定・2026-08-09）。
 
 > `packages/domain/src/shared/quantity.ts` の `Quantity.of()` は **`value < 0` のみ reject** し、
 > **`0` は許容する**（`Quantity.of(0, unit)` は成功する。`consume()` が残量 0 を表現するために
@@ -367,7 +367,7 @@ Pantry.updateStockDetails(
 `consumeStock` / `discardStock` と同型（対象 Stock を検索 → 見つからなければ throw →
 対象 Stock のメソッドを呼ぶ）。
 
-> **Domain 層は `StockNotFoundError` を throw できない**（実測確定・2026-08-07）。
+> **Domain 層は `StockNotFoundError` を throw できない**（実測確定・2026-08-09）。
 > `StockNotFoundError` は `packages/application/src/pantry/` にあり、Domain がこれを import すると
 > 依存方向（`Application → Domain`）に違反する。既存の `Pantry.consumeStock` は
 > `throw new Error('Stock not found')`（`pantry.ts:196`）という素の `Error` を投げており、
@@ -427,7 +427,7 @@ export class UpdateStockDetailsUseCase {
 }
 ```
 
-**404 / 422 の発生経路**（実測した既存 UseCase の慣行に合わせて確定・2026-08-07）:
+**404 / 422 の発生経路**（実測した既存 UseCase の慣行に合わせて確定・2026-08-09）:
 
 | 状況                   | 判定場所                                                       | 投げるもの                   | HTTP |
 | ---------------------- | -------------------------------------------------------------- | ---------------------------- | ---- |
@@ -526,7 +526,7 @@ UseCase から直接呼ばれるケース・将来の呼び出し元追加に備
    `EXPIRY_URGENCY_WITHIN_DAYS`（= 3）以内の場合のみチップを表示する。保存場所ラベルは
    `expiresAt` の有無に関わらず常時表示する。
 
-#### チップの表示条件・文言・レイアウト（レビュー M-1 / M-2 / M-3 を受けて確定・2026-08-07）
+#### チップの表示条件・文言・レイアウト（レビュー M-1 / M-2 / M-3 を受けて確定・2026-08-09）
 
 - **表示条件は `getExpiryRemainingDays(expiresAt, asOf) <= EXPIRY_URGENCY_WITHIN_DAYS`。**
   つまり**残日数が負（期限切れ）も表示対象に含める**。`0 <= remainingDays && remainingDays <= 3`
@@ -818,11 +818,11 @@ pantry-core.md 該当箇所への参照を残し、pantry-core.md 側にも「st
 必要があり、UI の `parseQuantity` を通す通常操作では起こらない）。R-6 の防御が完全ではない
 ことを記録として残し、実運用で観測されたら Zod 側に最小値（`0.001`）を入れる。
 **同じ穴は既存の `AddStockUseCase` / `addStockSchema` にも存在する**（本ユニットが
-持ち込んだものではない）。出典: 2026-08-07 レビュー S-5 |
+持ち込んだものではない）。出典: 2026-08-09 レビュー S-5 |
 
 ## 確定事項（旧: 未決事項）
 
-P-1〜P-6 はすべて **2026-08-07 にユーザー確定済み**（Orchestrator 経由の確認）。以下に確定
+P-1〜P-6 はすべて **2026-08-09 にユーザー確定済み**（Orchestrator 経由の確認）。以下に確定
 内容と、比較検討した非採用案の記録を残す（`shopping-complete-stock-selection.md` の書式に
 倣う）。
 
@@ -904,7 +904,7 @@ UI は 3 フィールド（数量・保存場所・期限）を常に一緒に�
 妥当だったが、現時点では roadmap の完了条件として明示されたため転換が必要と判断する。
 
 正式な記録は **[ADR-0016](../decisions/ADR-0016-stock-details-mutable.md) で行う。作成済み**
-（2026-08-07）。P-1 の確定内容（数量・期限・保存場所を可変にし `displayName` /
+（2026-08-09）。P-1 の確定内容（数量・期限・保存場所を可変にし `displayName` /
 `purchasedAt` / `productId` / `sourceShoppingItemId` は不変のまま）、`amount` が元々
 `consume()` のために唯一の可変フィールドだったこととの関係、非採用案（廃棄して作り直す運用 /
 `expiresAt` のみ可変 / `PATCH` / 差し替え方式）を同 ADR に記録している。

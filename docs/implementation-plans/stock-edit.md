@@ -1,7 +1,7 @@
 # 実装計画: stock-edit
 
 - ステータス: ready
-- 設計書: `docs/designs/stock-edit.md`（confirmed・P-1〜P-6 ユーザー確定・2026-08-07）
+- 設計書: `docs/designs/stock-edit.md`（confirmed・P-1〜P-6 ユーザー確定・2026-08-09）
 - 契約設計書: `docs/designs/stock-edit.contract.md`（confirmed）
 - 試験計画: `docs/tests/stock-edit.md`（観点 ID: STK-UPD-\*, PT-UPD-\*, A-UPD-\*, Z-UPD-\*,
   INF-UPD-\*, WH-PUT-\*, SED-\*, CSP-\*, SR-EDIT-\*, PC-EDIT-\*, EXP-\*, REG-\*, MB-\*）

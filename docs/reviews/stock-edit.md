@@ -1,6 +1,6 @@
 # レビュー記録: stock-edit（設計フェーズ・成果物 5 点 + ADR）
 
-- レビュー日: 2026-08-08
+- レビュー日: 2026-08-09
 - レビュー対象（実装は未着手。設計成果物のみ）:
   - `docs/requirements/stock-edit.md`
   - `docs/designs/stock-edit.md`（confirmed）
@@ -260,7 +260,7 @@ Entity 同一性の観点で妥当。
 > **全 Task 共通の証跡**。Task 単位の判定は本節の末尾（`## Task 1`〜`## Task 8`）に分けて記録する
 > （IMP-2026-026 の Task 網羅規約。一括記録だけでは個別 Task の欠落を見逃す）。
 
-- 実施日: 2026-08-07
+- 実施日: 2026-08-09
 - 対象: `docs/tasks/codex/stock-edit/01-domain.md` 〜 `08-complete-panel.md`（全 8 Task）
 - ブランチ: `claude/sprint8-design-r6qn4z`
 - 対象コミット: `38dfbf1` fix(infra): persist editable stock details /
@@ -502,7 +502,7 @@ bash .claude/scripts/run-quality-gates.sh
 
 # 実画面確認（manual-browser-verify）と修正
 
-- 実施日: 2026-08-08
+- 実施日: 2026-08-09
 - 環境: `DATABASE_URL=pglite://.pglite-dev next dev`（リモート・PGlite 経路）
 - スクリプト: `apps/web/scripts/seed-stock-edit-verify.mjs` / `apps/web/scripts/verify-stock-edit.mjs`
 - **結果（修正後）: PASS 14 / FAIL 0 / BLOCKED 1。前提データ S-1〜S-7 は全消化。**
