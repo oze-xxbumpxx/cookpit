@@ -41,7 +41,7 @@ Sprint 8 のゴールは「賞味期限が実データとして入り、期限�
 **賞味期限アラートを、Web Push（VAPID）による通知と Vercel Cron による日次実行で実現する。
 購読情報は新規ドメイン集約 `PushSubscription` として `packages/domain` に置く。**
 
-決定の内訳は 6 点。
+決定の内訳は 7 点。
 
 ### 1. 通知方式は Web Push（VAPID）とする
 
@@ -117,6 +117,32 @@ Cron 用に別途持つ案はスコープが最小で済むが、閾値ロジッ
 
 Cron ルート内に閉じる案は、CLAUDE.md の層責務（Presentation は UseCase を呼ぶだけ）に
 反するため採らない。
+
+**移設対象は `expiry.ts` の全 export（文言生成 `formatExpiryUrgencyLabel` を含む）とし、
+`apps/web/src/app/_utils/expiry.ts` は削除する。** 当初は「文言は UI 表示専用なので
+`apps/web` に残す」としていたが、通知本文がこの関数に依存する以上、
+`packages/application` が `apps/web` に依存できない（循環する）ため成立しない。
+実装計画フェーズで検出した（設計書 P-14）。判定を一本化してズレを構造的に防ぐという
+本決定の目的は、閾値だけでなく文言にも及ぶ。**CSS クラス名を返す
+`expiryUrgencyChipClass`（`apps/web/src/app/_utils/category-color.ts`）は据え置く** —
+CSS は Application に持ち込まない。
+
+### 7. 外部サービスへの出力 port（`PushSender`）も Domain に置く
+
+Repository インターフェースと同じく、`PushSender` を
+`packages/domain/src/push-subscription/push-sender.ts` に置き、Infrastructure が実装する。
+
+当初は Application 層に置く設計だったが、`packages/infrastructure/package.json` は
+`@cookpit/domain` にのみ依存しており（実測）、port を Application に置くと
+Infrastructure → Application の依存が必要になって
+`Presentation → Application → Domain ← Infrastructure` に反する。実装計画フェーズで
+検出した（設計書 P-13）。既存 9 集約の Repository インターフェースがすべて Domain にある
+現行の依存グラフに揃えるほうが、例外を作るより一貫する。
+
+**条件は「port に HTTP 型を漏らさない」こと**（`.claude/rules/domain-layer.md`）。
+`PushSendResult.reason` は HTTP ステータスではなくドメイン語彙
+（`invalid_subscription` / `other`）であり、HTTP → ドメイン語彙の写像は Infrastructure が担う。
+Decision 5（削除の業務判断は Application）とも矛盾しない。
 
 ### 補足: タイムゾーンは環境変数で固定する
 
@@ -263,14 +289,18 @@ Actions の精度上の利点が活きない。**なお日次より高頻度が�
    既存の `runtimeCaching` 4 件には触れない。
 4. ダッシュボードの購読 UI（`_components/dashboard.tsx`）を削除する。
 5. `SendExpiryAlertsUseCase` / 購読登録・解除 UseCase / `PushSubscription` 集約 /
-   `PushSubscriptionRepository` / Drizzle 実装 / Zod スキーマを削除し、各バレルから外す。
-6. `web-push` 依存を `apps/web/package.json` から外す。
+   `PushSubscriptionRepository` / `PushSender` port / Drizzle 実装 / `WebPushSender` /
+   Zod スキーマを削除し、各バレルから外す。
+6. `web-push` 依存を `packages/infrastructure/package.json` から外す（**`apps/web` ではない**
+   — 実際に import するのは Infrastructure。pnpm の phantom dependency 制約による）。
 7. 環境変数（VAPID 鍵・`CRON_SECRET`）を Vercel から削除する。**`TZ=Asia/Tokyo` は残す**
    — これは本決定に固有ではなく、既存のダッシュボード表示のズレも直しているため。
 
-`GetExpiringStocksUseCase` への差し替え（Decision 6）は**戻さなくてよい**。層責務として
-正しい形であり、通知を止めても画面表示は同じ結果になる。戻す場合は
-`page.tsx` を `selectExpiringStocks` 呼び出しへ復帰させる。
+`GetExpiringStocksUseCase` への差し替えと `expiry.ts` の Application 層への移設
+（Decision 6）は**戻さなくてよい**。層責務として正しい形であり、通知を止めても画面表示は
+同じ結果になる。戻す場合は `packages/application/src/pantry/expiry.ts` を
+`apps/web/src/app/_utils/expiry.ts` へ差し戻し、`page.tsx` を `selectExpiringStocks`
+呼び出しへ復帰させる。
 
 `push_subscriptions` テーブルは残しても害が無い（誰も読まなくなるだけ）。消す場合は
 ロールバック用のマイグレーションを別途生成する。**保存済みの購読情報は端末側の
@@ -278,7 +308,7 @@ Actions の精度上の利点が活きない。**なお日次より高頻度が�
 
 ## References
 
-- 設計書: `docs/designs/expiry-alert.md`（ステータス confirmed。P-1〜P-11 の確定内容と
+- 設計書: `docs/designs/expiry-alert.md`（ステータス confirmed。P-1〜P-14 の確定内容と
   実装上の罠 9 件）
 - 要件定義書: `docs/requirements/expiry-alert.md`
 - 契約設計書: `docs/designs/expiry-alert.contract.md`

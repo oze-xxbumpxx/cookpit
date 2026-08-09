@@ -1,6 +1,6 @@
 # 設計書: expiry-alert
 
-- ステータス: confirmed（P-1〜P-12 ユーザー確定・2026-08-09）
+- ステータス: confirmed（P-1〜P-14 ユーザー確定・2026-08-09）
 - レベル: L3
 - 関連:
   - `docs/requirements/expiry-alert.md`（本設計の要件定義書）
@@ -267,9 +267,19 @@ export function selectExpiringStocks(
 }
 ```
 
-`formatExpiryUrgencyLabel`（人間可読な文言）と `expiryUrgencyChipClass`（CSS クラス名）は
-**UI 表示専用**として `apps/web/src/app/_utils/` に残す（Application 層に表示文字列・CSS
-を持ち込まない）。通知本文の文言は P-7 で別途扱う。
+> **P-14 で更新（ユーザー確定・2026-08-09）**: 当初は「`formatExpiryUrgencyLabel`
+> （人間可読な文言）と `expiryUrgencyChipClass`（CSS クラス名）は UI 表示専用として
+> `apps/web/src/app/_utils/` に残す」としていたが、**P-7（通知本文がこの関数に依存する）と
+> 両立しない**（`packages/application` は `apps/web` に依存できない）。
+> implementation-planner が実装計画作成時に検出した。
+>
+> **確定: `formatExpiryUrgencyLabel` も Application 層へ移す。** `expiry.ts` の全 6 export を
+> `packages/application/src/pantry/expiry.ts` へ移設し、`apps/web` は
+> `@cookpit/application` から import する。`apps/web/src/app/_utils/expiry.ts` は削除する。
+> **`expiryUrgencyChipClass`（CSS クラス名）は `apps/web/src/app/_utils/category-color.ts` に
+> 据え置く**（CSS は Application に持ち込まない。Unit A の確定どおり動かさない）。
+>
+> 詳細は §確定事項 P-14。
 
 新規 UseCase:
 
@@ -317,8 +327,23 @@ const [mealPlan, expiringStocks] = await Promise.all([
 従い Application 層に置く。Pantry 固有でも PushSubscription 固有でもないため、新規
 モジュール `notification/` を切る（`pantry/` にも `push-subscription/` にも属させない）。
 
+> **P-13 で更新（ユーザー確定・2026-08-09）**: `PushSender` port の配置先を
+> **Application 層から Domain 層へ変更**した。`packages/infrastructure/package.json` は
+> `@cookpit/domain` にのみ依存しており（実測）、port を Application に置くと
+> `WebPushSender`（Infrastructure）が実装するために Infrastructure → Application の依存が
+> 必要になり、`Presentation → Application → Domain ← Infrastructure` に反する。
+> implementation-planner が実装計画作成時に検出した。
+>
+> **確定: `packages/domain/src/push-subscription/push-sender.ts` に置く。** 既存の
+> Repository インターフェースがすべて Domain にあり Infrastructure が実装する現行の
+> 依存グラフに揃う。**port に HTTP 型（`Response`・ステータスコード等）を漏らさないこと**
+> （`.claude/rules/domain-layer.md`）。`PushSendResult.reason` は HTTP ステータスではなく
+> ドメイン語彙（`invalid_subscription` / `other`）である点がこの条件を満たす根拠。
+> 詳細は §確定事項 P-13。
+
 ```ts
-// push-sender.ts（Application 層のポート。Infrastructure が実装する）
+// packages/domain/src/push-subscription/push-sender.ts（Domain 層のポート。
+// Infrastructure が実装する。P-13 確定）
 export interface PushPayload {
   title: string;
   body: string;
@@ -992,7 +1017,8 @@ DB マイグレーションは新規追加のみ（既存データへの影響�
 
 P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の確認）。以下に確定内容と、
 比較検討した非採用案の記録を残す（`docs/designs/stock-edit.md` の書式に倣う）。
-**P-7〜P-11 はいずれも本設計書の推奨どおりに確定した。P-12 は契約設計フェーズで追加された論点。**
+**P-7〜P-11 はいずれも本設計書の推奨どおりに確定した。P-12 は契約設計フェーズ、
+P-13 / P-14 は実装計画フェーズで下流 Agent が検出した論点。**
 
 | #     | 論点                      | 確定                                                                               |
 | ----- | ------------------------- | ---------------------------------------------------------------------------------- |
@@ -1009,6 +1035,64 @@ P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の�
 | P-10b | 数量 0 の在庫             | 通知経路だけで除外する。ダッシュボード・`/pantry` の表示は変更しない               |
 | P-11  | 実機検証手段              | Vercel Preview Deployment + iPhone 実機                                            |
 | P-12  | 環境変数未設定時の扱い    | 全エンドポイントで 500 フェイルクローズに揃える                                    |
+| P-13  | `PushSender` port の配置  | `packages/domain/src/push-subscription/push-sender.ts`（Application からの変更）   |
+| P-14  | 期限文言関数の配置        | `formatExpiryUrgencyLabel` も Application へ移す（P-4 の当該部分を取り消す）       |
+
+### P-13 の詳細（確定: Domain に置く）
+
+**実装計画フェーズで発覚した依存方向違反**（implementation-planner が申し送り#1 として差し戻し）。
+本設計書の当初のコード例は `PushSender` port を
+`packages/application/src/notification/push-sender.ts` に置いていた。
+
+**問題**: `packages/infrastructure/package.json` は `@cookpit/domain` にのみ依存する（実測）。
+`WebPushSender`（Infrastructure）がこの port を実装するには
+`@cookpit/application` への依存追加が必要になり、CLAUDE.md /
+`.claude/rules/domain-layer.md` の依存方向 `Presentation → Application → Domain ←
+Infrastructure` に反する。
+
+比較した案:
+
+- 案 A: `packages/domain/src/push-subscription/push-sender.ts` に置く。
+- 案 B: Application のまま `packages/infrastructure` に `@cookpit/application` を追加し、
+  依存方向ルールの例外を認める。一般的な Clean Architecture では port を Application に置く
+  流儀もある。
+
+**確定: 案 A**。既存の Repository インターフェース（`PantryRepository` ほか）はすべて Domain に
+あり Infrastructure が実装する、という現行の依存グラフに揃う。案 B は既存 9 集約すべての
+先例と CLAUDE.md の明記に反するため、ADR で例外を記録する必要が生じる一方、得るものが無い。
+
+**条件: port に HTTP 型（`Response`・生のステータスコード等）を漏らさないこと。**
+`PushSendResult.reason` が HTTP ステータスではなくドメイン語彙
+（`invalid_subscription` / `other`）である点がこの条件を満たす根拠であり、
+Infrastructure が HTTP → ドメイン語彙の写像を担う（P-8 確定と整合）。
+
+**「失効した購読を消す」業務判断は `SendExpiryAlertsUseCase`（Application）に残る**ため、
+P-8 の確定内容（業務判断を Infrastructure に持たせない）は損なわれない。
+
+### P-14 の詳細（確定: Application へ移し P-4 の当該部分を取り消す）
+
+**実装計画フェーズで発覚した確定事項どうしの非両立**（implementation-planner が申し送り#2 として
+差し戻し）。P-4 は「`formatExpiryUrgencyLabel` は UI 表示専用として `apps/web` に残す」と
+していたが、P-7 は「通知本文はこの関数に依存する」としている。
+`packages/application` は `apps/web` に依存できない（依存の向きが逆であり循環する）ため、
+**両者は同時に成立しない**。
+
+比較した案:
+
+- 案 A: `expiry.ts` の全 6 export を `packages/application/src/pantry/expiry.ts` へ移設し、
+  `apps/web` は `@cookpit/application` から import する。`apps/web/src/app/_utils/expiry.ts` は削除。
+- 案 B: Application に同等の文言生成関数を複製する。層の純粋さは保てるが、
+  「期限切れ / 本日まで / 明日まで / あとN日」が 2 箇所に並存する。
+- 案 C: P-7 を見直し、通知本文を件数中心の文言にして共有をやめる。
+
+**確定: 案 A**。P-4 の目的は「判定を一本化して通知と画面のズレを構造的に防ぐ」ことであり、
+文言もその対象に含めるほうが目的に忠実である。案 B は片方だけ直したときに画面と通知の文言が
+食い違うリスクを負い、P-4 の目的と正面から衝突する。案 C は P-7 の確定
+（既存文言を流用し先頭 3 件を要約）を実質撤回することになる。
+
+**`expiryUrgencyChipClass`（CSS クラス名）は `apps/web/src/app/_utils/category-color.ts` に
+据え置く。** CSS を Application に持ち込まないという P-4 の趣旨はこちらで維持され、
+Unit A の「`category-color.ts` から動かさない」という確定とも整合する。
 
 ### P-12 の詳細（確定: 500 フェイルクローズ）
 
@@ -1131,8 +1215,8 @@ P-7〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の�
 Unit A の編集導線がある画面のため）。`/`（ダッシュボード）は表示専用のサマリであり
 行動に直結しないため採らない。
 
-これにより通知本文は `apps/web/src/app/_utils/expiry.ts` の `formatExpiryUrgencyLabel` に
-依存する。文言を変更する場合はダッシュボードのチップ表示と通知が同時に変わる点に注意する。
+これにより通知本文は `formatExpiryUrgencyLabel` に依存する（**P-14 確定により、この関数の
+配置先は `packages/application/src/pantry/expiry.ts` になった**）。文言を変更する場合はダッシュボードのチップ表示と通知が同時に変わる点に注意する。
 
 ### P-8 の詳細（確定: UNIQUE 制約あり・削除判断は Application 層）
 
@@ -1238,3 +1322,13 @@ Infrastructure は HTTP ステータスの写像のみを担う。
   場合（例: 世帯数が増え Pantry 集約が大規模化する場合）に再検討する。
 - Push 購読数が将来的に増加する場合（本ユニットの想定規模を超える場合）、§性能で
   触れたバッチ処理・同時実行数制限の導入を検討する。
+- **P-14 により `apps/web/src/app/_utils/expiry.ts` は削除される。** 同ファイルを import して
+  いる箇所（ダッシュボード・`/pantry`）は `@cookpit/application` からの import へ差し替える。
+  既存テスト `apps/web/tests/app/_utils/dashboard-view.node.test.ts` の扱いは実装計画
+  Step 3 / Step 6 に従う（試験計画 §15 項目 1 の申し送りに対応）。
+- **試験計画 §15 の「要確認」観点 3 件を実装時に確定する**（本設計書では未定義のまま残す）:
+  再購読時に `PushSubscription.createdAt` を保持するか（upsert で既存行の `created_at` を
+  維持する想定。SUB-05）、購読 UI の初期表示で `pushManager.getSubscription()` により
+  現在の購読状態を反映するか（EAS-09）、`createdAt` getter が防御的コピーを返すか
+  （Unit A の `Stock.expiresAt` / `purchasedAt` に倣う想定。PS-08）。いずれも実装者が
+  設計から逸脱せず決められる粒度だが、テストで固定する対象として明示しておく。
