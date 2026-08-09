@@ -34,8 +34,8 @@ export class Stock {
     private readonly stockDisplayName: string,
     private stockAmount: Quantity,
     private readonly stockPurchasedAt: Date,
-    private readonly stockExpiresAt: Date | null,
-    private readonly stockStoredLocation: StorageLocation | null,
+    private stockExpiresAt: Date | null,
+    private stockStoredLocation: StorageLocation | null,
     private readonly stockSourceShoppingItemId: ShoppingItemId | null,
   ) {}
 
@@ -86,6 +86,28 @@ export class Stock {
       amount.value >= this.stockAmount.value
         ? Quantity.of(0, this.stockAmount.unit)
         : this.stockAmount.subtract(amount);
+  }
+
+  /**
+   * 生成後の在庫の詳細（数量・賞味期限・保存場所）をまとめて更新する。
+   *
+   * 3 項目すべてを指定する全体置換。値を消す場合は `null` を渡す（キー省略はできない）。
+   * `displayName` / `purchasedAt` / `productId` / `sourceShoppingItemId` は変更しない。
+   *
+   * @throws Error amount.value が 0 以下の場合
+   */
+  updateDetails(props: {
+    amount: Quantity;
+    expiresAt: Date | null;
+    storedLocation: StorageLocation | null;
+  }): void {
+    if (props.amount.value <= 0) {
+      throw new Error('Stock amount must be positive');
+    }
+
+    this.stockAmount = props.amount;
+    this.stockExpiresAt = props.expiresAt;
+    this.stockStoredLocation = props.storedLocation;
   }
 
   isEmpty(): boolean {
@@ -173,6 +195,24 @@ export class Pantry {
   discardStock(stockId: StockId): void {
     this.findStock(stockId);
     this.pantryStocks = this.pantryStocks.filter((candidate) => !candidate.id.equals(stockId));
+  }
+
+  /**
+   * 在庫の詳細（数量・賞味期限・保存場所）を更新する。数量を 0 以下にはできない
+   * （残量 0 の在庫は `consumeStock` が集約から取り除く扱いのため）。
+   *
+   * @throws Error stockId の Stock が存在しない場合、または amount.value が 0 以下の場合
+   */
+  updateStockDetails(
+    stockId: StockId,
+    props: {
+      amount: Quantity;
+      expiresAt: Date | null;
+      storedLocation: StorageLocation | null;
+    },
+  ): void {
+    const stock = this.findStock(stockId);
+    stock.updateDetails(props);
   }
 
   /** 買い物完了の再実行時、同一 ShoppingItem 由来の Stock 追加をスキップする判定に使う（S-3）。 */

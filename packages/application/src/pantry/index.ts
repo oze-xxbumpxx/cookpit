@@ -6,3 +6,4 @@ export * from './invalid-stock-operation.error';
 export * from './pantry.dto';
 export * from './pantry.mapper';
 export * from './stock-not-found.error';
+export * from './update-stock-details.use-case';

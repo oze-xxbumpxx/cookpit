@@ -1,6 +1,11 @@
 import type { MealPlanDto, StockDto, StorageLocation } from '@cookpit/application';
 import { ThemeToggle } from '@/app/_components/theme-toggle';
 import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
+import {
+  formatExpiryUrgencyLabel,
+  getExpiryRemainingDays,
+  getExpiryUrgency,
+} from '@/app/_utils/expiry';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -22,12 +27,7 @@ import {
   formatExpiresAt,
 } from '../pantry/_utils/pantry-view';
 import { formatWeekRange } from '../meal-plans/_utils/meal-plan-view';
-import {
-  MEAL_PLAN_STATUS_LABELS,
-  formatExpiryUrgencyLabel,
-  getExpiryRemainingDays,
-  getExpiryUrgency,
-} from '../_utils/dashboard-view';
+import { MEAL_PLAN_STATUS_LABELS } from '../_utils/dashboard-view';
 
 interface Props {
   mealPlan: MealPlanDto | null;

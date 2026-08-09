@@ -20,7 +20,9 @@ function renderLocationGroup(props: Partial<Parameters<typeof LocationGroup>[0]>
   const defaults = {
     location: null,
     stocks: [createStockDto()],
+    asOf: new Date('2026-08-08T09:00:00'),
     submittingStockId: null,
+    onEdit: vi.fn(),
     onConsume: vi.fn(),
     onDiscard: vi.fn(),
   };
@@ -46,7 +48,9 @@ describe('LocationGroup', () => {
         <LocationGroup
           location={location}
           stocks={[]}
+          asOf={new Date('2026-08-08T09:00:00')}
           submittingStockId={null}
+          onEdit={vi.fn()}
           onConsume={vi.fn()}
           onDiscard={vi.fn()}
         />,

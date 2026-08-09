@@ -5,7 +5,9 @@ import { StockRow } from './stock-row';
 interface Props {
   location: StorageLocation | null;
   stocks: StockDto[];
+  asOf: Date;
   submittingStockId: string | null;
+  onEdit: (stock: StockDto) => void;
   onConsume: (stockId: string) => void;
   onDiscard: (stockId: string) => void;
 }
@@ -13,7 +15,9 @@ interface Props {
 export function LocationGroup({
   location,
   stocks,
+  asOf,
   submittingStockId,
+  onEdit,
   onConsume,
   onDiscard,
 }: Props) {
@@ -27,7 +31,9 @@ export function LocationGroup({
           <StockRow
             key={stock.id}
             stock={stock}
+            asOf={asOf}
             submitting={submittingStockId === stock.id}
+            onEdit={onEdit}
             onConsume={onConsume}
             onDiscard={onDiscard}
           />

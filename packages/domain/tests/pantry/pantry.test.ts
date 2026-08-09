@@ -115,6 +115,135 @@ describe('Stock', () => {
     expect(stock.amount.value).toBe(200);
   });
 
+  it('updateDetails は数量の値のみ変更する', () => {
+    const stock = reconstructStock({ amount: Quantity.of(2, '個') });
+
+    stock.updateDetails({
+      amount: Quantity.of(5, '個'),
+      expiresAt: stock.expiresAt,
+      storedLocation: stock.storedLocation,
+    });
+
+    expect(stock.amount.value).toBe(5);
+    expect(stock.amount.unit).toBe('個');
+  });
+
+  it('updateDetails は数量の値を据え置き、単位のみ変更する', () => {
+    const stock = reconstructStock({ amount: Quantity.of(2, '個') });
+
+    stock.updateDetails({
+      amount: Quantity.of(2, 'g'),
+      expiresAt: stock.expiresAt,
+      storedLocation: stock.storedLocation,
+    });
+
+    expect(stock.amount.value).toBe(2);
+    expect(stock.amount.unit).toBe('g');
+  });
+
+  it('updateDetails は賞味期限を設定・変更する', () => {
+    const stock = reconstructStock({ expiresAt: null });
+    const expiresAt = new Date('2026-08-20T00:00:00');
+
+    stock.updateDetails({
+      amount: stock.amount,
+      expiresAt,
+      storedLocation: stock.storedLocation,
+    });
+
+    expect(stock.expiresAt).toEqual(expiresAt);
+  });
+
+  it('updateDetails は amount が 0 の場合を拒否し、元の数量を維持する', () => {
+    const stock = reconstructStock({ amount: Quantity.of(2, '個') });
+
+    expect(() =>
+      stock.updateDetails({
+        amount: Quantity.of(0, '個'),
+        expiresAt: stock.expiresAt,
+        storedLocation: stock.storedLocation,
+      }),
+    ).toThrow('Stock amount must be positive');
+    expect(stock.amount.value).toBe(2);
+  });
+
+  it('updateDetails に渡す数量の負値は Quantity 生成時に拒否される', () => {
+    expect(() => Quantity.of(-1, '個')).toThrow('Quantity must be non-negative');
+  });
+
+  it('updateDetails は賞味期限を null にクリアする', () => {
+    const stock = reconstructStock();
+
+    stock.updateDetails({
+      amount: stock.amount,
+      expiresAt: null,
+      storedLocation: stock.storedLocation,
+    });
+
+    expect(stock.expiresAt).toBeNull();
+  });
+
+  it('updateDetails は保存場所を設定・変更する', () => {
+    const stock = reconstructStock({ storedLocation: null });
+
+    stock.updateDetails({
+      amount: stock.amount,
+      expiresAt: stock.expiresAt,
+      storedLocation: 'freezer',
+    });
+
+    expect(stock.storedLocation).toBe('freezer');
+  });
+
+  it('updateDetails は保存場所を null にクリアする', () => {
+    const stock = reconstructStock();
+
+    stock.updateDetails({
+      amount: stock.amount,
+      expiresAt: stock.expiresAt,
+      storedLocation: null,
+    });
+
+    expect(stock.storedLocation).toBeNull();
+  });
+
+  it('updateDetails は編集対象外のフィールドを変更しない', () => {
+    const stock = reconstructStock();
+    const originalId = stock.id;
+    const originalProductId = stock.productId;
+    const originalDisplayName = stock.displayName;
+    const originalPurchasedAt = stock.purchasedAt;
+    const originalSourceShoppingItemId = stock.sourceShoppingItemId;
+
+    stock.updateDetails({
+      amount: Quantity.of(1.25, 'g'),
+      expiresAt: new Date('2026-08-20T00:00:00'),
+      storedLocation: 'freezer',
+    });
+
+    expect(stock.id).toBe(originalId);
+    expect(stock.productId).toBe(originalProductId);
+    expect(stock.displayName).toBe(originalDisplayName);
+    expect(stock.purchasedAt).toEqual(originalPurchasedAt);
+    expect(stock.sourceShoppingItemId).toBe(originalSourceShoppingItemId);
+  });
+
+  it('updateDetails は数量・賞味期限・保存場所を同時に変更する', () => {
+    const stock = reconstructStock();
+    const expiresAt = new Date('2026-08-20T00:00:00');
+
+    stock.updateDetails({
+      amount: Quantity.of(1.25, 'g'),
+      expiresAt,
+      storedLocation: 'freezer',
+    });
+
+    expect(stock.amount.value).toBe(1.25);
+    expect(stock.amount.unit).toBe('g');
+    expect(stock.expiresAt).toEqual(expiresAt);
+    expect(stock.storedLocation).toBe('freezer');
+  });
+
   it('isEmpty は amount が 0 で true、正数で false を返す', () => {
     expect(reconstructStock({ amount: Quantity.of(0, '個') }).isEmpty()).toBe(true);
     expect(reconstructStock({ amount: Quantity.of(1, '個') }).isEmpty()).toBe(false);
@@ -218,6 +347,85 @@ describe('Pantry', () => {
     const pantry = Pantry.create();
 
     expect(() => pantry.discardStock(StockId.fromString('missing'))).toThrow('Stock not found');
+  });
+
+  it('updateStockDetails は対象 Stock の数量・賞味期限・保存場所を更新する', () => {
+    const stock = reconstructStock();
+    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
+    const expiresAt = new Date('2026-08-20T00:00:00');
+
+    pantry.updateStockDetails(stock.id, {
+      amount: Quantity.of(1.25, 'g'),
+      expiresAt,
+      storedLocation: 'freezer',
+    });
+
+    const updated = pantry.stocks[0];
+    expect(updated?.amount.value).toBe(1.25);
+    expect(updated?.amount.unit).toBe('g');
+    expect(updated?.expiresAt).toEqual(expiresAt);
+    expect(updated?.storedLocation).toBe('freezer');
+  });
+
+  it('updateStockDetails は存在しない Stock を素の Error で拒否する', () => {
+    const pantry = Pantry.create();
+
+    expect(() =>
+      pantry.updateStockDetails(StockId.fromString('missing'), {
+        amount: Quantity.of(1, '個'),
+        expiresAt: null,
+        storedLocation: null,
+      }),
+    ).toThrow(new Error('Stock not found'));
+  });
+
+  it('updateStockDetails は Stock.updateDetails の数量 0 エラーをそのまま伝播する', () => {
+    const stock = reconstructStock();
+    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
+
+    expect(() =>
+      pantry.updateStockDetails(stock.id, {
+        amount: Quantity.of(0, '個'),
+        expiresAt: stock.expiresAt,
+        storedLocation: stock.storedLocation,
+      }),
+    ).toThrow('Stock amount must be positive');
+  });
+
+  it('updateStockDetails は対象外の Stock に影響しない', () => {
+    const target = reconstructStock();
+    const untouched = reconstructStock({ id: StockId.fromString('stock-2') });
+    const pantry = Pantry.reconstruct({
+      id: PantryId.singleton(),
+      stocks: [target, untouched],
+    });
+
+    pantry.updateStockDetails(target.id, {
+      amount: Quantity.of(1.25, 'g'),
+      expiresAt: null,
+      storedLocation: 'freezer',
+    });
+
+    expect(pantry.stocks[1]).toBe(untouched);
+    expect(untouched.amount.value).toBe(3);
+    expect(untouched.amount.unit).toBe('個');
+    expect(untouched.expiresAt).toEqual(new Date('2026-07-20T00:00:00.000Z'));
+    expect(untouched.storedLocation).toBe('fridge');
+  });
+
+  it('updateStockDetails 実行後も stocks getter は防御的コピーを返す', () => {
+    const stock = reconstructStock();
+    const pantry = Pantry.reconstruct({ id: PantryId.singleton(), stocks: [stock] });
+    pantry.updateStockDetails(stock.id, {
+      amount: Quantity.of(1, '個'),
+      expiresAt: null,
+      storedLocation: null,
+    });
+
+    const stocks = pantry.stocks;
+    stocks.push(reconstructStock({ id: StockId.fromString('stock-2') }));
+
+    expect(pantry.stocks).toHaveLength(1);
   });
 
   it('hasStockFromShoppingItem は一致する由来 ID があれば true を返す', () => {

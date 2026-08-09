@@ -7,6 +7,7 @@ import {
   GetPantryUseCase,
   InvalidStockOperationError,
   StockNotFoundError,
+  UpdateStockDetailsUseCase,
 } from '@cookpit/application';
 import type { PantryDto, StockDto } from '@cookpit/application';
 import type * as ApplicationModule from '@cookpit/application';
@@ -24,6 +25,7 @@ vi.mock('@cookpit/application', async (importOriginal) => {
     ConsumeStockUseCase: vi.fn(),
     DiscardStockUseCase: vi.fn(),
     GetPantryUseCase: vi.fn(),
+    UpdateStockDetailsUseCase: vi.fn(),
   };
 });
 
@@ -274,5 +276,152 @@ describe('pantryRoute', () => {
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: `Stock not found: ${STOCK_ID}` });
+  });
+
+  it('PUT /api/pantry/stocks/:stockId は 200 で更新後 PantryDto を返す', async () => {
+    const body = {
+      amount: { value: 1.25, unit: 'g' },
+      storedLocation: 'freezer',
+      expiresAt: '2026-08-20',
+    };
+    const execute = vi.fn().mockResolvedValue(pantryDto);
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const res = await app.request(`/api/pantry/stocks/${STOCK_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(pantryDto);
+    expect(execute).toHaveBeenCalledWith({ stockId: STOCK_ID, ...body });
+  });
+
+  it('PUT /api/pantry/stocks/:stockId は StockNotFoundError を 404 に変換する', async () => {
+    const execute = vi.fn().mockRejectedValue(new StockNotFoundError(STOCK_ID));
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const res = await app.request(`/api/pantry/stocks/${STOCK_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `Stock not found: ${STOCK_ID}` });
+  });
+
+  it('PUT /api/pantry/stocks/:stockId は InvalidStockOperationError を 422 に変換する', async () => {
+    const execute = vi
+      .fn()
+      .mockRejectedValue(new InvalidStockOperationError('Stock amount must be positive'));
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const res = await app.request(`/api/pantry/stocks/${STOCK_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    });
+
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({ error: 'Stock amount must be positive' });
+  });
+
+  it.each([
+    {
+      name: 'amount.value が 0',
+      body: { amount: { value: 0, unit: '個' }, storedLocation: null, expiresAt: null },
+    },
+    {
+      name: 'expiresAt が datetime 形式',
+      body: {
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: '2026-08-20T00:00:00Z',
+      },
+    },
+    {
+      name: 'storedLocation が enum 外',
+      body: { amount: { value: 1, unit: '個' }, storedLocation: 'garage', expiresAt: null },
+    },
+    {
+      name: '必須キー expiresAt が省略',
+      body: { amount: { value: 1, unit: '個' }, storedLocation: null },
+    },
+  ])('$name の場合 400 で UseCase を呼ばない', async ({ body }) => {
+    const execute = vi.fn();
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const res = await app.request(`/api/pantry/stocks/${STOCK_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('PUT /api/pantry/stocks/:stockId は不正な stockId で 400 を返し UseCase を呼ばない', async () => {
+    const execute = vi.fn();
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const res = await app.request('/api/pantry/stocks/not-a-uuid', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: { value: 1, unit: '個' },
+        storedLocation: null,
+        expiresAt: null,
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('PUT /api/pantry/stocks/:stockId は同一ボディの 2 回実行でべき等に 200 を返す', async () => {
+    const body = {
+      amount: { value: 1.25, unit: 'g' },
+      storedLocation: 'freezer',
+      expiresAt: '2026-08-20',
+    };
+    const execute = vi.fn().mockResolvedValue(pantryDto);
+    vi.mocked(UpdateStockDetailsUseCase).mockImplementation(function () {
+      return { execute } as unknown as UpdateStockDetailsUseCase;
+    });
+
+    const request = () =>
+      app.request(`/api/pantry/stocks/${STOCK_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    const first = await request();
+    const second = await request();
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await first.json()).toEqual(await second.json());
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 });

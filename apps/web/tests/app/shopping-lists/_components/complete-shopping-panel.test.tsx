@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CompleteShoppingPanel } from '../../../../src/app/shopping-lists/_components/complete-shopping-panel';
@@ -163,5 +163,95 @@ describe('CompleteShoppingPanel', () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('CSP-01: 既定では日付入力を表示せず、設定ボタンで独立行を展開する', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const toggle = screen.getByRole('button', { name: '賞味期限を設定' });
+
+    expect(screen.queryByLabelText('賞味期限')).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(toggle);
+
+    expect(screen.getByLabelText('賞味期限')).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: '賞味期限を削除' }).getAttribute('aria-expanded'),
+    ).toBe('true');
+  });
+
+  it('CSP-02: 期限を展開せず完了すると expiresAt: null を送る', async () => {
+    const user = userEvent.setup();
+    const { onComplete } = renderPanel();
+
+    await user.click(screen.getByRole('button', { name: '完了する' }));
+
+    expect(onComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ itemId: 'item-1', expiresAt: null }),
+    ]);
+  });
+
+  it('CSP-03: 入力した賞味期限を対象品目の expiresAt に送る', async () => {
+    const user = userEvent.setup();
+    const { onComplete } = renderPanel();
+    await user.click(screen.getByRole('button', { name: '賞味期限を設定' }));
+    fireEvent.change(screen.getByLabelText('賞味期限'), { target: { value: '2026-08-20' } });
+
+    await user.click(screen.getByRole('button', { name: '完了する' }));
+
+    expect(onComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ itemId: 'item-1', expiresAt: '2026-08-20' }),
+    ]);
+  });
+
+  it('CSP-04: 賞味期限を削除すると値をクリアし expiresAt: null を送る', async () => {
+    const user = userEvent.setup();
+    const { onComplete } = renderPanel();
+    await user.click(screen.getByRole('button', { name: '賞味期限を設定' }));
+    fireEvent.change(screen.getByLabelText('賞味期限'), { target: { value: '2026-08-20' } });
+
+    await user.click(screen.getByRole('button', { name: '賞味期限を削除' }));
+    await user.click(screen.getByRole('button', { name: '完了する' }));
+
+    expect(screen.queryByLabelText('賞味期限')).toBeNull();
+    expect(onComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ itemId: 'item-1', expiresAt: null }),
+    ]);
+  });
+
+  it('CSP-05: 複数品目のうち入力した品目だけ期限を送る', async () => {
+    const user = userEvent.setup();
+    const carrotItem = createShoppingItemDto({
+      id: 'item-3',
+      displayName: 'にんじん',
+      status: 'bought',
+      requiredAmount: { value: 2, unit: '本' },
+    });
+    const { onComplete } = renderPanel([onionItem, carrotItem]);
+    await user.click(screen.getAllByRole('button', { name: '賞味期限を設定' })[0]);
+    fireEvent.change(screen.getByLabelText('賞味期限'), { target: { value: '2026-08-20' } });
+
+    await user.click(screen.getByRole('button', { name: '完了する' }));
+
+    expect(onComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ itemId: 'item-1', expiresAt: '2026-08-20' }),
+      expect.objectContaining({ itemId: 'item-3', expiresAt: null }),
+    ]);
+  });
+
+  it('CSP-06: すべて解除・選択を挟んでも期限の入力と展開状態を維持する', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(screen.getByRole('button', { name: '賞味期限を設定' }));
+    fireEvent.change(screen.getByLabelText('賞味期限'), { target: { value: '2026-08-20' } });
+
+    await user.click(screen.getByRole('button', { name: 'すべて解除' }));
+    await user.click(screen.getByRole('button', { name: 'すべて選択' }));
+
+    expect((screen.getByLabelText('賞味期限') as HTMLInputElement).value).toBe('2026-08-20');
+    expect(
+      screen.getByRole('button', { name: '賞味期限を削除' }).getAttribute('aria-expanded'),
+    ).toBe('true');
   });
 });

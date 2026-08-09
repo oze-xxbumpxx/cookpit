@@ -8,6 +8,7 @@ import {
   stockIdParamSchema,
   stockResponseSchema,
   storageLocationSchema,
+  updateStockSchema,
 } from '../src/pantry.schema';
 import type { PantryResponse, StockResponse } from '../src/pantry.schema';
 
@@ -147,6 +148,89 @@ describe('addStockSchema', () => {
 
   it('不正な expiresAt（ISO date でない）を reject する', () => {
     expect(() => addStockSchema.parse({ ...VALID_ADD_STOCK, expiresAt: '2026/07/31' })).toThrow();
+  });
+});
+
+describe('updateStockSchema', () => {
+  const VALID_UPDATE_STOCK = {
+    amount: { value: 2, unit: '個' },
+    storedLocation: 'fridge',
+    expiresAt: '2026-08-20',
+  };
+
+  it('必須 3 項目を満たす入力を受け入れる', () => {
+    expect(updateStockSchema.parse(VALID_UPDATE_STOCK)).toEqual(VALID_UPDATE_STOCK);
+  });
+
+  it('storedLocation / expiresAt が null の入力を受け入れる', () => {
+    const input = { ...VALID_UPDATE_STOCK, storedLocation: null, expiresAt: null };
+    expect(updateStockSchema.parse(input)).toEqual(input);
+  });
+
+  it.each([0, -1])('amount.value が %s の入力を reject する', (value) => {
+    expect(() =>
+      updateStockSchema.parse({
+        ...VALID_UPDATE_STOCK,
+        amount: { value, unit: '個' },
+      }),
+    ).toThrow();
+  });
+
+  it('amount.value の小数を受け入れる', () => {
+    expect(
+      updateStockSchema.parse({
+        ...VALID_UPDATE_STOCK,
+        amount: { value: 1.25, unit: 'g' },
+      }).amount,
+    ).toEqual({ value: 1.25, unit: 'g' });
+  });
+
+  it('expiresAt の datetime 形式を reject する', () => {
+    expect(() =>
+      updateStockSchema.parse({
+        ...VALID_UPDATE_STOCK,
+        expiresAt: '2026-08-07T00:00:00Z',
+      }),
+    ).toThrow();
+  });
+
+  it('storedLocation の enum 外の値を reject する', () => {
+    expect(() =>
+      updateStockSchema.parse({ ...VALID_UPDATE_STOCK, storedLocation: 'garage' }),
+    ).toThrow();
+  });
+
+  it.each([
+    { storedLocation: 'fridge', expiresAt: '2026-08-20' },
+    { amount: { value: 2, unit: '個' }, expiresAt: '2026-08-20' },
+    { amount: { value: 2, unit: '個' }, storedLocation: 'fridge' },
+  ])('必須キーが省略された入力を reject する', (input) => {
+    expect(() => updateStockSchema.parse(input)).toThrow();
+  });
+
+  it('displayName を reject せず parse 結果から strip する', () => {
+    const parsed = updateStockSchema.parse({
+      ...VALID_UPDATE_STOCK,
+      displayName: '玉ねぎ',
+    });
+
+    expect(parsed).toEqual(VALID_UPDATE_STOCK);
+    expect(parsed).not.toHaveProperty('displayName');
+  });
+
+  it('プリセット外の自由入力単位を受理し、空文字は reject する', () => {
+    expect(
+      updateStockSchema.parse({
+        ...VALID_UPDATE_STOCK,
+        amount: { value: 1, unit: '箱' },
+      }).amount.unit,
+    ).toBe('箱');
+    expect(() =>
+      updateStockSchema.parse({
+        ...VALID_UPDATE_STOCK,
+        amount: { value: 1, unit: '' },
+      }),
+    ).toThrow();
   });
 });
 

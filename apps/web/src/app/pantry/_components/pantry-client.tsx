@@ -10,18 +10,21 @@ import { useEffect, useState } from 'react';
 import { groupStocksByLocation } from '../_utils/pantry-view';
 import { AddStockForm, type AddStockFormInput } from './add-stock-form';
 import { LocationGroup } from './location-group';
+import { StockEditDialog } from './stock-edit-dialog';
 
 interface Props {
   pantry: PantryDto;
+  asOf: Date;
 }
 
 /** 在庫追加・再取得を表す実行中キー。在庫行の操作は stockId をキーにする。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
-export function PantryClient({ pantry }: Props) {
+export function PantryClient({ pantry, asOf }: Props) {
   const [stocks, setStocks] = useState<StockDto[]>(pantry.stocks);
   const [addFormOpen, setAddFormOpen] = useState(false);
+  const [editingStock, setEditingStock] = useState<StockDto | null>(null);
   // 在庫行の操作・追加・再取得はエラーバナーを共有するため 1 インスタンスにまとめ、
   // 「どれが実行中か」は キーごとの isPending で区別する。
   const action = useApiAction();
@@ -75,6 +78,18 @@ export function PantryClient({ pantry }: Props) {
     });
   }
 
+  /**
+   * 編集対象が他経路で消えていた（404）ときの後始末。
+   *
+   * ダイアログは閉じてしまい、その中のエラー表示は同時に消えるため、理由は一覧の共有
+   * エラーバナーで伝える。`handleRefetch` は成功時にバナーを消すので、**再同期を待ってから**
+   * メッセージを設定する（順序を逆にするとバナーが即座に消える）。
+   */
+  async function handleStockMissing(): Promise<void> {
+    await handleRefetch({ silent: true });
+    action.setErrorMessage('この在庫はすでに削除されています');
+  }
+
   useEffect(() => {
     function handleFocus(): void {
       void handleRefetch({ silent: true });
@@ -122,9 +137,11 @@ export function PantryClient({ pantry }: Props) {
                 key={group.location ?? 'unset'}
                 location={group.location}
                 stocks={group.stocks}
+                asOf={asOf}
                 submittingStockId={
                   group.stocks.find((stock) => action.isPending(stock.id))?.id ?? null
                 }
+                onEdit={setEditingStock}
                 onConsume={(stockId) => void handleConsume(stockId)}
                 onDiscard={(stockId) => void handleDiscard(stockId)}
               />
@@ -148,6 +165,20 @@ export function PantryClient({ pantry }: Props) {
             在庫を追加
           </Button>
         )}
+
+        <StockEditDialog
+          stock={editingStock}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingStock(null);
+            }
+          }}
+          onUpdated={(updatedStocks) => {
+            action.setErrorMessage(null);
+            setStocks(updatedStocks);
+          }}
+          onStockMissing={() => void handleStockMissing()}
+        />
       </div>
     </main>
   );

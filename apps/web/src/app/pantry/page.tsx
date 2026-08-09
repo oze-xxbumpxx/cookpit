@@ -5,6 +5,7 @@ import { PantryClient } from './_components/pantry-client';
 export const dynamic = 'force-dynamic';
 
 export default async function PantryPage() {
+  const now = new Date();
   const pantry = await new GetPantryUseCase(pantryRepository()).execute();
-  return <PantryClient pantry={pantry} />;
+  return <PantryClient pantry={pantry} asOf={now} />;
 }
