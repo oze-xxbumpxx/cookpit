@@ -1,6 +1,6 @@
 # 設計書: expiry-alert
 
-- ステータス: confirmed（P-1〜P-11 ユーザー確定・2026-08-09）
+- ステータス: confirmed（P-1〜P-12 ユーザー確定・2026-08-09）
 - レベル: L3
 - 関連:
   - `docs/requirements/expiry-alert.md`（本設計の要件定義書）
@@ -587,7 +587,17 @@ export class WebPushSender implements PushSender {
 ```ts
 // apps/web/src/server/routes/push.ts（新設）
 export const pushRoute = new Hono()
-  .get('/vapid-public-key', (c) => c.json({ publicKey: process.env.VAPID_PUBLIC_KEY ?? '' }))
+  // 未設定時は 500 でフェイルクローズする（ユーザー確定・2026-08-09）。
+  // 200 + 空文字だとクライアントが「サーバ未設定」と「ブラウザ非対応」を区別できず、
+  // 購読ボタンが無反応になる形で現れて原因が追えない（罠 4・罠 5 と同じ性質）。
+  .get('/vapid-public-key', (c) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    if (publicKey === undefined || publicKey === '') {
+      console.error('VAPID_PUBLIC_KEY is not configured');
+      return c.json({ error: 'Server misconfigured' }, 500);
+    }
+    return c.json({ publicKey }, 200);
+  })
   .post('/subscribe', zValidator('json', subscribeToExpiryAlertSchema), async (c) => {
     const body = c.req.valid('json');
     await new SubscribeToExpiryAlertUseCase(pushSubscriptionRepository()).execute({
@@ -720,7 +730,7 @@ userVisibleOnly: true, applicationServerKey: <VAPID 公開鍵> })` を呼ぶ（i
 
 | メソッド | パス                         | リクエスト                                                     | レスポンス                                                           | ステータス      |
 | -------- | ---------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------- | --------------- |
-| GET      | `/api/push/vapid-public-key` | なし                                                           | `{ publicKey: string }`                                              | 200             |
+| GET      | `/api/push/vapid-public-key` | なし                                                           | `{ publicKey: string }`（未設定時は `{ error: string }`）            | 200 / 500       |
 | POST     | `/api/push/subscribe`        | `{ endpoint: string; keys: { p256dh: string; auth: string } }` | なし                                                                 | 204 / 400       |
 | POST     | `/api/push/unsubscribe`      | `{ endpoint: string }`                                         | なし                                                                 | 204 / 400       |
 | GET      | `/api/cron/expiry-alerts`    | なし（`Authorization: Bearer $CRON_SECRET`）                   | `{ subscriptionCount, sentCount, removedCount, expiringStockCount }` | 200 / 401 / 500 |
@@ -982,7 +992,7 @@ DB マイグレーションは新規追加のみ（既存データへの影響�
 
 P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の確認）。以下に確定内容と、
 比較検討した非採用案の記録を残す（`docs/designs/stock-edit.md` の書式に倣う）。
-**P-7〜P-11 はいずれも本設計書の推奨どおりに確定した。**
+**P-7〜P-11 はいずれも本設計書の推奨どおりに確定した。P-12 は契約設計フェーズで追加された論点。**
 
 | #     | 論点                      | 確定                                                                               |
 | ----- | ------------------------- | ---------------------------------------------------------------------------------- |
@@ -998,6 +1008,32 @@ P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の�
 | P-10a | Cron 実行時刻             | JST 08:00 台（`vercel.json` に UTC `0 23 * * *`）。発火は 1 時間ブレる             |
 | P-10b | 数量 0 の在庫             | 通知経路だけで除外する。ダッシュボード・`/pantry` の表示は変更しない               |
 | P-11  | 実機検証手段              | Vercel Preview Deployment + iPhone 実機                                            |
+| P-12  | 環境変数未設定時の扱い    | 全エンドポイントで 500 フェイルクローズに揃える                                    |
+
+### P-12 の詳細（確定: 500 フェイルクローズ）
+
+**契約設計フェーズで発覚した非対称の解消**（contract-designer が §12 項目 4★ として差し戻し）。
+当初の本設計書のコード例は `GET /api/push/vapid-public-key` が `VAPID_PUBLIC_KEY` 未設定時に
+`{ publicKey: '' }` を **200** で返す一方、`GET /api/cron/expiry-alerts` は `CRON_SECRET`
+未設定時に **500** でフェイルクローズしていた。
+
+比較した案:
+
+- 案 A: 500 に揃えてフェイルクローズする。
+- 案 B: 200 + 空文字のまま。クライアント側で空文字を「通知非対応」として扱い、購読 UI を
+  出さない実装で吸収する。iOS 非対応ブラウザなど「そもそも使えない」ケースと同じ経路に
+  乗るため UI はシンプルになる。
+- 案 C: 200 だが `{ publicKey: null }` を返し、クライアントが「サーバ未設定」を区別できるようにする。
+
+**確定: 案 A**。理由は本ユニット最大の罠が「**環境変数の設定忘れで静かに壊れる**」
+（罠 4・罠 5）であることによる。200 + 空文字だとクライアントは「サーバ未設定」と
+「ブラウザ非対応」を区別できず、**購読ボタンが無反応になる形でしか現れないため原因が追えない**。
+500 なら Vercel の実行ログに残り、設定漏れを道具で検知できる。案 C は区別可能になるが、
+エラーを 200 で返す形は変わらず、`CRON_SECRET` 側との非対称も残る。
+
+この確定に伴い、本書 §変更後構成の `pushRoute` のコード例と §API 設計の表を更新した。
+契約設計書（`docs/designs/expiry-alert.contract.md` §5-4 / §6 / §9.1 / §10.2 / §12）も
+同じ内容へ更新する。
 
 ### P-1 の詳細（確定: Vercel Cron）
 
