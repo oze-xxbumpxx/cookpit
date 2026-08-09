@@ -1,6 +1,6 @@
 # 設計書: expiry-alert
 
-- ステータス: confirmed（P-1〜P-14 ユーザー確定・2026-08-09）
+- ステータス: confirmed（P-1〜P-17 ユーザー確定・2026-08-09）
 - レベル: L3
 - 関連:
   - `docs/requirements/expiry-alert.md`（本設計の要件定義書）
@@ -760,9 +760,9 @@ userVisibleOnly: true, applicationServerKey: <VAPID 公開鍵> })` を呼ぶ（i
 | POST     | `/api/push/unsubscribe`      | `{ endpoint: string }`                                         | なし                                                                 | 204 / 400       |
 | GET      | `/api/cron/expiry-alerts`    | なし（`Authorization: Bearer $CRON_SECRET`）                   | `{ subscriptionCount, sentCount, removedCount, expiringStockCount }` | 200 / 401 / 500 |
 
-- `subscribe` / `unsubscribe` は認証を持たない（ADR-0003・単一世帯前提）。`endpoint` は
-  ブラウザの Push Service が発行する推測困難な URL であり、実務上のリスクは小さいと判断する
-  （既存アプリ全体の無認証方針と整合）。
+- `subscribe` / `unsubscribe` は認証を持たない（ADR-0003・単一世帯前提。既存アプリ全体の
+  無認証方針と整合）。**`endpoint` の推測困難性が守るのは `unsubscribe`（他人の購読の削除）と
+  なりすまし送信であって、`subscribe`（新規登録）ではない**（P-15 確定。§セキュリティ参照）。
 - `subscribe` は同一 `endpoint` に対して冪等（upsert）。`unsubscribe` も冪等（存在しなくても
   204）。
 - `cron` エンドポイントの 400 系は無い（リクエストボディを取らないため契約層バリデーション
@@ -873,14 +873,67 @@ Cookpit MVP1 には専用のログ基盤・APM は導入されていない。Cro
 ## セキュリティ
 
 - 認証・認可は対象外（ADR-0003 / ADR-0004。単一世帯前提が継続）。`subscribe` /
-  `unsubscribe` は無認証のまま設計する（§API設計参照。`endpoint` の推測困難性に依拠）。
+  `unsubscribe` は無認証のまま設計する。
+
+> **P-15 で訂正（ユーザー確定・2026-08-09。security-reviewer H-1 の指摘）**: 当初は
+> 「`endpoint` は推測困難な URL なので `subscribe` / `unsubscribe` を無認証にしても
+> リスクは小さい」と書いていたが、**この根拠は `subscribe` には効かない**。
+>
+> `GET /api/push/vapid-public-key` が公開鍵を無認証で配っているため、攻撃者は
+> 「アプリ URL を知る → 公開鍵を GET → 自分のブラウザで購読を作る → `POST /subscribe`」の
+> 手順で、`endpoint` を一切推測せずに自分の購読を登録できる。以後、日次ダイジェスト
+> （在庫の表示名・件数）を毎日受信できる。件数上限が無いため行の無制限追加も同じ経路で成立する。
+> `*.vercel.app` のホスト名は証明書透明性ログから列挙されうるため「URL を 2 人しか知らない」も
+> 強い前提ではない。
+>
+> **推測困難性が正しく効くのは `unsubscribe`（正確な `endpoint` を知らないと他人の購読を
+> 削除できない）となりすまし送信（VAPID 秘密鍵と購読鍵の両方が要る）に対してである。**
+>
+> **確定した対処**（ADR-0003 は覆さない）:
+>
+> 1. `SubscribeToExpiryAlertUseCase` に**購読件数の上限**を設ける。既存行が上限（10 件）以上で
+>    かつ新規 `endpoint` の場合は `InvalidOperationError` を投げ、422 を返す。
+>    **既存 `endpoint` の再登録（upsert 経路）は上限の対象外**にする（正規利用者が再購読
+>    できなくなるのを防ぐため）。
+> 2. 残るリスク（第三者が上限の範囲内で購読を 1 件登録し、在庫名ダイジェストを受信できる）は
+>    単一世帯前提のもとで受容する。ADR-0017 §Consequences に記録する。
+
+- **`endpoint` は攻撃者が制御しうる任意の HTTPS URL**であり、Cron 実行時にサーバがそこへ
+  POST する（blind SSRF）。**P-16 確定（security-reviewer M-1・案 A）**: `hostname` が
+  IPv4 / IPv6 リテラルでないこと、`localhost` / `.local` / `.internal` で終わらないことを
+  検証する。**判定は必ず `new URL(value).hostname` で行い、文字列の前方一致・`includes` を
+  使わない**（`https://evil.example@fcm.googleapis.com/x` や
+  `https://fcm.googleapis.com.evil.example/x` を通してしまう）。既知 Push Service の
+  許可リスト（案 B）は、ブラウザが新しい Push Service に切り替えたときに正規利用者の購読を
+  誤って拒否するため採らない。
+- **`p256dh` / `auth` は長さを制約する**。**P-17 確定（security-reviewer M-4）**: RFC 8291 で
+  `p256dh` は非圧縮 P-256 公開鍵 65 バイト固定、`auth` は 16 バイト固定であり可変長ではない。
+  下限が `min(1)` のままだと、長さ不正な鍵を登録されたとき `web-push` が**送信前に**例外を
+  投げ、`reason: 'other'` に落ちて**購読が削除されず毎日必ず失敗する行が恒久的に残る**。
+  `p256dh` は `.min(86).max(88)`、`auth` は `.min(22).max(24)`（パディング有無を吸収した幅）とする。
+- HTTPS 判定は文字列の前方一致ではなく `new URL(value).protocol === 'https:'` で行う
+  （security-reviewer L-4。スキームは大小文字非依存）。
+- **`.gitignore` を `.env*` + `!.env.example` に変更し、`.env.example`（キー名のみ・値は空）を
+  新設する**（security-reviewer H-2）。本ユニットで秘密情報が `DATABASE_URL` 1 つから
+  3 つへ増えるが、現状 `.env.production` 等は追跡対象のままである（実測）。
+  秘密の誤コミットは事後の rotate では取り返せない。
+- `CRON_SECRET` は `openssl rand -base64 32`（256 bit）で生成する（security-reviewer M-2）。
+  401 に対するレート制限が無いため、総当たり耐性は秘密のエントロピーのみに依存する。
+  Bearer 比較の定数時間化は**この規模・脅威モデルでは不要**（同 L-1。ネットワークジッタが
+  タイミング差を覆い隠し、優先すべきは比較方法ではなく秘密の長さ）。
+- Preview Deployment には**本番とは別の VAPID 鍵ペアと `CRON_SECRET`** を発行し、検証後に
+  破棄する（security-reviewer M-3）。手動 `curl` は `-H "Authorization: Bearer $CRON_SECRET"` の
+  形でシェル変数を参照し、**実値を `docs/` / `logs/` / PR 本文に貼らない**。
+- `endpoint` は秘匿情報として扱うが、DB エラー時に `app.onError` の `console.error(err)` 経由で
+  Vercel の実行ログへ出うる（security-reviewer L-2）。ログ閲覧権限の範囲内に留まることを
+  前提に受容し、既存の `onError` は変更しない。
 - Cron エンドポイントは Vercel が付与する `Authorization: Bearer $CRON_SECRET` で
   保護する。`CRON_SECRET` 未設定時はフェイルクローズ（500）とし、比較の偶然の安全性
   （`Bearer undefined` との不一致）に依存しない明示的なガードにする。
 - VAPID 秘密鍵はサーバー環境変数のみに置き、クライアントへは公開鍵のみを配る
   （実装上の罠 4）。
 - 入力値は `zValidator` による Zod スキーマ検証を境界で行う（`endpoint` の URL 形式・
-  `p256dh` / `auth` の非空制約）。
+  ホスト検証（P-16）・`p256dh` / `auth` の長さ制約（P-17））。
 - DB アクセスは Drizzle のパラメータ化クエリのみで、SQL インジェクションのリスクは無い。
 - Push ペイロードには在庫の表示名・件数程度の低機微情報のみを含め、個人を特定する情報は
   含めない（単一世帯前提のため元々個人識別情報を扱っていない）。
@@ -1018,7 +1071,8 @@ DB マイグレーションは新規追加のみ（既存データへの影響�
 P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の確認）。以下に確定内容と、
 比較検討した非採用案の記録を残す（`docs/designs/stock-edit.md` の書式に倣う）。
 **P-7〜P-11 はいずれも本設計書の推奨どおりに確定した。P-12 は契約設計フェーズ、
-P-13 / P-14 は実装計画フェーズで下流 Agent が検出した論点。**
+P-13 / P-14 は実装計画フェーズ、P-15〜P-17 はセキュリティレビューで
+下流 Agent が検出した論点。**
 
 | #     | 論点                      | 確定                                                                               |
 | ----- | ------------------------- | ---------------------------------------------------------------------------------- |
@@ -1037,6 +1091,9 @@ P-13 / P-14 は実装計画フェーズで下流 Agent が検出した論点。*
 | P-12  | 環境変数未設定時の扱い    | 全エンドポイントで 500 フェイルクローズに揃える                                    |
 | P-13  | `PushSender` port の配置  | `packages/domain/src/push-subscription/push-sender.ts`（Application からの変更）   |
 | P-14  | 期限文言関数の配置        | `formatExpiryUrgencyLabel` も Application へ移す（P-4 の当該部分を取り消す）       |
+| P-15  | 無認証 subscribe の扱い   | 受容根拠を訂正し、購読件数の上限（10 件。upsert は対象外）を設ける                 |
+| P-16  | `endpoint` のホスト検証   | IP リテラルと `localhost` / `.local` / `.internal` を拒否（許可リストは採らない）  |
+| P-17  | `p256dh` / `auth` の長さ  | RFC 8291 の固定長に合わせて幅で制約する（`min(1)` を取り消す）                     |
 
 ### P-13 の詳細（確定: Domain に置く）
 
