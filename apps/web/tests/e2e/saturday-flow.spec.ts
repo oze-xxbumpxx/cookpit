@@ -55,6 +55,14 @@ async function createRecipeFixture(
   return { id: resolveRecipeId(await response.json()), name, ingredientName };
 }
 
+/**
+ * 買い物完了パネルで入力する賞味期限。**固定日**にして「今日」に依存させない
+ * （CI が日付境界をまたいでも揺れないようにするため）。緊急度チップの閾値（3 日）から
+ * 十分離れているので、在庫カードにはチップではなく `formatExpiresAt` の日付表記だけが出る。
+ */
+const STOCK_EXPIRES_AT = '2030-12-24';
+const STOCK_EXPIRES_AT_LABEL = '12/24まで';
+
 // 土曜の主要運用を、献立作成から在庫消費まで画面経由で通す。
 // MealPlan / ShoppingList には削除 API がないため、一意な未来週を使って共有 DB との衝突を避ける。
 test('献立から買い物リストを作り、購入品を在庫化して消費できる', async ({ page, request }) => {
@@ -95,6 +103,15 @@ test('献立から買い物リストを作り、購入品を在庫化して消�
 
     await page.getByRole('button', { name: '買い物完了' }).click();
     await expect(page.getByRole('heading', { name: '在庫に追加する品目' })).toBeVisible();
+
+    // 賞味期限の任意入力（Sprint 8 Unit A）。既定は非表示で、設定ボタンで独立行を展開する。
+    // RTL（CSP-01〜06）はパネル内の挙動までしか見られないので、ここでは
+    // 「入力した期限が DB を通って /pantry に出る」ことを end-to-end で押さえる
+    // （roadmap Sprint 8 完了条件「買い物完了時に賞味期限を入力できる（任意）」の裏取り）。
+    await expect(page.getByLabel('賞味期限')).toHaveCount(0);
+    await page.getByRole('button', { name: '賞味期限を設定' }).click();
+    await page.getByLabel('賞味期限').fill(STOCK_EXPIRES_AT);
+
     await page.getByRole('button', { name: '完了する' }).click();
     await expect(page.getByText('買い物を完了しました', { exact: true })).toBeVisible();
     await expect(page.getByText('1件を在庫に追加しました', { exact: true })).toBeVisible();
@@ -103,6 +120,9 @@ test('献立から買い物リストを作り、購入品を在庫化して消�
     await expect(page).toHaveURL(/\/pantry$/);
     const stockRow = page.getByRole('listitem').filter({ hasText: recipe.ingredientName });
     await expect(stockRow).toBeVisible();
+    // パネルで入力した期限が在庫に載っていること。ここが通らないと Unit B（賞味期限
+    // アラート）は発火対象のデータを得られない。
+    await expect(stockRow.getByText(STOCK_EXPIRES_AT_LABEL, { exact: false })).toBeVisible();
     await stockRow.getByRole('button', { name: '消費' }).click();
     await expect(stockRow).toHaveCount(0);
   } finally {
