@@ -14,7 +14,6 @@ import { client } from '@/lib/api-client';
 import { parseQuantity } from '@/lib/parse-quantity';
 import type { UpdateStockBody } from '@cookpit/api-contract';
 import type { StockDto } from '@cookpit/application';
-import { useRouter } from 'next/navigation';
 import type { FormEvent, JSX } from 'react';
 import { useEffect, useId, useState } from 'react';
 import {
@@ -26,6 +25,15 @@ import {
 interface Props {
   stock: StockDto | null;
   onOpenChange: (open: boolean) => void;
+  /**
+   * 更新成功時に、応答の更新後 Pantry の stocks を呼び出し側へ返す。
+   *
+   * PantryClient は stocks を自前の state で持つ（consume / discard と同じ D-5 の方式）ため、
+   * `router.refresh()` だけでは一覧が更新されない。必ずこの経路で反映させる。
+   */
+  onUpdated: (stocks: StockDto[]) => void;
+  /** 対象の在庫が他経路で消えていた（404）ことを呼び出し側へ伝える。 */
+  onStockMissing: () => void;
 }
 
 interface FieldErrors {
@@ -45,8 +53,12 @@ function errorMessageFromPayload(payload: unknown): string | null {
   return typeof payload.error === 'string' ? payload.error : null;
 }
 
-export function StockEditDialog({ stock, onOpenChange }: Props): JSX.Element {
-  const router = useRouter();
+export function StockEditDialog({
+  stock,
+  onOpenChange,
+  onUpdated,
+  onStockMissing,
+}: Props): JSX.Element {
   const amountId = useId();
   const locationId = useId();
   const expiresAtId = useId();
@@ -122,16 +134,19 @@ export function StockEditDialog({ stock, onOpenChange }: Props): JSX.Element {
         json: body,
       });
       if (response.ok) {
+        const dto = await response.json();
+        onUpdated(dto.stocks);
         onOpenChange(false);
-        router.refresh();
         return;
       }
 
       const status: number = response.status;
       if (status === 404) {
-        setErrorMessage('この在庫はすでに削除されています');
+        // 削除済みの在庫を編集し続けても意味がないのでダイアログは閉じるが、
+        // errorMessage はダイアログ内にしか描画されない（閉じると同時に消える）。
+        // 理由をユーザーへ伝えるため、一覧側の共有エラーバナーに委ねる。
+        onStockMissing();
         onOpenChange(false);
-        router.refresh();
         return;
       }
       if (status === 422) {

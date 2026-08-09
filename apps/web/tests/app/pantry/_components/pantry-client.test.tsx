@@ -486,6 +486,50 @@ describe('PantryClient', () => {
     });
   });
 
+  it('PC-EDIT-03: 編集の成功で応答の stocks を一覧へ反映する（リロード不要）', async () => {
+    // 回帰ガード。以前の実装はダイアログが router.refresh() するだけだったが、
+    // PantryClient は stocks を useState で持ち props と同期しないため、
+    // 保存しても一覧が変わらず「編集が効いていない」ように見えた（2026-08-08 実画面確認）。
+    const user = userEvent.setup();
+    const stock = createStockDto({ displayName: '味噌', amount: { value: 1, unit: '袋' } });
+    putStock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ stocks: [{ ...stock, amount: { value: 9, unit: '袋' } }] }),
+    });
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([stock])} />);
+
+    await user.click(within(getStockRow('味噌')).getByRole('button', { name: '編集' }));
+    await waitFor(() => {
+      expect((screen.getByLabelText('数量') as HTMLInputElement).value).toBe('1袋');
+    });
+    await user.clear(screen.getByLabelText('数量'));
+    await user.type(screen.getByLabelText('数量'), '9袋');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(within(getStockRow('味噌')).getByText('9袋')).toBeDefined();
+    });
+  });
+
+  it('PC-EDIT-04: 編集対象が他経路で消えていたら一覧側にエラーバナーを出す', async () => {
+    // 回帰ガード。404 のメッセージはダイアログ内にしか無く、閉じると同時に消えるため
+    // 一覧側のバナーで伝える必要がある（2026-08-08 実画面確認 MB-16）。
+    const user = userEvent.setup();
+    const stock = createStockDto({ displayName: '塩' });
+    putStock.mockResolvedValue({ ok: false, status: 404 });
+    getPantry.mockResolvedValue({ ok: true, json: async () => ({ stocks: [] }) });
+    render(<PantryClient asOf={AS_OF} pantry={createPantryDto([stock])} />);
+
+    await user.click(within(getStockRow('塩')).getByRole('button', { name: '編集' }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: '在庫を編集' })).toBeDefined();
+    });
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(screen.getByText('この在庫はすでに削除されています')).toBeDefined();
+  });
+
   it('PC-EDIT-02: asOf を在庫行へ伝播し期限3日のチップを表示する', () => {
     render(
       <PantryClient

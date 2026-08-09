@@ -78,6 +78,18 @@ export function PantryClient({ pantry, asOf }: Props) {
     });
   }
 
+  /**
+   * 編集対象が他経路で消えていた（404）ときの後始末。
+   *
+   * ダイアログは閉じてしまい、その中のエラー表示は同時に消えるため、理由は一覧の共有
+   * エラーバナーで伝える。`handleRefetch` は成功時にバナーを消すので、**再同期を待ってから**
+   * メッセージを設定する（順序を逆にするとバナーが即座に消える）。
+   */
+  async function handleStockMissing(): Promise<void> {
+    await handleRefetch({ silent: true });
+    action.setErrorMessage('この在庫はすでに削除されています');
+  }
+
   useEffect(() => {
     function handleFocus(): void {
       void handleRefetch({ silent: true });
@@ -161,6 +173,11 @@ export function PantryClient({ pantry, asOf }: Props) {
               setEditingStock(null);
             }
           }}
+          onUpdated={(updatedStocks) => {
+            action.setErrorMessage(null);
+            setStocks(updatedStocks);
+          }}
+          onStockMissing={() => void handleStockMissing()}
         />
       </div>
     </main>

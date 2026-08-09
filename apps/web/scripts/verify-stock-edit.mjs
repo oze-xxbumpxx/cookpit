@@ -145,6 +145,26 @@ try {
     );
   }
 
+  // MB-18: 編集の成功が **リロードなしで** 一覧へ反映される
+  // （PantryClient は stocks を useState で持つため、router.refresh() だけでは反映されない）
+  {
+    await openEditDialog(page, '味噌');
+    await page.getByRole('alertdialog').getByLabel('数量').fill('9袋');
+    await page.getByRole('alertdialog').getByRole('button', { name: '保存' }).click();
+    await page.getByRole('alertdialog').waitFor({ state: 'hidden' });
+    await page.waitForTimeout(800); // リロードはしない
+    const text = await card(page, '味噌').innerText();
+    const ok = text.includes('9袋');
+    record(
+      'MB-18',
+      ok ? 'PASS' : 'FAIL',
+      ok
+        ? '味噌を 1袋→9袋 に編集し、リロードせずに一覧へ反映されることを確認'
+        : `リロードなしで一覧が更新されない。表示: ${text.replace(/\n/g, ' / ')}`,
+      ['S-6'],
+    );
+  }
+
   // MB-01: 数量の値を変更 → リロードで保持
   {
     await openEditDialog(page, '米');
