@@ -215,15 +215,46 @@ const isDisallowedHostname = (hostname: string): boolean =>
  * 常に小文字へ正規化されるため `HTTPS://...` のような大文字表記も正しく受理できる）。
  * 文字列の前方一致（`startsWith('https://')`）は大文字スキームを誤って拒否するため使わない。
  */
+// 【実装フェーズで訂正・2026-08-10】zod v4 は先行チェック（`.url()` を含む）が失敗しても
+// 後続の `.refine()` を短絡しない。そのため `new URL(value)` を try/catch なしで呼ぶと、
+// 不正な入力（例: 'not-a-url'）で `TypeError: Invalid URL` が送出され、`safeParse()` 自体が
+// throw して `{ success: false }` を返さなくなる。各 refine 内で必ず try/catch し false を返す。
 export const pushEndpointSchema = z
   .url()
   .max(2048)
-  .refine((value) => new URL(value).protocol === 'https:', {
-    message: 'endpoint must be an https URL',
-  })
-  .refine((value) => !isDisallowedHostname(new URL(value).hostname), {
-    message: 'endpoint must not target a private, loopback, or internal host',
-  });
+  .refine(
+    (value) => {
+      try {
+        return new URL(value).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    },
+    { message: 'endpoint must be an https URL' },
+  )
+  // userinfo 付き URL の hostname は正規ホストと同一になるため、hostname 検証では弾けない。
+  // 例: new URL('https://evil.example@fcm.googleapis.com/x').hostname === 'fcm.googleapis.com'
+  .refine(
+    (value) => {
+      try {
+        const url = new URL(value);
+        return url.username === '' && url.password === '';
+      } catch {
+        return false;
+      }
+    },
+    { message: 'endpoint must not contain userinfo (username/password)' },
+  )
+  .refine(
+    (value) => {
+      try {
+        return !isDisallowedHostname(new URL(value).hostname);
+      } catch {
+        return false;
+      }
+    },
+    { message: 'endpoint must not target a private, loopback, or internal host' },
+  );
 
 /**
  * ECDH 公開鍵（p256dh）と認証シークレット（auth）。ブラウザの
@@ -323,14 +354,14 @@ export * from './push-subscription.schema';
 
 ### 4.1 `endpoint`（P-16・L-4 確定を反映）
 
-| 規則                                 | 内容                                                                                                                 | 理由                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 形式                                 | `z.url()`（本体設計書のコード例のまま）                                                                              | Web Push の `endpoint` は URL 形式を持つ（RFC 8030）                                                                                                                                                                                                                                                                                                                                                 |
-| 長さ                                 | `.max(2048)`                                                                                                         | 実務上の Push Service の `endpoint` は数百文字以内。悪意ある巨大文字列の送りつけ・DB 肥大化への防御。既存の `store.schema.ts` の `max(255)` と同種の「防御的上限」の慣習                                                                                                                                                                                                                             |
-| スキーム                             | `new URL(value).protocol === 'https:'` で判定（L-4 確定）                                                            | 実在する Push Service は常に HTTPS。`protocol` は小文字へ正規化されるため大文字表記（`HTTPS://...`）も正しく受理できる。文字列前方一致は大文字表記を誤って拒否するため不採用                                                                                                                                                                                                                         |
-| hostname（blind SSRF 対策）          | `new URL(value).hostname` が IPv4/IPv6 リテラル、または `localhost`/`*.local`/`*.internal` の場合は拒否（P-16 確定） | `POST /subscribe` に認証が無いため `endpoint` は外部由来の未検証の値であり、Cron が日次で毎回 POST する送信先になる。判定を文字列の前方一致・`includes` で行うと `https://evil.example@fcm.googleapis.com/x` のような userinfo 付与や `https://fcm.googleapis.com.evil.example/x` のような上位ドメイン偽装を見落とす（または逆に正規ドメインを誤検知する）ため、必ず `new URL().hostname` で判定する |
-| 許可リストは採らない（P-16 確定）    | 既知 Push Service のドメイン一致では検証しない                                                                       | ブラウザが新しい Push Service へ切り替えたときに正規購読を誤って拒否するため                                                                                                                                                                                                                                                                                                                         |
-| `subscribe` / `unsubscribe` での共有 | 両スキーマとも `pushEndpointSchema` を共有                                                                           | DB の `UNIQUE` 制約と同じ値をキーに使う 2 つの操作であり、バリデーション規則がずれると「登録は通るが解除できない `endpoint`」のような非対称が生まれ得るため一致させる                                                                                                                                                                                                                                |
+| 規則                                 | 内容                                                                                                                                                                                | 理由                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 形式                                 | `z.url()`（本体設計書のコード例のまま）                                                                                                                                             | Web Push の `endpoint` は URL 形式を持つ（RFC 8030）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 長さ                                 | `.max(2048)`                                                                                                                                                                        | 実務上の Push Service の `endpoint` は数百文字以内。悪意ある巨大文字列の送りつけ・DB 肥大化への防御。既存の `store.schema.ts` の `max(255)` と同種の「防御的上限」の慣習                                                                                                                                                                                                                                                                                                                                                             |
+| スキーム                             | `new URL(value).protocol === 'https:'` で判定（L-4 確定）                                                                                                                           | 実在する Push Service は常に HTTPS。`protocol` は小文字へ正規化されるため大文字表記（`HTTPS://...`）も正しく受理できる。文字列前方一致は大文字表記を誤って拒否するため不採用                                                                                                                                                                                                                                                                                                                                                         |
+| hostname（blind SSRF 対策）          | `new URL(value).hostname` が IPv4/IPv6 リテラル、または `localhost`/`*.local`/`*.internal` の場合は拒否（P-16 確定）。加えて `username`/`password`（userinfo）を持つ URL も拒否する | `POST /subscribe` に認証が無いため `endpoint` は外部由来の未検証の値であり、Cron が日次で毎回 POST する送信先になる。判定は必ず `new URL()` で行う。**`https://evil.example@fcm.googleapis.com/x` は hostname が正規ホストと同一になるため hostname 検証では弾けず、userinfo の明示チェックが要る。** 一方 `https://fcm.googleapis.com.evil.example/x` は **accept される** — ブロックリスト方式では未知の外部ホストと区別できず、区別するには P-16 が却下した許可リストが要るため。残存ギャップは ADR-0017 §Consequences に記録済み |
+| 許可リストは採らない（P-16 確定）    | 既知 Push Service のドメイン一致では検証しない                                                                                                                                      | ブラウザが新しい Push Service へ切り替えたときに正規購読を誤って拒否するため                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `subscribe` / `unsubscribe` での共有 | 両スキーマとも `pushEndpointSchema` を共有                                                                                                                                          | DB の `UNIQUE` 制約と同じ値をキーに使う 2 つの操作であり、バリデーション規則がずれると「登録は通るが解除できない `endpoint`」のような非対称が生まれ得るため一致させる                                                                                                                                                                                                                                                                                                                                                                |
 
 ### 4.2 `p256dh` / `auth`（P-17 確定を反映）
 

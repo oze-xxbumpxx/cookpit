@@ -289,16 +289,17 @@
 
 `pushEndpointSchema` に `new URL(value).hostname` を用いた検証が追加される。**単純な
 文字列一致（`startsWith`/`includes`）で実装するとバイパスされる 2 パターン
-（Z-PUSH-17・Z-PUSH-18）が本命の回帰ガード**である。
+（Z-PUSH-17）が本命の回帰ガード**である。Z-PUSH-18 は「reject されないことを固定する」
+観点であり、意味が逆である点に注意する（§15 項目 9）。
 
-| #                                           | 観点                                                                                                    | テスト値                                                                            | 期待結果                                                                                                                                                                                                                                                                                                                 | 分類                                               |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| Z-PUSH-15                                   | IPv4/IPv6 リテラルホストを reject                                                                       | `it.each`: `https://127.0.0.1/x` / `https://[::1]/x` / `https://192.168.1.1/x`      | いずれも失敗                                                                                                                                                                                                                                                                                                             | 異常・境界                                         |
-| Z-PUSH-16                                   | `localhost`/`.local`/`.internal` サフィックスのホストを reject                                          | `it.each`: `https://localhost/x` / `https://foo.local/x` / `https://foo.internal/x` | いずれも失敗                                                                                                                                                                                                                                                                                                             | 異常・境界                                         |
-| Z-PUSH-17（**最重要・実装ミス検出の本命**） | userinfo 部を含む URL を reject（文字列一致実装だと `fcm.googleapis.com` を含むため誤って通ってしまう） | `https://evil.example@fcm.googleapis.com/x`                                         | 失敗（`new URL().hostname` は `evil.example` ではなく実際には `fcm.googleapis.com` になる点に注意。**この URL は `hostname` としては正規ホストと同一になるため、`hostname` 検証だけでは reject できない可能性がある。実装計画で `username`/`password` 部の扱いを明示的に禁止する設計になっているか確認する必要がある**） | 異常・**要確認（実装計画への申し送り。§15 参照）** |
-| Z-PUSH-18（**最重要・実装ミス検出の本命**） | サフィックス偽装ホスト（`fcm.googleapis.com.evil.example`）を reject                                    | `https://fcm.googleapis.com.evil.example/x`                                         | 失敗（`hostname` が `fcm.googleapis.com.evil.example` そのものであり、`allowlist` との完全一致・末尾一致の実装であれば正しく reject されるはず。文字列の `includes('fcm.googleapis.com')` 実装だと誤って通る）                                                                                                           | 異常                                               |
-| Z-PUSH-19                                   | 正規ホストを accept                                                                                     | `https://fcm.googleapis.com/fcm/send/xxx`                                           | 成功                                                                                                                                                                                                                                                                                                                     | 正常                                               |
-| Z-PUSH-20（境界）                           | 大文字スキーム（`HTTPS://`）を accept                                                                   | `HTTPS://fcm.googleapis.com/fcm/send/xxx`                                           | 成功（スキームは大小文字非依存。前方一致で実装すると誤って reject するため境界として明示する）                                                                                                                                                                                                                           | 正常・境界                                         |
+| #                                           | 観点                                                                                                                                                                | テスト値                                                                            | 期待結果                                                                                                                                                                                                                                                                                                                 | 分類                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| Z-PUSH-15                                   | IPv4/IPv6 リテラルホストを reject                                                                                                                                   | `it.each`: `https://127.0.0.1/x` / `https://[::1]/x` / `https://192.168.1.1/x`      | いずれも失敗                                                                                                                                                                                                                                                                                                             | 異常・境界                                         |
+| Z-PUSH-16                                   | `localhost`/`.local`/`.internal` サフィックスのホストを reject                                                                                                      | `it.each`: `https://localhost/x` / `https://foo.local/x` / `https://foo.internal/x` | いずれも失敗                                                                                                                                                                                                                                                                                                             | 異常・境界                                         |
+| Z-PUSH-17（**最重要・実装ミス検出の本命**） | userinfo 部を含む URL を reject（文字列一致実装だと `fcm.googleapis.com` を含むため誤って通ってしまう）                                                             | `https://evil.example@fcm.googleapis.com/x`                                         | 失敗（`new URL().hostname` は `evil.example` ではなく実際には `fcm.googleapis.com` になる点に注意。**この URL は `hostname` としては正規ホストと同一になるため、`hostname` 検証だけでは reject できない可能性がある。実装計画で `username`/`password` 部の扱いを明示的に禁止する設計になっているか確認する必要がある**） | 異常・**要確認（実装計画への申し送り。§15 参照）** |
+| Z-PUSH-18（**accept が正**）                | サフィックス偽装ホスト（`fcm.googleapis.com.evil.example`）は **accept される**（P-16 のブロックリスト方式では未知の外部ホストと区別できないため。§15 項目 9 参照） | `https://fcm.googleapis.com.evil.example/x`                                         | 成功。**reject を期待しないこと** — 期待すると P-16（許可リストを採らない）と矛盾する                                                                                                                                                                                                                                    | 正常（残存ギャップの固定）                         |
+| Z-PUSH-19                                   | 正規ホストを accept                                                                                                                                                 | `https://fcm.googleapis.com/fcm/send/xxx`                                           | 成功                                                                                                                                                                                                                                                                                                                     | 正常                                               |
+| Z-PUSH-20（境界）                           | 大文字スキーム（`HTTPS://`）を accept                                                                                                                               | `HTTPS://fcm.googleapis.com/fcm/send/xxx`                                           | 成功（スキームは大小文字非依存。前方一致で実装すると誤って reject するため境界として明示する）                                                                                                                                                                                                                           | 正常・境界                                         |
 
 ### 4-3. `p256dh`/`auth` の長さ境界（P-17 確定・新規追加）
 
@@ -478,7 +479,7 @@
   Cron の Bearer 保護は WH-CRON-01〜07 で扱う）。
 - **セキュリティ（P-15/P-16。無認証エンドポイントの悪用防止・本ユニットで新設）**:
   SUB-06〜08（購読件数上限）、WH-PUSH-09〜10（422 写像・上限対象外の回帰）、
-  Z-PUSH-15〜20（`endpoint` ホスト検証。特に Z-PUSH-17/18 は文字列一致実装のバイパスを
+  Z-PUSH-15〜20（`endpoint` ホスト検証。特に Z-PUSH-17 は文字列一致実装のバイパスを
   検出する本命の観点）。攻撃シナリオ（VAPID 公開鍵の無認証配布 + `endpoint` 推測不要）は
   設計書 §確定事項 P-15/P-16 を正とする。
 - **データ整合性**: SEA-07 と GES-03（数量 0 除外の非対称を両方から固定）、PS-06（`reconstruct`
@@ -659,7 +660,7 @@ $CRON_SECRET"` の形で参照し、実値そのものをコマンド出力ご�
       pass する（**SEA-04/06/07・GES-03 の非対称固定に加え、SUB-07（422）・SUB-08（上限
       対象外の回帰）は必須**）。`PushSender` 関連の型は `@cookpit/domain` から import
       されていることを確認する（P-13）。
-- [ ] api-contract: Z-PUSH-01〜26 が実装され pass する（**Z-PUSH-17/18（userinfo・
+- [ ] api-contract: Z-PUSH-01〜26 が実装され pass する（**Z-PUSH-17（userinfo・
       サフィックス偽装の reject）と Z-PUSH-21/24（鍵長下限）は必須**）。
 - [ ] **Infrastructure（最重要・リリースブロッカー）**: `create-test-db.ts` への DDL 追記
       （§5-1）を含め INF-PUSH-01〜08・INF-WPS-01〜06 がすべて実装され pass する。
@@ -750,3 +751,18 @@ evil.example@fcm.googleapis.com/x').hostname` は `'fcm.googleapis.com'` を返�
    スコープでは検討していない。将来 Push Service 依存のテストを安定化させたい場合は、
    独立した改善候補として `docs/claude-code/improvements/` に起票することを推奨する
    （本書はその起票自体は行わない）。
+
+10. **【解決済み・2026-08-10】Z-PUSH-18（サフィックス偽装 `fcm.googleapis.com.evil.example`）の
+    期待結果を reject → accept へ訂正した。** 本書の初版は Orchestrator の指示に従って reject を
+    期待していたが、**その指示が P-16（許可リストを採らない・ブロックリスト方式）と矛盾していた**。
+    ブロックリスト（IP リテラル・`localhost` / `.local` / `.internal`）では
+    `fcm.googleapis.com.evil.example` を他の未知の外部ホストと区別できない。区別するには
+    P-16 が明示的に却下した許可リストが要る。実装フェーズで implementer が検出した。
+    - **残存ギャップ**: 任意の外部 HTTPS ホストを購読 `endpoint` として登録できる。これは
+      ADR-0017 §Consequences に「正規の Push Service に見えるホストへの送信は防げない」として
+      記録済みであり、P-16 は内部ネットワーク向けの blind SSRF を塞ぐことを目的としている。
+      第三者が購読を登録できること自体は H-1 / P-15（件数上限）で扱う別の論点。
+    - Z-PUSH-17（userinfo 部）は**引き続き reject が正**。`new URL('https://evil.example@
+fcm.googleapis.com/x').hostname` は正規ホスト `fcm.googleapis.com` を返すため
+      `hostname` 検証だけでは弾けず、`username` / `password` の明示チェックが要る。
+      implementer がこれを実装した（契約設計書 §3.1 の literal なコードには無かった追加）。
