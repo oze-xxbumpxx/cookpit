@@ -12,12 +12,14 @@
   "dependencies": {
     "@cookpit/domain": "workspace:*",
     "@neondatabase/serverless": "^1.1.0",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "@electric-sql/pglite": "^0.5.4",
     "@types/node": "^20",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
