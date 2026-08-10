@@ -150,7 +150,7 @@ P-15〜P-17 はセキュリティレビューの各フェーズで下流 Agent �
 - 認証の全体導入はしない（ADR-0003 を再訪しない）。Cron エンドポイントの保護は
   当該ルート限定のインラインチェックとし、汎用ミドルウェアを追加しない。
 - `apps/web/src/app/sw.ts` の既存 `runtimeCaching` 4 件（Google Fonts / 買い物リスト詳細 GET /
-  店舗一覧 GET / `/shopping-lists*` GET）は `docs/tests/saturday-flow.md:83-85`
+  店舗一覧 GET / `/shopping-lists*` GET）は `docs/tests/saturday-flow.md:83-86`
   （オフライン再訪問 O-01）が固定した挙動であり、`push` / `notificationclick` ハンドラの
   追加でこれを壊してはならない（実装上の罠 2）。
 - `packages/infrastructure/tests/testing/create-test-db.ts` の PGlite DDL テンプレート

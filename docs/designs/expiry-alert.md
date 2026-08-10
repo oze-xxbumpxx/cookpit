@@ -74,7 +74,7 @@ skipWaiting: true, clientsClaim: true, navigationPreload: false, runtimeCaching:
   `addEventListener` は**存在しない**。
   - runtimeCaching 4 件（L18-54）: Google Fonts（CacheFirst）/ `GET /api/shopping-lists/:id`
     （NetworkFirst 3s）/ `GET /api/stores`（StaleWhileRevalidate）/ `GET /shopping-lists*`
-    （NetworkFirst 3s）。この挙動は `docs/tests/saturday-flow.md:83-85`
+    （NetworkFirst 3s）。この挙動は `docs/tests/saturday-flow.md:83-86`
     （オフライン再訪問 O-01）が固定している。
 - `apps/web/next.config.ts:24-29`: `process.env.NODE_ENV === 'production'` のときだけ
   `withSerwist({ swSrc: 'src/app/sw.ts', swDest: 'public/sw.js' })` を適用する。dev では
@@ -853,7 +853,7 @@ userVisibleOnly: true, applicationServerKey: <VAPID 公開鍵> })` を呼ぶ（i
    `NODE_ENV === 'production'` 分岐）。`pnpm dev` では push を検証できず、「動くはずの
    ものが確認できない」形で詰まる。P-11 で実機確認手順を扱う。
 2. **`sw.ts` への `push` / `notificationclick` ハンドラ追加が既存 `runtimeCaching` 4 件を
-   壊さないこと。** `docs/tests/saturday-flow.md:83-85`（オフライン再訪問 O-01）がこの
+   壊さないこと。** `docs/tests/saturday-flow.md:83-86`（オフライン再訪問 O-01）がこの
    4 件の挙動を固定している。§変更後構成のとおり、追加ハンドラは Serwist インスタンスとは
    独立した `self.addEventListener` として書き、既存の `Serwist` コンストラクタ引数
    （`runtimeCaching` 配列）には触れない。
