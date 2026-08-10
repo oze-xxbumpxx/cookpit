@@ -4,6 +4,7 @@ import {
   getExpiryRemainingDays,
   getExpiryUrgency,
 } from '@cookpit/application';
+import { ExpiryAlertSubscription } from '@/app/_components/expiry-alert-subscription';
 import { ThemeToggle } from '@/app/_components/theme-toggle';
 import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
@@ -120,6 +121,7 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
               在庫を見る
             </Link>
           </div>
+          <ExpiryAlertSubscription />
           {expiringStocks.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               まもなく期限を迎える在庫はありません

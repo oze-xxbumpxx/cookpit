@@ -230,4 +230,14 @@ describe('Dashboard', () => {
     expect(badge.className).toContain('text-xs');
     expect(badge.className).toContain('font-medium');
   });
+
+  it('DASH-REG-02: 通知 ON/OFF セクションが「賞味期限が近い在庫」見出し配下に描画される', () => {
+    render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
+
+    const heading = screen.getByText('賞味期限が近い在庫');
+    const section = heading.closest('section');
+    expect(section).not.toBeNull();
+    // happy-dom は PushManager 非対応のため「通知に非対応」の案内文言に落ちる（非対応ブラウザ扱い）。
+    expect(section?.textContent).toContain('このブラウザは通知に対応していません。');
+  });
 });
