@@ -44,7 +44,7 @@ Web Push（VAPID）+ 日次 Cron にユーザー確定済み（`docs/05-roadmap.
   パッケージを用いた Push 送信実装（P-9）。
 - Presentation（apps/web）: Cron 用 Hono ルート、購読/購読解除 Hono ルート、`sw.ts` への
   `push`/`notificationclick` ハンドラ追加、ダッシュボードへの購読 ON/OFF UI 追加。
-- 設定: `vercel.json` 新設、Vercel 環境変数（VAPID 鍵一式・`CRON_SECRET`・`TZ=Asia/Tokyo`）
+- 設定: `vercel.json` 新設、Vercel 環境変数（VAPID 鍵一式・`CRON_SECRET`）。**`TZ` は設定しない**（P-5 改）
   の追加。
 
 ## 対象外
@@ -867,12 +867,15 @@ userVisibleOnly: true, applicationServerKey: <VAPID 公開鍵> })` を呼ぶ（i
    `VAPID_SUBJECT` / `CRON_SECRET` / `TZ`）は §移行とリリースに明記する。既存の秘密情報は
    `DATABASE_URL` のみで検証層も無いため（`.env.example` 不在）、ここに書き残さないと
    実装時に失われる。
-5. **`TZ=Asia/Tokyo` の設定忘れで静かにズレる。** コード変更が無いぶん、設定漏れが
-   「通知が 1 日ずれる」形でしか現れない（気づきにくい）。§移行とリリースに設定手順を
-   明記する。**加えて、Vercel Cron の `schedule` フィールド自体は `TZ` 環境変数の影響を
-   受けず常に UTC で解釈される。** JST の意図した時刻を UTC に変換して `vercel.json` に
-   書く必要があり、`TZ=Asia/Tokyo` を設定したからといって `vercel.json` に JST の値を
-   そのまま書いてよいわけではない（別々の設定箇所であることの注意喚起）。
+5. **期限判定が実行時 TZ に依存すると通知が 1 日ずれる。** 当初は `TZ=Asia/Tokyo` を
+   Vercel 環境変数で設定する方針だったが、**`TZ` は Vercel の予約環境変数で設定できない**
+   （AWS Lambda が定義済み。2026-08-10 に実機設定時へ判明）。Cron は UTC 23:00
+   （= JST 08:00）に発火するため、実行時 TZ（UTC）に依存すると「今日」が JST の前日と
+   判定され、**「本日まで」の在庫が「明日まで」として通知され、3 日間の窓も 1 日短くなる**。
+   `process.env.TZ` への代入は Node が最初の `Date` 操作後に TZ をキャッシュするため
+   サーバレスでは信頼できない。**P-5 改として `expiry.ts` に JST をコード上で明示する**
+   （`Intl.DateTimeFormat` で JST の暦日を得て、`Date.UTC` 基準で差分を取る）。
+   なお `vercel.json` の `schedule` は UTC で書く必要がある点は従来どおり変わらない。
 6. **PGlite テスト DDL の手動同期**（`packages/infrastructure/tests/testing/
 create-test-db.ts` の `stocks` テーブル定義は L100-113）。`push_subscriptions` の
    `CREATE TABLE` を同ファイルに追記しないと、新規 Repository テストが全滅する。
@@ -1077,7 +1080,8 @@ DB マイグレーションは新規追加のみ（既存データへの影響�
 1. **環境変数の準備**（Vercel プロジェクト設定）: `VAPID_PUBLIC_KEY` /
    `VAPID_PRIVATE_KEY`（`web-push generate-vapid-keys` 等で生成） /
    `VAPID_SUBJECT`（`mailto:` または HTTPS URL。実装上の罠 8） / `CRON_SECRET`
-   （Vercel Cron 用。ランダムな秘匿文字列） / `TZ=Asia/Tokyo`（P-5）。
+   （Vercel Cron 用。ランダムな秘匿文字列）の 4 点。**`TZ` は設定しない**（Vercel の
+   予約環境変数で登録できない。P-5 改。JST はコード側に持つ）。
 2. **DB マイグレーション**（`push_subscriptions` テーブル）を Domain/Application/
    Infrastructure の実装と同一 PR で先にリリースする。
 3. **`vercel.json` の追加**（Cron スケジュール定義）。Vercel へのデプロイ後に Cron
@@ -1098,7 +1102,7 @@ DB マイグレーションは新規追加のみ（既存データへの影響�
 | R-2  | `sw.ts` への追記が既存 `runtimeCaching` 4 件を壊す（罠 2）                                                    | オフライン再訪問（O-01）の回帰                        | Serwist インスタンスとは独立した `self.addEventListener` として追記し、既存回帰テストを実行する              |
 | R-3  | iOS はホーム画面追加済み PWA + ユーザージェスチャ起点の権限要求でないと動かない（罠 3）                       | iOS だけ通知が届かない                                | P-3（ダッシュボードのボタン起点）で設計上対応済み。P-11 で iOS 実機確認を必須化する                          |
 | R-4  | VAPID 秘密鍵が誤ってクライアントに露出する（罠 4）                                                            | 第三者が任意の購読へなりすまし送信可能になる          | 公開鍵専用エンドポイントのみ公開し、秘密鍵はサーバー環境変数のみに置く。実装計画でコードレビュー観点に含める |
-| R-5  | `TZ=Asia/Tokyo` の設定忘れ（罠 5）                                                                            | 通知の対象選定が 1 日ずれる。気づきにくい             | 移行とリリース §1 に手順を明記し、実装計画のデプロイ前チェックリストに含める                                 |
+| R-5  | 期限判定が実行時 TZ に依存すると通知が 1 日ずれる（罠 5）                                                     | 「本日まで」が「明日まで」になり閉刃の在庫を見逃す    | JST をコード上に明示し（P-5 改）、Cron 発火時点（UTC 23:00）を再現する回帰テストで固定する                   |
 | R-6  | `vercel.json` の `schedule` が UTC 固定であることの誤認（罠 5 の追加論点）                                    | JST 08:00 のつもりが別の時刻に発火する                | 設計書に UTC 変換値（`0 23 * * *`）を明記し、実装計画で二重チェックする                                      |
 | R-7  | PGlite テスト DDL の手動同期漏れ（罠 6）                                                                      | 新規 Repository テストが全滅する                      | `create-test-db.ts` への追記を実装計画のタスクに明示的に含める                                               |
 | R-8  | Vercel Hobby の Cron 発火時刻が 1 時間ブレる（罠 7）                                                          | 「毎朝ちょうど n 時」を前提にした試験観点が成立しない | B-6 のとおり受け入れ基準を「その日のうちに届く」粒度にとどめる                                               |
@@ -1131,26 +1135,26 @@ P-1〜P-11 は 2026-08-09 にユーザー確定済み（Orchestrator 経由の�
 P-13 / P-14 は実装計画フェーズ、P-15〜P-17 はセキュリティレビューで
 下流 Agent が検出した論点。**
 
-| #     | 論点                      | 確定                                                                               |
-| ----- | ------------------------- | ---------------------------------------------------------------------------------- |
-| P-1   | 日次 Cron の実行基盤      | Vercel Cron。`Authorization: Bearer $CRON_SECRET` で保護する                       |
-| P-2   | 通知の粒度と再送          | 1 日 1 通のダイジェスト・再送あり。送信履歴テーブルは作らない                      |
-| P-3   | 購読 ON/OFF UI の置き場所 | ダッシュボードの「賞味期限が近い在庫」セクション内                                 |
-| P-4   | 期限判定ロジックの層      | Application 層へ移す。ダッシュボードも新 UseCase に差し替える                      |
-| P-5   | タイムゾーン              | `TZ=Asia/Tokyo` を Vercel 環境変数で固定する                                       |
-| P-6   | Push 購読情報の位置づけ   | 新規集約として Domain に置く                                                       |
-| P-7   | 通知本文の文言と遷移先    | 既存 `formatExpiryUrgencyLabel` を流用。先頭 3 件 +「他 n 件」。タップで `/pantry` |
-| P-8   | 購読の同一性と失効        | `endpoint` に UNIQUE 制約。失効時の削除判断は Application 層が行う                 |
-| P-9   | VAPID 実装手段            | `web-push` パッケージを追加する                                                    |
-| P-10a | Cron 実行時刻             | JST 08:00 台（`vercel.json` に UTC `0 23 * * *`）。発火は 1 時間ブレる             |
-| P-10b | 数量 0 の在庫             | 通知経路だけで除外する。ダッシュボード・`/pantry` の表示は変更しない               |
-| P-11  | 実機検証手段              | Vercel Preview Deployment + iPhone 実機                                            |
-| P-12  | 環境変数未設定時の扱い    | 全エンドポイントで 500 フェイルクローズに揃える                                    |
-| P-13  | `PushSender` port の配置  | `packages/domain/src/push-subscription/push-sender.ts`（Application からの変更）   |
-| P-14  | 期限文言関数の配置        | `formatExpiryUrgencyLabel` も Application へ移す（P-4 の当該部分を取り消す）       |
-| P-15  | 無認証 subscribe の扱い   | 受容根拠を訂正し、購読件数の上限（10 件。upsert は対象外）を設ける                 |
-| P-16  | `endpoint` のホスト検証   | IP リテラルと `localhost` / `.local` / `.internal` を拒否（許可リストは採らない）  |
-| P-17  | `p256dh` / `auth` の長さ  | RFC 8291 の固定長に合わせて幅で制約する（`min(1)` を取り消す）                     |
+| #     | 論点                      | 確定                                                                                   |
+| ----- | ------------------------- | -------------------------------------------------------------------------------------- |
+| P-1   | 日次 Cron の実行基盤      | Vercel Cron。`Authorization: Bearer $CRON_SECRET` で保護する                           |
+| P-2   | 通知の粒度と再送          | 1 日 1 通のダイジェスト・再送あり。送信履歴テーブルは作らない                          |
+| P-3   | 購読 ON/OFF UI の置き場所 | ダッシュボードの「賞味期限が近い在庫」セクション内                                     |
+| P-4   | 期限判定ロジックの層      | Application 層へ移す。ダッシュボードも新 UseCase に差し替える                          |
+| P-5   | タイムゾーン              | JST をコード上に明示する。**`TZ` は Vercel の予約変数で設定できない**（2026-08-10 改） |
+| P-6   | Push 購読情報の位置づけ   | 新規集約として Domain に置く                                                           |
+| P-7   | 通知本文の文言と遷移先    | 既存 `formatExpiryUrgencyLabel` を流用。先頭 3 件 +「他 n 件」。タップで `/pantry`     |
+| P-8   | 購読の同一性と失効        | `endpoint` に UNIQUE 制約。失効時の削除判断は Application 層が行う                     |
+| P-9   | VAPID 実装手段            | `web-push` パッケージを追加する                                                        |
+| P-10a | Cron 実行時刻             | JST 08:00 台（`vercel.json` に UTC `0 23 * * *`）。発火は 1 時間ブレる                 |
+| P-10b | 数量 0 の在庫             | 通知経路だけで除外する。ダッシュボード・`/pantry` の表示は変更しない                   |
+| P-11  | 実機検証手段              | Vercel Preview Deployment + iPhone 実機                                                |
+| P-12  | 環境変数未設定時の扱い    | 全エンドポイントで 500 フェイルクローズに揃える                                        |
+| P-13  | `PushSender` port の配置  | `packages/domain/src/push-subscription/push-sender.ts`（Application からの変更）       |
+| P-14  | 期限文言関数の配置        | `formatExpiryUrgencyLabel` も Application へ移す（P-4 の当該部分を取り消す）           |
+| P-15  | 無認証 subscribe の扱い   | 受容根拠を訂正し、購読件数の上限（10 件。upsert は対象外）を設ける                     |
+| P-16  | `endpoint` のホスト検証   | IP リテラルと `localhost` / `.local` / `.internal` を拒否（許可リストは採らない）      |
+| P-17  | `p256dh` / `auth` の長さ  | RFC 8291 の固定長に合わせて幅で制約する（`min(1)` を取り消す）                         |
 
 ### P-13 の詳細（確定: Domain に置く）
 
@@ -1284,18 +1288,38 @@ HTTPS URL を叩く）を転用できる利点があったが、環境変数の�
 **確定: 案 A**。既存 UI に手が入ることでスコープが広がることを受容する。ロジックの
 二重管理を避けることを優先した。
 
-### P-5 の詳細（確定: `TZ=Asia/Tokyo` を環境変数で固定）
+### P-5 の詳細（確定: JST をコード上に明示。2026-08-10 改訂）
 
 比較した案:
 
-- 案 A（確定）: `TZ=Asia/Tokyo` を環境変数で固定。
-- 案 B: コード上で `Asia/Tokyo` を明示（`Intl.DateTimeFormat` 等）。環境変数に依存せず
-  テストで固定できるが、日付計算の実装量が増え、既存のローカルタイム規約
-  （`meal-plan.mapper` / `pantry.mapper` / `expiry.ts`）と二重規範になる。
-- 案 C: 両方。
+- 案 A（**当初の確定・2026-08-10 に撤回**）: `TZ=Asia/Tokyo` を Vercel 環境変数で固定し、
+  サーバ側の既存ロジック（実行時 TZ 依存）をそのまま使う。
+- 案 B（**改めて採用**）: 実行時 TZ に依存しない形で JST をコード上に明示する。
+- 案 C: UTC のまま受容する。
 
-**確定: 案 A**。代償は「環境変数の設定忘れで静かに壊れる」依存を作ることであり
-（実装上の罠 5）、移行節に設定手順を明記することで対応する。
+**当初は案 A を確定していたが、実装後の環境変数設定時に `TZ` が Vercel の予約環境変数で
+登録できないことが判明した**（AWS Lambda が `TZ` を定義済みのため。2026-08-10）。
+案 A は**実現不可能**だったので撤回する。
+
+**確定: 案 B。** `packages/application/src/pantry/expiry.ts` で
+`Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' })` により JST の暦日（`YYYY-MM-DD`）を
+求め、`Date.UTC` 基準の `Date` に変換して差分を取る。`expiresAt` は元々 `YYYY-MM-DD` なので、
+比較は暦日どうしで完結し実行時 TZ の影響を受けない。
+
+案 C（UTC 受容）は採らない。Cron が UTC 23:00 に発火する以上、**「本日まで」の在庫が
+「明日まで」として通知される**ため、本ユニットの目的（期限切れ前に気づく）を損なう。
+
+`process.env.TZ = 'Asia/Tokyo'` をコード先頭で代入する回避策も採らない。Node は最初の
+`Date` 操作後に TZ をキャッシュするため、モジュール初期化順に依存して効いたり効かなかったり
+する。サーバレスでは信頼できない。
+
+**この変更が安く済んだのは P-4 / P-14 の副産物である。** 期限判定を `expiry.ts` 1 ファイルに
+集約していたため、修正はそのファイルとテストに閉じた。当時「既存 UI に手が入りスコープが
+広がる」ことを受容した判断が、ここで回収された。
+
+**回帰ガード**: `packages/application/tests/pantry/expiry.test.ts` に、Cron の実際の発火時点
+（UTC 2026-08-09T23:00Z = JST 2026-08-10 08:00）を再現するテストを置いた。実装が実行時 TZ に
+依存すると落ちる。
 
 ### P-6 の詳細（確定: 新規集約として Domain に置く）
 

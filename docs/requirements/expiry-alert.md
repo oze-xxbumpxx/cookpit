@@ -56,8 +56,10 @@ P-15〜P-17 はセキュリティレビューの各フェーズで下流 Agent �
   Application 層へ移し、ダッシュボードの表示ロジックも新規 UseCase 経由に差し替える
   （確定・P-4 / **P-14**）。`apps/web/src/app/_utils/expiry.ts` は削除する。
   CSS クラス名を返す `expiryUrgencyChipClass` は `category-color.ts` に据え置く。
-- FR-6: 日付計算は `TZ=Asia/Tokyo` を Vercel 環境変数で固定した上で、既存のローカル日付規約
-  （`toLocalDateString` 等）をそのまま利用する（確定・P-5）。
+- FR-6: 日付計算は **JST の暦日を基準**とし、**実行時タイムゾーンに依存しない**
+  （確定・P-5 改。2026-08-10 更新）。当初は `TZ=Asia/Tokyo` を Vercel 環境変数で固定する
+  方針だったが、**`TZ` は Vercel の予約環境変数で設定できない**（AWS Lambda が定義済み）。
+  そのため `packages/application/src/pantry/expiry.ts` でコード上に JST を明示する。
 - FR-7: Push 購読情報（endpoint・鍵）を新規集約として Domain 層に持つ（確定・P-6）。
 - FR-8: Cron エンドポイントは Vercel が付与する `Authorization: Bearer $CRON_SECRET` で
   保護し、汎用認証ミドルウェアは追加しない（確定・P-1 に付随）。
@@ -139,7 +141,8 @@ P-15〜P-17 はセキュリティレビューの各フェーズで下流 Agent �
 - `apps/web/next.config.ts` は `NODE_ENV === 'production'` のときだけ Serwist を有効化する
   （L24-29）。dev では SW が生成されない（実装上の罠 1）。
 - `vercel.json` はリポジトリに存在しない（新設が必要）。
-- アプリコードに TZ 設定は無い（`TZ=Asia/Tokyo` を Vercel 環境変数として新設する。P-5）。
+- アプリコードに TZ 設定は無い。**`TZ` は Vercel の予約変数で設定できない**ため、
+  期限判定の JST 固定はコード側で行う（P-5 改）。
 - 環境変数の検証層（`.env.example` やスキーマ検証）は存在しない。`apps/web/src/db/client.ts`
   の「未設定なら null、`getDb()` で初めて throw」が唯一の前例。
 - Hono に `.use(` によるミドルウェアは 0 件（ADR-0003）。認証は導入しない。
@@ -172,7 +175,7 @@ P-15〜P-17 はセキュリティレビューの各フェーズで下流 Agent �
   呼ばれる）、購読/購読解除の Hono ルート、`sw.ts` への `push` / `notificationclick`
   ハンドラ追加、ダッシュボードへの購読 ON/OFF UI 追加。
 - 設定: `vercel.json` の新設（Cron スケジュール定義）、Vercel 環境変数（VAPID 鍵一式・
-  `CRON_SECRET`・`TZ=Asia/Tokyo`）の追加。
+  `CRON_SECRET`）の追加。**`TZ` は設定しない**（予約変数のため。P-5 改）。
 
 ## 対象外
 

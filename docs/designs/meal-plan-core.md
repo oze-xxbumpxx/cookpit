@@ -315,7 +315,12 @@ WeekIdentifier（案 A: Date ベース）
 
 - `fromDate(date: Date)` は `date.getDay()` を使用する（ローカルタイムの曜日）
 - サーバープロセスが JST（UTC+9）環境で動くことを前提とする
-- Next.js / Vercel デプロイ時はタイムゾーンを `TZ=Asia/Tokyo` に設定する
+- ~~Next.js / Vercel デプロイ時はタイムゾーンを `TZ=Asia/Tokyo` に設定する~~
+  **（2026-08-10 訂正: 実行不可能。`TZ` は Vercel の予約環境変数で、プロジェクト設定に
+  登録できない。Vercel の実行時 TZ は UTC のまま変えられないため、JST 前提の日付ロジックは
+  コード側で `Asia/Tokyo` を明示する必要がある。expiry-alert では
+  `packages/application/src/pantry/expiry.ts` がこの形を採った。`WeekIdentifier` は本項の
+  前提が崩れているため別タスクで見直す。詳細は ADR-0017 §Decision 補足）**
 - 既存の `new Date()` 呼び出し（`Product.create()`, `Store.create()` 等）と同一の規約
 - テスト環境では `vitest.setSystemTime()` で現在日時をコントロールする
 

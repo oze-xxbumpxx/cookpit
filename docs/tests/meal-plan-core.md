@@ -702,8 +702,13 @@ Application 層テストで使用する。`ProductRepository` 先例（`product-
 `WeekIdentifier` 関連のテストはローカルタイム前提（JST 想定）。テスト実行環境の `TZ` 環境変数が
 未設定または JST 以外の場合、`fromDate`/`current` の境界テストが不安定になる可能性がある。
 実装時に `vitest.config.ts` または `package.json` の `test` スクリプトで `TZ=Asia/Tokyo` を明示するか、
-少なくとも CI 環境の TZ 設定を確認すること（設計 §4-6「Next.js / Vercel デプロイ時はタイムゾーンを
-`TZ=Asia/Tokyo` に設定する」との整合）。
+少なくとも CI 環境の TZ 設定を確認すること。
+
+> **2026-08-10 注記**: 本項が整合先としていた設計 §4-6「Next.js / Vercel デプロイ時は
+> タイムゾーンを `TZ=Asia/Tokyo` に設定する」は**実行不可能なため訂正済み**（`TZ` は
+> Vercel の予約環境変数で登録できない）。テスト環境で `TZ` を明示する話（Vitest / CI）は
+> 引き続き有効だが、**本番の実行時 TZ は UTC のまま**である点に注意する。JST 前提の
+> 日付ロジックはコード側で `Asia/Tokyo` を明示する形へ寄せる。詳細は ADR-0017 §Decision 補足。
 
 ---
 

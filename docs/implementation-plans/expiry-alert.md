@@ -1504,7 +1504,7 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=  # mailto: か https:// のみ（罠 8）
 CRON_SECRET=  # openssl rand -base64 32
-TZ=Asia/Tokyo
+# TZ は設定しない（Vercel の予約環境変数。P-5 改）
 ```
 
 ### 7-3. 環境変数の準備（Vercel プロジェクト設定）
@@ -1658,7 +1658,8 @@ pnpm --filter @cookpit/web build   # Serwist 適用の本番ビルドが通る�
 
 ### 9-1. デプロイ順序（ADR-0017 §Migration に従う）
 
-1. 環境変数（VAPID 鍵一式・`CRON_SECRET`・`TZ=Asia/Tokyo`）を Vercel に設定（Step 7）
+1. 環境変数（VAPID 鍵一式・`CRON_SECRET`）を Vercel に設定（Step 7）。**`TZ` は設定しない**
+   — Vercel の予約変数のため登録できない（P-5 改）
 2. Domain/Application/Infrastructure（Step 1〜3）と DB マイグレーション（Step 2）を含む PR を
    マージ
 3. `vercel.json` を含む PR をマージ
@@ -1794,7 +1795,8 @@ ADR-0017 §Rollback を実装計画のファイル単位に対応させたもの
    から `web-push` 依存を削除
 6. **Domain（Step 1）**: `packages/domain/src/push-subscription/` ディレクトリを削除し、
    `domain/src/index.ts` の 4 export を削除
-7. **環境変数**: VAPID 鍵一式・`CRON_SECRET` を Vercel から削除する。**`TZ=Asia/Tokyo` は
+7. **環境変数**: VAPID 鍵一式・`CRON_SECRET` を Vercel から削除する。**`TZ` は元々設定して
+   いない（予約変数）。以下の旧記述は
    残す**。`.gitignore`/`.env.example`（H-2 対応分）はロールバック後も**残してよい**
    （`DATABASE_URL` を含む既存の秘密情報保護のためにも有効であり、本ユニット固有ではない）
 

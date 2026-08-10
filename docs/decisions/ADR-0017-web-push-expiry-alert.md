@@ -144,18 +144,38 @@ Infrastructure → Application の依存が必要になって
 （`invalid_subscription` / `other`）であり、HTTP → ドメイン語彙の写像は Infrastructure が担う。
 Decision 5（削除の業務判断は Application）とも矛盾しない。
 
-### 補足: タイムゾーンは環境変数で固定する
+### 補足: タイムゾーンは JST をコード上に明示する（2026-08-10 に方針変更）
 
 `toLocalMidnight` は実行時 TZ に依存し、Vercel の実行時 TZ は UTC である。
-`TZ=Asia/Tokyo` を Vercel の環境変数に設定してサーバ側の既存ロジックをそのまま使う。
-コード上で `Asia/Tokyo` を明示する案は、既存のローカルタイム規約
-（`meal-plan.mapper` / `pantry.mapper` / `expiry.ts`）と二重規範になるため採らない。
+Cron は UTC 23:00（= JST 08:00）に発火するため、実行時 TZ のままだと「今日」が JST の
+前日と判定され、「本日まで」の在庫が「明日まで」として通知され、3 日間の窓も 1 日短くなる。
 
-**代償として「環境変数の設定忘れで静かに壊れる」依存を作る。** 設定漏れはコード上に
-痕跡を残さず「通知が 1 日ずれる」形でしか現れない。設定手順を設計書の移行節に明記する。
+**当初の決定（2026-08-09）は `TZ=Asia/Tokyo` を Vercel の環境変数に設定し、サーバ側の
+既存ロジックをそのまま使うことだった。この決定は 2026-08-10 に「実装不可能」として
+撤回した。** `TZ` は Vercel の予約環境変数（基盤の AWS Lambda が定義済み）で、
+プロジェクト設定に登録できない。実装完了後の環境変数設定作業で判明した。
 
-なお、この設定はダッシュボードに既に存在する潜在的なズレ（JST 00:00〜09:00 の間、
-サーバが前日と見なす）も同時に解消する。
+改めて採る方針は、**実行時 TZ に依存しない形で JST をコード上に明示する**こと
+（`packages/application/src/pantry/expiry.ts`）。`Intl.DateTimeFormat('en-CA', { timeZone:
+'Asia/Tokyo' })` で任意の時点を JST の暦日 `YYYY-MM-DD` に変換し、`Date.UTC` で UTC 0 時
+基準の `Date` に載せ替えて比較する。比較は暦日どうしで完結し、実行時 TZ の影響を受けない。
+
+`process.env.TZ = 'Asia/Tokyo'` をコード先頭で代入する回避策は採らない。Node は最初の
+`Date` 操作後に TZ をキャッシュするため、モジュール初期化順に依存して効いたり効かなかったり
+する。当初案が避けたかった「静かに壊れる」性質を、より診断しにくい形で持ち込む。
+
+当初案を退けた理由だった「コード上で `Asia/Tokyo` を明示すると既存のローカルタイム規約
+（`meal-plan.mapper` / `pantry.mapper`）と二重規範になる」という懸念は残る。ただし
+P-4 / P-14 で期限判定を `expiry.ts` 1 ファイルへ集約済みだったため、明示範囲はこの
+ファイル内に閉じ、修正も小さく済んだ。TZ 規約全体の統一は別タスクとする。
+
+なお、この対応はダッシュボードに既に存在する潜在的なズレ（JST 00:00〜09:00 の間、
+サーバが前日と見なす）も同時に解消する（ダッシュボードも同じ関数を使うため）。
+
+設定漏れで静かに壊れる依存が消えた代わりに、**回帰はテストで固定する**。Cron 発火時点
+（UTC 2026-08-09T23:00Z = JST 2026-08-10 08:00）を再現するテストを
+`packages/application/tests/pantry/expiry.test.ts` に置き、実装が実行時 TZ に戻ったら
+必ず落ちるようにした。
 
 ## Alternatives（検討した非採用案と却下理由）
 
@@ -222,7 +242,8 @@ Actions の精度上の利点が活きない。**なお日次より高頻度が�
 - Unit A で入力できるようになった賞味期限データに、初めて**能動的な出口**ができる。
   ADR-0016 が「Unit B のデータが揃う」と書いた前提の受け側にあたる。
 - 期限判定ロジックが Application 層に一本化され、通知と画面表示が同じ判定を共有する。
-  ダッシュボードの潜在的な TZ ズレ（JST 00:00〜09:00）も `TZ=Asia/Tokyo` 設定で解消する。
+  ダッシュボードの潜在的な TZ ズレ（JST 00:00〜09:00）も、JST をコード上に明示したことで
+  同時に解消する（2026-08-10 の方針変更後）。
 - **追加費用は発生しない。** Vercel Cron は全プランに含まれ、Push Service（FCM / Apple /
   Mozilla）は VAPID 方式なら無料、`web-push` は MIT、Neon Free の消費は日次 1 回・数秒の
   起床で誤差の範囲（いずれも 2026-08-09 に公式ドキュメントで確認）。
@@ -282,8 +303,9 @@ Actions の精度上の利点が活きない。**なお日次より高頻度が�
 3. VAPID 鍵ペアを生成し、Vercel の環境変数に設定する。秘密鍵はサーバ限定、公開鍵のみを
    クライアントへ配る。VAPID subject は **`mailto:` か HTTPS URL** にする（Apple の制約）。
 4. `CRON_SECRET` を Vercel の環境変数に設定する。
-5. **`TZ=Asia/Tokyo` を Vercel の環境変数に設定する。** これを忘れると通知日が 1 日ずれるが、
-   コード上に痕跡が残らないため気づきにくい。
+5. **`TZ` は設定しない**（Vercel の予約環境変数のため登録できない）。JST は
+   `packages/application/src/pantry/expiry.ts` にコード上で明示してあるので、実行時 TZ が
+   UTC のままで正しく動く。設定作業は不要（2026-08-10 の方針変更。§Decision 補足）。
 6. リポジトリルートに `vercel.json` を新設し、`crons` に `0 23 * * *`（UTC）を定義する。
 
 既存データへの影響は無い。`push_subscriptions` は新規テーブルであり、既存 9 テーブルの
@@ -304,8 +326,8 @@ Actions の精度上の利点が活きない。**なお日次より高頻度が�
    Zod スキーマを削除し、各バレルから外す。
 6. `web-push` 依存を `packages/infrastructure/package.json` から外す（**`apps/web` ではない**
    — 実際に import するのは Infrastructure。pnpm の phantom dependency 制約による）。
-7. 環境変数（VAPID 鍵・`CRON_SECRET`）を Vercel から削除する。**`TZ=Asia/Tokyo` は残す**
-   — これは本決定に固有ではなく、既存のダッシュボード表示のズレも直しているため。
+7. 環境変数（VAPID 鍵・`CRON_SECRET`）を Vercel から削除する。**`expiry.ts` の JST 明示は
+   残す** — これは本決定に固有ではなく、既存のダッシュボード表示のズレも直しているため。
 
 `GetExpiringStocksUseCase` への差し替えと `expiry.ts` の Application 層への移設
 （Decision 6）は**戻さなくてよい**。層責務として正しい形であり、通知を止めても画面表示は

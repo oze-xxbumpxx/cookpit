@@ -5,6 +5,7 @@ import {
   getExpiryRemainingDays,
   getExpiryUrgency,
   selectExpiringStocks,
+  toJstDateString,
 } from '../../src/pantry/expiry';
 import type { StockDto } from '../../src/pantry/pantry.dto';
 
@@ -101,10 +102,14 @@ describe('getExpiryRemainingDays', () => {
     expect(getExpiryRemainingDays('2027-01-01', new Date('2026-12-31T09:00:00'))).toBe(1);
   });
 
-  it('EU-07: asOf の時刻成分に依存しない（ローカル 0 時基準）', () => {
-    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-21T00:00:00'))).toBe(1);
-    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-21T09:00:00'))).toBe(1);
-    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-21T23:59:59'))).toBe(1);
+  // 2026-08-10 更新: 基準を「実行時 TZ のローカル 0 時」から「JST の暦日」へ変えたため
+  // （P-5 改。TZ が Vercel の予約変数で設定できないことによる）、同じ JST 暦日に写る
+  // UTC 時刻を並べる形へ書き直した。JST の 2026-07-21 は
+  // UTC 2026-07-20T15:00:00Z 〜 2026-07-21T14:59:59Z に対応する。
+  it('EU-07: asOf の時刻成分に依存しない（JST の暦日基準）', () => {
+    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-20T15:00:00.000Z'))).toBe(1);
+    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-21T00:00:00.000Z'))).toBe(1);
+    expect(getExpiryRemainingDays('2026-07-22', new Date('2026-07-21T14:59:59.000Z'))).toBe(1);
   });
 
   it('EU-08: 不正な expiresAt 文字列でも例外を投げない', () => {
@@ -178,5 +183,51 @@ describe('formatExpiryUrgencyLabel', () => {
       expect(getExpiryUrgency(remainingDays)).toBe(urgency);
       expect(formatExpiryUrgencyLabel(remainingDays)).toBe(label);
     }
+  });
+});
+
+// P-5 改（2026-08-10 確定）の回帰ガード。
+//
+// `TZ` は Vercel の予約環境変数で設定できないため、サーバの実行時 TZ は UTC のままになる。
+// Cron は UTC 23:00（= JST 08:00）に発火するので、実行時 TZ に依存した実装だと「今日」が
+// JST の前日と判定され、「本日まで」の在庫が「明日まで」として通知され、3 日間の窓も
+// 1 日短くなる。以下は **その瞬間を再現する**ケースであり、実装が実行時 TZ に依存すると落ちる。
+describe('JST 固定の期限判定（実行時 TZ に依存しない）', () => {
+  // UTC では 2026-08-09 23:00 だが、JST では 2026-08-10 08:00。Cron の実際の発火時点。
+  const cronFiredAt = new Date('2026-08-09T23:00:00.000Z');
+
+  it('Cron 発火時点の「今日」を JST の暦日で判定する', () => {
+    expect(toJstDateString(cronFiredAt)).toBe('2026-08-10');
+  });
+
+  it('JST で当日が期限の在庫を「本日まで」と扱う（UTC 基準だと「明日まで」になり誤る）', () => {
+    expect(getExpiryRemainingDays('2026-08-10', cronFiredAt)).toBe(0);
+    expect(formatExpiryUrgencyLabel(getExpiryRemainingDays('2026-08-10', cronFiredAt))).toBe(
+      '本日まで',
+    );
+  });
+
+  it('JST で前日が期限の在庫を期限切れと扱う', () => {
+    expect(getExpiryRemainingDays('2026-08-09', cronFiredAt)).toBe(-1);
+    expect(getExpiryUrgency(getExpiryRemainingDays('2026-08-09', cronFiredAt))).toBe('overdue');
+  });
+
+  it('3 日の窓が JST 基準で開く（閾値ちょうどの 08-13 を含み、08-14 を含まない）', () => {
+    const stocks = [
+      createStock({ id: 'in-boundary', expiresAt: '2026-08-13' }),
+      createStock({ id: 'out-of-boundary', expiresAt: '2026-08-14' }),
+    ];
+
+    const selected = selectExpiringStocks(stocks, cronFiredAt, EXPIRY_URGENCY_WITHIN_DAYS);
+
+    expect(selected.map((stock) => stock.id)).toStrictEqual(['in-boundary']);
+  });
+
+  it('JST 深夜（UTC では前日の昼）でも当日判定が JST の暦日に従う', () => {
+    // UTC 2026-08-09 15:30 = JST 2026-08-10 00:30
+    const justAfterJstMidnight = new Date('2026-08-09T15:30:00.000Z');
+
+    expect(toJstDateString(justAfterJstMidnight)).toBe('2026-08-10');
+    expect(getExpiryRemainingDays('2026-08-10', justAfterJstMidnight)).toBe(0);
   });
 });
