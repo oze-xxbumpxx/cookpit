@@ -22,36 +22,36 @@
 
 以下は実コードを開いて裏取りし、文書の記述が正しいことを確認した。後続工程は再検証しなくてよい。
 
-| 文書の記述 | 実コードでの確認 | 判定 |
-| --- | --- | --- |
-| `next.config.ts` は `NODE_ENV === 'production'` のときだけ Serwist を適用（L24-29） | `apps/web/next.config.ts:24-29` の三項演算子 | 一致 |
-| `sw.ts` は Serwist のみ・`push`/`notificationclick` ハンドラ無し・全 58 行・`serwist.addEventListeners()` は L58 | `apps/web/src/app/sw.ts`（58 行） | 一致（設計書 L71 の「全 58 行」が正・試験計画の「59 行」は N-1 参照） |
-| `runtimeCaching` 4 件 = Google Fonts / `GET /api/shopping-lists/:id` / `GET /api/stores` / `GET /shopping-lists*` | 同 L17-55 | 一致（設計書の「L18-54」は誤差 1 行内） |
-| `packages/infrastructure` は `@cookpit/domain` にのみ依存（P-13 の根拠） | `dependencies` は `@cookpit/domain`/`@neondatabase/serverless`/`drizzle-orm` の 3 件のみ | 一致 |
-| `vercel.json` はリポジトリに存在しない | `ls vercel.json` → not found | 一致 |
-| Hono の `.use(` は 0 件（ミドルウェア・認証なし） | `apps/web/src` 全体で 0 件 | 一致 |
-| `app.ts` は全 35 行・7 ルート・`onError` は L24-33 の 3 分岐 | `apps/web/src/server/app.ts` | 一致 |
-| Cron を `GET` にできる（Route Handler の割当） | `app/api/[[...route]]/route.ts` は `runtime='nodejs'` で GET/POST/PUT/PATCH/DELETE を `handle(app)` に割当 | 一致 |
-| `create-test-db.ts`: `CREATE TABLE stocks` が L100-111、`CREATE INDEX` が L113、閉じ `` ` `` が L114、全 123 行 | 実測一致 | 一致（契約書 §2・試験計画 §5-1・実装計画 前提確認 1 の 3 文書とも正しい） |
-| 既存マイグレーションは `0000`〜`0007`。次は `0008` | `apps/web/src/db/migrations/` | 一致 |
-| `stocks.amount_value` が `numeric(10,3)`（罠 9 の根拠 `schema.ts:150`）・`expires_at` は `date()` nullable・index は `stocks_product_id_idx` のみ | `packages/infrastructure/src/db/schema.ts:144-162` | 一致 |
-| `expiry.ts` の 6 値 export（`EXPIRY_URGENCY_WITHIN_DAYS=3` ほか）と各関数の実装内容 | `apps/web/src/app/_utils/expiry.ts` | 一致（実装計画 Step 3-1 の移設コードは実装と一字一句同じ） |
-| `selectExpiringStocks` は `dashboard-view.ts` L19-31。呼び出し元は `page.tsx` の 1 箇所のみ | `page.tsx:4,16` のみ（他は JSDoc 内の言及） | 一致 |
-| `expiryUrgencyChipClass` は `category-color.ts:66-68`、引数は `urgency: string`（`ExpiryUrgency` を import していない） | 実測一致 | 一致（実装計画 前提確認 11 が正しい。P-14 の「据え置き」は安全） |
-| `dashboard.tsx` に `'use client'` は無い／`stock-row.tsx` 自身にも無く `pantry-client.tsx`（`'use client'`）配下 | 実測一致 | 一致（試験計画 §0-2・実装計画 前提確認 10 が正しい） |
-| `dashboard.tsx` の「賞味期限が近い在庫」`<section>` は L108 開始 | 実測一致 | 一致 |
-| `layout.tsx` の `appleWebApp: { capable:true, statusBarStyle:'default', title:'Cookpit' }` は L23-27 | 実測一致 | 一致 |
-| `StockDto.amount` は `{ value: number; unit: Unit }`（P-10b の `stock.amount.value > 0` が型上成立） | `packages/application/src/pantry/pantry.dto.ts:9` | 一致 |
-| ID 値オブジェクトの基底は `shared/identifier.ts` L13-25、`generateId()` は L27-29 | 実測一致 | 一致（試験計画 §0-1 の「L13-25」が正しい） |
-| `api-contract/src/index.ts` は 8 行・既存 7 本の `export *` のみ | 実測一致 | 一致 |
-| `NETWORK_ERROR_MESSAGE` は `use-api-action.ts:9` | 実測一致 | 一致（試験計画 EAS-07） |
-| `repositories.ts` は `getDb()` を渡す手動 DI 関数 6 本（L11-33） | 実測一致 | 一致 |
-| `docs/reviews/stock-edit.md` の S-5（`numeric(10,3)` 丸め）は L156 起点 | 実測一致 | 一致（設計書の `:156-164` 参照は生きている） |
-| **Markdown テーブルの描画** | 6 文書すべてを走査し、セル内改行でテーブルが途切れる箇所は **0 件** | 一致（Unit A の N-4 は再発していない。ただし N-2 の見出し崩れは別途あり） |
-| 要件 N-1〜N-8 / E-1〜E-6 / B-1〜B-6 の試験観点への引き継ぎ | すべて試験計画に観点 ID（SUB/UNSUB/SEA/GES/Z-PUSH/INF/WH/EAS/MB）付きで対応あり | 一致（**E-7 のみ欠落 → M-3**） |
-| ADR-0017 Decision 6/7 と設計書 P-13/P-14、試験計画の更新注記の整合 | ADR L121-128（P-14）/ L130-145（P-13）と設計書 L1072-1095 / L1041-1070、試験計画 L17-27 が一致 | 一致（**実装計画のみ未反映 → M-1**） |
-| P-12 の反映（`vapid-public-key` を 500 フェイルクローズ） | 設計書 L612-625・§API 設計表 / 契約書 §5-2・§5-4・§6・§9.1・§10.1・§10.2 / 試験計画 WH-PUSH-02/03 / 実装計画 Step 5-2 のすべてで 500 に揃っている | 一致 |
-| 障害設計 (a)(b)(d)(e) | リトライ 0 回（無限リトライ無し）・`timeout: 10_000`・`Promise.allSettled` による部分失敗隔離・縮退 UI 無しの明示 — いずれも設計書 §エラー処理に記載あり、試験観点（SEA-05/06/09・INF-WPS-02）も対応 | 妥当 |
+| 文書の記述                                                                                                                                        | 実コードでの確認                                                                                                                                                                                     | 判定                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `next.config.ts` は `NODE_ENV === 'production'` のときだけ Serwist を適用（L24-29）                                                               | `apps/web/next.config.ts:24-29` の三項演算子                                                                                                                                                         | 一致                                                                      |
+| `sw.ts` は Serwist のみ・`push`/`notificationclick` ハンドラ無し・全 58 行・`serwist.addEventListeners()` は L58                                  | `apps/web/src/app/sw.ts`（58 行）                                                                                                                                                                    | 一致（設計書 L71 の「全 58 行」が正・試験計画の「59 行」は N-1 参照）     |
+| `runtimeCaching` 4 件 = Google Fonts / `GET /api/shopping-lists/:id` / `GET /api/stores` / `GET /shopping-lists*`                                 | 同 L17-55                                                                                                                                                                                            | 一致（設計書の「L18-54」は誤差 1 行内）                                   |
+| `packages/infrastructure` は `@cookpit/domain` にのみ依存（P-13 の根拠）                                                                          | `dependencies` は `@cookpit/domain`/`@neondatabase/serverless`/`drizzle-orm` の 3 件のみ                                                                                                             | 一致                                                                      |
+| `vercel.json` はリポジトリに存在しない                                                                                                            | `ls vercel.json` → not found                                                                                                                                                                         | 一致                                                                      |
+| Hono の `.use(` は 0 件（ミドルウェア・認証なし）                                                                                                 | `apps/web/src` 全体で 0 件                                                                                                                                                                           | 一致                                                                      |
+| `app.ts` は全 35 行・7 ルート・`onError` は L24-33 の 3 分岐                                                                                      | `apps/web/src/server/app.ts`                                                                                                                                                                         | 一致                                                                      |
+| Cron を `GET` にできる（Route Handler の割当）                                                                                                    | `app/api/[[...route]]/route.ts` は `runtime='nodejs'` で GET/POST/PUT/PATCH/DELETE を `handle(app)` に割当                                                                                           | 一致                                                                      |
+| `create-test-db.ts`: `CREATE TABLE stocks` が L100-111、`CREATE INDEX` が L113、閉じ `` ` `` が L114、全 123 行                                   | 実測一致                                                                                                                                                                                             | 一致（契約書 §2・試験計画 §5-1・実装計画 前提確認 1 の 3 文書とも正しい） |
+| 既存マイグレーションは `0000`〜`0007`。次は `0008`                                                                                                | `apps/web/src/db/migrations/`                                                                                                                                                                        | 一致                                                                      |
+| `stocks.amount_value` が `numeric(10,3)`（罠 9 の根拠 `schema.ts:150`）・`expires_at` は `date()` nullable・index は `stocks_product_id_idx` のみ | `packages/infrastructure/src/db/schema.ts:144-162`                                                                                                                                                   | 一致                                                                      |
+| `expiry.ts` の 6 値 export（`EXPIRY_URGENCY_WITHIN_DAYS=3` ほか）と各関数の実装内容                                                               | `apps/web/src/app/_utils/expiry.ts`                                                                                                                                                                  | 一致（実装計画 Step 3-1 の移設コードは実装と一字一句同じ）                |
+| `selectExpiringStocks` は `dashboard-view.ts` L19-31。呼び出し元は `page.tsx` の 1 箇所のみ                                                       | `page.tsx:4,16` のみ（他は JSDoc 内の言及）                                                                                                                                                          | 一致                                                                      |
+| `expiryUrgencyChipClass` は `category-color.ts:66-68`、引数は `urgency: string`（`ExpiryUrgency` を import していない）                           | 実測一致                                                                                                                                                                                             | 一致（実装計画 前提確認 11 が正しい。P-14 の「据え置き」は安全）          |
+| `dashboard.tsx` に `'use client'` は無い／`stock-row.tsx` 自身にも無く `pantry-client.tsx`（`'use client'`）配下                                  | 実測一致                                                                                                                                                                                             | 一致（試験計画 §0-2・実装計画 前提確認 10 が正しい）                      |
+| `dashboard.tsx` の「賞味期限が近い在庫」`<section>` は L108 開始                                                                                  | 実測一致                                                                                                                                                                                             | 一致                                                                      |
+| `layout.tsx` の `appleWebApp: { capable:true, statusBarStyle:'default', title:'Cookpit' }` は L23-27                                              | 実測一致                                                                                                                                                                                             | 一致                                                                      |
+| `StockDto.amount` は `{ value: number; unit: Unit }`（P-10b の `stock.amount.value > 0` が型上成立）                                              | `packages/application/src/pantry/pantry.dto.ts:9`                                                                                                                                                    | 一致                                                                      |
+| ID 値オブジェクトの基底は `shared/identifier.ts` L13-25、`generateId()` は L27-29                                                                 | 実測一致                                                                                                                                                                                             | 一致（試験計画 §0-1 の「L13-25」が正しい）                                |
+| `api-contract/src/index.ts` は 8 行・既存 7 本の `export *` のみ                                                                                  | 実測一致                                                                                                                                                                                             | 一致                                                                      |
+| `NETWORK_ERROR_MESSAGE` は `use-api-action.ts:9`                                                                                                  | 実測一致                                                                                                                                                                                             | 一致（試験計画 EAS-07）                                                   |
+| `repositories.ts` は `getDb()` を渡す手動 DI 関数 6 本（L11-33）                                                                                  | 実測一致                                                                                                                                                                                             | 一致                                                                      |
+| `docs/reviews/stock-edit.md` の S-5（`numeric(10,3)` 丸め）は L156 起点                                                                           | 実測一致                                                                                                                                                                                             | 一致（設計書の `:156-164` 参照は生きている）                              |
+| **Markdown テーブルの描画**                                                                                                                       | 6 文書すべてを走査し、セル内改行でテーブルが途切れる箇所は **0 件**                                                                                                                                  | 一致（Unit A の N-4 は再発していない。ただし N-2 の見出し崩れは別途あり） |
+| 要件 N-1〜N-8 / E-1〜E-6 / B-1〜B-6 の試験観点への引き継ぎ                                                                                        | すべて試験計画に観点 ID（SUB/UNSUB/SEA/GES/Z-PUSH/INF/WH/EAS/MB）付きで対応あり                                                                                                                      | 一致（**E-7 のみ欠落 → M-3**）                                            |
+| ADR-0017 Decision 6/7 と設計書 P-13/P-14、試験計画の更新注記の整合                                                                                | ADR L121-128（P-14）/ L130-145（P-13）と設計書 L1072-1095 / L1041-1070、試験計画 L17-27 が一致                                                                                                       | 一致（**実装計画のみ未反映 → M-1**）                                      |
+| P-12 の反映（`vapid-public-key` を 500 フェイルクローズ）                                                                                         | 設計書 L612-625・§API 設計表 / 契約書 §5-2・§5-4・§6・§9.1・§10.1・§10.2 / 試験計画 WH-PUSH-02/03 / 実装計画 Step 5-2 のすべてで 500 に揃っている                                                    | 一致                                                                      |
+| 障害設計 (a)(b)(d)(e)                                                                                                                             | リトライ 0 回（無限リトライ無し）・`timeout: 10_000`・`Promise.allSettled` による部分失敗隔離・縮退 UI 無しの明示 — いずれも設計書 §エラー処理に記載あり、試験観点（SEA-05/06/09・INF-WPS-02）も対応 | 妥当                                                                      |
 
 **未検証（本レビューの範囲外・要注意）**: `packages/domain/src/index.ts` の行番号（L1-49）、
 `packages/domain/tests/` 配下の既存テスト内容、`dashboard.test.tsx`／`stock-row.test.tsx` の
@@ -138,6 +138,7 @@
      これは **P-12 が `vapid-public-key` から取り除いたのと同じ `?? ''` パターン**である。
      設計書 §確定事項 `:1037` の P-12 は「**全エンドポイントで** 500 フェイルクローズに揃える」と
      書いており、この `pushSender()` はその確定に真正面から反する。
+
   3. 実際には `webpush.setVapidDetails('', '', '')` が throw して `app.onError` 経由で 500 になる
      公算が高いが、それは**偶然の安全**であり、要件 E-2 の理由づけ（「値が無ければ
      `Bearer undefined` と比較して常に不一致になるという**偶然の安全ではなく、明示的にガードする**」
@@ -147,6 +148,7 @@
   4. 試験計画は E-7 を **WH-PUSH-02 / WH-PUSH-03（`vapid-public-key` の 500）にだけ**割り当てている
      （`:350-351`）。これは E-7 が述べている「**Cron が実行される**」シナリオとは別物であり、
      `cronRoute` 側の VAPID 未設定ケースは WH-CRON-01〜08 のどこにも無い。
+
 - 直し方:
   1. `pushSender()`（または `cronRoute` の先頭、`CRON_SECRET` チェックの直後）で
      `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` の未設定・空文字を明示チェックし、
@@ -183,6 +185,7 @@
   Step 8 の完了条件（`:1332`）は `pnpm --filter @cookpit/web type-check` を含むため、
   着手直後に確実に詰まる。**既存ファイルがわざわざキャストを置いている事実が、素の `self` では
   型が付かないことの傍証**である。
+
 - 直し方: Step 8-1 に型付け方針を明記する。いずれか 1 つで足りる。
   - 既存の `sw` 別名を `ServiceWorkerGlobalScope` へ拡張して `sw.addEventListener('push', ...)` /
     `sw.registration` / `sw.clients` を使う（既存の `WorkerGlobalScope` 拡張との整合を確認）。
@@ -198,8 +201,8 @@
   `:709` / `:710` / `:741` / `:759` / `:763` / `:764`（計 11 箇所）
 
   ```ts
-  import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository';  // :683
-  import { PushSubscription } from '@cookpit/domain/src/push-subscription/push-subscription';  // :709
+  import type { PantryRepository } from '@cookpit/domain/src/pantry/pantry.repository'; // :683
+  import { PushSubscription } from '@cookpit/domain/src/push-subscription/push-subscription'; // :709
   ```
 
 - 根拠: 既存の `packages/application/src/**` は**例外なく**バレル import
@@ -213,7 +216,7 @@
 - 直し方: Step 2 / Step 3 の全コード例を
   `import { PushSubscription, PushSubscriptionId } from '@cookpit/domain';` /
   `import type { PantryRepository, PushSubscriptionRepository, PushSender, PushPayload,
-  PushSendResult, PushSubscriptionTarget } from '@cookpit/domain';` に統一する。
+PushSendResult, PushSubscriptionTarget } from '@cookpit/domain';` に統一する。
 
 ---
 
@@ -244,7 +247,7 @@
   疑似コードは **L443-472**、プレースホルダ注記は **L474-477**。
 - 直し方: S-1 と同じ。節名参照に置換する。
 
-### S-3. `SendExpiryAlertsUseCase` が内部で `new GetExpiringStocksUseCase(...)` している（DI の外・UseCase 間の直接依存）。試験計画の SEA-* 前提とも噛み合わない
+### S-3. `SendExpiryAlertsUseCase` が内部で `new GetExpiringStocksUseCase(...)` している（DI の外・UseCase 間の直接依存）。試験計画の SEA-\* 前提とも噛み合わない
 
 - 対象: 設計書 `:396` / 実装計画 Step 3-4 / 試験計画 SEA-02・SEA-07・SEA-08・SEA-10 の「前提」列
 - 問題:
@@ -261,10 +264,10 @@
 - 直し方（いずれか）:
   - 案 A: `SendExpiryAlertsUseCase` は UseCase ではなく純粋関数を共有する
     （`selectExpiringStocks(toPantryDto(await this.pantryRepository.find()).stocks, asOf,
-    EXPIRY_URGENCY_WITHIN_DAYS)`）。P-4 の目的「判定を一本化してズレを構造的に防ぐ」は
+EXPIRY_URGENCY_WITHIN_DAYS)`）。P-4 の目的「判定を一本化してズレを構造的に防ぐ」は
     `selectExpiringStocks` を共有していれば満たされる。
   - 案 B: `GetExpiringStocksUseCase` をコンストラクタ注入にする。
-  - いずれの場合も試験計画 SEA-* の「前提」列を実際に制御可能な表現（PantryRepository への seed）に
+  - いずれの場合も試験計画 SEA-\* の「前提」列を実際に制御可能な表現（PantryRepository への seed）に
     書き直す。
 
 ### S-4. `TZ=Asia/Tokyo` が Vercel で実際に効くかの裏取りが無く、手動確認にも「効果」の検証が無い
@@ -424,14 +427,14 @@
 
 ## Orchestrator への差し戻し（どの成果物を直すか）
 
-| # | 直す成果物 | 対応する指摘 |
-| --- | --- | --- |
-| 1 | `docs/implementation-plans/expiry-alert.md` | M-1（P-13/P-14 の確定反映）・M-3（`pushSender()` の `?? ''`）・M-4（`sw.ts` の型付け）・M-5（ディープ import）・S-5（Step 6 完了条件に build 追加）・N-5 |
-| 2 | `docs/requirements/expiry-alert.md` | M-2（FR-5・対象範囲・未決事項）・N-3 |
-| 3 | `docs/designs/expiry-alert.md` | M-3（`cronRoute` の VAPID ガード）・M-4（`sw.ts` コード例）・S-3（UseCase 内 `new`）・S-4（TZ の出典）・S-5（R-12 の影響格上げ）・S-8・N-6・N-7 |
-| 4 | `docs/designs/expiry-alert.contract.md` | M-3（§5-3 の 500 追加）・S-2（旧行番号）・N-2 |
-| 5 | `docs/tests/expiry-alert.md` | M-3（WH-CRON-09 追加・E-7 の付け替え）・S-1（旧行番号）・S-3（SEA-* の前提列）・S-4（TZ の効果確認）・S-6（MB-05 の期待値）・S-7（MB-15/16 追加）・N-1・N-2 |
-| 6 | `docs/decisions/ADR-0017-web-push-expiry-alert.md` | N-4（P-12 の記載） |
+| #   | 直す成果物                                         | 対応する指摘                                                                                                                                                 |
+| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `docs/implementation-plans/expiry-alert.md`        | M-1（P-13/P-14 の確定反映）・M-3（`pushSender()` の `?? ''`）・M-4（`sw.ts` の型付け）・M-5（ディープ import）・S-5（Step 6 完了条件に build 追加）・N-5     |
+| 2   | `docs/requirements/expiry-alert.md`                | M-2（FR-5・対象範囲・未決事項）・N-3                                                                                                                         |
+| 3   | `docs/designs/expiry-alert.md`                     | M-3（`cronRoute` の VAPID ガード）・M-4（`sw.ts` コード例）・S-3（UseCase 内 `new`）・S-4（TZ の出典）・S-5（R-12 の影響格上げ）・S-8・N-6・N-7              |
+| 4   | `docs/designs/expiry-alert.contract.md`            | M-3（§5-3 の 500 追加）・S-2（旧行番号）・N-2                                                                                                                |
+| 5   | `docs/tests/expiry-alert.md`                       | M-3（WH-CRON-09 追加・E-7 の付け替え）・S-1（旧行番号）・S-3（SEA-\* の前提列）・S-4（TZ の効果確認）・S-6（MB-05 の期待値）・S-7（MB-15/16 追加）・N-1・N-2 |
+| 6   | `docs/decisions/ADR-0017-web-push-expiry-alert.md` | N-4（P-12 の記載）                                                                                                                                           |
 
 **Must 5 件のうち M-1 / M-2 は「確定済み事項の下流反映漏れ」、M-3 は「要件 E-7 の未実装」、
 M-4 / M-5 は「コード例をそのまま写すと通らない／規約違反になる」であり、いずれも実装着手前に
