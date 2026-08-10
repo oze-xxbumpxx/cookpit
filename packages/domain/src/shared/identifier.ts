@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 /**
  * UUID ベースの ID 値オブジェクトの共通基底。
  * 具象クラスは `static generate()` / `static fromString()` を定義し、
@@ -24,6 +22,10 @@ export abstract class Identifier<Brand extends string> {
   }
 }
 
+// `node:crypto` ではなく標準の Web Crypto を使う。Domain は「他のパッケージに依存しない」
+// 層（.claude/rules/domain-layer.md）であり、Node 固有 API に結合するとクライアント
+// バンドルへ載せられない（webpack が node:crypto を解決できず UnhandledSchemeError になる）。
+// engines は node >=20 で、ブラウザ・Node・jsdom のいずれでも globalThis.crypto は利用できる。
 export function generateId(): string {
-  return randomUUID();
+  return crypto.randomUUID();
 }

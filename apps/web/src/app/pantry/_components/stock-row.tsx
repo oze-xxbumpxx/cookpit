@@ -1,14 +1,13 @@
 import { expiryUrgencyChipClass } from '@/app/_utils/category-color';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   EXPIRY_URGENCY_WITHIN_DAYS,
   formatExpiryUrgencyLabel,
   getExpiryRemainingDays,
   getExpiryUrgency,
-} from '@/app/_utils/expiry';
-import type { ExpiryUrgency } from '@/app/_utils/expiry';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import type { StockDto } from '@cookpit/application';
+} from '@cookpit/application';
+import type { ExpiryUrgency, StockDto } from '@cookpit/application';
 import { Pencil, Trash2, Utensils } from 'lucide-react';
 import { LOCATION_LABELS, UNSET_LOCATION_LABEL, formatExpiresAt } from '../_utils/pantry-view';
 

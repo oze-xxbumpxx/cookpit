@@ -1,11 +1,11 @@
 import type { MealPlanDto, StockDto, StorageLocation } from '@cookpit/application';
-import { ThemeToggle } from '@/app/_components/theme-toggle';
-import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import {
   formatExpiryUrgencyLabel,
   getExpiryRemainingDays,
   getExpiryUrgency,
-} from '@/app/_utils/expiry';
+} from '@cookpit/application';
+import { ThemeToggle } from '@/app/_components/theme-toggle';
+import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {

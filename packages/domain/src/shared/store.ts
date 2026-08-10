@@ -1,10 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
 export class StoreId {
   private constructor(private readonly storeIdValue: string) {}
 
   static generate(): StoreId {
-    return new StoreId(randomUUID());
+    return new StoreId(crypto.randomUUID());
   }
 
   static fromString(value: string): StoreId {
