@@ -1,11 +1,9 @@
 ---
 name: review-codex-implementation
 description: >
-  Codex 委譲実装の受け入れレビューを一括実行する手順。tsc / eslint を通過する既知ミス型
-  （識別子・Tailwind クラスのタイポ、イベントハンドラ結線漏れ、'use client' 漏れ等）を
-  機械検出スクリプトで先に洗い出し、品質ゲート・人間チェックリスト・実画面確認へつなぐ。
-  「Codex の実装をレビューして」「差し戻し後の再レビュー」で使う。
-  docs/06-ai-tools.md のレビューチェックリストと対。
+  Codex 委譲実装の受け入れレビューを一括実行する手順。既知ミス型の機械検出、品質ゲート、
+  Claude の意味レビュー、必要な black-box 証拠を統合し、人間には主観・不可逆・未知の
+  最大 3 判断だけを渡す。「Codex の実装をレビューして」「差し戻し後の再レビュー」で使う。
 ---
 
 # Codex 実装の受け入れレビュー
@@ -15,65 +13,134 @@ description: >
 - `docs/tasks/codex/<feature>/` の指示書で Codex に委譲した実装を受け取ったとき
 - 差し戻し後の再実装を再レビューするとき
 
+## 原則
+
+- 正本は `docs/reviews/<feature>.md`。current-state packet と追記型監査ログを同居させる。
+- 固定チェックリストを人間に再走査させない。機械が確認できることは機械証拠、意味的整合は
+  Reviewer、操作でしか分からないことは対象を絞った black-box 証拠にする。
+- 人間へ渡すのは `subjective` / `irreversible` / `unknown` の例外だけで、最大 3 件。
+- AI は受け入れを承認しない。最終判断は packet を読んだ人間が行う。
+
+## 入力
+
+- `<feature>`: kebab-case の feature-name
+- `<base>`: 原則 `origin/main`。取得できない環境では明示した merge-base
+- `docs/tasks/codex/<feature>/`: 対象 Task のブリーフ
+- staged snapshot: 今回受け入れる変更をすべて stage したもの
+
+当該 `docs/reviews/<feature>.md` だけは subject digest から除外される。その他の未 stage / untracked
+変更がある状態では snapshot が不完全として停止する。
+
 ## 手順
 
-1. **機械チェック**（既知ミス型の一次検出）:
+### 1. 対象を固定する
 
-   ```bash
-   node .claude/scripts/check-codex-implementation.mjs --brief docs/tasks/codex/<feature>
-   ```
+Orchestrator が意図した変更を stage し、subject を取得する。
 
-   - 既定では merge-base origin/main 以降の変更ファイルを検査する（`--base <ref>` で変更可）
-   - **FAIL**（結線漏れ・'use client' 漏れ）は即差し戻し候補
-   - **WARN / INFO** は目視で PASS / FAIL を確定する（新規の正当な Tailwind クラス等は
-     誤検出になりうる。機械チェックは人間チェックリストの代替ではなく前処理）
+```bash
+node .claude/scripts/review-readiness.mjs subject --feature <feature> --base <base>
+```
 
-2. **品質ゲート**: `bash .claude/scripts/run-quality-gates.sh`（quality-gates Skill 参照）。
+以後、対象差分が変われば以前のレビューは `stale`。小さな修正でも subject を再計算する。
 
-3. **人間チェックリスト**: docs/06-ai-tools.md「Codex 実装のレビューチェックリスト」全 8 項目を
-   表で走査する。機械検出済みの項目（識別子 / Tailwind / 結線 / use client / テーブル命名 /
-   バリデーション分岐の一部）はスクリプト結果を引用し、機械検出できない項目は diff を目視する:
+### 2. 安い機械検出を先に回す
 
-   | 項目                  | 確認方法                                                                |
-   | --------------------- | ----------------------------------------------------------------------- |
-   | 識別子のタイポ        | script（brief 突き合わせ + サブトークン）+ 指示書のシグネチャと目視照合 |
-   | Tailwind タイポ・連結 | script + 実画面確認（手順 4）                                           |
-   | ハンドラ結線漏れ      | script + 実画面での操作確認                                             |
-   | 'use client'          | script                                                                  |
-   | `import type` 規約    | diff を目視（機械検出なし）                                             |
-   | 命名の傾向ずれ        | script（テーブル単数形のみ）+ 目視                                      |
-   | 差し戻しの部分反映    | **手順 5 のプロセスで担保**（機械検出なし）                             |
-   | バリデーション分岐    | script（INFO）+ 該当 Zod スキーマを目視                                 |
+```bash
+node .claude/scripts/check-codex-implementation.mjs \
+  --brief docs/tasks/codex/<feature> --base <base>
+bash .claude/scripts/run-quality-gates.sh
+```
 
-4. **実画面確認**: 画面変更を含む場合は manual-browser-verify Skill へハンドオフする。
-   リモート環境では PGlite 経路（`pnpm --filter @cookpit/web dev:pglite`）を使う。
+`docs/06-ai-tools.md` の既知リスク型は人間チェック表ではなく、機械検出と Reviewer の探索 catalog。
+検出結果は次のように処理する。
 
-5. **差し戻し**: 指摘は全件を番号付きリストで指示書ディレクトリに追記して Codex へ渡す。
-   再実装後は**指摘全件を再レビュー**（部分反映が既知ミス型。1 件でも未確認のまま
-   受け入れない）+ スクリプト再実行。
+- 明確な failure は `BLOCK` 候補。
+- warning / info は差分と照合し、真の問題だけを指摘へ昇格する。
+- lint / type / test と同じ原因は重複指摘にしない。
+- 誤検出は根拠を監査ログへ 1 行残し、人間判断には含めない。
 
-6. **記録 + 報告**:
-   - **必須**: `docs/reviews/<feature>.md` に受け入れレビュー結果を追記する
-     （ファイルが無ければ作成。既存があれば Task 単位で追記）。
-     最低限含める項目: 実施日 / 対象 Task・指示書パス / ブランチ /
-     機械チェック結果（FAIL/WARN 件数）/ 品質ゲート結果 /
-     チェックリスト 8 項目の判定表 / 実画面確認（該当時）/ 総合判定（受け入れ可 or 差し戻し）。
-     良い例: `docs/reviews/shopping-list-core.md` Task 1・2。
-   - チャットへの報告は上記ファイルへのリンク付き要約でよい。
-   - PR 本文への転記は任意（正本は `docs/reviews/`。出典: shopping-list-core 事象 6）。
+### 3. Claude Reviewer で意味を検証する
 
-## 完了条件
+Reviewer へ requirements / design / implementation plan / test plan / brief / staged diff / 機械結果を
+渡す。Reviewer は各候補について introduced-by-diff、証拠、CI 重複、根本原因の重複を検証し、
+`action / impact / evidence / status` の 4 軸と `review_assessment` JSON を返す。
 
-- スクリプトの FAIL が 0、または全 FAIL に処置（修正 / 差し戻し / 誤検出と判断した根拠）が決定済み
-- チェックリスト全 8 項目に判定がついている
-- 品質ゲートが green
-- 差し戻しがあった場合、指摘全件の再確認が済んでいる
-- `docs/reviews/<feature>.md` への今回分の追記が完了している
+- open `BLOCK` は修正へ戻す。
+- critical / high の未検証候補は追加証拠を取るまで `evidence_pending`。
+- `FOLLOW_UP` は今回を止めず、最大 3 件を監査ログへ置く。
+- `PRE_EXISTING` は今回の受け入れと分離する。
+
+### 4. 必要な経路だけ black-box で確認する
+
+画面変更を含み、コードと自動試験だけでは操作・表示を確定できない場合は
+`manual-browser-verify` Skill へハンドオフする。すべての画面を巡回せず、変更した振る舞いと
+高影響の反例に限定する。リモート環境では PGlite 経路
+（`pnpm --filter @cookpit/web dev:pglite`）を使う。
+
+実行結果は claim / kind / result / ref を持つ evidence として assessment へ戻す。単なる
+「画面を見た」ではなく、どの主張をどの操作で確かめたかを記録する。
+
+### 5. 差し戻しと再レビュー
+
+open `BLOCK` を番号付きで Codex へ返す。再実装後は次を行う。
+
+1. 全変更を stage し直し、subject を再計算する。
+2. 機械チェックと品質ゲートを再実行する。
+3. 以前の open `BLOCK` 全件と、修正が触れた振る舞いを再確認する。
+4. 新しい差分が別の失敗モードを増やしていないか Reviewer が確認する。
+
+既に証拠があり、修正の影響を受けない詳細を人間が最初から全走査する必要はない。ただし
+以前の指摘を未確認のまま消してはならない。
+
+### 6. 監査ログと current packet を生成する
+
+L3 で reflection candidate / metrics を作る場合は、先にそれらを確定して stage する。これらは
+subject digest の対象なので、意味レビュー後に更新した場合は Reviewer が最終差分を closure review
+してから assessment を確定する。closure 後に review 文書以外を変更したら再度 stale になる。
+
+`docs/reviews/<feature>.md` の監査ログへ、最低限次を Task 単位で追記する。
+
+- 実施日、Task / brief、branch、subject digest
+- Codex model / reasoning effort
+- 機械検出と品質ゲートの結果
+- 4 軸の指摘、処置、再確認結果
+- black-box evidence（該当時）
+- 残余リスクと人間判断候補
+
+Task coverage は既存の `## Task N` 見出しで維持する。assessment JSON は repository 外の一時
+ファイルへ保存し、render の stdout から marker 全体を得る。
+
+```bash
+node .claude/scripts/review-readiness.mjs render \
+  --feature <feature> --base <base> --assessment <assessment-json>
+```
+
+Orchestrator が出力を `docs/reviews/<feature>.md` の
+`review-readiness:begin` / `review-readiness:end` 間へ挿入する。スクリプト自身はファイルを
+変更しない。最後に state、表示、Task coverage、subject freshness をまとめて確認する。
+
+```bash
+node .claude/scripts/review-readiness.mjs check --feature <feature> --base <base>
+```
+
+チャットと PR 本文は packet へのリンク付き要約だけでよい。詳細を二重転記しない。
+
+## 人間への引き渡し条件
+
+- open `BLOCK` が 0。
+- critical / high の未検証が 0。
+- 品質ゲートが green、または unavailable の理由と代替証拠が明記されている。
+- 差し戻しがあった場合、対象指摘の再確認が済んでいる。
+- review state が current な `human_review_requested`。
+- 人間項目が 3 件以下で、各項目に質問・推奨・証拠参照がある。
+
+この条件は AI による承認ではない。人間は packet の先頭から、例外判断、残余リスク、
+振る舞い差分、必要な証拠だけを確認してマージ可否を決める。
 
 ## 備考
 
-- スクリプトの検出原理: 既存コミット済みコードから収穫した「既知クラス辞書」と Tailwind 文法で
-  照合するため、**新規クラスの誤検出（WARN）はあり得る**。マージ後は辞書側に取り込まれるので
-  同じ WARN は再発しない。
-- `import type` 規約の機械化は eslint ルール
-  （`@typescript-eslint/consistent-type-imports`）の導入が本筋。改善候補として別途起票する。
+- `check-codex-implementation.mjs` は、既存コミット済みコードから収穫した既知クラス辞書と
+  Tailwind 文法を使うため、新規クラスの誤検出はあり得る。
+- `import type` は eslint による機械化が本筋。未導入の環境では Reviewer が差分だけを確認する。
+- marker のない既存 review は legacy 監査ログとして残す。次にその feature をレビューするときに
+  current packet を追加し、一括 migration はしない。

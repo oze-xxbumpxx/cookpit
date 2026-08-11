@@ -59,8 +59,22 @@ tools: Read, Grep, Glob, Bash
 
 ## 出力
 
-指摘を「重大度（Must / Should / Nice）・該当箇所（path:line）・理由・修正案」の形で返す。
-指摘がゼロの場合も「問題なし」と明示し、確認した観点を列挙する（サイレントな OK は避ける）。
+Reviewer と同じ契約で、各指摘を次の表にする。意味が同じ一般 Reviewer の指摘は重複させず、
+既存 ID を参照する。
+
+| ID  | action | impact | evidence | status | path:line | 根拠・再現 | 修正案 |
+| --- | ------ | ------ | -------- | ------ | --------- | ---------- | ------ |
+
+- action: `BLOCK` / `HUMAN_DECISION` / `FOLLOW_UP` / `PRE_EXISTING`
+- impact: `critical` / `high` / `medium` / `low`
+- evidence: `E0`（未確認）/ `E1`（静的）/ `E2`（test）/ `E3`（counterfactual）/
+  `E4`（black-box）
+- status: `open` / `resolved` / `accepted_risk`
+
+検証済み指摘が 0 件でも、確認範囲、実行した証拠、未確認範囲を列挙する。AI による承認表現は
+使わない。critical / high なのに証拠が足りない候補は断定せず、main Reviewer が
+`highImpactUnverified` へ統合できる形で報告する。人間によるリスク受容が必要な場合だけ
+`HUMAN_DECISION` とし、質問・推奨・根拠を付ける。
 
 ## 制約・禁止事項
 

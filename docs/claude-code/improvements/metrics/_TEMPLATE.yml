@@ -20,9 +20,14 @@ codex:
 quality:
   tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
   initial_test_failures: unknown
-  reviewer_critical: 0
-  reviewer_major: 0
-  reviewer_minor: 0
+  reviewer_block_open: 0
+  reviewer_high_impact_unverified: 0
+  reviewer_follow_up_open: 0
+  reviewer_pre_existing: 0
+  # 旧 severity の時系列比較用。新規 review では impact 別件数として記録し、不明なら unknown。
+  reviewer_critical: unknown
+  reviewer_major: unknown # high impact の互換欄
+  reviewer_minor: unknown # medium / low impact の互換欄
   user_corrections: 0
   escaped_defects: 0
 
@@ -35,6 +40,19 @@ process:
   # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
   # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
   meta_work_ratio: unknown
+
+# 人間レビューの負荷を測る。秒単位の計時や長いアンケートは要求しない。
+# active_time_bucket / confidence / full_diff_opened だけ人間が任意で回答し、その他は
+# review packet / audit から取得できる場合に記録する。不明なら推測せず unknown。
+review:
+  active_time_bucket: unknown # lt5m | 5to15m | 15to30m | gt30m
+  confidence: unknown # 1〜5（変更を理解してマージ判断できる確信度）
+  full_diff_opened: unknown # true | false
+  handoff_items: unknown
+  rounds: unknown
+  stale_invalidations: unknown
+  verified_findings: unknown
+  false_positive_findings: unknown
 
 machine:
   # collect-task-metrics.mjs が transcript / quality-gates-log から自動で埋める（手で編集しない）。

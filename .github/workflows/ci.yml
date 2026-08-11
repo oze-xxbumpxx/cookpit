@@ -82,6 +82,15 @@ jobs:
       - name: Harness tests
         run: pnpm test:harness
 
+      # 導入期間は診断だけを出し、既存品質ゲートを妨げない。strict 化は試行実績と
+      # ユーザー承認を要する別変更で行う。
+      - name: Review readiness (warning-only)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .claude/scripts/review-readiness.mjs ci --base "${BASE_SHA}" --head HEAD --mode warn
+
       # format:check は Markdown も対象のため、ドキュメントだけの変更でも必ず実行する
       - name: Format check
         run: pnpm format:check

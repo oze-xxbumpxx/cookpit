@@ -45,8 +45,10 @@ description: >
    - ブランチ名に feature 名が含まれないブランチで作業した場合は
      `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --branch <ブランチ部分一致> --task-id <task-id> --write`
      で対象ブランチを明示して再実行する。
-   - 意味的な値（quality/process の手戻り・レビュー指摘・ユーザー修正数）は自動化対象外。
-     タスク完了時に reflection-agent / 人間が会話の記憶から埋める（不明値は unknown のまま）。
+   - 意味的な値（quality/process の手戻り・4 軸レビュー指摘・ユーザー修正数）は自動化対象外。
+     タスク完了時に reflection-agent が packet / audit から埋める（不明値は unknown のまま）。
+   - `review.active_time_bucket/confidence/full_diff_opened` だけは人間の任意回答。計時や回答を
+     完了条件にせず、未回答を推測しない。
 2. **振り返り**（L2/L3 のみ）: reflection-agent へ委譲し reflect-task Skill で
    candidate を作成する。L0/L1 はスキップ（過剰工程にしない）。
 3. **レビュー記録の網羅確認**: 複数 Task の Codex 委譲 feature では、main マージ済み

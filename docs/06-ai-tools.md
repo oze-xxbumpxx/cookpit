@@ -32,33 +32,37 @@
 - どちらのルートでも設計判断と最終レビューは Claude Code が担う（下記の注意事項どおり）。
 - Codex ルートの実装計画は軽量（分解・依存・完了条件のみ）とし、ファイル別の実装内容は
   ブリーフ `docs/tasks/codex/<feature>/` が正本（IMP-2026-025。二重生成しない）。
-- Codex 実装のレビューは下記チェックリストを重点確認する。
+- Codex 実装のレビューは下記の既知リスク catalog を機械検出と Reviewer の探索へ使う。
 
-### Codex 実装のレビューチェックリスト（実績由来・2026-07-02 整理）
+### Codex 実装の既知リスク catalog（2026-08-11 更新）
 
-Sprint 1〜2 の全 Codex 実装レビューで繰り返し検出したミスの型。**多くは `tsc` / `eslint` を
-通過する**ため、静的チェック green でも目視・実画面確認を省略しない。
+Sprint 1〜2 の Codex 実装レビューで繰り返し検出したミスの型。多くは `tsc` / `eslint` を
+通過するが、これは**人間が毎回全項目を走査するチェックリストではない**。最初に機械検出し、
+Reviewer が差分で真偽を確定し、操作でしか分からない変更経路だけを実画面で確認する。
 （出典: `logs/2026-05-16.md` / `2026-05-17.md` / `2026-06-06.md` / `2026-06-16.md`）
 
-> 先に機械検出を回す: `node .claude/scripts/check-codex-implementation.mjs --brief docs/tasks/codex/<feature>`
-> （review-codex-implementation Skill が本チェックリストとゲート・実画面確認を一括実行する）
+```bash
+node .claude/scripts/check-codex-implementation.mjs --brief docs/tasks/codex/<feature>
+```
 
-- [ ] **識別子のタイポ**: フィールド名・ゲッター名・引数名・関数名・型名
-      （例: `matchsQuery`・`RecipeDetaiulPage`・`RecipeNow`。指示書の命名と突き合わせる）
-- [ ] **Tailwind クラス名のタイポ・連結ミス**: `w-fll`・`bg-zinc-90`・
-      `rounded-xlborder-zinc-200`（tsc/eslint を通過する。実画面確認が必須）
-- [ ] **イベントハンドラの結線漏れ**: props で受けた `onClick`/`onChange` を要素に渡し忘れる
-- [ ] **`'use client'` の付け忘れ / 不要付与**: hooks を使うファイルは冒頭宣言必須。
-      ファイル名に client と付いていても判定には無関係
-- [ ] **`import type` 規約漏れ**: 型のみ import は `import type`（coding-standards）
-- [ ] **命名の傾向ずれ**: テーブル名を単数形にしがち → 指示書に「複数形」等を明示しておく
-- [ ] **差し戻しの部分反映**: 複数指摘の差し戻しは一部だけ直して残りを取りこぼすことがある
-      → 差し戻し後は**指摘全件の再レビュー必須**（2026-06-06 で1件取りこぼし実績）
-- [ ] **バリデーションのエラーメッセージ分岐**: 排他条件（両方 null / 両方 set 等）で
-      メッセージを分けているか
-- [ ] **使用モデルの記録**: 実際に使った Codex のモデル・reasoning effort を
-      `docs/reviews/<feature>.md` と metrics YAML の `codex:` セクションに記録したか
-      （IMP-2026-025 の効果実測をモデル条件込みで比較するため。2026-07-18 追加）
+| 既知リスク                           | 一次検出               | 追加証拠が必要な条件                 |
+| ------------------------------------ | ---------------------- | ------------------------------------ |
+| 識別子のタイポ                       | script + brief 照合    | public contract と実装が曖昧なとき   |
+| Tailwind クラス名のタイポ・連結ミス  | script                 | 表示に影響する候補だけ実画面         |
+| イベントハンドラの結線漏れ           | script + Reviewer      | 変更した操作経路だけ実画面           |
+| `'use client'` の付け忘れ / 不要付与 | script                 | 原則不要                             |
+| `import type` 規約漏れ               | lint または Reviewer   | lint 未導入時だけ差分確認            |
+| 命名の傾向ずれ                       | script + brief 照合    | contract / DB 命名の意図が曖昧なとき |
+| 差し戻しの部分反映                   | review state + 指摘 ID | 以前の open 指摘と影響経路を再確認   |
+| バリデーションの分岐漏れ             | script + test          | 高影響の反例が未試験のとき           |
+
+機械結果の誤検出や green 項目は、人間へ再確認させず監査ログへ圧縮する。人間へ渡すのは
+主観・不可逆・未知の最大 3 件だけで、現在状態は
+`node .claude/scripts/review-readiness.mjs check --feature <feature>` で鮮度を確認する。詳細手順は
+`.claude/skills/review-codex-implementation/SKILL.md`、表示契約は `docs/reviews/README.md` を正典とする。
+
+実際に使った Codex の model / reasoning effort は既知リスクとは別の運用メタデータとして、
+`docs/reviews/<feature>.md` と metrics YAML の `codex:` セクションへ記録する。
 
 ---
 

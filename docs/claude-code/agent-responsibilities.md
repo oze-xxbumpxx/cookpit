@@ -13,8 +13,8 @@
 | implementation-planner    | 実装計画                                                       | `docs/implementation-plans/<feature>.md`                | Read, Grep, Glob, Write                         | しない     |
 | implementer               | 実装・単体/E2E・lint/型チェック                                | ソースコード・テスト                                    | Read, Grep, Glob, Edit, Write, Bash             | する       |
 | test-designer             | 試験観点・試験計画                                             | `docs/tests/<feature>.md`                               | Read, Grep, Glob, Write                         | しない     |
-| reviewer                  | 整合性・品質・文書レビュー                                     | 指摘（必要なら `docs/reviews/<feature>.md`）            | Read, Grep, Glob, Bash                          | しない     |
-| security-reviewer         | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 指摘リスト                                              | Read, Grep, Glob, Bash                          | しない     |
+| reviewer                  | 整合性・品質・文書レビュー                                     | 4 軸指摘 + review assessment                            | Read, Grep, Glob, Bash                          | しない     |
+| security-reviewer         | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 4 軸指摘 + 専門 evidence                                | Read, Grep, Glob, Bash                          | しない     |
 | reflection-agent          | 振り返り・改善候補抽出                                         | `docs/claude-code/improvements/candidates/<task-id>.md` | Read, Grep, Glob, Write                         | しない     |
 | agent-evaluator           | 固定評価ケースで回帰評価                                       | `docs/claude-code/improvements/evaluations/`            | Read, Grep, Glob, Write                         | しない     |
 | agent-improvement-manager | 横断分析・改善提案                                             | `docs/claude-code/improvements/proposals/`              | Read, Grep, Glob, Write, Agent(agent-evaluator) | しない     |
@@ -78,7 +78,10 @@
 - 要件充足性、設計との整合性、実装計画との整合性、コード品質、責務分離、
   エラー処理、セキュリティ（概要）、性能（概要）、テスト不足、ドキュメント更新漏れ。
 - 文書成果物の事実整合・矛盾・参照生存・鮮度（旧 document-reviewer。条件付き）。
-- 原則コードを変更せず、指摘と修正案を提示。保存が必要なら `docs/reviews/<feature>.md`。
+- 原則コードを変更せず、指摘を action / impact / evidence / status の 4 軸で検証する。
+- current packet 用の `review_assessment` JSON を返し、Orchestrator が
+  `docs/reviews/<feature>.md` の監査ログと marker へ統合する。
+- 人間へ渡すのは主観・不可逆・未知の最大 3 件。AI 自身はマージを承認しない。
 - 事実確認は自身の Read/Grep で行う（他 Agent を起動しない）。
 
 ## security-reviewer
@@ -89,4 +92,5 @@
 - OWASP Top 10・入力検証（Zod 境界）・認証/認可の漏れ・秘密情報のログ漏洩・
   `pnpm audit` による依存脆弱性・セキュリティヘッダー（フロント変更時のみ）を確認する。
 - `reviewer` と役割を分担: reviewer は品質/整合性を担当、security-reviewer はセキュリティ深掘り。
-- コードを変更せず、指摘（Must/Should/Nice + path:line + 修正案）を返す。
+- コードを変更せず、reviewer と同じ 4 軸の指摘と専門 evidence を返す。Reviewer / Orchestrator が
+  重複を除いて assessment へ統合する。
