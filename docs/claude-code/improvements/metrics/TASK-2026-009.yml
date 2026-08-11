@@ -1,0 +1,57 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-2026-009
+feature_name: review-readiness
+change_level: 3
+date: 2026-08-11
+
+agents:
+  calls: unknown
+  retries: unknown
+  unnecessary_calls: 0
+
+codex:
+  model: gpt-5
+  reasoning_effort: unknown
+  notes: '設計は Claude Code architecture-designer の反証・再設計を経て確定'
+
+quality:
+  tests_added: 24
+  initial_test_failures: 2 # 追加境界試験の fixture / assertion を修正し、実装回帰は 0
+  reviewer_block_open: 0
+  reviewer_high_impact_unverified: 0
+  reviewer_follow_up_open: 0
+  reviewer_pre_existing: 0
+  reviewer_critical: 0
+  reviewer_major: 0
+  reviewer_minor: 0
+  user_corrections: 0
+  escaped_defects: 0
+
+process:
+  requirement_rework: 1 # current guide 同期と dogfood 成果物を対象範囲へ明記
+  design_rework: 4 # digest/budget、層再分類、subject freeze順序、formatter安定性
+  implementation_rework: 2 # CI の missing review 検出、Prettierによるrender drift防止
+  missing_documents: 0
+  unresolved_items: 0
+  meta_work_ratio: unknown
+
+review:
+  active_time_bucket: unknown
+  confidence: unknown
+  full_diff_opened: unknown
+  handoff_items: 0
+  rounds: 3 # main review、dogfood後のclosureを2回。Security Reviewは専門観点として併走
+  stale_invalidations: 0
+  verified_findings: 0
+  false_positive_findings: 0
+
+machine:
+  # collect-task-metrics.mjs の実行環境で取得できる場合に追記する。
+
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }

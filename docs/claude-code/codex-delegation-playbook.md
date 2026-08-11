@@ -1,7 +1,7 @@
 # Codex 委譲プレイブック
 
 Codex への実装委譲を「指示書生成 → 実行 → レビュー → 差し戻し」の定型フローとして運用する
-ための手順書。**いつ Codex を使うかの判断基準とレビューチェックリストは
+ための手順書。**いつ Codex を使うかの判断基準と既知リスク catalog は
 [docs/06-ai-tools.md](../06-ai-tools.md) が正典**。本書はその実行手順を担う。
 指示書の生成は `create-codex-brief` Skill（`.claude/skills/create-codex-brief/`）が担う。
 
@@ -18,8 +18,8 @@ Codex への実装委譲を「指示書生成 → 実行 → レビュー → �
        │       実装計画は Codex 軽量モード＝分解・依存・完了条件のみ。完成コードはブリーフが正本）
        │    2. Claude Code: create-codex-brief Skill で docs/tasks/codex/<feature>/ を生成
        │    3. 人間: Codex に指示書を渡して実行（下記コピペプロンプト）
-       │    4. Claude Code: レビュー（06-ai-tools チェックリスト + 実画面確認）
-       │    5. 差し戻しがあれば下記テンプレで再依頼 → 指摘全件の再レビュー
+       │    4. Claude Code: review-codex-implementation（機械検出 → 意味レビュー → 必要な実画面証拠）
+       │    5. 差し戻しがあれば下記テンプレで再依頼 → 指摘 ID と影響経路を再確認
        │
        └─ Orchestrator ルート（設計判断が発生しうるタスク）→ CLAUDE.md 開発ワークフローへ
 ```
@@ -71,18 +71,19 @@ AGENTS.md とそこに記載された docs/ を必ず読んでから着手して
 2. [指摘2]
 ```
 
-> 差し戻しの部分反映は既知のミス型（2026-06-06 実績）。**差し戻し後は指摘全件の
-> 再レビューが必須**（06-ai-tools チェックリスト末尾）。
+> 差し戻しの部分反映は既知のミス型（2026-06-06 実績）。差し戻し後は open 指摘全件と、
+> 修正が触れた振る舞いを再確認する。
 
 ## レビュー手順（Claude Code 側）
 
-1. `docs/06-ai-tools.md` の「Codex 実装のレビューチェックリスト」を全項目確認する
-   （tsc/eslint を通過するミスが多いため、静的チェック green を根拠に省略しない）。
-2. 指示書のシグネチャと実装の識別子を突き合わせる（タイポ検出）。
-3. UI 変更を含む場合は `manual-browser-verify` Skill で実画面確認する。
-4. 品質ゲート: `bash .claude/scripts/run-quality-gates.sh`。
-5. レビュー結果をログ（AI ツール活用記録）に 1 行残す（ミス型の再発カウントが
-   改善サイクルの入力になるため）。
+1. `review-codex-implementation` Skill を実行し、staged snapshot の subject を固定する。
+2. 既知リスク catalog の機械検出と品質ゲートを先に実行する。
+3. Reviewer が候補の真偽、差分起因、証拠、重複を確認する。
+4. UI 変更のうち、操作でしか確定できない変更経路だけ `manual-browser-verify` で確認する。
+5. 監査ログと current packet を `docs/reviews/<feature>.md` に統合し、freshness を check する。
+
+人間へ渡すのは主観・不可逆・未知の最大 3 件。既知 catalog の全項目を人間が再走査しない。
+詳細は `.claude/skills/review-codex-implementation/SKILL.md` を正典とする。
 
 ## 安全境界
 

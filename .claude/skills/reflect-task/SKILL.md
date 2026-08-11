@@ -26,7 +26,7 @@ reflection-agent がタスク完了後の振り返りを行い、Memory 候補�
 - [ ] 要件見落とし
 - [ ] 設計変更（途中での方針転換）
 - [ ] テスト失敗（仕様誤解 / 実装漏れ / 環境）
-- [ ] Reviewer 指摘（重大度・種類・再発性）
+- [ ] Reviewer 指摘（action / impact / evidence / status、誤検出、再発性）
 - [ ] ユーザー訂正（同じ訂正が何回目か）
 - [ ] Agent 間の認識不一致
 - [ ] 重複作業・不要な Agent 呼び出し・トークン浪費
@@ -79,7 +79,12 @@ candidate ファイル作成後、タスクのメトリクスを記録する。
 1. `bash .claude/scripts/record-task-metrics.sh <task-id> <feature-name> <level>` を実行してテンプレートを生成する（既存なら上書き不要）。
 2. 生成された `docs/claude-code/improvements/metrics/<task-id>.yml` に実値を埋める：
    - `agents.calls`：subagent-log から自動補完済みかを確認。未補完なら subagent-log を数えて記入。
-   - `quality.reviewer_critical/major/minor/nits`：`docs/reviews/<feature>.md` の実指摘数。
+   - `quality.reviewer_block_open/high_impact_unverified/follow_up_open/pre_existing`：
+     `docs/reviews/<feature>.md` の current assessment と監査ログから記入する。
+   - `quality.reviewer_critical/major/minor`：過去との比較が必要な場合だけ impact 別件数を記入する。
+   - `review.handoff_items/rounds/stale_invalidations/verified_findings/false_positive_findings`：
+     packet と監査ログから取得できる値だけを記入する。
+   - `review.active_time_bucket/confidence/full_diff_opened`：人間が任意で答えた場合だけ記入する。
    - `quality.user_corrections`：会話上のユーザー修正・差し戻し回数。
    - `process.*_rework`：各フェーズの手戻り回数。
    - 判定できない値は `unknown` のまま残す（推測値を入れない）。

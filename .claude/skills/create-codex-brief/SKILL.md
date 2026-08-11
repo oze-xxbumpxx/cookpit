@@ -48,7 +48,7 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
      import type / 値なしは null）
    - 期待するクラス・関数シグネチャ（タイポ照合の基準になる正確な識別子名）
    - **「命名・記法の注意（過去の Codex ミス実績への先回り）」節（必須・空欄不可）**:
-     直近の `docs/claude-code/improvements/candidates/` と docs/06-ai-tools.md チェックリストから、
+     直近の `docs/claude-code/improvements/candidates/` と docs/06-ai-tools.md の既知リスク catalog から、
      **この Task で起きうる既知ミス型**を具体的に列挙する（汎用コピペ禁止。feature/層ごとに抽出）。
      例: ルート変数の単複、`'use client'` 要否、三項演算子の向き、`param`+`json` 2 バリデータ、
      名前衝突（同名型の二重定義）など。
@@ -57,14 +57,14 @@ Codex は別サブスクのため Claude Code の usage を消費しない（最
 5. 指示書にサンプルコードを置く場合は、**サンプル自体を敵対的に一度読む**（catch の捕捉範囲・
    エラーパスの前提・Zod 境界がサンプルどおりか）。指示書由来のバグは Codex が忠実にコピーする
    （出典: shopping-list-core 事象 2）。疑わしければサンプルを短くするか、境界を厳守事項に書く。
-5b. **完成コードの同梱は層で使い分ける**（出典: pantry-core 事象 3・4 の層別示唆）:
-    - Domain / Infrastructure（ボイラープレート色が強い層）: 完成コードを同梱してよい
-      （3 タスク連続で識別子・配線ミス 0 の実証あり）。
-    - Application / Presentation（ロジックが絡む層）: 公開シグネチャ + 不変条件/落とし穴 +
-      テスト観点 + **公開識別子一覧（タイポ照合基準・必須）**を主とし、メソッド本体の完成コード
-      貼付は最小化する（サンプル自体の潜在バグが Application 層で 2 回発生。事象 3）。
-6. 生成後、指示書を docs/06-ai-tools.md「Codex 実装のレビューチェックリスト」の観点で
-   セルフチェックする（指示書側の曖昧さがミスの温床になるため）。
+   5b. **完成コードの同梱は層で使い分ける**（出典: pantry-core 事象 3・4 の層別示唆）:
+   - Domain / Infrastructure（ボイラープレート色が強い層）: 完成コードを同梱してよい
+     （3 タスク連続で識別子・配線ミス 0 の実証あり）。
+   - Application / Presentation（ロジックが絡む層）: 公開シグネチャ + 不変条件/落とし穴 +
+     テスト観点 + **公開識別子一覧（タイポ照合基準・必須）**を主とし、メソッド本体の完成コード
+     貼付は最小化する（サンプル自体の潜在バグが Application 層で 2 回発生。事象 3）。
+6. 生成後、指示書を docs/06-ai-tools.md「Codex 実装の既知リスク catalog」のうち
+   この Task に該当する観点でセルフチェックする（汎用の全項目走査はしない）。
 7. ユーザーへ「Codex への貼り付け手順」（playbook のコピペプロンプト）と、実装完了後の
    レビュー手順（`review-codex-implementation` + `docs/reviews/<feature>.md` 追記）を提示して引き渡す。
 

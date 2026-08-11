@@ -33,6 +33,52 @@ Level 1（軽微）は設計書・計画を省略し、implementer（または�
 reviewer の最小フローで進める。レベルの定義は
 [document-policy.md](./document-policy.md) を参照。
 
+## 人間レビューを二つのゲートへ分ける
+
+人間を工程ごとの確認者にせず、AI が代替できない意思決定者として扱う。通常は次の 2 箇所だけで
+確認を求める。
+
+| gate                | 時点         | 人間が判断すること                         | AI / 機械が先に用意するもの        |
+| ------------------- | ------------ | ------------------------------------------ | ---------------------------------- |
+| A: design decision  | 実装前       | 複数案の trade-off、不可逆変更、要件の主観 | 推奨案、反対案、影響、rollback     |
+| B: merge acceptance | 実装・検証後 | 残余リスクの受容、UX の主観、マージ可否    | current packet、振る舞い差分、証拠 |
+
+Gate A は設計で意思決定が必要な場合だけ発生する。既存ルールから一意に決まる実装を、人間へ
+形式的に確認しない。各 gate の質問は原則 3 件以下にまとめ、質問ごとに推奨と根拠を付ける。
+4 件以上なら人間へ大量に渡さず、PR 分割、設計判断の前倒し、追加証拠で圧縮する。
+
+実装中は、スコープ変更、不可逆操作、新しい権限が必要な場合を除き、人間を細切れに中断しない。
+確定可能な事項は AI と deterministic gates で処理し、未決事項を次の gate に集約する。
+
+## Review state
+
+L2/L3 の新しいレビュー記録は `docs/reviews/<feature>.md` に current-state packet と監査ログを
+同居させる。
+
+```text
+draft ──証拠生成──┬── open BLOCK ──────────> ai_blocked
+                  ├── 高影響の未検証 ─────> evidence_pending
+                  └── 上記なし ───────────> human_review_requested
+
+review subject が変化: いずれの保存状態からも stale → 再検証
+human_review_requested: Gate B で人間が受容または差し戻し
+```
+
+- `human_review_requested` は AI の承認ではなく、人間へ渡せる状態。
+- Reviewer は候補指摘を introduced-by-diff / evidence / CI 重複 / 根本原因重複で検証する。
+- 指摘は action / impact / evidence / status の 4 軸で記録する。
+- 人間項目は `subjective` / `irreversible` / `unknown` だけ、最大 3 件。
+- subject digest は staged index（ローカル）または base-to-head diff（CI）から計算する。
+- 詳細は [reviews README](../reviews/README.md) を正典とする。
+
+### L3 の subject freeze
+
+L3 の candidate / metrics は review 結果を入力にする一方、review 文書と違って digest 対象である。
+そのため、意味 / security review の指摘解消後に candidate / metrics を確定し、全非 review 変更を
+stage して final subject を作る。Reviewer は前回からの差分を closure review し、その後は
+`docs/reviews/<feature>.md` だけを生成する。非 review ファイルをさらに変えたら final subject を
+再計算する。人間は closure の途中ではなく、current packet ができた Gate B で 1 回判断する。
+
 ## 実装前に必ず満たす条件
 
 L2/L3 の実装に着手する前に、以下が揃っていることを確認する。
@@ -59,6 +105,8 @@ Orchestrator は以下をすべて確認してから「完了」とユーザー�
 - L2/L3 で必要な成果物が存在し、必須セクションが埋まっている
 - `pnpm lint` / `pnpm type-check` / `pnpm test`（Vitest。全層導入済み — 2026-07-01 PR #21）が通っている
 - スコープ外の変更が混入していない
+- L2/L3 の新規 review packet が current で、open `BLOCK` と高影響の未検証が 0
+- Gate B へ渡す人間項目が 3 件以下で、各項目に推奨と証拠参照がある
 - ユーザー確認が必要な判断（下記）が解決済み
 
 ## ユーザーへ確認すべき条件
@@ -70,6 +118,9 @@ Orchestrator は以下をすべて確認してから「完了」とユーザー�
 - 依頼スコープを超える変更が必要になったとき
 - 後方互換性・データ移行が絡むとき
 - 複数の妥当な設計案があり、トレードオフの選択が必要なとき
+
+確認時は個別の思いつきを逐次送らず、Gate A の質問として最大 3 件へまとめる。ただし安全上の
+停止条件や新しい権限要求は、件数を理由に遅らせない。
 
 ## セッション跨ぎの復旧（強制中断・計画分割）
 

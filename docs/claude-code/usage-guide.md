@@ -127,7 +127,9 @@ Claude が場面に応じて自動選択する。`/<skill-name>` で明示的に
 ### 完了条件（[definition-of-done.md](./definition-of-done.md)）
 
 レベル別 DoD を満たすこと。実在する品質コマンド（lint / type-check / test / build /
-format-check）のみをゲートにする。Reviewer の Critical/Major が残る間は完了にしない。
+format-check）のみをゲートにする。Reviewer の open `BLOCK` または critical / high の未検証が
+残る間は人間へ引き渡さない。L2/L3 の current packet は
+`review-readiness.mjs check` で対象差分との一致を確認する。
 
 ## 4. 主要コマンド
 

@@ -77,7 +77,7 @@ for y in docs/claude-code/improvements/metrics/TASK-*.yml; do
   METRICS_FOUND=$((METRICS_FOUND + 1))
   echo "### $y"
   grep -E '^(task_id|feature_name|change_level|date):' "$y" || true
-  grep -E '^\s+(calls|retries|reviewer_critical|reviewer_major|reviewer_minor|user_corrections|implementation_rework|unresolved_items):' "$y" || true
+  grep -E '^\s+(calls|retries|reviewer_block_open|reviewer_high_impact_unverified|reviewer_follow_up_open|reviewer_critical|reviewer_major|reviewer_minor|user_corrections|implementation_rework|unresolved_items|active_time_bucket|confidence|handoff_items|rounds|stale_invalidations|false_positive_findings):' "$y" || true
   echo
 done
 [ "$METRICS_FOUND" -eq 0 ] && echo "- 期間内のメトリクスなし" && echo
