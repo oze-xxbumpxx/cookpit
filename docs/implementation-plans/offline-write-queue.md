@@ -715,7 +715,7 @@ Domain / Application / Infrastructure / `packages/api-contract` / `apps/web/src/
      status: 'pending',
      actualPrice: null,
      actualStoreId: null,
-     source: 'manual',
+     source: 'manually_added',
    };
 
    /** DB スキーマを import せず直接レコードを注入する（TTL/attempts の境界値を作るため）。 */
@@ -1713,6 +1713,30 @@ remove/checked/sync.test.tsx` の全ケース。Step 1 の `setupFiles` 導入 +
 `shopping-list-client.view.test.tsx` / `.sync.test.tsx` / `.remove.test.tsx` / `.complete.test.tsx`
 を実行し、`useEffect` 追加（online/mount flush）が既存の呼び出し回数系アサーション
 （例: `LC-15`, `LC-22`）や `setupFiles` 追加に影響されないことを確認する。
+
+#### `LC-22` の修正（必須。reviewer Must 1・実測で破壊を確認済み）
+
+`apps/web/tests/app/shopping-lists/_components/shopping-list-client.view.test.tsx:263-277` の
+`LC-22` は、`focus` イベントを `act()` で発火した**直後に同期的**
+`expect(getShoppingList).toHaveBeenCalledTimes(1)` を検証している。本ステップで `handleFocus` を
+flush 先行（P-4）に変更すると、refetch は IndexedDB のオープンと `getAll` の解決を待ってから
+呼ばれる。`IDBRequest` はマイクロタスクではなくタスク（マクロタスク相当）で解決するため、
+`act(async () => ...)` の 1 回のマイクロタスク消化では到達せず、アサーション時点の呼び出し回数は
+`0` になり**確実に失敗する**（reviewer が `fake-indexeddb` + `idb` を実際にインストールして実測）。
+
+対処: 当該アサーションを `waitFor` でラップする。テストの意図（silent な focus refetch では
+更新ボタンが disable されない）は変えない。
+
+```ts
+await waitFor(() => {
+  expect(getShoppingList).toHaveBeenCalledTimes(1);
+});
+const refreshButton = screen.getByRole('button', { name: '更新' }) as HTMLButtonElement;
+expect(refreshButton.disabled).toBe(false);
+```
+
+同じ構造（`focus` 発火直後に同期アサーション）を持つテストが他にないか、`.view` / `.sync` /
+`.remove` / `.complete` を通して確認し、該当すれば同様に修正すること。
 
 ---
 
