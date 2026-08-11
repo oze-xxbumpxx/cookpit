@@ -47,3 +47,9 @@ export * from './pantry/pantry';
 export * from './pantry/pantry-id';
 export * from './pantry/pantry.repository';
 export * from './pantry/stock-id';
+
+// PushSubscription 集約
+export * from './push-subscription/push-subscription';
+export * from './push-subscription/push-subscription-id';
+export * from './push-subscription/push-subscription.repository';
+export * from './push-subscription/push-sender';

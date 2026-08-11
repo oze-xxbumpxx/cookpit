@@ -115,7 +115,13 @@ iPhone（Safari）と Android（Chrome）の両方で動かす必要があるた
 
 **重要な前提**：iOS は7日間アプリを起動しないとローカルストレージがクリアされる場合がある。よって「サーバー（Neon）が真実のソース、ローカルはキャッシュ」という設計を徹底する。
 
-MVP1 ではプッシュ通知を使わないため、両OS で機能差は出ない想定。
+MVP1 ではプッシュ通知を使わないため、両OS で機能差は出ない想定だった。
+
+> **更新（2026-08-09・Sprint 8 Unit B）**: MVP2 の Sprint 8 で**プッシュ通知を使う**ことを決めた（[ADR-0017](./decisions/ADR-0017-web-push-expiry-alert.md)）。賞味期限アラートを Web Push（VAPID）+ Vercel Cron で実現する。よって上表の「プッシュ通知 △ (iOS 16.4+ 限定対応)」は実際に効いてくる差異になる。
+>
+> iOS 側の条件は 2 つ。**ホーム画面に追加した PWA でのみ動作する**（Safari のタブ内では動かない）ことと、**通知権限の要求がユーザー操作起点でなければ失敗する**こと。加えて Apple は VAPID subject が `mailto:` か HTTPS URL 以外だと 403 を返す。いずれも Chrome / Android では通るため、**Android で確認して iOS だけ落ちる**形で現れる。詳細は `docs/designs/expiry-alert.md` §実装上の罠。
+>
+> なお Web Push 自体に費用はかからない（Apple Developer Program への加入も不要）。
 
 ## デプロイ戦略
 

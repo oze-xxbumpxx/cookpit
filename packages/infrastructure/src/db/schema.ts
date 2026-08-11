@@ -160,3 +160,14 @@ export const stocks = pgTable(
 
 export type StockRow = typeof stocks.$inferSelect;
 export type NewStockRow = typeof stocks.$inferInsert;
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  endpoint: text('endpoint').notNull().unique(), // P-8 確定: UNIQUE。onConflictDoUpdate の target
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscriptionRow = typeof pushSubscriptions.$inferInsert;

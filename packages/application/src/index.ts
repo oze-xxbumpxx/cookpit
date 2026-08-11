@@ -8,3 +8,4 @@ export * from './product';
 export * from './meal-plan';
 export * from './shopping-list';
 export * from './pantry';
+export * from './notification';

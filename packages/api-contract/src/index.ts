@@ -6,3 +6,4 @@ export * from './store.schema';
 export * from './meal-plan.schema';
 export * from './shopping-list.schema';
 export * from './pantry.schema';
+export * from './push-subscription.schema';

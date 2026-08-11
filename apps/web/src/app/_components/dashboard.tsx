@@ -1,11 +1,12 @@
 import type { MealPlanDto, StockDto, StorageLocation } from '@cookpit/application';
-import { ThemeToggle } from '@/app/_components/theme-toggle';
-import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import {
   formatExpiryUrgencyLabel,
   getExpiryRemainingDays,
   getExpiryUrgency,
-} from '@/app/_utils/expiry';
+} from '@cookpit/application';
+import { ExpiryAlertSubscription } from '@/app/_components/expiry-alert-subscription';
+import { ThemeToggle } from '@/app/_components/theme-toggle';
+import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -120,6 +121,7 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
               在庫を見る
             </Link>
           </div>
+          <ExpiryAlertSubscription />
           {expiringStocks.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               まもなく期限を迎える在庫はありません

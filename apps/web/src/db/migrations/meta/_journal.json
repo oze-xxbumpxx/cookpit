@@ -57,6 +57,13 @@
       "when": 1784243112733,
       "tag": "0007_tranquil_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786365686144,
+      "tag": "0008_dry_true_believers",
+      "breakpoints": true
     }
   ]
 }

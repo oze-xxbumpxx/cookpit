@@ -111,6 +111,14 @@ CREATE TABLE IF NOT EXISTS stocks (
 );
 
 CREATE INDEX IF NOT EXISTS stocks_product_id_idx ON stocks (product_id);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id text PRIMARY KEY,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT now()
+);
 `;
 
 export async function createTestDb(): Promise<DrizzleClient> {
