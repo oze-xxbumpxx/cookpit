@@ -71,6 +71,8 @@ script から export する pure function を直接試験する。
 | U-04 | AI assessment   | `<details>` 内に置く                        |
 | U-05 | human 0         | 承認済みでなく「追加判断なし」と表示        |
 | U-06 | formatter       | Prettier range-ignore が marker 内を覆う    |
+| U-07 | Gate B lint     | 禁止語・プロセス言語の振る舞い差分を warn   |
+| U-08 | handoff-blurb   | 承認語なしの短文。正本 path を含む          |
 
 ## 7. Review parser / checker
 
@@ -82,6 +84,8 @@ script から export する pure function を直接試験する。
 | C-04 | JSON 不正                       | invalid、stack trace を人間へ要求しない |
 | C-05 | 保存 digest と現在 digest不一致 | `stale`                                 |
 | C-06 | brief Task 見出し不足           | uncovered Task を維持して報告           |
+| C-07 | `requireHandoff` + legacy       | `legacy_not_handoffable` error          |
+| C-08 | `requireHandoff` + Task 不足    | `task_uncovered` を error に格上げ      |
 
 ## 8. CLI / CI
 
@@ -95,6 +99,8 @@ script から export する pure function を直接試験する。
 | CLI-05  | `ci --mode strict` invalid review  | exit 1                      |
 | CLI-06  | changed review なし                | 短い info、exit 0           |
 | CLI-07  | changed L2/L3 成果物に review なし | warning は 0、strict は非 0 |
+| CLI-08  | `handoff-check` legacy             | exit 1                      |
+| CLI-09  | `handoff-blurb` current packet     | 短文、exit 0                |
 
 ## 9. 回帰・整合
 

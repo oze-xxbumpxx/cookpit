@@ -61,7 +61,20 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
 5. 成果物を統合し、矛盾があれば該当 Subagent へ差し戻す。
 6. （L2/L3）全委譲の完了後、`bash .claude/scripts/record-task-metrics.sh` でメトリクスを
    セッション内転記する（improvement-cycle.md §計測の原則）。
-7. 完了条件（development-workflow.md）を確認してユーザーへ報告する。
+7. **（L2/L3）人間引き渡し前の hard stop**: 「完了」「PR 準備完了」「人間レビュー待ち」と
+   報告する前に、次を満たすこと。満たさない場合は完了報告せず、不足を解消するか
+   `evidence_pending` / `ai_blocked` として差し戻す。
+   - feature に `docs/reviews/<feature>.md` がある、または L3（`docs/requirements/<feature>.md`
+     がある）なら、必ず structured packet が必要。
+   - `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
+     が exit 0（legacy 不可 / `human_review_requested` / stale でない / open BLOCK 相当なし）。
+   - チャット・PR 要約に `受け入れ可` / `PASS` / `APPROVED` を書かない。
+   - PR/チャットへ貼る短文は
+     `node .claude/scripts/review-readiness.mjs handoff-blurb --feature <feature> --base origin/main`
+     の出力を使う（正本は常に `docs/reviews/`）。
+   - 書き方は `docs/reviews/README.md` の Gate B 規範。CI の review-readiness は当面 warn-only
+     のまま（session hard stop が先。ADR-0017）。
+8. 完了条件（development-workflow.md / definition-of-done.md）を確認してユーザーへ報告する。
 
 ## モデル采配（詳細・正典は orchestration-policy.md §モデル割り当て）
 

@@ -120,10 +120,13 @@ Orchestrator が出力を `docs/reviews/<feature>.md` の
 変更しない。最後に state、表示、Task coverage、subject freshness をまとめて確認する。
 
 ```bash
-node .claude/scripts/review-readiness.mjs check --feature <feature> --base <base>
+node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base <base>
+node .claude/scripts/review-readiness.mjs handoff-blurb --feature <feature> --base <base>
 ```
 
-チャットと PR 本文は packet へのリンク付き要約だけでよい。詳細を二重転記しない。
+`handoff-check` が exit 0 になるまで「人間レビュー待ち」「PR 準備完了」と報告しない。
+チャットと PR 本文は `handoff-blurb` の出力だけを貼る。詳細を二重転記しない。
+内容 lint の WARN（禁止語・プロセス言語の振る舞い差分など）は修正するか、監査ログへ理由を残す。
 
 ## 人間への引き渡し条件
 

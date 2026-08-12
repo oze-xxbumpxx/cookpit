@@ -94,14 +94,18 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
    結果（機械検出・品質ゲート・Reviewer の意味レビュー・必要な black-box 証拠）を
    `docs/reviews/<feature>.md` の current-state packet と監査ログへ記録する（**必須**。
    複数 Task の feature では Task 単位で追記）。人間向け packet の書き方は
-   `docs/reviews/README.md` の Gate B 規範に従う。PR 本文への要約転記は任意
-   （正本は常に `docs/reviews/`。承認語は書かない）。
+   `docs/reviews/README.md` の Gate B 規範に従う。
    受け入れレビューが Orchestrator 経路の reviewer 工程に相当する（省略ではなく代替）。
-3. **reflection-agent は Codex ルートでも実施**する（feature 完了時）。
-4. 実装途中でルートを切り替えた場合（Orchestrator ⇔ Codex）、実装計画の「実装ルート」欄を
+3. **引き渡し hard stop**。PR 作成・「人間レビュー待ち」報告の前に
+   `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature>` が
+   exit 0 であること（legacy 不可）。PR/チャット要約は `handoff-blurb` を使い、
+   正本は常に `docs/reviews/`。承認語は書かない。
+4. **reflection-agent は Codex ルートでも実施**する（feature 完了時）。
+5. 実装途中でルートを切り替えた場合（Orchestrator ⇔ Codex）、実装計画の「実装ルート」欄を
    更新し、切替理由を日次ログに残す。
-5. **PR 作成・マージの主体**: 受け入れレビュー合格後、作業ブランチからの draft/open PR 作成は
-   Orchestrator（またはレビュー実施セッション）が行い、**main へのマージ判断は人間**が行う。
+6. **PR 作成・マージの主体**: 受け入れレビュー（handoff-check 成功）後、作業ブランチからの
+   draft/open PR 作成は Orchestrator（またはレビュー実施セッション）が行い、
+   **main へのマージ判断は人間**が行う。
    （出典: shopping-list-core 事象 7 — 合格後の受け渡しが暗黙だった問題の明文化）
 
 ## 並列実行の指針

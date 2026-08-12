@@ -149,11 +149,30 @@ node .claude/scripts/review-readiness.mjs subject --feature <feature> --base <ba
 node .claude/scripts/review-readiness.mjs render \
   --feature <feature> --base <base> --assessment <assessment-json>
 node .claude/scripts/review-readiness.mjs check --feature <feature> --base <base>
+# 人間引き渡し hard stop（legacy 不可）
+node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base <base>
+# PR / チャット用の短文
+node .claude/scripts/review-readiness.mjs handoff-blurb --feature <feature> --base <base>
 ```
 
 `render` の stdout を Orchestrator が marker 間へ挿入する。当該 review 文書だけは digest から
 除外されるが、要件・設計・テスト・`.claude`・`.github` を含む他の変更はすべて対象になる。
 subject が変わったら packet を再生成する。
+
+`check` / `render` は Gate B 文言を **warn** 検査する（禁止語、疑問形、recommendation の
+行動語、振る舞い差分のプロセス言語）。warn だけでは handoff を止めないが、放置しない。
+
+## 引き渡し強制（session hard stop）
+
+「完了」「PR 準備完了」「人間レビュー待ち」と報告する前に `handoff-check` を通す。
+接続先は Orchestrator / close-session / validate-deliverables / definition-of-done。
+CI の review-readiness は当面 warning-only のまま（ADR-0017。strict 化は別タスク）。
+
+## 次のプロダクト feature での実戦
+
+harness 自身（`review-readiness`）以外の **次の L2/L3 プロダクト feature** では、必ず
+structured packet を生成し `handoff-check` を通す。legacy 長文のまま Gate B へ渡さない。
+これが採用ギャップを閉じる移行 SLA である。
 
 ## 既存文書と安全限界
 

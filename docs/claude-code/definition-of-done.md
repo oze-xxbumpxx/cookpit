@@ -37,9 +37,14 @@
 - critical / high の未検証が 0。
 - state が `human_review_requested`。これは AI の承認ではなく、人間への引き渡し状態。
 - 人間項目が主観・不可逆・未知だけで 3 件以下。各項目に質問、推奨、証拠参照がある。
+- 機械確認:
+  `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base <base>`
+  が exit 0。legacy のままでは成功しない。
+- チャット/PR の第一面は `handoff-blurb` の出力（または同等の短文）とし、承認語を書かない。
 
 AI 作業の完了報告と、Gate B での人間のマージ受容を混同しない。マージ可否は人間が packet と
-残余リスクを読んで決める。
+残余リスクを読んで決める。セッション完了時の hard stop は Orchestrator / close-session /
+validate-deliverables。CI の review-readiness は当面 warning-only（ADR-0017）。
 
 ## 共通（全 Level）
 
@@ -72,7 +77,8 @@ AI 作業の完了報告と、Gate B での人間のマージ受容を混同し�
 - 必要に応じ `pnpm build` 成功。
 - Unit/Integration test：`pnpm test` 成功必須（変更パッケージの対応テスト追加を含む）。
 - 独立 Reviewer の open `BLOCK` が 0、critical / high の未検証が 0。
-- 今回 review 文書を作成・更新する場合、current な structured packet がある。
+- 今回 review 文書を作成・更新する場合、current な structured packet があり
+  `handoff-check` が成功している（legacy 不可）。
 - 文書と実装が一致。
 
 ## Level 3（重要変更）
