@@ -191,12 +191,14 @@ review 文書以外の metrics、candidate、作業ログ、正典文書はす�
 
 新規 `.claude/scripts/review-readiness.mjs` のみを追加する。
 
-| command   | 入力                           | 出力 / 責務                 |
-| --------- | ------------------------------ | --------------------------- |
-| `subject` | feature / base / source / head | digest JSON                 |
-| `render`  | 上記 + assessment JSON         | marker 全体の Markdown      |
-| `check`   | feature / base / source / head | schema、Task、digest の検査 |
-| `ci`      | base / head / mode             | 変更 review の一括検査      |
+| command         | 入力                            | 出力 / 責務                                   |
+| --------------- | ------------------------------- | --------------------------------------------- |
+| `subject`       | feature / base / source / head  | digest JSON                                   |
+| `render`        | 上記 + assessment JSON          | marker 全体の Markdown（Gate B 文言は warn）  |
+| `check`         | 上記 + optional require-handoff | schema、Task、digest の検査                   |
+| `handoff-check` | feature / base / source / head  | 人間引き渡し hard stop（legacy 不可）         |
+| `handoff-blurb` | 同上                            | PR/チャット用短文（handoff-check 成功時のみ） |
+| `ci`            | base / head / mode              | 変更 review の一括検査（当面 warn-only）      |
 
 既定は read-only。`render` は stdout にだけ出力し、ファイルは変更しない。
 
@@ -303,8 +305,13 @@ workflow の checker を参照する方向は許可された上位 → 下位依
 
 1. warning-only と新形式テンプレートを導入する。
 2. 本 feature 自身のレビューで end-to-end 利用する。
-3. 次の 2 feature 以上で誤警告を計測する。
-4. strict 化はユーザー判断で別変更とする。
+3. **セッション hard stop**（Orchestrator / close-session / validate-deliverables）で
+   `handoff-check` を必須化する。CI strict より先にこちらを定着させる。
+4. Gate B 文言 lint は warn-first。禁止語・疑問形・recommendation 行動語・
+   振る舞い差分のプロセス言語を検出する。
+5. 次の **プロダクト** feature（harness 以外）2 件以上で packet + handoff-blurb を実戦し、
+   誤警告を計測する。
+6. CI strict 化はユーザー判断で別変更とする。
 
 ロールバックは CI step、Reviewer/Skill 文言、新規 script/test、正典追記を本 feature の commit で
 revert する。既存 review 本文に migration をかけないためデータ復旧は不要。

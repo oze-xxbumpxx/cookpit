@@ -101,6 +101,7 @@ Reviewer は tier を上げられるが下げない。人間が下げる場合�
 6. 仕様の事実確認が必要なら、自分の Read/Grep/Glob で調査する
    （旧 requirements-analyst への再委譲はしない。IMP-2026-031）。
 7. 人間へ渡す項目を、AI が代替できない `subjective` / `irreversible` / `unknown` に限定する。
+   書き方の正典は `docs/reviews/README.md`「人間向け packet の書き方（Gate B）」。
 
 ## 指摘契約
 
@@ -133,11 +134,18 @@ Reviewer は tier を上げられるが下げない。人間が下げる場合�
 
 1. review tier と上げた trigger
 2. 実行した証拠と未実行理由
-3. 残余リスク
+3. 残余リスク（今回受容する未確認だけ。行動不能な不安は書かない）
 4. 人間が判断する項目（最大 3 件）
+5. 振る舞い差分（利用者言語、1〜5 件。実装日誌は書かない）
 
 人間項目が 4 件以上なら隠したり先頭 3 件へ切り詰めたりせず、全件を示して
 `evidence_pending` とする。PR 分割、設計判断の前倒し、追加証拠で 3 件以下へ戻す。
+
+人間項目の各 `question` は Yes/No または A/B で答えられる一文にする。
+`recommendation` には推奨（accept / reject / accept_risk 等）と、なぜ AI では代替できないかを
+短く含める。AI が正誤を断言できる指摘は `humanItems` に入れず、`BLOCK` または `FOLLOW_UP` へ送る。
+handoff / 要約に `受け入れ可` / `PASS` / `APPROVED` / `マージ OK` を使わない。
+Must / Should / Nice を人間 UI の主語彙にしない（使うなら監査ログ内部に閉じる）。
 
 最後に、Orchestrator が `.claude/scripts/review-readiness.mjs render` へ渡せる有効な JSON を
 `review_assessment` code fence で必ず 1 個出す。コメントや省略記号を入れない。

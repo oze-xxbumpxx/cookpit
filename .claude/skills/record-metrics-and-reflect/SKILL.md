@@ -55,9 +55,15 @@ description: >
    Task 分の `docs/reviews/<feature>.md` 記録が揃っているか
    `node .claude/scripts/check-review-coverage.mjs <feature>` で確認する
    （空配列 = 網羅済み。出典: cookpit/pantry-core 事象 2 / IMP-2026-020 適用後の再発）。
+4. **引き渡し packet 確認**（人間マージ判断へ渡す L2/L3）:
+   `docs/reviews/<feature>.md` がある、または L3 なら
+   `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
+   を実行する。失敗時はメトリクス記録自体は続けてよいが、完了報告では
+   「人間レビュー待ち」と書かず持ち越しにする（正典: close-session 手順 5）。
 
 ## 完了条件
 
 - L2/L3 タスクでメトリクス・振り返りを飛ばしていない（飛ばした場合は理由を報告に明記）。
 - メトリクス YAML の `machine:` セクションが当セッション分まで反映されている。
 - `check-review-coverage.mjs` が空配列を返す（該当する feature がある場合）。
+- 人間引き渡し対象 feature では `handoff-check` 成功、または未充足を報告に明記。

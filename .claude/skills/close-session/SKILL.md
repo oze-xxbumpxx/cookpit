@@ -39,15 +39,24 @@ description: >
    - **利用できない環境ではスキップし、ログにスキップした旨を書く。** セッション終了作業を
      メトリクスの都合で止めない（出典: cookpit/harness-plugin-split 要件 E-02）。
    - L0/L1 はそもそも対象外（過剰工程にしない）。
-5. **コミット & プッシュ**: 指定の作業ブランチへコミットし `git push -u origin <branch>` する
+5. **レビュー引き渡しゲート**（L2/L3 のみ）: `.claude/state/current-feature` の feature について、
+   次のいずれかに該当するなら
+   `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
+   を実行し、exit 0 を確認する。
+   - `docs/reviews/<feature>.md` が存在する
+   - L3（`docs/requirements/<feature>.md` が存在する）
+   - 失敗したら「人間レビュー待ち / PR 準備完了」とは報告せず、packet 生成または指摘解消を
+     持ち越し（次回やること）へ書く。legacy のまま close してマージ判断へ渡さない。
+   - L0/L1、および上記に該当しない L2（review 文書なし）はスキップ可。
+6. **コミット & プッシュ**: 指定の作業ブランチへコミットし `git push -u origin <branch>` する
    （CLAUDE.md の行動制約どおり、作業ブランチへは事前承認不要。構成ファイル
    （CLAUDE.md / agents / hooks / skills / rules / settings.json）を含む変更は、
    PR レビューで重点確認する対象であることをコミットメッセージと報告に明記する）。
    - **強制終了が近い・usage が逼迫しているとき**: フェーズ境界のチェックポイントコミットを
      先にリモートへ出し、「次回やること」を残工程が機械判別できる粒度で書く
      （次セッションの復旧チェックリスト — development-workflow.md §セッション跨ぎの復旧）。
-6. **最終報告**: やったこと・ゲート結果・所要時間・持ち越し（次回やること）を要約して
-   ユーザーへ報告する。
+7. **最終報告**: やったこと・ゲート結果・所要時間・持ち越し（次回やること）を要約して
+   ユーザーへ報告する。手順 5 を通した場合は handoff-check の結果（または持ち越し理由）を含める。
 
 ## 完了条件
 
@@ -57,3 +66,5 @@ description: >
 - L2/L3 タスクで手順 4 を飛ばした場合、その理由を報告に明記している
   （`record-metrics-and-reflect` を持たない環境なら「improvement 層なし」と書く）。
   メトリクス・振り返り自体の完了条件はあちらの Skill が持つ。
+- 手順 5 の対象 feature では `handoff-check` が成功している。失敗したまま
+  「人間レビュー待ち」と報告していない。

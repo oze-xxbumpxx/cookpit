@@ -21,7 +21,9 @@ import {
   checkReview,
   computeSubject,
   deriveStatus,
+  lintHandoffContent,
   parseReviewState,
+  renderHandoffBlurb,
   renderPacket,
   validateAssessment,
   validateFeatureName,
@@ -602,6 +604,115 @@ test('script 自身は review 文書を書き換えない', () => {
     const before = readFileSync(path, 'utf8');
     checkReview({ root, feature: 'demo', baseRef: initial, coverageFn: () => [] });
     assert.equal(readFileSync(path, 'utf8'), before);
+  } finally {
+    cleanup();
+  }
+});
+
+test('lintHandoffContent は禁止語とプロセス言語を warn する', () => {
+  const dirty = baseAssessment({
+    humanItems: [
+      {
+        id: 'HC-01',
+        kind: 'subjective',
+        question: '受け入れ可としてよいか',
+        recommendation: '良さそう',
+        evidenceRefs: ['EV-01'],
+      },
+    ],
+    behaviorChanges: ['UpdateStockDetails UseCase を追加する'],
+  });
+  const warnings = lintHandoffContent(validateAssessment(dirty).value);
+  assert.ok(warnings.some((item) => item.code === 'banned_acceptance'));
+  assert.ok(warnings.some((item) => item.code === 'recommendation_missing_action'));
+  assert.ok(warnings.some((item) => item.code === 'behavior_process_language'));
+});
+
+test('requireHandoff は legacy と Task 不足を error にする', () => {
+  const { root, initial, cleanup } = sandbox();
+  try {
+    write(root, 'docs/reviews/demo.md', '# Legacy review\n');
+    const legacy = checkReview({
+      root,
+      feature: 'demo',
+      baseRef: initial,
+      coverageFn: () => [],
+      requireHandoff: true,
+    });
+    assert.equal(legacy.ok, false);
+    assert.ok(legacy.diagnostics.some((item) => item.code === 'legacy_not_handoffable'));
+
+    write(root, 'src/example.txt', 'reviewed\n');
+    git(root, ['add', 'src/example.txt']);
+    const subject = computeSubject({ root, feature: 'demo', baseRef: initial, source: 'index' });
+    const packet = renderPacket({
+      feature: 'demo',
+      subject,
+      assessment: baseAssessment(),
+    }).markdown;
+    write(root, 'docs/reviews/demo.md', `# Review\n\n${packet}\n## Task 1\n`);
+    const uncovered = checkReview({
+      root,
+      feature: 'demo',
+      baseRef: initial,
+      source: 'index',
+      coverageFn: () => [2],
+      requireHandoff: true,
+    });
+    assert.equal(uncovered.ok, false);
+    assert.ok(uncovered.diagnostics.some((item) => item.code === 'task_uncovered'));
+  } finally {
+    cleanup();
+  }
+});
+
+test('handoff-check / handoff-blurb は current packet だけを通す', () => {
+  const { root, initial, cleanup } = sandbox();
+  try {
+    write(root, 'docs/reviews/demo.md', '# Legacy review\n');
+    const blocked = runScript(root, [
+      'handoff-check',
+      '--feature',
+      'demo',
+      '--base',
+      initial,
+    ]);
+    assert.equal(blocked.code, 1);
+    assert.match(blocked.stdout, /legacy_not_handoffable/);
+
+    write(root, 'src/example.txt', 'reviewed\n');
+    git(root, ['add', 'src/example.txt']);
+    const subject = computeSubject({ root, feature: 'demo', baseRef: initial, source: 'index' });
+    const packet = renderPacket({
+      feature: 'demo',
+      subject,
+      assessment: baseAssessment(),
+    }).markdown;
+    write(root, 'docs/reviews/demo.md', `# Review\n\n${packet}\n## Audit\n`);
+
+    const ready = checkReview({
+      root,
+      feature: 'demo',
+      baseRef: initial,
+      source: 'index',
+      coverageFn: () => [],
+      requireHandoff: true,
+    });
+    assert.equal(ready.ok, true);
+    const blurb = renderHandoffBlurb({ feature: 'demo', result: ready });
+    assert.match(blurb, /人間レビュー待ち/);
+    assert.match(blurb, /docs\/reviews\/demo\.md/);
+    assert.doesNotMatch(blurb, /受け入れ可|APPROVED/);
+
+    const cli = runScript(root, [
+      'handoff-blurb',
+      '--feature',
+      'demo',
+      '--base',
+      initial,
+    ]);
+    assert.equal(cli.code, 0);
+    assert.match(cli.stdout, /Review handoff/);
   } finally {
     cleanup();
   }

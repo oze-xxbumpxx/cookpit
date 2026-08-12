@@ -55,6 +55,17 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
 - [ ] 恒久ドキュメント/ADR の更新要否が判断されている
 - [ ] ユーザー確認が必要な判断がすべて解決済み
 
+### 7. 人間引き渡し（Gate B / L2・L3）
+- [ ] L3、または `docs/reviews/<feature>.md` を作成・更新した L2 では、
+  `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
+  が exit 0
+- [ ] review state が current な `human_review_requested`（AI 承認ではない）
+- [ ] legacy marker なし文書のまま「完了」「PR 準備完了」としていない
+- [ ] チャット/PR 要約が `handoff-blurb` 相当で、`受け入れ可` / `APPROVED` を含まない
+- [ ] 人間向け packet が `docs/reviews/README.md` の Gate B 書き方に沿っている
+  （内容 lint の WARN は修正または監査ログへ理由を残す）
+
 ## 結果
 
 未充足項目があれば、どの成果物を誰が直すべきかを添えて Orchestrator へ返す。
+Gate B 未充足のまま人間へマージ判断を渡さない。

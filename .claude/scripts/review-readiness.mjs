@@ -239,19 +239,81 @@ export function validateAssessment(value) {
     );
   }
 
-  return {
-    value: {
-      schemaVersion: REVIEW_SCHEMA_VERSION,
-      reviewTier,
-      aiAssessment,
-      humanItems,
-      residualRisks,
-      behaviorChanges,
-      evidence,
-      reviewer: normalizeReviewer(obj.reviewer),
-    },
-    warnings,
+  const normalized = {
+    schemaVersion: REVIEW_SCHEMA_VERSION,
+    reviewTier,
+    aiAssessment,
+    humanItems,
+    residualRisks,
+    behaviorChanges,
+    evidence,
+    reviewer: normalizeReviewer(obj.reviewer),
   };
+  warnings.push(...lintHandoffContent(normalized).map((item) => item.message));
+
+  return { value: normalized, warnings };
+}
+
+const BANNED_HANDOFF_PATTERNS = [
+  { code: 'banned_acceptance', re: /受け入れ可/ },
+  { code: 'banned_approved', re: /\bAPPROVED\b/i },
+  { code: 'banned_merge_ok', re: /マージ\s*OK/i },
+  { code: 'banned_pass_banner', re: /レビュー\s*PASS/i },
+];
+
+const PROCESS_BEHAVIOR_PATTERN =
+  /(UseCase|use case|schema\.ts|\bdrizzle\b|\bOrchestrator\b|current-state packet|CI step)/i;
+
+/**
+ * Gate B の人間向け文言を warn 検査する。schema は通っても、判断 UI として弱い表現を検出する。
+ * 失敗にはしない（warn-first）。
+ */
+export function lintHandoffContent(assessment) {
+  const diagnostics = [];
+  const push = (code, message) => {
+    diagnostics.push({ code, message });
+  };
+
+  const scan = (text, path) => {
+    for (const pattern of BANNED_HANDOFF_PATTERNS) {
+      if (pattern.re.test(text)) {
+        push(pattern.code, `${path} に禁止語があります: ${text}`);
+      }
+    }
+  };
+
+  for (const item of assessment.humanItems) {
+    scan(item.question, `${item.id}.question`);
+    scan(item.recommendation, `${item.id}.recommendation`);
+    if (!/[?？]|か\s*$|か。$/.test(item.question) && !item.question.includes('か')) {
+      push(
+        'question_not_decisive',
+        `${item.id}.question は Yes/No または A/B で答えられる疑問形にしてください`,
+      );
+    }
+    if (!/\b(accept_risk|accept|reject)\b/i.test(item.recommendation)) {
+      push(
+        'recommendation_missing_action',
+        `${item.id}.recommendation に accept / reject / accept_risk のいずれかを含めてください`,
+      );
+    }
+  }
+
+  assessment.residualRisks.forEach((risk, index) => {
+    scan(risk, `residualRisks[${index}]`);
+  });
+
+  assessment.behaviorChanges.forEach((behavior, index) => {
+    scan(behavior, `behaviorChanges[${index}]`);
+    if (PROCESS_BEHAVIOR_PATTERN.test(behavior)) {
+      push(
+        'behavior_process_language',
+        `behaviorChanges[${index}] が実装/プロセス言語です。利用者から見える変化で書いてください`,
+      );
+    }
+  });
+
+  return diagnostics;
 }
 
 export function deriveStatus(assessment) {
@@ -677,6 +739,7 @@ export function checkReview({
   source = 'index',
   headRef = 'HEAD',
   coverageFn = reviewTasksUncovered,
+  requireHandoff = false,
 }) {
   const normalizedFeature = validateFeatureName(feature);
   const reviewPath = join(resolve(root), `docs/reviews/${normalizedFeature}.md`);
@@ -710,7 +773,7 @@ export function checkReview({
   if (uncoveredTasks.length > 0) {
     diagnostics.push(
       diagnostic(
-        'warning',
+        requireHandoff ? 'error' : 'warning',
         'task_uncovered',
         `受け入れレビュー記録がない Task: ${uncoveredTasks.join(', ')}`,
       ),
@@ -720,13 +783,15 @@ export function checkReview({
   if (parsed.kind === 'legacy') {
     diagnostics.push(
       diagnostic(
-        'warning',
-        'legacy_review',
-        'current-state marker がありません。既存監査ログとして扱います',
+        requireHandoff ? 'error' : 'warning',
+        requireHandoff ? 'legacy_not_handoffable' : 'legacy_review',
+        requireHandoff
+          ? 'legacy 監査ログのままでは人間へ引き渡せません。structured packet を生成してください'
+          : 'current-state marker がありません。既存監査ログとして扱います',
       ),
     );
     return {
-      ok: true,
+      ok: diagnostics.every((item) => item.level !== 'error'),
       legacy: true,
       effectiveStatus: 'evidence_pending',
       diagnostics,
@@ -786,6 +851,11 @@ export function checkReview({
     );
   }
 
+  // Gate B 文言は warn-first。requireHandoff でも内容 lint 単独では止めない。
+  for (const item of lintHandoffContent(assessmentFromState(state))) {
+    diagnostics.push(diagnostic('warning', item.code, item.message));
+  }
+
   return {
     ok: diagnostics.every((item) => item.level !== 'error'),
     legacy: false,
@@ -794,6 +864,53 @@ export function checkReview({
     state,
     currentSubject,
   };
+}
+
+export function renderHandoffBlurb({ feature, result }) {
+  const normalizedFeature = validateFeatureName(feature);
+  if (
+    !result.ok ||
+    result.legacy ||
+    result.effectiveStatus !== 'human_review_requested' ||
+    result.state === undefined
+  ) {
+    fail(
+      'handoff_not_ready',
+      `${normalizedFeature} は人間引き渡し可能な current packet ではありません。` +
+        '先に handoff-check を通してください',
+    );
+  }
+
+  const state = result.state;
+  const lines = [
+    '## Review handoff',
+    '',
+    '状態: **人間レビュー待ち**（これは承認ではありません）',
+    `feature: \`${normalizedFeature}\` / tier: ${state.reviewTier} / ` +
+      `digest: \`${state.subject.digest.slice(0, 19)}…\` / changes: ${state.subject.entryCount}`,
+    '',
+    `### あなたが判断すること（${state.humanItems.length} 件）`,
+  ];
+
+  if (state.humanItems.length === 0) {
+    lines.push('- 追加の主観・不可逆・未知の判断はありません。残余リスクと振る舞い差分を確認してください。');
+  } else {
+    state.humanItems.forEach((item, index) => {
+      lines.push(
+        `${index + 1}. **[${humanKindLabel(item.kind)}] ${item.question}** — 推奨: ${item.recommendation}`,
+      );
+    });
+  }
+
+  lines.push(
+    '',
+    `残余リスク: ${state.residualRisks.length} 件 / 振る舞い差分: ${state.behaviorChanges.length} 件`,
+    '',
+    `詳細（正本）: \`docs/reviews/${normalizedFeature}.md\` の Review handoff を読み、` +
+      'マージ可否を判断してください。',
+    '',
+  );
+  return `${lines.join('\n')}\n`;
 }
 
 function changedReviewCandidates(root, baseRef, headRef) {
@@ -871,9 +988,26 @@ function usage() {
     'usage:\n' +
     '  review-readiness.mjs subject --feature <name> [--base <ref>] [--source index|commit] [--head <ref>]\n' +
     '  review-readiness.mjs render --feature <name> --assessment <json> [--base <ref>] [--source index|commit] [--head <ref>]\n' +
-    '  review-readiness.mjs check --feature <name> [--base <ref>] [--source index|commit] [--head <ref>]\n' +
+    '  review-readiness.mjs check --feature <name> [--base <ref>] [--source index|commit] [--head <ref>] [--require-handoff true|false]\n' +
+    '  review-readiness.mjs handoff-check --feature <name> [--base <ref>] [--source index|commit] [--head <ref>]\n' +
+    '  review-readiness.mjs handoff-blurb --feature <name> [--base <ref>] [--source index|commit] [--head <ref>]\n' +
     '  review-readiness.mjs ci --base <ref> [--head <ref>] [--mode warn|strict]\n'
   );
+}
+
+function runHandoffCheck(root, options) {
+  assertOptions(options, new Set(['feature', 'base', 'source', 'head']));
+  const feature = option(options, 'feature', { required: true });
+  const result = checkReview({
+    root,
+    feature,
+    baseRef: option(options, 'base'),
+    source: option(options, 'source', { fallback: 'index' }),
+    headRef: option(options, 'head', { fallback: 'HEAD' }),
+    requireHandoff: true,
+  });
+  printCheck(feature, result);
+  return { feature, result, code: result.ok ? 0 : 1 };
 }
 
 export function runCli(argv, { root = process.env.CLAUDE_PROJECT_DIR || process.cwd() } = {}) {
@@ -917,17 +1051,34 @@ export function runCli(argv, { root = process.env.CLAUDE_PROJECT_DIR || process.
   }
 
   if (command === 'check') {
-    assertOptions(options, new Set(['feature', 'base', 'source', 'head']));
+    assertOptions(options, new Set(['feature', 'base', 'source', 'head', 'require-handoff']));
     const feature = option(options, 'feature', { required: true });
+    const requireHandoffRaw = option(options, 'require-handoff', { fallback: 'false' });
+    if (requireHandoffRaw !== 'true' && requireHandoffRaw !== 'false') {
+      fail('usage', '--require-handoff は true または false です');
+    }
     const result = checkReview({
       root,
       feature,
       baseRef: option(options, 'base'),
       source: option(options, 'source', { fallback: 'index' }),
       headRef: option(options, 'head', { fallback: 'HEAD' }),
+      requireHandoff: requireHandoffRaw === 'true',
     });
     printCheck(feature, result);
     return result.ok ? 0 : 1;
+  }
+
+  if (command === 'handoff-check') {
+    return runHandoffCheck(root, options).code;
+  }
+
+  if (command === 'handoff-blurb') {
+    const { feature, result, code } = runHandoffCheck(root, options);
+    if (code !== 0) return code;
+    process.stdout.write('\n');
+    process.stdout.write(renderHandoffBlurb({ feature, result }));
+    return 0;
   }
 
   if (command === 'ci') {

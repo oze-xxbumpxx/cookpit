@@ -107,6 +107,9 @@ Orchestrator は以下をすべて確認してから「完了」とユーザー�
 - スコープ外の変更が混入していない
 - L2/L3 の新規 review packet が current で、open `BLOCK` と高影響の未検証が 0
 - Gate B へ渡す人間項目が 3 件以下で、各項目に推奨と証拠参照がある
+- 人間引き渡し対象では
+  `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature>` が成功し、
+  PR/チャット要約は `handoff-blurb` を使う（承認語禁止）
 - ユーザー確認が必要な判断（下記）が解決済み
 
 ## ユーザーへ確認すべき条件
