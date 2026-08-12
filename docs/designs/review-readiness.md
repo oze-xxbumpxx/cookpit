@@ -191,14 +191,14 @@ review 文書以外の metrics、candidate、作業ログ、正典文書はす�
 
 新規 `.claude/scripts/review-readiness.mjs` のみを追加する。
 
-| command         | 入力                           | 出力 / 責務                                      |
-| --------------- | ------------------------------ | ------------------------------------------------ |
-| `subject`       | feature / base / source / head | digest JSON                                      |
-| `render`        | 上記 + assessment JSON         | marker 全体の Markdown（Gate B 文言は warn）     |
-| `check`         | 上記 + optional require-handoff | schema、Task、digest の検査                     |
-| `handoff-check` | feature / base / source / head | 人間引き渡し hard stop（legacy 不可）            |
-| `handoff-blurb` | 同上                           | PR/チャット用短文（handoff-check 成功時のみ）    |
-| `ci`            | base / head / mode             | 変更 review の一括検査（当面 warn-only）         |
+| command         | 入力                            | 出力 / 責務                                   |
+| --------------- | ------------------------------- | --------------------------------------------- |
+| `subject`       | feature / base / source / head  | digest JSON                                   |
+| `render`        | 上記 + assessment JSON          | marker 全体の Markdown（Gate B 文言は warn）  |
+| `check`         | 上記 + optional require-handoff | schema、Task、digest の検査                   |
+| `handoff-check` | feature / base / source / head  | 人間引き渡し hard stop（legacy 不可）         |
+| `handoff-blurb` | 同上                            | PR/チャット用短文（handoff-check 成功時のみ） |
+| `ci`            | base / head / mode              | 変更 review の一括検査（当面 warn-only）      |
 
 既定は read-only。`render` は stdout にだけ出力し、ファイルは変更しない。
 
