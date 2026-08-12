@@ -133,9 +133,14 @@ node .claude/scripts/review-readiness.mjs check --feature <feature> --base <base
 - 差し戻しがあった場合、対象指摘の再確認が済んでいる。
 - review state が current な `human_review_requested`。
 - 人間項目が 3 件以下で、各項目に質問・推奨・証拠参照がある。
+- handoff が `docs/reviews/README.md` の Gate B 書き方に従っている
+  （禁止語なし、振る舞い差分は利用者言語、残余リスクは今回受容する未確認のみ）。
+- 誤検出 WARN や FOLLOW_UP 詳細を handoff 前面に並べていない（監査ログへ圧縮）。
 
 この条件は AI による承認ではない。人間は packet の先頭から、例外判断、残余リスク、
 振る舞い差分、必要な証拠だけを確認してマージ可否を決める。
+チャットと PR に `受け入れ可` / `PASS` / `APPROVED` と書かない。packet へのリンクと
+人間項目の要約だけにする。
 
 ## 備考
 

@@ -91,9 +91,11 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
 
 1. **作業ブランチ必須**。main への直コミットは禁止（lefthook pre-commit の branch-guard がブロック）。
 2. **受け入れレビュー必須**。`review-codex-implementation` Skill を PR 作成前に実行し、
-   結果（機械チェック・品質ゲート・チェックリスト判定）を
-   `docs/reviews/<feature>.md` に追記する（**必須**。複数 Task の feature では Task 単位で追記）。
-   PR 本文への要約転記は任意（正本は常に `docs/reviews/`）。
+   結果（機械検出・品質ゲート・Reviewer の意味レビュー・必要な black-box 証拠）を
+   `docs/reviews/<feature>.md` の current-state packet と監査ログへ記録する（**必須**。
+   複数 Task の feature では Task 単位で追記）。人間向け packet の書き方は
+   `docs/reviews/README.md` の Gate B 規範に従う。PR 本文への要約転記は任意
+   （正本は常に `docs/reviews/`。承認語は書かない）。
    受け入れレビューが Orchestrator 経路の reviewer 工程に相当する（省略ではなく代替）。
 3. **reflection-agent は Codex ルートでも実施**する（feature 完了時）。
 4. 実装途中でルートを切り替えた場合（Orchestrator ⇔ Codex）、実装計画の「実装ルート」欄を
