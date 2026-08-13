@@ -162,7 +162,7 @@ Mapper 単体の専用テストファイルは設計書に明記がないため�
 型往復で代替する（meal-plan-core 試験計画と同じ扱い。implementer が Mapper 専用テストを追加すること
 は歓迎するが必須にしない）。**注意**: `toShoppingListDto` の `shoppingDate` 整形は
 `toISOString().slice(0,10)` を**使わない**（設計書 §Application 設計「Mapper」の注意書き。JST で前日
-ずれが起きるため）。この非対称（`meal-plan.mapper.ts` は `toISOString().slice(0,10)` を使っている）が
+ずれが起きるため）。`meal-plan.mapper.ts` の `scheduledDate` も同じ規則（Sprint 10 タスク 2）。
 正しく実装されているかは INF-16（Repository 往復）と GEN-N-01/09（Generate の shoppingDate 検証）で
 間接的に確認する。
 
