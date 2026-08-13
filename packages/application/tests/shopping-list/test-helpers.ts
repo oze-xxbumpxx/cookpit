@@ -312,6 +312,11 @@ export function seededProduct(id: string, withPrice = true): Product {
 export interface SeededItemOptions {
   id?: string;
   status?: 'pending' | 'bought' | 'skipped';
+  source?: 'from_meal_plan' | 'manually_added';
+  productId?: string | null;
+  displayName?: string;
+  requiredAmount?: Quantity | null;
+  amountNote?: string | null;
   targetStoreId?: string | null;
   actualPrice?: Money | null;
   actualStoreId?: string | null;
@@ -320,10 +325,12 @@ export interface SeededItemOptions {
 export function seededItem(options: SeededItemOptions = {}): ShoppingItem {
   return ShoppingItem.reconstruct({
     id: ShoppingItemId.fromString(options.id ?? SHOPPING_ITEM_ID),
-    productId: ProductId.fromString(PRODUCT_ID),
-    displayName: '玉ねぎ',
-    requiredAmount: Quantity.of(2, '個'),
-    amountNote: null,
+    productId:
+      options.productId === null ? null : ProductId.fromString(options.productId ?? PRODUCT_ID),
+    displayName: options.displayName ?? '玉ねぎ',
+    requiredAmount:
+      options.requiredAmount === undefined ? Quantity.of(2, '個') : options.requiredAmount,
+    amountNote: options.amountNote ?? null,
     targetStore:
       options.targetStoreId === null ? null : StoreId.fromString(options.targetStoreId ?? STORE_ID),
     status: options.status ?? 'pending',
@@ -334,7 +341,7 @@ export function seededItem(options: SeededItemOptions = {}): ShoppingItem {
         : options.actualStoreId === undefined
           ? null
           : StoreId.fromString(options.actualStoreId),
-    source: 'from_meal_plan',
+    source: options.source ?? 'from_meal_plan',
   });
 }
 

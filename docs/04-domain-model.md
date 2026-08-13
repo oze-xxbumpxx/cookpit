@@ -502,6 +502,13 @@ export type ShoppingListStatus = 'active' | 'completed';
 - `shopping_items` は別テーブル（JSONB 不採用）・`shopping_lists.meal_plan_id` に UNIQUE 制約
   （S-1。生成冪等 S-6 の基盤）
 
+> 実装追記（2026-08-13, `docs/designs/meal-plan-sync.md` / ADR-0018）: `ShoppingItem` に
+> `updateRequiredAmount(amount)` を追加した。`pending` 以外と amountNote 品目（`requiredAmount` が
+> null）は拒否する。`source` は Domain では見ない（対象の絞り込みは Application の責務）。
+> `ShoppingList` にも `assertActive` 付きの薄いラッパー `updateItemRequiredAmount(itemId, amount)`
+> を追加した。献立同期は `from_meal_plan` かつ `pending` の品目だけ削除・数量上書きする。
+> `bought`（画面のチェック済みを含む）と手動追加は触らない。
+
 > 実装追記（2026-07-25, `docs/designs/shopping-item-remove.md` / ADR-0011）: `ShoppingList` に
 > `removeItem(itemId)` を追加した。`assertActive('removeItem')` を通し、存在しない itemId は
 > `Error('ShoppingItem not found')`。**status / source を問わず削除できる**（`bought` の品目を

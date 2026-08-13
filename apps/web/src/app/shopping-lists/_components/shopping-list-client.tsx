@@ -24,6 +24,8 @@ import Link from 'next/link';
 import { startTransition, useEffect, useMemo, useOptimistic, useRef, useState } from 'react';
 import {
   describeRemoveConfirmation,
+  describeSyncResult,
+  diffSyncResult,
   formatShoppingDate,
   groupItemsByStore,
 } from '../_utils/shopping-list-view';
@@ -142,13 +144,9 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
       () => client.api['shopping-lists'][':id'].sync.$post({ param: { id: shoppingList.id } }),
       {
         onSuccess: (dto) => {
-          const addedCount = dto.items.length - items.length;
+          const diff = diffSyncResult(items, dto.items);
           setItems(dto.items);
-          setSyncMessage(
-            addedCount > 0
-              ? `${addedCount}件の材料を追加しました`
-              : '追加する材料はありませんでした',
-          );
+          setSyncMessage(describeSyncResult(diff));
         },
       },
     );

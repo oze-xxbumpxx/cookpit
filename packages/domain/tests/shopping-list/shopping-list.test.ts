@@ -169,6 +169,50 @@ describe('ShoppingItem', () => {
     expect(() => item.markAsSkipped()).toThrow("Cannot skip a ShoppingItem with status 'skipped'");
   });
 
+  it('updateRequiredAmount は pending 品目の数量を上書きする', () => {
+    const item = createItem();
+
+    item.updateRequiredAmount(Quantity.of(5, '個'));
+
+    expect(item.requiredAmount?.value).toBe(5);
+    expect(item.requiredAmount?.unit).toBe('個');
+    expect(item.amountNote).toBeNull();
+    expect(item.status).toBe('pending');
+  });
+
+  it('updateRequiredAmount は bought からの呼び出しを拒否する', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+
+    expect(() => item.updateRequiredAmount(Quantity.of(5, '個'))).toThrow(
+      "Cannot update required amount of a ShoppingItem with status 'bought'",
+    );
+  });
+
+  it('updateRequiredAmount は skipped からの呼び出しを拒否する', () => {
+    const item = createItem();
+    item.markAsSkipped();
+
+    expect(() => item.updateRequiredAmount(Quantity.of(5, '個'))).toThrow(
+      "Cannot update required amount of a ShoppingItem with status 'skipped'",
+    );
+  });
+
+  it('updateRequiredAmount は amountNote 品目を拒否する', () => {
+    const item = ShoppingItem.create({
+      productId: null,
+      displayName: '塩',
+      requiredAmount: null,
+      amountNote: '適量',
+      targetStore: null,
+      source: 'from_meal_plan',
+    });
+
+    expect(() => item.updateRequiredAmount(Quantity.of(1, 'g'))).toThrow(
+      'Cannot update required amount of a ShoppingItem with amountNote',
+    );
+  });
+
   it('isBought は pending で false を返す', () => {
     expect(createItem().isBought()).toBe(false);
   });
@@ -391,6 +435,33 @@ describe('ShoppingList', () => {
 
     expect(() =>
       list.reassignStore(ShoppingItemId.fromString('missing'), StoreId.fromString('store-2')),
+    ).toThrow('ShoppingItem not found');
+  });
+
+  it('updateItemRequiredAmount は active 状態で対象 item の数量を更新する', () => {
+    const item = createItem();
+    const list = createList([item]);
+
+    list.updateItemRequiredAmount(item.id, Quantity.of(5, '個'));
+
+    expect(list.items[0]?.requiredAmount?.value).toBe(5);
+    expect(list.items[0]?.requiredAmount?.unit).toBe('個');
+  });
+
+  it('updateItemRequiredAmount は completed 状態で拒否する', () => {
+    const item = createItem();
+    const list = reconstructCompletedList([item]);
+
+    expect(() => list.updateItemRequiredAmount(item.id, Quantity.of(5, '個'))).toThrow(
+      "Cannot updateItemRequiredAmount a ShoppingList with status 'completed'",
+    );
+  });
+
+  it('updateItemRequiredAmount は存在しない itemId を拒否する', () => {
+    const list = createList();
+
+    expect(() =>
+      list.updateItemRequiredAmount(ShoppingItemId.fromString('missing'), Quantity.of(5, '個')),
     ).toThrow('ShoppingItem not found');
   });
 
