@@ -10,6 +10,7 @@ import type { MealPlanRepository, MealPlanStatus } from '@cookpit/domain';
 import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import { toLocalDate, toLocalDateString } from './mappers';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 import {
   mealPlans,
   plannedRecipes,
@@ -30,7 +31,11 @@ interface MealPlanGroup {
 }
 
 export class DrizzleMealPlanRepository implements MealPlanRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findById(id: MealPlanId): Promise<MealPlan | null> {
     const rows = await this.db

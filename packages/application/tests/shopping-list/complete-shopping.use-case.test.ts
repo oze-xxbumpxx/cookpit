@@ -33,6 +33,7 @@ import type { StockAdditionInputDto } from '../../src/shopping-list/shopping-lis
 import { toShoppingListDto } from '../../src/shopping-list/shopping-list.mapper';
 import { ShoppingItemNotFoundError } from '../../src/shopping-list/shopping-item-not-found.error';
 import { ShoppingListNotFoundError } from '../../src/shopping-list/shopping-list-not-found.error';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 const SHOPPING_LIST_ID = 'shopping-list-1';
 const SHOPPING_ITEM_ID_1 = 'shopping-item-1';
@@ -338,6 +339,7 @@ function completeShoppingUseCase(): CompleteShoppingUseCase {
     pantryRepository,
     productRepository,
     mealPlanRepository,
+    passthroughUnitOfWork,
   );
 }
 

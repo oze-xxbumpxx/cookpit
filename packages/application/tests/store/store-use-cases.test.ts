@@ -14,6 +14,7 @@ import { GetStoresUseCase } from '../../src/store/get-stores.use-case';
 import { RenameStoreUseCase } from '../../src/store/rename-store.use-case';
 import { STORE_LIMIT, StoreLimitExceededError } from '../../src/store/store-limit-exceeded.error';
 import { StoreNotFoundError } from '../../src/store/store-not-found.error';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 // UseCase の検証は外部 I/O を持たないインメモリ Repository で行う（DB 不要）。
 // 副作用（保存回数）も観測できるようにする。
@@ -81,7 +82,7 @@ beforeEach(() => {
 
 describe('CreateStoreUseCase', () => {
   it('ストアを保存し、入力どおりの DTO を返す（N-01 / CSU-01）', async () => {
-    const usecase = new CreateStoreUseCase(repository);
+    const usecase = new CreateStoreUseCase(repository, passthroughUnitOfWork);
 
     const dto = await usecase.execute({ name: '西友' });
 
@@ -93,7 +94,7 @@ describe('CreateStoreUseCase', () => {
   });
 
   it('空の name はドメインバリデーションで弾かれ、保存されない（E-01 / CSU-09）', async () => {
-    const usecase = new CreateStoreUseCase(repository);
+    const usecase = new CreateStoreUseCase(repository, passthroughUnitOfWork);
 
     await expect(usecase.execute({ name: '' })).rejects.toThrow('Store name is required');
     expect(repository.saveCount).toBe(0);
@@ -101,7 +102,7 @@ describe('CreateStoreUseCase', () => {
   });
 
   it('空白のみの name はドメインバリデーションで弾かれ、保存されない（E-02 / CSU-09）', async () => {
-    const usecase = new CreateStoreUseCase(repository);
+    const usecase = new CreateStoreUseCase(repository, passthroughUnitOfWork);
 
     await expect(usecase.execute({ name: '  ' })).rejects.toThrow('Store name is required');
     expect(repository.saveCount).toBe(0);
@@ -111,7 +112,7 @@ describe('CreateStoreUseCase', () => {
   it('CSU-02: 既存 2 件なら 3 件目を作成できる（上限の境界値）', async () => {
     seedStores(repository, STORE_LIMIT - 1);
 
-    await new CreateStoreUseCase(repository).execute({ name: 'ライフ' });
+    await new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: 'ライフ' });
 
     expect(repository.size).toBe(STORE_LIMIT);
   });
@@ -120,7 +121,7 @@ describe('CreateStoreUseCase', () => {
     seedStores(repository, STORE_LIMIT);
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: 'ライフ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: 'ライフ' }),
     ).rejects.toBeInstanceOf(StoreLimitExceededError);
     expect(repository.saveCount).toBe(0);
     expect(repository.size).toBe(STORE_LIMIT);
@@ -130,7 +131,7 @@ describe('CreateStoreUseCase', () => {
     seedStores(repository, 10);
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: 'ライフ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: 'ライフ' }),
     ).rejects.toMatchObject({ limit: STORE_LIMIT, current: 10 });
     expect(repository.size).toBe(10);
   });
@@ -139,7 +140,7 @@ describe('CreateStoreUseCase', () => {
     repository.seed(seededStore('id-1', 'ライフ'));
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: 'ライフ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: 'ライフ' }),
     ).rejects.toBeInstanceOf(DuplicateStoreNameError);
     expect(repository.saveCount).toBe(0);
     expect(repository.size).toBe(1);
@@ -149,7 +150,7 @@ describe('CreateStoreUseCase', () => {
     repository.seed(seededStore('id-1', 'ライフ'));
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: '  ライフ  ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: '  ライフ  ' }),
     ).rejects.toBeInstanceOf(DuplicateStoreNameError);
   });
 
@@ -157,7 +158,7 @@ describe('CreateStoreUseCase', () => {
     repository.seed(seededStore('id-1', '業務スーパー'));
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: '業務ｽｰﾊﾟｰ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: '業務ｽｰﾊﾟｰ' }),
     ).rejects.toBeInstanceOf(DuplicateStoreNameError);
   });
 
@@ -165,7 +166,7 @@ describe('CreateStoreUseCase', () => {
     repository.seed(seededStore('id-1', '業務スーパー'));
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: '業務ｽｰﾊﾟｰ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: '業務ｽｰﾊﾟｰ' }),
     ).rejects.toMatchObject({ attemptedName: '業務ｽｰﾊﾟｰ' });
   });
 
@@ -174,12 +175,12 @@ describe('CreateStoreUseCase', () => {
     repository.seed(seededStore('dup', 'ライフ'));
 
     await expect(
-      new CreateStoreUseCase(repository).execute({ name: 'ライフ' }),
+      new CreateStoreUseCase(repository, passthroughUnitOfWork).execute({ name: 'ライフ' }),
     ).rejects.toBeInstanceOf(StoreLimitExceededError);
   });
 
   it('CSU-01: 異なる名前なら上限内で複数作成できる', async () => {
-    const usecase = new CreateStoreUseCase(repository);
+    const usecase = new CreateStoreUseCase(repository, passthroughUnitOfWork);
 
     await usecase.execute({ name: 'ライフ' });
     await usecase.execute({ name: 'コモディ飯田' });
@@ -190,7 +191,7 @@ describe('CreateStoreUseCase', () => {
 
 describe('CreateStoreUseCase + GetStoresUseCase', () => {
   it('作成した Store が GetStoresUseCase で取得できる（N-02）', async () => {
-    const createUseCase = new CreateStoreUseCase(repository);
+    const createUseCase = new CreateStoreUseCase(repository, passthroughUnitOfWork);
     const getUseCase = new GetStoresUseCase(repository);
 
     const created = await createUseCase.execute({ name: 'マルエツ' });
@@ -326,6 +327,7 @@ function cascadeContext(lists: ShoppingList[] = []): CascadeContext {
       trackedStoreRepository,
       new CascadeProductRepository(calls),
       new CascadeShoppingListRepository(calls, lists),
+      passthroughUnitOfWork,
     ),
   };
 }
@@ -399,7 +401,7 @@ describe('RenameStoreUseCase', () => {
   it('A-RSU-01: 名前が変わる', async () => {
     repository.seed(seededStore('id-1', '業務スーパ'));
 
-    const dto = await new RenameStoreUseCase(repository).execute({
+    const dto = await new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
       id: 'id-1',
       name: '業務スーパー',
     });
@@ -412,7 +414,10 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-1', 'ライフ'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: 'ライフ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-1',
+        name: 'ライフ',
+      }),
     ).resolves.toMatchObject({ name: 'ライフ' });
   });
 
@@ -420,7 +425,10 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-1', 'Life'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: 'life' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-1',
+        name: 'life',
+      }),
     ).resolves.toMatchObject({ name: 'life' });
   });
 
@@ -428,7 +436,10 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-1', '業務スーパー'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: '業務ｽｰﾊﾟｰ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-1',
+        name: '業務ｽｰﾊﾟｰ',
+      }),
     ).resolves.toMatchObject({ name: '業務ｽｰﾊﾟｰ' });
   });
 
@@ -437,7 +448,10 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-2', 'コンビニ'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-2', name: '業務ｽｰﾊﾟｰ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-2',
+        name: '業務ｽｰﾊﾟｰ',
+      }),
     ).rejects.toBeInstanceOf(DuplicateStoreNameError);
     expect(repository.saveCount).toBe(0);
   });
@@ -446,7 +460,10 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-1', 'ライフ'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-1', name: '  ライフ  ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-1',
+        name: '  ライフ  ',
+      }),
     ).resolves.toMatchObject({ name: '  ライフ  ' });
   });
 
@@ -455,21 +472,27 @@ describe('RenameStoreUseCase', () => {
     repository.seed(seededStore('id-2', 'コンビニ'));
 
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'id-2', name: '  ライフ  ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'id-2',
+        name: '  ライフ  ',
+      }),
     ).rejects.toBeInstanceOf(DuplicateStoreNameError);
     expect(repository.saveCount).toBe(0);
   });
 
   it('A-RSU-08: 店舗が存在しなければ StoreNotFoundError を投げる', async () => {
     await expect(
-      new RenameStoreUseCase(repository).execute({ id: 'missing', name: 'ライフ' }),
+      new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+        id: 'missing',
+        name: 'ライフ',
+      }),
     ).rejects.toBeInstanceOf(StoreNotFoundError);
     expect(repository.saveCount).toBe(0);
   });
 
   it('A-RSU-09: 同一 name で 2 回連続 execute しても StoreDto が完全一致する（冪等性）', async () => {
     repository.seed(seededStore('id-1', '西友'));
-    const usecase = new RenameStoreUseCase(repository);
+    const usecase = new RenameStoreUseCase(repository, passthroughUnitOfWork);
 
     const first = await usecase.execute({ id: 'id-1', name: '西友' });
     const second = await usecase.execute({ id: 'id-1', name: '西友' });
@@ -484,7 +507,10 @@ describe('RenameStoreUseCase', () => {
       throw new Error('test setup failed: no seeded store found');
     }
 
-    await new RenameStoreUseCase(repository).execute({ id: target.id.value, name: '新名前' });
+    await new RenameStoreUseCase(repository, passthroughUnitOfWork).execute({
+      id: target.id.value,
+      name: '新名前',
+    });
 
     expect((await repository.findAll()).length).toBe(STORE_LIMIT);
   });

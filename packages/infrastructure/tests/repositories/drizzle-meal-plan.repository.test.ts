@@ -4,7 +4,7 @@ import { MealPlan, MealPlanId, RecipeId, WeekIdentifier } from '@cookpit/domain'
 import type { PlannedRecipe } from '@cookpit/domain';
 import type { DrizzleClient } from '../../src/db/client';
 import { mealPlans, plannedRecipes } from '../../src/db/schema';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzleMealPlanRepository } from '../../src/repositories/drizzle-meal-plan.repository';
 
 function createMealPlan(weekStartDate: string = '2026-07-04'): MealPlan {
@@ -49,7 +49,7 @@ describe('DrizzleMealPlanRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzleMealPlanRepository(db);
+    repository = new DrizzleMealPlanRepository(new DrizzleUnitOfWork(db));
   });
 
   it('save() → findById() で plannedRecipes 込みで復元される', async () => {

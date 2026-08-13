@@ -11,6 +11,7 @@ import type { RecipeRepository, RecipeTag } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { recipes, type NewRecipeRow, type RecipeRow } from '../db/schema';
 import { toUnit } from './mappers';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 type IngredientRow = {
   productRef: string | null;
   displayName: string;
@@ -24,7 +25,11 @@ type StepRow = {
 };
 
 export class DrizzleRecipeRepository implements RecipeRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findById(id: RecipeId): Promise<Recipe | null> {
     const rows = await this.db.select().from(recipes).where(eq(recipes.id, id.value)).limit(1);

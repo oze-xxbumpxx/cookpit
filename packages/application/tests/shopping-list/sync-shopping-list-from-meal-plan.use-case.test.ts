@@ -5,6 +5,7 @@ import { MealPlanNotFoundError } from '../../src/meal-plan/meal-plan-not-found.e
 import { InvalidShoppingListStateError } from '../../src/shopping-list/invalid-shopping-list-state.error';
 import { ShoppingListNotFoundError } from '../../src/shopping-list/shopping-list-not-found.error';
 import { SyncShoppingListFromMealPlanUseCase } from '../../src/shopping-list/sync-shopping-list-from-meal-plan.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 import {
   SHOPPING_LIST_ID,
   RECIPE_ID,
@@ -52,6 +53,7 @@ function syncUseCase(): SyncShoppingListFromMealPlanUseCase {
     recipeRepository,
     productRepository,
     pantryRepository,
+    passthroughUnitOfWork,
   );
 }
 

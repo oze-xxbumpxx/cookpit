@@ -14,12 +14,13 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { mealPlanRepository } from '../repositories';
+import { mealPlanRepository, createWriteContext } from '../repositories';
 
 export const mealPlansRoute = new Hono()
   .post('/', zValidator('json', createMealPlanSchema), async (c) => {
     const body = c.req.valid('json');
-    const usecase = new CreateMealPlanUseCase(mealPlanRepository());
+    const ctx = createWriteContext();
+    const usecase = new CreateMealPlanUseCase(ctx.mealPlan, ctx.uow);
     const mealPlan = await usecase.execute(body);
     return c.json(mealPlan, 201);
   })
@@ -41,7 +42,8 @@ export const mealPlansRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new AddRecipeToMealPlanUseCase(mealPlanRepository());
+      const { mealPlan, uow } = createWriteContext();
+      const usecase = new AddRecipeToMealPlanUseCase(mealPlan, uow);
       const plannedRecipe = await usecase.execute({ mealPlanId: id, ...body });
       return c.json(plannedRecipe, 201);
     },
@@ -51,7 +53,8 @@ export const mealPlansRoute = new Hono()
     zValidator('param', plannedRecipeIdParamSchema),
     async (c) => {
       const { id, plannedRecipeId } = c.req.valid('param');
-      const usecase = new RemoveRecipeFromMealPlanUseCase(mealPlanRepository());
+      const { mealPlan, uow } = createWriteContext();
+      const usecase = new RemoveRecipeFromMealPlanUseCase(mealPlan, uow);
       await usecase.execute({ mealPlanId: id, plannedRecipeId });
       return c.body(null, 204);
     },

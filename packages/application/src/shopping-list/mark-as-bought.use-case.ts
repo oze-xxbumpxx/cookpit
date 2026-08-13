@@ -1,5 +1,5 @@
 import { Money, ShoppingItemId, StoreId } from '@cookpit/domain';
-import type { ShoppingListRepository } from '@cookpit/domain';
+import type { UnitOfWork, ShoppingListRepository } from '@cookpit/domain';
 import { findUpdatedItem, loadActiveShoppingList, requireItem } from './load-shopping-list';
 import type { MarkAsBoughtInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';
@@ -13,25 +13,30 @@ import { toShoppingItemDto } from './shopping-list.mapper';
  * @throws ShoppingItemNotFoundError itemId の品目が存在しない
  */
 export class MarkAsBoughtUseCase {
-  constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: MarkAsBoughtInputDto): Promise<ShoppingItemDto> {
-    const shoppingList = await loadActiveShoppingList(
-      this.shoppingListRepository,
-      input.shoppingListId,
-      'markAsBought',
-    );
+    return this.unitOfWork.execute(async () => {
+      const shoppingList = await loadActiveShoppingList(
+        this.shoppingListRepository,
+        input.shoppingListId,
+        'markAsBought',
+      );
 
-    const itemId = ShoppingItemId.fromString(input.itemId);
-    requireItem(shoppingList, itemId, input.itemId);
+      const itemId = ShoppingItemId.fromString(input.itemId);
+      requireItem(shoppingList, itemId, input.itemId);
 
-    shoppingList.markAsBought(
-      itemId,
-      Money.of(input.actualPrice.amount, input.actualPrice.currency),
-      StoreId.fromString(input.actualStoreId),
-    );
+      shoppingList.markAsBought(
+        itemId,
+        Money.of(input.actualPrice.amount, input.actualPrice.currency),
+        StoreId.fromString(input.actualStoreId),
+      );
 
-    await this.shoppingListRepository.save(shoppingList);
-    return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+      await this.shoppingListRepository.save(shoppingList);
+      return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+    });
   }
 }

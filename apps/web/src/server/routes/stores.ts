@@ -8,7 +8,12 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { productRepository, shoppingListRepository, storeRepository } from '../repositories';
+import {
+  productRepository,
+  shoppingListRepository,
+  storeRepository,
+  createWriteContext,
+} from '../repositories';
 
 export const storesRoute = new Hono()
   .get('/', async (c) => {
@@ -18,7 +23,8 @@ export const storesRoute = new Hono()
   })
   .post('/', zValidator('json', createStoreSchema), async (c) => {
     const body = c.req.valid('json');
-    const usecase = new CreateStoreUseCase(storeRepository());
+    const ctx = createWriteContext();
+    const usecase = new CreateStoreUseCase(ctx.store, ctx.uow);
     const store = await usecase.execute(body);
     return c.json(store, 201);
   })
@@ -29,7 +35,8 @@ export const storesRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new RenameStoreUseCase(storeRepository());
+      const ctx = createWriteContext();
+      const usecase = new RenameStoreUseCase(ctx.store, ctx.uow);
       const store = await usecase.execute({ id, ...body });
       return c.json(store);
     },
@@ -47,11 +54,8 @@ export const storesRoute = new Hono()
   })
   .delete('/:id', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');
-    const usecase = new DeleteStoreUseCase(
-      storeRepository(),
-      productRepository(),
-      shoppingListRepository(),
-    );
+    const { store, product, shoppingList, uow } = createWriteContext();
+    const usecase = new DeleteStoreUseCase(store, product, shoppingList, uow);
     await usecase.execute(id);
     return c.body(null, 204);
   });

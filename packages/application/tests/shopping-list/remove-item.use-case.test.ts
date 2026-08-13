@@ -12,6 +12,7 @@ import {
   createRepositories,
 } from './test-helpers';
 import type { InMemoryShoppingListRepository } from './test-helpers';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 let shoppingListRepository: InMemoryShoppingListRepository;
 
@@ -32,7 +33,7 @@ describe('RemoveItemUseCase', () => {
       seededShoppingList('active', [seededItem(), seededItem({ id: 'shopping-item-2' })]),
     );
 
-    await new RemoveItemUseCase(shoppingListRepository).execute(input);
+    await new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input);
 
     expect(shoppingListRepository.saveCount).toBe(1);
     expect(await savedItemIds()).toEqual(['shopping-item-2']);
@@ -41,7 +42,10 @@ describe('RemoveItemUseCase', () => {
   it('戻り値を持たない', async () => {
     shoppingListRepository.seed(seededShoppingList());
 
-    const result = await new RemoveItemUseCase(shoppingListRepository).execute(input);
+    const result = await new RemoveItemUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(result).toBeUndefined();
   });
@@ -57,14 +61,14 @@ describe('RemoveItemUseCase', () => {
       ]),
     );
 
-    await new RemoveItemUseCase(shoppingListRepository).execute(input);
+    await new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input);
 
     expect(await savedItemIds()).toEqual([]);
   });
 
   it('存在しない ShoppingList は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      new RemoveItemUseCase(shoppingListRepository).execute(input),
+      new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
     expect(shoppingListRepository.saveCount).toBe(0);
   });
@@ -73,7 +77,7 @@ describe('RemoveItemUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('completed'));
 
     await expect(
-      new RemoveItemUseCase(shoppingListRepository).execute(input),
+      new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
     expect(shoppingListRepository.saveCount).toBe(0);
   });
@@ -82,7 +86,7 @@ describe('RemoveItemUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('active', []));
 
     await expect(
-      new RemoveItemUseCase(shoppingListRepository).execute(input),
+      new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingItemNotFoundError);
     expect(shoppingListRepository.saveCount).toBe(0);
   });
@@ -93,13 +97,13 @@ describe('RemoveItemUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('completed', []));
 
     await expect(
-      new RemoveItemUseCase(shoppingListRepository).execute(input),
+      new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
   });
 
   it('削除済みの itemId を再指定すると ShoppingItemNotFoundError を投げる', async () => {
     shoppingListRepository.seed(seededShoppingList());
-    const usecase = new RemoveItemUseCase(shoppingListRepository);
+    const usecase = new RemoveItemUseCase(shoppingListRepository, passthroughUnitOfWork);
     await usecase.execute(input);
 
     await expect(usecase.execute(input)).rejects.toBeInstanceOf(ShoppingItemNotFoundError);

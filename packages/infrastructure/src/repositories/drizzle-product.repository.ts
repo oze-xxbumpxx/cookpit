@@ -19,6 +19,7 @@ import {
   type ProductRow,
 } from '../db/schema';
 import { toUnit } from './mappers';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 
 interface ProductWithPriceRecordRow {
   product: ProductRow;
@@ -31,7 +32,11 @@ interface ProductGroup {
 }
 
 export class DrizzleProductRepository implements ProductRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findById(id: ProductId): Promise<Product | null> {
     const rows = await this.db

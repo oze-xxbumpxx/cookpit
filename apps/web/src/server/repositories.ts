@@ -9,35 +9,66 @@ import {
   DrizzleRecipeRepository,
   DrizzleShoppingListRepository,
   DrizzleStoreRepository,
+  DrizzleUnitOfWork,
   WebPushSender,
 } from '@cookpit/infrastructure';
 
+export interface WriteContext {
+  uow: DrizzleUnitOfWork;
+  recipe: DrizzleRecipeRepository;
+  product: DrizzleProductRepository;
+  store: DrizzleStoreRepository;
+  mealPlan: DrizzleMealPlanRepository;
+  shoppingList: DrizzleShoppingListRepository;
+  pantry: DrizzlePantryRepository;
+  pushSubscription: DrizzlePushSubscriptionRepository;
+}
+
+/** 書き込み UseCase 用。1 リクエスト = 1 UoW。配下の Repository は皆同じ client を見る。 */
+export function createWriteContext(): WriteContext {
+  const uow = new DrizzleUnitOfWork(getDb());
+  return {
+    uow,
+    recipe: new DrizzleRecipeRepository(uow),
+    product: new DrizzleProductRepository(uow),
+    store: new DrizzleStoreRepository(uow),
+    mealPlan: new DrizzleMealPlanRepository(uow),
+    shoppingList: new DrizzleShoppingListRepository(uow),
+    pantry: new DrizzlePantryRepository(uow),
+    pushSubscription: new DrizzlePushSubscriptionRepository(uow),
+  };
+}
+
+function readUow(): DrizzleUnitOfWork {
+  return new DrizzleUnitOfWork(getDb());
+}
+
 export function recipeRepository(): DrizzleRecipeRepository {
-  return new DrizzleRecipeRepository(getDb());
+  return new DrizzleRecipeRepository(readUow());
 }
 
 export function productRepository(): DrizzleProductRepository {
-  return new DrizzleProductRepository(getDb());
+  return new DrizzleProductRepository(readUow());
 }
 
 export function storeRepository(): DrizzleStoreRepository {
-  return new DrizzleStoreRepository(getDb());
+  return new DrizzleStoreRepository(readUow());
 }
 
 export function mealPlanRepository(): DrizzleMealPlanRepository {
-  return new DrizzleMealPlanRepository(getDb());
+  return new DrizzleMealPlanRepository(readUow());
 }
 
 export function shoppingListRepository(): DrizzleShoppingListRepository {
-  return new DrizzleShoppingListRepository(getDb());
+  return new DrizzleShoppingListRepository(readUow());
 }
 
 export function pantryRepository(): DrizzlePantryRepository {
-  return new DrizzlePantryRepository(getDb());
+  return new DrizzlePantryRepository(readUow());
 }
 
 export function pushSubscriptionRepository(): DrizzlePushSubscriptionRepository {
-  return new DrizzlePushSubscriptionRepository(getDb());
+  return new DrizzlePushSubscriptionRepository(readUow());
 }
 
 /**

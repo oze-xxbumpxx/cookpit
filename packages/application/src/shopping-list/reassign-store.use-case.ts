@@ -1,5 +1,5 @@
 import { ShoppingItemId, StoreId } from '@cookpit/domain';
-import type { ShoppingListRepository } from '@cookpit/domain';
+import type { UnitOfWork, ShoppingListRepository } from '@cookpit/domain';
 import { findUpdatedItem, loadActiveShoppingList, requireItem } from './load-shopping-list';
 import type { ReassignStoreInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';
@@ -13,21 +13,26 @@ import { toShoppingItemDto } from './shopping-list.mapper';
  * @throws ShoppingItemNotFoundError itemId の品目が存在しない
  */
 export class ReassignStoreUseCase {
-  constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: ReassignStoreInputDto): Promise<ShoppingItemDto> {
-    const shoppingList = await loadActiveShoppingList(
-      this.shoppingListRepository,
-      input.shoppingListId,
-      'reassignStore',
-    );
+    return this.unitOfWork.execute(async () => {
+      const shoppingList = await loadActiveShoppingList(
+        this.shoppingListRepository,
+        input.shoppingListId,
+        'reassignStore',
+      );
 
-    const itemId = ShoppingItemId.fromString(input.itemId);
-    requireItem(shoppingList, itemId, input.itemId);
+      const itemId = ShoppingItemId.fromString(input.itemId);
+      requireItem(shoppingList, itemId, input.itemId);
 
-    shoppingList.reassignStore(itemId, StoreId.fromString(input.targetStoreId));
+      shoppingList.reassignStore(itemId, StoreId.fromString(input.targetStoreId));
 
-    await this.shoppingListRepository.save(shoppingList);
-    return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+      await this.shoppingListRepository.save(shoppingList);
+      return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+    });
   }
 }

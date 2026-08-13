@@ -19,7 +19,7 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { productRepository, storeRepository } from '../repositories';
+import { productRepository, storeRepository, createWriteContext } from '../repositories';
 
 export const productsRoute = new Hono()
   .get('/', async (c) => {
@@ -29,7 +29,8 @@ export const productsRoute = new Hono()
   })
   .post('/', zValidator('json', createProductSchema), async (c) => {
     const body = c.req.valid('json');
-    const usecase = new CreateProductUseCase(productRepository());
+    const ctx = createWriteContext();
+    const usecase = new CreateProductUseCase(ctx.product, ctx.uow);
     const product = await usecase.execute(body);
     return c.json(product, 201);
   })
@@ -46,14 +47,16 @@ export const productsRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new UpdateProductUseCase(productRepository(), storeRepository());
+      const ctx = createWriteContext();
+      const usecase = new UpdateProductUseCase(ctx.product, ctx.store, ctx.uow);
       const product = await usecase.execute({ id, ...body });
       return c.json(product);
     },
   )
   .delete('/:id', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');
-    const usecase = new DeleteProductUseCase(productRepository());
+    const { product, uow } = createWriteContext();
+    const usecase = new DeleteProductUseCase(product, uow);
     await usecase.execute(id);
     return c.body(null, 204);
   })
@@ -64,7 +67,8 @@ export const productsRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new RecordPriceUseCase(productRepository(), storeRepository());
+      const { product, store, uow } = createWriteContext();
+      const usecase = new RecordPriceUseCase(product, store, uow);
       await usecase.execute({ productId: id, ...body });
       return c.body(null, 200);
     },
@@ -76,7 +80,8 @@ export const productsRoute = new Hono()
     async (c) => {
       const { id, priceRecordId } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new UpdatePriceRecordUseCase(productRepository(), storeRepository());
+      const ctx = createWriteContext();
+      const usecase = new UpdatePriceRecordUseCase(ctx.product, ctx.store, ctx.uow);
       const product = await usecase.execute({ productId: id, priceRecordId, ...body });
       return c.json(product);
     },
@@ -86,7 +91,8 @@ export const productsRoute = new Hono()
     zValidator('param', priceRecordIdParamSchema),
     async (c) => {
       const { id, priceRecordId } = c.req.valid('param');
-      const usecase = new DeletePriceRecordUseCase(productRepository());
+      const { product, uow } = createWriteContext();
+      const usecase = new DeletePriceRecordUseCase(product, uow);
       await usecase.execute({ productId: id, priceRecordId });
       return c.body(null, 204);
     },

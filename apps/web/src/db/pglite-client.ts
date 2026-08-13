@@ -10,8 +10,8 @@ export function createPgliteDevDb(databaseUrl: string): DrizzleClient {
   const dataDir = databaseUrl.replace(/^pglite:\/\//, '');
   globalStore.__cookpitPglite ??= new PGlite(dataDir);
   const db = drizzle(globalStore.__cookpitPglite, { schema });
-  // Repository は neon-http ドライバ由来の DrizzleClient 型を受け取るが、dev では
-  // pglite ドライバを使うため型だけ合わせる（packages/infrastructure/src/testing/
+  // Repository は neon-serverless ドライバ由来の DrizzleClient 型を受け取るが、dev では
+  // pglite ドライバを使うため型だけ合わせる（packages/infrastructure/tests/testing/
   // create-test-db.ts と同じ手法。全 Repository テストが PGlite で通過済み）。
   return db as unknown as DrizzleClient;
 }

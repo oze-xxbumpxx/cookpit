@@ -15,6 +15,7 @@ import { DiscardStockUseCase } from '../../src/pantry/discard-stock.use-case';
 import { GetPantryUseCase } from '../../src/pantry/get-pantry.use-case';
 import { InvalidStockOperationError } from '../../src/pantry/invalid-stock-operation.error';
 import { StockNotFoundError } from '../../src/pantry/stock-not-found.error';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 const STOCK_ID = 'stock-1';
 const PRODUCT_ID = 'product-1';
@@ -72,7 +73,7 @@ describe('ConsumeStockUseCase', () => {
   it('単位が一致する在庫を消費し、更新後の PantryDto を返す', async () => {
     pantryRepository.seed(seededPantry([seededStock()]));
 
-    const result = await new ConsumeStockUseCase(pantryRepository).execute({
+    const result = await new ConsumeStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
       stockId: STOCK_ID,
       amount: { value: 100, unit: 'g' },
     });
@@ -84,7 +85,7 @@ describe('ConsumeStockUseCase', () => {
 
   it('全量以上を消費すると対象 Stock を削除する', async () => {
     pantryRepository.seed(seededPantry([seededStock({ value: 200 })]));
-    const useCase = new ConsumeStockUseCase(pantryRepository);
+    const useCase = new ConsumeStockUseCase(pantryRepository, passthroughUnitOfWork);
 
     const exactResult = await useCase.execute({
       stockId: STOCK_ID,
@@ -104,7 +105,7 @@ describe('ConsumeStockUseCase', () => {
 
   it('対象 Stock が存在しない場合は StockNotFoundError を投げる', async () => {
     await expect(
-      new ConsumeStockUseCase(pantryRepository).execute({
+      new ConsumeStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
         stockId: 'missing-stock',
         amount: { value: 1, unit: '個' },
       }),
@@ -116,7 +117,7 @@ describe('ConsumeStockUseCase', () => {
     pantryRepository.seed(seededPantry([seededStock()]));
 
     await expect(
-      new ConsumeStockUseCase(pantryRepository).execute({
+      new ConsumeStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
         stockId: STOCK_ID,
         amount: { value: 1, unit: '個' },
       }),
@@ -134,7 +135,9 @@ describe('DiscardStockUseCase', () => {
       ]),
     );
 
-    const result = await new DiscardStockUseCase(pantryRepository).execute({ stockId: STOCK_ID });
+    const result = await new DiscardStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
+      stockId: STOCK_ID,
+    });
 
     expect(result.stocks).toHaveLength(1);
     expect(result.stocks[0]?.id).toBe('stock-2');
@@ -143,7 +146,9 @@ describe('DiscardStockUseCase', () => {
 
   it('対象 Stock が存在しない場合は StockNotFoundError を投げる', async () => {
     await expect(
-      new DiscardStockUseCase(pantryRepository).execute({ stockId: 'missing-stock' }),
+      new DiscardStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
+        stockId: 'missing-stock',
+      }),
     ).rejects.toEqual(new StockNotFoundError('missing-stock'));
     expect(pantryRepository.saveCount).toBe(0);
   });
@@ -151,7 +156,7 @@ describe('DiscardStockUseCase', () => {
 
 describe('AddStockUseCase', () => {
   it('在庫を 1 件追加し、productId は null・任意項目つきで更新後 PantryDto を返す', async () => {
-    const result = await new AddStockUseCase(pantryRepository).execute({
+    const result = await new AddStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
       displayName: '玉ねぎ',
       amount: { value: 3, unit: '個' },
       storedLocation: 'fridge',
@@ -172,7 +177,7 @@ describe('AddStockUseCase', () => {
   it('既存在庫に加算せず新規 Stock として追加する（追加＝常に新規）', async () => {
     pantryRepository.seed(seededPantry([seededStock({ value: 300, unit: 'g' })]));
 
-    const result = await new AddStockUseCase(pantryRepository).execute({
+    const result = await new AddStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
       displayName: '玉ねぎ',
       amount: { value: 2, unit: '個' },
       storedLocation: null,
@@ -183,7 +188,7 @@ describe('AddStockUseCase', () => {
   });
 
   it('storedLocation / expiresAt が null でも追加できる', async () => {
-    const result = await new AddStockUseCase(pantryRepository).execute({
+    const result = await new AddStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
       displayName: '塩',
       amount: { value: 1, unit: '袋' },
       storedLocation: null,
@@ -198,7 +203,7 @@ describe('AddStockUseCase', () => {
 
   it('displayName が空白のみの場合は InvalidStockOperationError を投げ save しない', async () => {
     await expect(
-      new AddStockUseCase(pantryRepository).execute({
+      new AddStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
         displayName: '   ',
         amount: { value: 1, unit: '個' },
         storedLocation: null,
@@ -210,7 +215,7 @@ describe('AddStockUseCase', () => {
 
   it('amount が 0 以下の場合は InvalidStockOperationError を投げ save しない', async () => {
     await expect(
-      new AddStockUseCase(pantryRepository).execute({
+      new AddStockUseCase(pantryRepository, passthroughUnitOfWork).execute({
         displayName: '玉ねぎ',
         amount: { value: 0, unit: '個' },
         storedLocation: null,

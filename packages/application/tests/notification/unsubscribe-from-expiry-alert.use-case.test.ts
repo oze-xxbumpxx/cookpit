@@ -2,6 +2,7 @@ import { PushSubscription } from '@cookpit/domain';
 import type { PushSubscriptionRepository } from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { UnsubscribeFromExpiryAlertUseCase } from '../../src/notification/unsubscribe-from-expiry-alert.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 class InMemoryPushSubscriptionRepository implements PushSubscriptionRepository {
   private subscriptions: PushSubscription[] = [];
@@ -46,7 +47,7 @@ describe('UnsubscribeFromExpiryAlertUseCase', () => {
       PushSubscription.create({ endpoint: 'https://example.com/a', p256dh: 'p', auth: 'a' }),
     );
 
-    await new UnsubscribeFromExpiryAlertUseCase(repository).execute({
+    await new UnsubscribeFromExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
       endpoint: 'https://example.com/a',
     });
 
@@ -56,7 +57,7 @@ describe('UnsubscribeFromExpiryAlertUseCase', () => {
 
   it('UNSUB-02: 存在しない endpoint を解除しても例外を投げない（冪等）', async () => {
     await expect(
-      new UnsubscribeFromExpiryAlertUseCase(repository).execute({
+      new UnsubscribeFromExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
         endpoint: 'https://example.com/not-registered',
       }),
     ).resolves.toBeUndefined();

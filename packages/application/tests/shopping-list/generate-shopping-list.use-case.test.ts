@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { InvalidMealPlanStateError } from '../../src/meal-plan/invalid-meal-plan-state.error';
 import { MealPlanNotFoundError } from '../../src/meal-plan/meal-plan-not-found.error';
 import { GenerateShoppingListUseCase } from '../../src/shopping-list/generate-shopping-list.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 import {
   MEAL_PLAN_ID,
   RECIPE_ID,
@@ -48,6 +49,7 @@ function generateUseCase(): GenerateShoppingListUseCase {
     productRepository,
     shoppingListRepository,
     pantryRepository,
+    passthroughUnitOfWork,
   );
 }
 

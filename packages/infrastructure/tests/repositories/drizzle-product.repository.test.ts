@@ -12,7 +12,7 @@ import {
 } from '@cookpit/domain';
 import type { DrizzleClient } from '../../src/db/client';
 import { priceRecords, products } from '../../src/db/schema';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzleProductRepository } from '../../src/repositories/drizzle-product.repository';
 import { DrizzleStoreRepository } from '../../src/repositories/drizzle-store.repository';
 import { toUnit } from '../../src/repositories/mappers';
@@ -46,12 +46,12 @@ describe('DrizzleProductRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzleProductRepository(db);
+    repository = new DrizzleProductRepository(new DrizzleUnitOfWork(db));
   });
 
   async function insertStore(): Promise<Store> {
     const store = Store.create({ name: 'スーパーA' });
-    await new DrizzleStoreRepository(db).save(store);
+    await new DrizzleStoreRepository(new DrizzleUnitOfWork(db)).save(store);
     return store;
   }
 
@@ -290,7 +290,7 @@ describe('DrizzleProductRepository', () => {
   it('IR-P-12: countPriceRecordsByStore() は店舗ごとに商品をまたいで数える', async () => {
     const storeA = await insertStore();
     const storeB = Store.create({ name: 'スーパーB' });
-    await new DrizzleStoreRepository(db).save(storeB);
+    await new DrizzleStoreRepository(new DrizzleUnitOfWork(db)).save(storeB);
 
     const product1 = createProduct({ name: 'トマト' });
     product1.recordPrice(createPriceRecord(storeA.id));
@@ -314,7 +314,7 @@ describe('DrizzleProductRepository', () => {
   it('IR-04: deletePriceRecordsByStore() は対象店舗の記録だけを消す', async () => {
     const storeA = await insertStore();
     const storeB = Store.create({ name: 'スーパーB' });
-    await new DrizzleStoreRepository(db).save(storeB);
+    await new DrizzleStoreRepository(new DrizzleUnitOfWork(db)).save(storeB);
 
     const product = createProduct({ name: 'トマト' });
     product.recordPrice(createPriceRecord(storeA.id));
@@ -355,7 +355,7 @@ describe('DrizzleProductRepository', () => {
     const product = createProduct({ name: 'トマト' });
     product.recordPrice(createPriceRecord(store.id));
     await repository.save(product);
-    const storeRepository = new DrizzleStoreRepository(db);
+    const storeRepository = new DrizzleStoreRepository(new DrizzleUnitOfWork(db));
 
     await repository.deletePriceRecordsByStore(store.id);
     await storeRepository.delete(store.id);
@@ -369,7 +369,9 @@ describe('DrizzleProductRepository', () => {
     product.recordPrice(createPriceRecord(store.id));
     await repository.save(product);
 
-    await expect(new DrizzleStoreRepository(db).delete(store.id)).rejects.toThrow();
+    await expect(
+      new DrizzleStoreRepository(new DrizzleUnitOfWork(db)).delete(store.id),
+    ).rejects.toThrow();
   });
 });
 

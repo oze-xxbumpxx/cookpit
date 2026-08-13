@@ -1,5 +1,5 @@
 import { PushSubscription } from '@cookpit/domain';
-import type { PushSubscriptionRepository } from '@cookpit/domain';
+import type { UnitOfWork, PushSubscriptionRepository } from '@cookpit/domain';
 import { TooManySubscriptionsError } from './too-many-subscriptions.error';
 
 export interface SubscribeToExpiryAlertInputDto {
@@ -19,28 +19,33 @@ export const MAX_SUBSCRIPTION_COUNT = 10;
  * @throws TooManySubscriptionsError 新規 endpoint かつ既存購読数が上限以上の場合
  */
 export class SubscribeToExpiryAlertUseCase {
-  constructor(private readonly pushSubscriptionRepository: PushSubscriptionRepository) {}
+  constructor(
+    private readonly pushSubscriptionRepository: PushSubscriptionRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: SubscribeToExpiryAlertInputDto): Promise<void> {
-    const existing = await this.pushSubscriptionRepository.findByEndpoint(input.endpoint);
+    return this.unitOfWork.execute(async () => {
+      const existing = await this.pushSubscriptionRepository.findByEndpoint(input.endpoint);
 
-    if (existing === null) {
-      const currentCount = (await this.pushSubscriptionRepository.findAll()).length;
-      if (currentCount >= MAX_SUBSCRIPTION_COUNT) {
-        throw new TooManySubscriptionsError(MAX_SUBSCRIPTION_COUNT);
+      if (existing === null) {
+        const currentCount = (await this.pushSubscriptionRepository.findAll()).length;
+        if (currentCount >= MAX_SUBSCRIPTION_COUNT) {
+          throw new TooManySubscriptionsError(MAX_SUBSCRIPTION_COUNT);
+        }
       }
-    }
 
-    const subscription =
-      existing === null
-        ? PushSubscription.create(input)
-        : PushSubscription.reconstruct({
-            id: existing.id,
-            endpoint: input.endpoint,
-            p256dh: input.p256dh,
-            auth: input.auth,
-            createdAt: existing.createdAt,
-          });
-    await this.pushSubscriptionRepository.save(subscription);
+      const subscription =
+        existing === null
+          ? PushSubscription.create(input)
+          : PushSubscription.reconstruct({
+              id: existing.id,
+              endpoint: input.endpoint,
+              p256dh: input.p256dh,
+              auth: input.auth,
+              createdAt: existing.createdAt,
+            });
+      await this.pushSubscriptionRepository.save(subscription);
+    });
   }
 }

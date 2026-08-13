@@ -14,7 +14,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { DrizzleClient } from '../../src/db/client';
 import { shoppingItems, shoppingLists } from '../../src/db/schema';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzleShoppingListRepository } from '../../src/repositories/drizzle-shopping-list.repository';
 
 const CREATED_AT = new Date('2026-07-12T03:00:00');
@@ -75,7 +75,7 @@ describe('DrizzleShoppingListRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzleShoppingListRepository(db);
+    repository = new DrizzleShoppingListRepository(new DrizzleUnitOfWork(db));
   });
 
   it('save() → findById() で items と nullable 値を復元する', async () => {
@@ -404,7 +404,7 @@ describe('DrizzleShoppingListRepository', () => {
     await repository.save(loaded);
 
     const found = requireList(
-      await new DrizzleShoppingListRepository(db).findById(
+      await new DrizzleShoppingListRepository(new DrizzleUnitOfWork(db)).findById(
         ShoppingListId.fromString('shopping-list-1'),
       ),
     );

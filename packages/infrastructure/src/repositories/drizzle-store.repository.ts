@@ -3,9 +3,14 @@ import { normalizeStoreName, Store, StoreId } from '@cookpit/domain';
 import type { StoreRepository } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { stores, type StoreRow, type NewStoreRow } from '../db/schema';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 
 export class DrizzleStoreRepository implements StoreRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findById(id: StoreId): Promise<Store | null> {
     const rows = await this.db.select().from(stores).where(eq(stores.id, id.value)).limit(1);

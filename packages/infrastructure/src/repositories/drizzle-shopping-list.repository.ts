@@ -26,6 +26,7 @@ import {
   type ShoppingListRow,
 } from '../db/schema';
 import { toLocalDate, toLocalDateString, toUnit } from './mappers';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 
 interface ShoppingListWithItemRow {
   shoppingList: ShoppingListRow;
@@ -38,7 +39,11 @@ interface ShoppingListGroup {
 }
 
 export class DrizzleShoppingListRepository implements ShoppingListRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findById(id: ShoppingListId): Promise<ShoppingList | null> {
     const rows = await this.db

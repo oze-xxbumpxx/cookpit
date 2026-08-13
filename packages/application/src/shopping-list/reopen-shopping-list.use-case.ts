@@ -1,5 +1,5 @@
 import { ShoppingListId } from '@cookpit/domain';
-import type { ShoppingListRepository } from '@cookpit/domain';
+import type { UnitOfWork, ShoppingListRepository } from '@cookpit/domain';
 import { InvalidShoppingListStateError } from './invalid-shopping-list-state.error';
 import type { ReopenShoppingListInputDto, ShoppingListDto } from './shopping-list.dto';
 import { toShoppingListDto } from './shopping-list.mapper';
@@ -14,21 +14,26 @@ import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
  * @throws InvalidShoppingListStateError リストが completed 以外（既に active 等）
  */
 export class ReopenShoppingListUseCase {
-  constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: ReopenShoppingListInputDto): Promise<ShoppingListDto> {
-    const shoppingList = await this.shoppingListRepository.findById(
-      ShoppingListId.fromString(input.shoppingListId),
-    );
-    if (shoppingList === null) {
-      throw new ShoppingListNotFoundError(input.shoppingListId);
-    }
-    if (shoppingList.status !== 'completed') {
-      throw new InvalidShoppingListStateError(shoppingList.status, 'reopen');
-    }
+    return this.unitOfWork.execute(async () => {
+      const shoppingList = await this.shoppingListRepository.findById(
+        ShoppingListId.fromString(input.shoppingListId),
+      );
+      if (shoppingList === null) {
+        throw new ShoppingListNotFoundError(input.shoppingListId);
+      }
+      if (shoppingList.status !== 'completed') {
+        throw new InvalidShoppingListStateError(shoppingList.status, 'reopen');
+      }
 
-    shoppingList.reopen();
-    await this.shoppingListRepository.save(shoppingList);
-    return toShoppingListDto(shoppingList);
+      shoppingList.reopen();
+      await this.shoppingListRepository.save(shoppingList);
+      return toShoppingListDto(shoppingList);
+    });
   }
 }

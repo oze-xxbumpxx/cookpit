@@ -1,5 +1,6 @@
 import { MealPlanId, ShoppingItem, ShoppingList } from '@cookpit/domain';
 import type {
+  UnitOfWork,
   MealPlanRepository,
   PantryRepository,
   ProductRepository,
@@ -38,61 +39,64 @@ export class GenerateShoppingListUseCase {
     private readonly productRepository: ProductRepository,
     private readonly shoppingListRepository: ShoppingListRepository,
     private readonly pantryRepository: PantryRepository,
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   async execute(input: GenerateShoppingListInputDto): Promise<GenerateShoppingListResultDto> {
-    const mealPlanId = MealPlanId.fromString(input.mealPlanId);
-    const mealPlan = await this.mealPlanRepository.findById(mealPlanId);
-    if (mealPlan === null) {
-      throw new MealPlanNotFoundError(input.mealPlanId);
-    }
-
-    const existing = await this.shoppingListRepository.findByMealPlanId(mealPlanId);
-    if (existing !== null) {
-      if (mealPlan.status === 'draft') {
-        mealPlan.transitionTo('shopping');
-        await this.mealPlanRepository.save(mealPlan);
+    return this.unitOfWork.execute(async () => {
+      const mealPlanId = MealPlanId.fromString(input.mealPlanId);
+      const mealPlan = await this.mealPlanRepository.findById(mealPlanId);
+      if (mealPlan === null) {
+        throw new MealPlanNotFoundError(input.mealPlanId);
       }
-      return { shoppingList: toShoppingListDto(existing), created: false };
-    }
 
-    if (mealPlan.status !== 'draft') {
-      throw new InvalidMealPlanStateError(mealPlan.status, 'generate a ShoppingList from');
-    }
+      const existing = await this.shoppingListRepository.findByMealPlanId(mealPlanId);
+      if (existing !== null) {
+        if (mealPlan.status === 'draft') {
+          mealPlan.transitionTo('shopping');
+          await this.mealPlanRepository.save(mealPlan);
+        }
+        return { shoppingList: toShoppingListDto(existing), created: false };
+      }
 
-    const aggregated = await resolveMealPlanIngredients(mealPlan, this.recipeRepository);
-    const pantry = await this.pantryRepository.find();
-    const { ingredients: afterDeduction, consumed } = applyPantryDeduction(aggregated, pantry);
-    const targetStoreMap = await resolveTargetStores(afterDeduction, this.productRepository);
+      if (mealPlan.status !== 'draft') {
+        throw new InvalidMealPlanStateError(mealPlan.status, 'generate a ShoppingList from');
+      }
 
-    const items = afterDeduction.map((ingredient) =>
-      ShoppingItem.create({
-        productId: ingredient.productId,
-        displayName: ingredient.displayName,
-        requiredAmount: ingredient.requiredAmount,
-        amountNote: ingredient.amountNote,
-        targetStore:
-          ingredient.productId === null
-            ? null
-            : (targetStoreMap.get(ingredient.productId.value) ?? null),
-        source: 'from_meal_plan',
-      }),
-    );
+      const aggregated = await resolveMealPlanIngredients(mealPlan, this.recipeRepository);
+      const pantry = await this.pantryRepository.find();
+      const { ingredients: afterDeduction, consumed } = applyPantryDeduction(aggregated, pantry);
+      const targetStoreMap = await resolveTargetStores(afterDeduction, this.productRepository);
 
-    const shoppingList = ShoppingList.create({
-      mealPlanId,
-      items,
-      shoppingDate: mealPlan.weekOf.startDate(),
+      const items = afterDeduction.map((ingredient) =>
+        ShoppingItem.create({
+          productId: ingredient.productId,
+          displayName: ingredient.displayName,
+          requiredAmount: ingredient.requiredAmount,
+          amountNote: ingredient.amountNote,
+          targetStore:
+            ingredient.productId === null
+              ? null
+              : (targetStoreMap.get(ingredient.productId.value) ?? null),
+          source: 'from_meal_plan',
+        }),
+      );
+
+      const shoppingList = ShoppingList.create({
+        mealPlanId,
+        items,
+        shoppingDate: mealPlan.weekOf.startDate(),
+      });
+
+      // 集約横断の永続化順序（D-7）: ShoppingList → Pantry → MealPlan。同一 UoW で原子的に保存する。
+      await this.shoppingListRepository.save(shoppingList);
+      if (consumed) {
+        await this.pantryRepository.save(pantry);
+      }
+      mealPlan.transitionTo('shopping');
+      await this.mealPlanRepository.save(mealPlan);
+
+      return { shoppingList: toShoppingListDto(shoppingList), created: true };
     });
-
-    // 集約横断の永続化順序（D-7）: ShoppingList → Pantry → MealPlan。UoW が無いため部分失敗を許容する。
-    await this.shoppingListRepository.save(shoppingList);
-    if (consumed) {
-      await this.pantryRepository.save(pantry);
-    }
-    mealPlan.transitionTo('shopping');
-    await this.mealPlanRepository.save(mealPlan);
-
-    return { shoppingList: toShoppingListDto(shoppingList), created: true };
   }
 }

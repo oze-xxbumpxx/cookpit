@@ -3,9 +3,14 @@ import { PushSubscription, PushSubscriptionId } from '@cookpit/domain';
 import type { PushSubscriptionRepository } from '@cookpit/domain';
 import type { DrizzleClient } from '../db/client';
 import { pushSubscriptions, type PushSubscriptionRow } from '../db/schema';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 
 export class DrizzlePushSubscriptionRepository implements PushSubscriptionRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async findAll(): Promise<PushSubscription[]> {
     const rows = await this.db.select().from(pushSubscriptions);

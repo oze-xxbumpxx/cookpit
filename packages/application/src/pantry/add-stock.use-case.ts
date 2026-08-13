@@ -1,5 +1,5 @@
 import { Quantity } from '@cookpit/domain';
-import type { CreateStockInput, PantryRepository } from '@cookpit/domain';
+import type { UnitOfWork, CreateStockInput, PantryRepository } from '@cookpit/domain';
 import { InvalidStockOperationError } from './invalid-stock-operation.error';
 import type { AddStockInputDto, PantryDto } from './pantry.dto';
 import { toPantryDto } from './pantry.mapper';
@@ -12,31 +12,36 @@ import { toPantryDto } from './pantry.mapper';
  * @throws InvalidStockOperationError displayName が空白のみ、または amount が 0 以下の場合
  */
 export class AddStockUseCase {
-  constructor(private readonly pantryRepository: PantryRepository) {}
+  constructor(
+    private readonly pantryRepository: PantryRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: AddStockInputDto): Promise<PantryDto> {
-    const pantry = await this.pantryRepository.find();
+    return this.unitOfWork.execute(async () => {
+      const pantry = await this.pantryRepository.find();
 
-    const stockInput: CreateStockInput = {
-      productId: null,
-      displayName: input.displayName,
-      amount: Quantity.of(input.amount.value, input.amount.unit),
-      purchasedAt: new Date(),
-      // ローカル 0 時で構築し、mapper の toLocalDateString と往復整合させる。
-      expiresAt: input.expiresAt === null ? null : new Date(`${input.expiresAt}T00:00:00`),
-      storedLocation: input.storedLocation,
-      sourceShoppingItemId: null,
-    };
+      const stockInput: CreateStockInput = {
+        productId: null,
+        displayName: input.displayName,
+        amount: Quantity.of(input.amount.value, input.amount.unit),
+        purchasedAt: new Date(),
+        // ローカル 0 時で構築し、mapper の toLocalDateString と往復整合させる。
+        expiresAt: input.expiresAt === null ? null : new Date(`${input.expiresAt}T00:00:00`),
+        storedLocation: input.storedLocation,
+        sourceShoppingItemId: null,
+      };
 
-    try {
-      pantry.addStock(stockInput);
-    } catch (error) {
-      throw new InvalidStockOperationError(
-        error instanceof Error ? error.message : 'Failed to add stock',
-      );
-    }
+      try {
+        pantry.addStock(stockInput);
+      } catch (error) {
+        throw new InvalidStockOperationError(
+          error instanceof Error ? error.message : 'Failed to add stock',
+        );
+      }
 
-    await this.pantryRepository.save(pantry);
-    return toPantryDto(pantry);
+      await this.pantryRepository.save(pantry);
+      return toPantryDto(pantry);
+    });
   }
 }
