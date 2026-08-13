@@ -11,9 +11,9 @@
   "reviewTier": "R2",
   "subject": {
     "algorithm": "git-raw-v1",
-    "baseSha": "c28123e6e38823e62548209bcd51aff6fc856aa5",
-    "digest": "sha256:dc5d21e1dc94425eb421e62e9544608febefbee1ec30517bfd3b3cfe9e98befd",
-    "source": "index",
+    "baseSha": "0060b3fc0f79166bacfd433772055252806ad9fb",
+    "digest": "sha256:2c5e2af17f939c94d037f0318a887dff01e1e4ce34e971619eaa746a79928d62",
+    "source": "commit",
     "entryCount": 16
   },
   "aiAssessment": {
@@ -98,7 +98,7 @@
 
 > **人間レビュー待ちです。**
 > Claude の評価です。これは承認ではありません。以下の判断事項・残余リスク・振る舞い差分を確認してください。
-> 対象: `sha256:dc5d21e1dc94…` / R2 / 16 changes
+> 対象: `sha256:2c5e2af17f93…` / R2 / 16 changes
 
 ### あなたが判断・確認すること（1 件）
 
@@ -145,7 +145,7 @@
 
 - 日付: 2026-08-13
 - 対象: 設計書 / 実装計画 / 試験計画 / 実装差分 / テスト / `docs/05-roadmap.md`
-- 対象差分: `origin/main..HEAD` + 本コミットのログ追記
+- 対象差分: `origin/main..HEAD`（#166 マージ後に衝突解消）
 - レベル: L2 / review tier R2（UI の振る舞い変更。API・DB・認証なし）
 - 省略: security-reviewer（外部 I/O・認証なし） / contract-designer（契約変更なし） / Codex ブリーフ（Orchestrator 経路）
 
@@ -161,7 +161,7 @@
 
 - 商品離脱確認は既存 `useLeaveConfirmation` の結線のみ。スナップショットは `useState` 初期化関数（`useRef` 不使用）。
 - 手順 DnD は材料と別 `DndContext` + `useId()`。`touch-none` はハンドルのみ。
-- Domain / Application / Infrastructure / api-contract に差分なし。
+- Domain / Application / Infrastructure / api-contract に差分なし（#166 の mapper 修正は main 側）。
 
 ### 試験計画との対応
 
@@ -171,3 +171,7 @@
 ### 品質ゲート
 
 `bash .claude/scripts/run-quality-gates.sh` → RESULT OK。harness / lint / type-check / test。web 894 tests。
+
+### 衝突解消（2026-08-13）
+
+PR #166 マージ後、`docs/05-roadmap.md` と `logs/2026-08-13.md` が衝突。タスク 2 を完了、タスク 4 をレビュー中として残し、日次ログは mapper-jst をセッション7・small-ux をセッション8 に並べた。実装コードの衝突は無し。
