@@ -14,6 +14,7 @@ export * from './shared/seasoning';
 export * from './shared/store';
 export * from './shared/store.repository';
 export * from './shared/unit';
+export * from './shared/unit-of-work';
 export * from './shared/week-identifier';
 
 // Recipe 集約

@@ -1,5 +1,5 @@
 import { ShoppingItemId } from '@cookpit/domain';
-import type { ShoppingListRepository } from '@cookpit/domain';
+import type { UnitOfWork, ShoppingListRepository } from '@cookpit/domain';
 import { loadActiveShoppingList, requireItem } from './load-shopping-list';
 import type { RemoveItemInputDto } from './shopping-list.dto';
 
@@ -19,20 +19,25 @@ import type { RemoveItemInputDto } from './shopping-list.dto';
  * @throws ShoppingItemNotFoundError itemId の品目が存在しない
  */
 export class RemoveItemUseCase {
-  constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: RemoveItemInputDto): Promise<void> {
-    const shoppingList = await loadActiveShoppingList(
-      this.shoppingListRepository,
-      input.shoppingListId,
-      'removeItem',
-    );
+    return this.unitOfWork.execute(async () => {
+      const shoppingList = await loadActiveShoppingList(
+        this.shoppingListRepository,
+        input.shoppingListId,
+        'removeItem',
+      );
 
-    const itemId = ShoppingItemId.fromString(input.itemId);
-    requireItem(shoppingList, itemId, input.itemId);
+      const itemId = ShoppingItemId.fromString(input.itemId);
+      requireItem(shoppingList, itemId, input.itemId);
 
-    shoppingList.removeItem(itemId);
+      shoppingList.removeItem(itemId);
 
-    await this.shoppingListRepository.save(shoppingList);
+      await this.shoppingListRepository.save(shoppingList);
+    });
   }
 }

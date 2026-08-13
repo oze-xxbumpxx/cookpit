@@ -8,7 +8,7 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { pushSubscriptionRepository } from '../repositories';
+import { createWriteContext } from '../repositories';
 
 export const pushRoute = new Hono()
   .get('/vapid-public-key', (c) => {
@@ -23,7 +23,8 @@ export const pushRoute = new Hono()
   .post('/subscribe', zValidator('json', subscribeToExpiryAlertSchema), async (c) => {
     c.header('Cache-Control', 'no-store');
     const body = c.req.valid('json');
-    await new SubscribeToExpiryAlertUseCase(pushSubscriptionRepository()).execute({
+    const { pushSubscription, uow } = createWriteContext();
+    await new SubscribeToExpiryAlertUseCase(pushSubscription, uow).execute({
       endpoint: body.endpoint,
       p256dh: body.keys.p256dh,
       auth: body.keys.auth,
@@ -33,7 +34,8 @@ export const pushRoute = new Hono()
   .post('/unsubscribe', zValidator('json', unsubscribeFromExpiryAlertSchema), async (c) => {
     c.header('Cache-Control', 'no-store');
     const { endpoint } = c.req.valid('json');
-    await new UnsubscribeFromExpiryAlertUseCase(pushSubscriptionRepository()).execute({
+    const { pushSubscription, uow } = createWriteContext();
+    await new UnsubscribeFromExpiryAlertUseCase(pushSubscription, uow).execute({
       endpoint,
     });
     return c.body(null, 204);

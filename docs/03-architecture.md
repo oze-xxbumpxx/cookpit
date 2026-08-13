@@ -230,22 +230,35 @@ export function RecipeListClient({ initialRecipes }) {
 個人開発のスケールでは DI コンテナ（tsyringe など）を使わず、**手動 DI** で十分。
 組み立ては `apps/web/src/server/repositories.ts` のファクトリに集約済み。
 
+書き込み UseCase は `UnitOfWork`（Domain のポート。実装は `DrizzleUnitOfWork`）を最後の引数に取る。
+`execute()` の本体を `unitOfWork.execute(...)` で包み、1 トランザクションにする（ADR-0019）。
+ルートは BEGIN/COMMIT せず、`createWriteContext()` で同じ UoW から Repository と UseCase を組み立てる。
+
+読み取り専用（Get* / SSR）は従来どおり `recipeRepository()` 等を使う。本番 DB は
+`drizzle-orm/neon-serverless`（WebSocket Pool）。dev / テストの PGlite は維持する。
+
 ```typescript
 // packages/application の UseCase（概念）
 export class CreateRecipeUseCase {
-  constructor(private readonly recipeRepo: RecipeRepository) {}
+  constructor(
+    private readonly recipeRepo: RecipeRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: CreateRecipeInput): Promise<RecipeId> {
-    const recipe = Recipe.create(input);
-    await this.recipeRepo.save(recipe);
-    return recipe.id;
+    return this.unitOfWork.execute(async () => {
+      const recipe = Recipe.create(input);
+      await this.recipeRepo.save(recipe);
+      return recipe.id;
+    });
   }
 }
 
-// Hono route / Server Component 側
-import { recipeRepository } from '@/server/repositories';
+// 書き込み Hono route
+import { createWriteContext } from '@/server/repositories';
 
-const useCase = new CreateRecipeUseCase(recipeRepository());
+const { recipe, uow } = createWriteContext();
+const useCase = new CreateRecipeUseCase(recipe, uow);
 await useCase.execute({ name: 'カレー' /* ... */ });
 ```
 

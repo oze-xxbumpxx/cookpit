@@ -1,5 +1,5 @@
 import { ShoppingItemId } from '@cookpit/domain';
-import type { ShoppingListRepository } from '@cookpit/domain';
+import type { UnitOfWork, ShoppingListRepository } from '@cookpit/domain';
 import { findUpdatedItem, loadActiveShoppingList, requireItem } from './load-shopping-list';
 import type { SetItemCheckedInputDto, ShoppingItemDto } from './shopping-list.dto';
 import { toShoppingItemDto } from './shopping-list.mapper';
@@ -17,26 +17,31 @@ import { toShoppingItemDto } from './shopping-list.mapper';
  * @throws ShoppingItemNotFoundError itemId の品目が存在しない
  */
 export class SetItemCheckedUseCase {
-  constructor(private readonly shoppingListRepository: ShoppingListRepository) {}
+  constructor(
+    private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: SetItemCheckedInputDto): Promise<ShoppingItemDto> {
-    const shoppingList = await loadActiveShoppingList(
-      this.shoppingListRepository,
-      input.shoppingListId,
-      'setItemChecked',
-    );
+    return this.unitOfWork.execute(async () => {
+      const shoppingList = await loadActiveShoppingList(
+        this.shoppingListRepository,
+        input.shoppingListId,
+        'setItemChecked',
+      );
 
-    const itemId = ShoppingItemId.fromString(input.itemId);
-    const item = requireItem(shoppingList, itemId, input.itemId);
+      const itemId = ShoppingItemId.fromString(input.itemId);
+      const item = requireItem(shoppingList, itemId, input.itemId);
 
-    const alreadyChecked = item.status === 'bought';
-    if (input.checked && !alreadyChecked) {
-      shoppingList.check(itemId);
-    } else if (!input.checked && alreadyChecked) {
-      shoppingList.uncheck(itemId);
-    }
+      const alreadyChecked = item.status === 'bought';
+      if (input.checked && !alreadyChecked) {
+        shoppingList.check(itemId);
+      } else if (!input.checked && alreadyChecked) {
+        shoppingList.uncheck(itemId);
+      }
 
-    await this.shoppingListRepository.save(shoppingList);
-    return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+      await this.shoppingListRepository.save(shoppingList);
+      return toShoppingItemDto(findUpdatedItem(shoppingList, itemId));
+    });
   }
 }

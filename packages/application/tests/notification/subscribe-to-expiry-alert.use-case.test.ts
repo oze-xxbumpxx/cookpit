@@ -7,6 +7,7 @@ import {
   SubscribeToExpiryAlertUseCase,
 } from '../../src/notification/subscribe-to-expiry-alert.use-case';
 import { TooManySubscriptionsError } from '../../src/notification/too-many-subscriptions.error';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 class InMemoryPushSubscriptionRepository implements PushSubscriptionRepository {
   private subscriptions: PushSubscription[] = [];
@@ -59,7 +60,7 @@ beforeEach(() => {
 
 describe('SubscribeToExpiryAlertUseCase', () => {
   it('SUB-01: 新規 endpoint を登録する', async () => {
-    await new SubscribeToExpiryAlertUseCase(repository).execute({
+    await new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
       endpoint: 'https://example.com/new',
       p256dh: 'p256dh-value',
       auth: 'auth-value',
@@ -78,7 +79,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
     });
     repository.seed(existing);
 
-    await new SubscribeToExpiryAlertUseCase(repository).execute({
+    await new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
       endpoint: 'https://example.com/a',
       p256dh: 'new-p256dh',
       auth: 'new-auth',
@@ -93,7 +94,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
 
   it('SUB-03: 空文字入力は Domain の検証（Error）が UseCase を素通りして伝搬する', async () => {
     await expect(
-      new SubscribeToExpiryAlertUseCase(repository).execute({
+      new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
         endpoint: '',
         p256dh: 'x',
         auth: 'y',
@@ -103,7 +104,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
   });
 
   it('SUB-04: 同一 endpoint・同一 keys の再送は完全に無害', async () => {
-    const useCase = new SubscribeToExpiryAlertUseCase(repository);
+    const useCase = new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork);
     const input = {
       endpoint: 'https://example.com/a',
       p256dh: 'p256dh-value',
@@ -124,7 +125,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
     });
     repository.seed(existing);
 
-    await new SubscribeToExpiryAlertUseCase(repository).execute({
+    await new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
       endpoint: 'https://example.com/a',
       p256dh: 'new-p256dh',
       auth: 'new-auth',
@@ -138,7 +139,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
     repository.seedMany(MAX_SUBSCRIPTION_COUNT - 1);
 
     await expect(
-      new SubscribeToExpiryAlertUseCase(repository).execute({
+      new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
         endpoint: 'https://example.com/tenth',
         p256dh: 'p256dh-value',
         auth: 'auth-value',
@@ -151,7 +152,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
     repository.seedMany(MAX_SUBSCRIPTION_COUNT);
 
     await expect(
-      new SubscribeToExpiryAlertUseCase(repository).execute({
+      new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
         endpoint: 'https://example.com/eleventh',
         p256dh: 'p256dh-value',
         auth: 'auth-value',
@@ -177,7 +178,7 @@ describe('SubscribeToExpiryAlertUseCase', () => {
     expect(await repository.findAll()).toHaveLength(MAX_SUBSCRIPTION_COUNT);
 
     await expect(
-      new SubscribeToExpiryAlertUseCase(repository).execute({
+      new SubscribeToExpiryAlertUseCase(repository, passthroughUnitOfWork).execute({
         endpoint: 'https://example.com/target',
         p256dh: 'rotated-p256dh',
         auth: 'rotated-auth',

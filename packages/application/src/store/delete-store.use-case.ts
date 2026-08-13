@@ -1,5 +1,10 @@
 import { StoreId } from '@cookpit/domain';
-import type { ProductRepository, ShoppingListRepository, StoreRepository } from '@cookpit/domain';
+import type {
+  UnitOfWork,
+  ProductRepository,
+  ShoppingListRepository,
+  StoreRepository,
+} from '@cookpit/domain';
 import { StoreNotFoundError } from './store-not-found.error';
 
 /**
@@ -13,10 +18,8 @@ import { StoreNotFoundError } from './store-not-found.error';
  *
  * 実行順序は「参照元 → 参照先」で固定する。逆順は `price_records.store_id` の外部キー
  * （restrict）に当たって生の DB エラー（→ 500）になる。FK は順序ミスを検出する安全網として
- * 残してある。
- *
- * 単一トランザクションではないため、途中失敗すると中間状態が残る。各段は冪等なので
- * 再実行による前方回復で整合させる（CompleteShoppingUseCase と同じ方針）。
+ * 残してある。書き込み全体は `UnitOfWork.execute` で 1 トランザクションになる（ADR-0019）。
+ * 各段の冪等はリトライ時の防衛線として残す。
  *
  * **削除された価格記録は復元できない。**呼び出し側（UI）は削除前に `GetStoreUsageUseCase` で
  * 失われる件数を提示し、ユーザーの確認を取ること。
@@ -26,21 +29,24 @@ export class DeleteStoreUseCase {
     private readonly storeRepository: StoreRepository,
     private readonly productRepository: ProductRepository,
     private readonly shoppingListRepository: ShoppingListRepository,
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   /**
    * @throws StoreNotFoundError 店舗が存在しない場合
    */
   async execute(id: string): Promise<void> {
-    const storeId = StoreId.fromString(id);
-    const store = await this.storeRepository.findById(storeId);
-    if (store === null) {
-      throw new StoreNotFoundError(id);
-    }
+    return this.unitOfWork.execute(async () => {
+      const storeId = StoreId.fromString(id);
+      const store = await this.storeRepository.findById(storeId);
+      if (store === null) {
+        throw new StoreNotFoundError(id);
+      }
 
-    await this.productRepository.deletePriceRecordsByStore(storeId);
-    await this.unassignFromShoppingLists(storeId);
-    await this.storeRepository.delete(storeId);
+      await this.productRepository.deletePriceRecordsByStore(storeId);
+      await this.unassignFromShoppingLists(storeId);
+      await this.storeRepository.delete(storeId);
+    });
   }
 
   private async unassignFromShoppingLists(storeId: StoreId): Promise<void> {

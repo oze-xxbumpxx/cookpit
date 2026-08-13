@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Recipe, RecipeId } from '@cookpit/domain';
 import type { DrizzleClient } from '../../src/db/client';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzleRecipeRepository } from '../../src/repositories/drizzle-recipe.repository';
 
 function createRecipe(overrides: { servings?: number | null } = {}): Recipe {
@@ -23,7 +23,7 @@ describe('DrizzleRecipeRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzleRecipeRepository(db);
+    repository = new DrizzleRecipeRepository(new DrizzleUnitOfWork(db));
   });
 
   // T-I01

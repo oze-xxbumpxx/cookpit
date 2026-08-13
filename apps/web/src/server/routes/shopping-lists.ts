@@ -22,24 +22,20 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import {
-  mealPlanRepository,
-  pantryRepository,
-  productRepository,
-  recipeRepository,
-  shoppingListRepository,
-} from '../repositories';
+import { createWriteContext, shoppingListRepository } from '../repositories';
 
 /** Generate は新規作成時 201、冪等な既存返却時 200 を返す。 */
 export const shoppingListsRoute = new Hono()
   .post('/', zValidator('json', generateShoppingListSchema), async (c) => {
     const body = c.req.valid('json');
+    const { mealPlan, recipe, product, shoppingList, pantry, uow } = createWriteContext();
     const usecase = new GenerateShoppingListUseCase(
-      mealPlanRepository(),
-      recipeRepository(),
-      productRepository(),
-      shoppingListRepository(),
-      pantryRepository(),
+      mealPlan,
+      recipe,
+      product,
+      shoppingList,
+      pantry,
+      uow,
     );
     const result = await usecase.execute(body);
     return c.json(result.shoppingList, result.created ? 201 : 200);
@@ -57,7 +53,8 @@ export const shoppingListsRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new AddItemUseCase(shoppingListRepository());
+      const { shoppingList, uow } = createWriteContext();
+      const usecase = new AddItemUseCase(shoppingList, uow);
       const dto = await usecase.execute({ shoppingListId: id, ...body });
       return c.json(dto, 201);
     },
@@ -69,7 +66,8 @@ export const shoppingListsRoute = new Hono()
     async (c) => {
       const { id, itemId } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new MarkAsBoughtUseCase(shoppingListRepository());
+      const { shoppingList, uow } = createWriteContext();
+      const usecase = new MarkAsBoughtUseCase(shoppingList, uow);
       const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
       return c.json(dto, 200);
     },
@@ -81,7 +79,8 @@ export const shoppingListsRoute = new Hono()
     async (c) => {
       const { id, itemId } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new SetItemCheckedUseCase(shoppingListRepository());
+      const { shoppingList, uow } = createWriteContext();
+      const usecase = new SetItemCheckedUseCase(shoppingList, uow);
       const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
       return c.json(dto, 200);
     },
@@ -93,14 +92,16 @@ export const shoppingListsRoute = new Hono()
     async (c) => {
       const { id, itemId } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new ReassignStoreUseCase(shoppingListRepository());
+      const { shoppingList, uow } = createWriteContext();
+      const usecase = new ReassignStoreUseCase(shoppingList, uow);
       const dto = await usecase.execute({ shoppingListId: id, itemId, ...body });
       return c.json(dto, 200);
     },
   )
   .delete('/:id/items/:itemId', zValidator('param', shoppingItemIdParamSchema), async (c) => {
     const { id, itemId } = c.req.valid('param');
-    const usecase = new RemoveItemUseCase(shoppingListRepository());
+    const { shoppingList, uow } = createWriteContext();
+    const usecase = new RemoveItemUseCase(shoppingList, uow);
     await usecase.execute({ shoppingListId: id, itemId });
     return c.body(null, 204);
   })
@@ -111,12 +112,8 @@ export const shoppingListsRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new CompleteShoppingUseCase(
-        shoppingListRepository(),
-        pantryRepository(),
-        productRepository(),
-        mealPlanRepository(),
-      );
+      const { shoppingList, pantry, product, mealPlan, uow } = createWriteContext();
+      const usecase = new CompleteShoppingUseCase(shoppingList, pantry, product, mealPlan, uow);
       const dto = await usecase.execute({
         shoppingListId: id,
         stockAdditions: body.stockAdditions,
@@ -126,18 +123,21 @@ export const shoppingListsRoute = new Hono()
   )
   .post('/:id/reopen', zValidator('param', shoppingListIdParamSchema), async (c) => {
     const { id } = c.req.valid('param');
-    const usecase = new ReopenShoppingListUseCase(shoppingListRepository());
+    const { shoppingList, uow } = createWriteContext();
+    const usecase = new ReopenShoppingListUseCase(shoppingList, uow);
     const dto = await usecase.execute({ shoppingListId: id });
     return c.json(dto, 200);
   })
   .post('/:id/sync', zValidator('param', shoppingListIdParamSchema), async (c) => {
     const { id } = c.req.valid('param');
+    const { shoppingList, mealPlan, recipe, product, pantry, uow } = createWriteContext();
     const usecase = new SyncShoppingListFromMealPlanUseCase(
-      shoppingListRepository(),
-      mealPlanRepository(),
-      recipeRepository(),
-      productRepository(),
-      pantryRepository(),
+      shoppingList,
+      mealPlan,
+      recipe,
+      product,
+      pantry,
+      uow,
     );
     const dto = await usecase.execute({ shoppingListId: id });
     return c.json(dto, 200);

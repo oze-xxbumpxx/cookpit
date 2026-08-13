@@ -8,6 +8,7 @@ import {
   UnitPriceCalculator,
 } from '@cookpit/domain';
 import type {
+  UnitOfWork,
   CreateStockInput,
   MealPlanId,
   MealPlanRepository,
@@ -48,8 +49,9 @@ interface ResolvedStockAddition {
  * 在庫化・価格記録されない。数量不明・0 以下や価格未設定の bought 品目は価格記録をスキップする。
  *
  * 保存順序は Pantry → Product → ShoppingList → MealPlan。ShoppingList の保存が
- * 「これより前は再実行対象・これより後は修復のみ」の境界になる。単一トランザクションではないため、
- * 途中失敗時は再実行による前方回復で整合させる（上記の冪等ガードが二重処理を防ぐ）。
+ * 「これより前は再実行対象・これより後は修復のみ」の境界になる。書き込み全体は
+ * `UnitOfWork.execute` で 1 トランザクションになる（ADR-0019）。冪等ガードは
+ * リトライ時の二重処理防止として残す。
  *
  * @throws ShoppingListNotFoundError shoppingListId の ShoppingList が存在しない
  * @throws ShoppingItemNotFoundError stockAdditions の itemId がリストに存在しない
@@ -61,35 +63,38 @@ export class CompleteShoppingUseCase {
     private readonly pantryRepository: PantryRepository,
     private readonly productRepository: ProductRepository,
     private readonly mealPlanRepository: MealPlanRepository,
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   async execute(input: CompleteShoppingInputDto): Promise<ShoppingListDto> {
-    const shoppingListId = ShoppingListId.fromString(input.shoppingListId);
-    const shoppingList = await this.shoppingListRepository.findById(shoppingListId);
-    if (shoppingList === null) {
-      throw new ShoppingListNotFoundError(input.shoppingListId);
-    }
+    return this.unitOfWork.execute(async () => {
+      const shoppingListId = ShoppingListId.fromString(input.shoppingListId);
+      const shoppingList = await this.shoppingListRepository.findById(shoppingListId);
+      if (shoppingList === null) {
+        throw new ShoppingListNotFoundError(input.shoppingListId);
+      }
 
-    if (shoppingList.status === 'completed') {
+      if (shoppingList.status === 'completed') {
+        await this.repairMealPlanTransition(shoppingList.mealPlanId);
+        return toShoppingListDto(shoppingList);
+      }
+
+      const boughtItems = shoppingList.items.filter((item) => item.isBought());
+      const now = new Date();
+
+      // 検証は書き込みより前にまとめて行い、不正な指定が 1 件でもあれば何も保存しないようにする。
+      const resolved = this.resolveStockAdditions(shoppingList, input.stockAdditions);
+      await this.addStocks(resolved, now);
+
+      await this.recordPrices(boughtItems, now);
+
+      shoppingList.complete();
+      await this.shoppingListRepository.save(shoppingList);
+
       await this.repairMealPlanTransition(shoppingList.mealPlanId);
+
       return toShoppingListDto(shoppingList);
-    }
-
-    const boughtItems = shoppingList.items.filter((item) => item.isBought());
-    const now = new Date();
-
-    // 検証は書き込みより前にまとめて行い、不正な指定が 1 件でもあれば何も保存しないようにする。
-    const resolved = this.resolveStockAdditions(shoppingList, input.stockAdditions);
-    await this.addStocks(resolved, now);
-
-    await this.recordPrices(boughtItems, now);
-
-    shoppingList.complete();
-    await this.shoppingListRepository.save(shoppingList);
-
-    await this.repairMealPlanTransition(shoppingList.mealPlanId);
-
-    return toShoppingListDto(shoppingList);
+    });
   }
 
   private resolveStockAdditions(

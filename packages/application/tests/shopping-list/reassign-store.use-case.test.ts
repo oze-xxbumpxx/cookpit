@@ -12,6 +12,7 @@ import {
   createRepositories,
 } from './test-helpers';
 import type { InMemoryShoppingListRepository } from './test-helpers';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 let shoppingListRepository: InMemoryShoppingListRepository;
 
@@ -29,7 +30,10 @@ describe('ReassignStoreUseCase', () => {
   it('購入予定店舗を変更する', async () => {
     shoppingListRepository.seed(seededShoppingList());
 
-    const dto = await new ReassignStoreUseCase(shoppingListRepository).execute(input);
+    const dto = await new ReassignStoreUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(dto.targetStoreId).toBe('new-store');
   });
@@ -45,7 +49,10 @@ describe('ReassignStoreUseCase', () => {
       ]),
     );
 
-    const dto = await new ReassignStoreUseCase(shoppingListRepository).execute(input);
+    const dto = await new ReassignStoreUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(dto.targetStoreId).toBe('new-store');
     expect(dto.actualPrice).toEqual({ amount: 100, currency: 'JPY' });
@@ -56,13 +63,13 @@ describe('ReassignStoreUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('active', []));
 
     await expect(
-      new ReassignStoreUseCase(shoppingListRepository).execute(input),
+      new ReassignStoreUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingItemNotFoundError);
   });
 
   it('存在しない ShoppingList は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      new ReassignStoreUseCase(shoppingListRepository).execute(input),
+      new ReassignStoreUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
   });
 
@@ -70,7 +77,7 @@ describe('ReassignStoreUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('completed'));
 
     await expect(
-      new ReassignStoreUseCase(shoppingListRepository).execute(input),
+      new ReassignStoreUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
   });
 });

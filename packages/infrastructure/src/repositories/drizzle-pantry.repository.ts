@@ -12,9 +12,14 @@ import { notInArray, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../db/client';
 import { stocks, type NewStockRow, type StockRow } from '../db/schema';
 import { toLocalDate, toLocalDateString, toUnit } from './mappers';
+import type { DrizzleUnitOfWork } from '../uow/drizzle-unit-of-work';
 
 export class DrizzlePantryRepository implements PantryRepository {
-  constructor(private readonly db: DrizzleClient) {}
+  constructor(private readonly unitOfWork: DrizzleUnitOfWork) {}
+
+  private get db(): DrizzleClient {
+    return this.unitOfWork.client;
+  }
 
   async find(): Promise<Pantry> {
     const rows = await this.db.select().from(stocks).orderBy(stocks.purchasedAt);

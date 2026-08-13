@@ -10,6 +10,7 @@ import {
   createRepositories,
 } from './test-helpers';
 import type { InMemoryShoppingListRepository } from './test-helpers';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 let shoppingListRepository: InMemoryShoppingListRepository;
 
@@ -21,7 +22,7 @@ describe('AddItemUseCase', () => {
   it('productId と targetStoreId つきの手動アイテムを追加する', async () => {
     shoppingListRepository.seed(seededShoppingList('active', []));
 
-    const dto = await new AddItemUseCase(shoppingListRepository).execute({
+    const dto = await new AddItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
       shoppingListId: SHOPPING_LIST_ID,
       displayName: '牛乳',
       requiredAmount: { value: 1, unit: '本' },
@@ -41,7 +42,7 @@ describe('AddItemUseCase', () => {
   it('productId と targetStoreId を省略すると null で追加する', async () => {
     shoppingListRepository.seed(seededShoppingList('active', []));
 
-    const dto = await new AddItemUseCase(shoppingListRepository).execute({
+    const dto = await new AddItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
       shoppingListId: SHOPPING_LIST_ID,
       displayName: '牛乳',
       requiredAmount: { value: 1, unit: '本' },
@@ -59,7 +60,7 @@ describe('AddItemUseCase', () => {
     async ({ productId, targetStoreId }) => {
       shoppingListRepository.seed(seededShoppingList('active', []));
 
-      const dto = await new AddItemUseCase(shoppingListRepository).execute({
+      const dto = await new AddItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
         shoppingListId: SHOPPING_LIST_ID,
         displayName: '牛乳',
         requiredAmount: { value: 1, unit: '本' },
@@ -74,7 +75,7 @@ describe('AddItemUseCase', () => {
 
   it('存在しない ShoppingList は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      new AddItemUseCase(shoppingListRepository).execute({
+      new AddItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
         shoppingListId: 'missing',
         displayName: '牛乳',
         requiredAmount: { value: 1, unit: '本' },
@@ -86,7 +87,7 @@ describe('AddItemUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('completed'));
 
     await expect(
-      new AddItemUseCase(shoppingListRepository).execute({
+      new AddItemUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
         shoppingListId: SHOPPING_LIST_ID,
         displayName: '牛乳',
         requiredAmount: { value: 1, unit: '本' },

@@ -4,6 +4,7 @@ import { ReopenShoppingListUseCase } from '../../src/shopping-list/reopen-shoppi
 import { ShoppingListNotFoundError } from '../../src/shopping-list/shopping-list-not-found.error';
 import { SHOPPING_LIST_ID, seededShoppingList, createRepositories } from './test-helpers';
 import type { InMemoryShoppingListRepository } from './test-helpers';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 let shoppingListRepository: InMemoryShoppingListRepository;
 
@@ -15,7 +16,10 @@ describe('ReopenShoppingListUseCase', () => {
   it('completed のリストを active に戻して保存する', async () => {
     shoppingListRepository.seed(seededShoppingList('completed'));
 
-    const dto = await new ReopenShoppingListUseCase(shoppingListRepository).execute({
+    const dto = await new ReopenShoppingListUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute({
       shoppingListId: SHOPPING_LIST_ID,
     });
 
@@ -25,7 +29,7 @@ describe('ReopenShoppingListUseCase', () => {
 
   it('存在しない shoppingListId は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      new ReopenShoppingListUseCase(shoppingListRepository).execute({
+      new ReopenShoppingListUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
         shoppingListId: 'missing',
       }),
     ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
@@ -36,7 +40,7 @@ describe('ReopenShoppingListUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('active'));
 
     await expect(
-      new ReopenShoppingListUseCase(shoppingListRepository).execute({
+      new ReopenShoppingListUseCase(shoppingListRepository, passthroughUnitOfWork).execute({
         shoppingListId: SHOPPING_LIST_ID,
       }),
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);

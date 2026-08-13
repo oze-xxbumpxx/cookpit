@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Store, StoreId } from '@cookpit/domain';
 import type { DrizzleClient } from '../../src/db/client';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzleStoreRepository } from '../../src/repositories/drizzle-store.repository';
 
 describe('DrizzleStoreRepository', () => {
@@ -10,7 +10,7 @@ describe('DrizzleStoreRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzleStoreRepository(db);
+    repository = new DrizzleStoreRepository(new DrizzleUnitOfWork(db));
   });
 
   it('IR-S-01: save() + findById() ラウンドトリップで全フィールドが一致する', async () => {

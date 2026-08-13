@@ -25,6 +25,7 @@ import { RecordPriceUseCase } from '../../src/product/record-price.use-case';
 import { UpdatePriceRecordUseCase } from '../../src/product/update-price-record.use-case';
 import { StoreNotFoundError } from '../../src/store/store-not-found.error';
 import { UpdateProductUseCase } from '../../src/product/update-product.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 import type {
   CreateProductInputDto,
   RecordPriceInputDto,
@@ -178,7 +179,9 @@ describe('CreateProductUseCase', () => {
   };
 
   it('商品を保存し、入力どおりの DTO を返す', async () => {
-    const dto = await new CreateProductUseCase(productRepository).execute(baseInput);
+    const dto = await new CreateProductUseCase(productRepository, passthroughUnitOfWork).execute(
+      baseInput,
+    );
 
     expect(productRepository.saveCount).toBe(1);
     expect(productRepository.size).toBe(1);
@@ -192,13 +195,16 @@ describe('CreateProductUseCase', () => {
 
   it('空白のみの name はドメインバリデーションで弾かれ、保存されない', async () => {
     await expect(
-      new CreateProductUseCase(productRepository).execute({ ...baseInput, name: '  ' }),
+      new CreateProductUseCase(productRepository, passthroughUnitOfWork).execute({
+        ...baseInput,
+        name: '  ',
+      }),
     ).rejects.toThrow('Product name is required');
     expect(productRepository.saveCount).toBe(0);
   });
 
   it('aliases はトリムし、空文字を除去する', async () => {
-    const dto = await new CreateProductUseCase(productRepository).execute({
+    const dto = await new CreateProductUseCase(productRepository, passthroughUnitOfWork).execute({
       ...baseInput,
       aliases: [' にんじん ', '  ', '人参'],
     });
@@ -266,9 +272,11 @@ describe('UpdateProductUseCase', () => {
   it('編集可能フィールドを更新し、保存した DTO を返す', async () => {
     productRepository.seed(seededProduct('product-1', '玉ねぎ'));
 
-    const dto = await new UpdateProductUseCase(productRepository, storeRepository).execute(
-      updateInput,
-    );
+    const dto = await new UpdateProductUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute(updateInput);
 
     expect(dto.name).toBe('にんじん');
     expect(dto.aliases).toEqual(['人参']);
@@ -278,7 +286,9 @@ describe('UpdateProductUseCase', () => {
 
   it('存在しない ID は ProductNotFoundError を投げ、保存しない', async () => {
     await expect(
-      new UpdateProductUseCase(productRepository, storeRepository).execute(updateInput),
+      new UpdateProductUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute(
+        updateInput,
+      ),
     ).rejects.toBeInstanceOf(ProductNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -288,7 +298,7 @@ describe('DeleteProductUseCase', () => {
   it('存在する商品を削除する', async () => {
     productRepository.seed(seededProduct('product-1'));
 
-    await new DeleteProductUseCase(productRepository).execute('product-1');
+    await new DeleteProductUseCase(productRepository, passthroughUnitOfWork).execute('product-1');
 
     expect(productRepository.size).toBe(0);
     expect(productRepository.deletedIds).toEqual(['product-1']);
@@ -296,7 +306,7 @@ describe('DeleteProductUseCase', () => {
 
   it('存在しない ID は ProductNotFoundError を投げ、delete を呼ばない', async () => {
     await expect(
-      new DeleteProductUseCase(productRepository).execute('missing'),
+      new DeleteProductUseCase(productRepository, passthroughUnitOfWork).execute('missing'),
     ).rejects.toBeInstanceOf(ProductNotFoundError);
     expect(productRepository.deletedIds).toEqual([]);
   });
@@ -315,7 +325,9 @@ describe('RecordPriceUseCase', () => {
     productRepository.seed(seededProduct('product-1'));
     storeRepository.seed(seededStore('store-1', '西友'));
 
-    await new RecordPriceUseCase(productRepository, storeRepository).execute(input);
+    await new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute(
+      input,
+    );
 
     const product = await productRepository.findById(ProductId.fromString('product-1'));
     const record = product?.latestPriceRecordAt(StoreId.fromString('store-1')) ?? null;
@@ -330,7 +342,7 @@ describe('RecordPriceUseCase', () => {
     storeRepository.seed(seededStore('store-1', '西友'));
 
     await expect(
-      new RecordPriceUseCase(productRepository, storeRepository).execute({
+      new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute({
         ...input,
         priceAmount: 1,
         packageSizeValue: 9_999_999,
@@ -343,7 +355,9 @@ describe('RecordPriceUseCase', () => {
     storeRepository.seed(seededStore('store-1', '西友'));
 
     await expect(
-      new RecordPriceUseCase(productRepository, storeRepository).execute(input),
+      new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute(
+        input,
+      ),
     ).rejects.toBeInstanceOf(ProductNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -352,7 +366,9 @@ describe('RecordPriceUseCase', () => {
     productRepository.seed(seededProduct('product-1'));
 
     await expect(
-      new RecordPriceUseCase(productRepository, storeRepository).execute(input),
+      new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute(
+        input,
+      ),
     ).rejects.toBeInstanceOf(StoreNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -362,7 +378,7 @@ describe('RecordPriceUseCase', () => {
     storeRepository.seed(seededStore('store-1', '西友'));
 
     await expect(
-      new RecordPriceUseCase(productRepository, storeRepository).execute({
+      new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute({
         ...input,
         priceAmount: 0,
       }),
@@ -375,7 +391,7 @@ describe('RecordPriceUseCase', () => {
     storeRepository.seed(seededStore('store-1', '西友'));
 
     await expect(
-      new RecordPriceUseCase(productRepository, storeRepository).execute({
+      new RecordPriceUseCase(productRepository, storeRepository, passthroughUnitOfWork).execute({
         ...input,
         packageSizeValue: 0,
       }),
@@ -413,7 +429,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-01: 店舗のみ変更する', async () => {
     seedBase();
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...baseInput,
       priceAmount: 300,
       packageSizeValue: 3,
@@ -429,7 +449,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-02: 価格のみ変更する', async () => {
     seedBase();
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...baseInput,
       storeId: 'store-a',
       priceAmount: 450,
@@ -446,7 +470,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-03: 内容量のみ変更する（単位は同じ）', async () => {
     seedBase();
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...baseInput,
       storeId: 'store-a',
       priceAmount: 300,
@@ -463,9 +491,11 @@ describe('UpdatePriceRecordUseCase', () => {
     const before = (await productRepository.findById(ProductId.fromString('product-1')))
       ?.priceHistory[0];
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(
-      baseInput,
-    );
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute(baseInput);
 
     expect(dto.priceHistory[0]?.id).toBe(before?.id.value);
     expect(dto.priceHistory[0]?.observedAt).toBe(before?.observedAt.toISOString());
@@ -496,7 +526,11 @@ describe('UpdatePriceRecordUseCase', () => {
         ]),
       );
 
-      const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+      const dto = await new UpdatePriceRecordUseCase(
+        productRepository,
+        storeRepository,
+        passthroughUnitOfWork,
+      ).execute({
         productId: 'product-1',
         priceRecordId: 'record-1',
         storeId: 'store-a',
@@ -514,7 +548,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-18: 単価が丸めで 0 になる入力を InvalidOperationError 派生で拒否し、保存しない', async () => {
     seedBase();
 
-    const promise = new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    const promise = new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...baseInput,
       priceAmount: 1,
       packageSizeValue: 9_999_999,
@@ -527,7 +565,11 @@ describe('UpdatePriceRecordUseCase', () => {
 
   it('A-UPU-09: 商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
     await expect(
-      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+      new UpdatePriceRecordUseCase(
+        productRepository,
+        storeRepository,
+        passthroughUnitOfWork,
+      ).execute(baseInput),
     ).rejects.toBeInstanceOf(ProductNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -537,7 +579,11 @@ describe('UpdatePriceRecordUseCase', () => {
     productRepository.seed(seededProduct('product-1'));
 
     await expect(
-      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+      new UpdatePriceRecordUseCase(
+        productRepository,
+        storeRepository,
+        passthroughUnitOfWork,
+      ).execute(baseInput),
     ).rejects.toBeInstanceOf(PriceRecordNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -550,7 +596,11 @@ describe('UpdatePriceRecordUseCase', () => {
     );
 
     await expect(
-      new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(baseInput),
+      new UpdatePriceRecordUseCase(
+        productRepository,
+        storeRepository,
+        passthroughUnitOfWork,
+      ).execute(baseInput),
     ).rejects.toBeInstanceOf(StoreNotFoundError);
     expect(productRepository.saveCount).toBe(0);
   });
@@ -561,7 +611,11 @@ describe('UpdatePriceRecordUseCase', () => {
       seedBase();
 
       await expect(
-        new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+        new UpdatePriceRecordUseCase(
+          productRepository,
+          storeRepository,
+          passthroughUnitOfWork,
+        ).execute({
           ...baseInput,
           priceAmount,
         }),
@@ -576,7 +630,11 @@ describe('UpdatePriceRecordUseCase', () => {
       seedBase();
 
       await expect(
-        new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+        new UpdatePriceRecordUseCase(
+          productRepository,
+          storeRepository,
+          passthroughUnitOfWork,
+        ).execute({
           ...baseInput,
           packageSizeValue,
         }),
@@ -588,7 +646,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-14: price が 1 円（下限）なら成功する', async () => {
     seedBase();
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...baseInput,
       priceAmount: 1,
     });
@@ -598,7 +660,11 @@ describe('UpdatePriceRecordUseCase', () => {
 
   it('A-UPU-15: 同一入力で 2 回連続 execute しても priceHistory の内容は一致する（冪等性）', async () => {
     seedBase();
-    const usecase = new UpdatePriceRecordUseCase(productRepository, storeRepository);
+    const usecase = new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    );
 
     const first = await usecase.execute(baseInput);
     const second = await usecase.execute(baseInput);
@@ -631,7 +697,11 @@ describe('UpdatePriceRecordUseCase', () => {
       ]),
     );
 
-    await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute({
+    await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute({
       productId: 'product-1',
       priceRecordId: 'record-b',
       storeId: 'store-b',
@@ -650,9 +720,11 @@ describe('UpdatePriceRecordUseCase', () => {
   it('A-UPU-17: 戻り値の storeName は編集後の storeId に対応する', async () => {
     seedBase();
 
-    const dto = await new UpdatePriceRecordUseCase(productRepository, storeRepository).execute(
-      baseInput,
-    );
+    const dto = await new UpdatePriceRecordUseCase(
+      productRepository,
+      storeRepository,
+      passthroughUnitOfWork,
+    ).execute(baseInput);
 
     expect(dto.priceHistory[0]?.storeName).toBe('ライフ');
   });
@@ -827,7 +899,7 @@ describe('DeletePriceRecordUseCase', () => {
   it('DPR-01: 指定した価格記録を取り除いて保存する', async () => {
     seedTwoRecords();
 
-    await new DeletePriceRecordUseCase(productRepository).execute({
+    await new DeletePriceRecordUseCase(productRepository, passthroughUnitOfWork).execute({
       productId: 'product-1',
       priceRecordId: 'record-1',
     });
@@ -839,7 +911,7 @@ describe('DeletePriceRecordUseCase', () => {
 
   it('DPR-02: 商品が存在しなければ ProductNotFoundError を投げ、保存しない', async () => {
     await expect(
-      new DeletePriceRecordUseCase(productRepository).execute({
+      new DeletePriceRecordUseCase(productRepository, passthroughUnitOfWork).execute({
         productId: 'missing',
         priceRecordId: 'record-1',
       }),
@@ -851,7 +923,7 @@ describe('DeletePriceRecordUseCase', () => {
     seedTwoRecords();
 
     await expect(
-      new DeletePriceRecordUseCase(productRepository).execute({
+      new DeletePriceRecordUseCase(productRepository, passthroughUnitOfWork).execute({
         productId: 'product-1',
         priceRecordId: 'missing',
       }),
@@ -861,7 +933,7 @@ describe('DeletePriceRecordUseCase', () => {
 
   it('DPR-04: 商品の存在確認が価格記録の存在確認より先に行われる', async () => {
     await expect(
-      new DeletePriceRecordUseCase(productRepository).execute({
+      new DeletePriceRecordUseCase(productRepository, passthroughUnitOfWork).execute({
         productId: 'missing',
         priceRecordId: 'missing',
       }),
@@ -875,7 +947,7 @@ describe('DeletePriceRecordUseCase', () => {
       ]),
     );
 
-    await new DeletePriceRecordUseCase(productRepository).execute({
+    await new DeletePriceRecordUseCase(productRepository, passthroughUnitOfWork).execute({
       productId: 'product-1',
       priceRecordId: 'record-1',
     });

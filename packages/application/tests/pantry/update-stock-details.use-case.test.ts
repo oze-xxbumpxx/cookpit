@@ -13,6 +13,7 @@ import { InvalidStockOperationError } from '../../src/pantry/invalid-stock-opera
 import type { PantryDto, StockDto, UpdateStockDetailsInputDto } from '../../src/pantry/pantry.dto';
 import { StockNotFoundError } from '../../src/pantry/stock-not-found.error';
 import { UpdateStockDetailsUseCase } from '../../src/pantry/update-stock-details.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 const STOCK_ID = 'stock-1';
 const PURCHASED_AT = new Date('2026-08-01T09:00:00.000Z');
@@ -75,7 +76,7 @@ describe('UpdateStockDetailsUseCase', () => {
 
   beforeEach(() => {
     pantryRepository = new InMemoryPantryRepository();
-    useCase = new UpdateStockDetailsUseCase(pantryRepository);
+    useCase = new UpdateStockDetailsUseCase(pantryRepository, passthroughUnitOfWork);
   });
 
   it('A-UPD-01: 数量の値を更新し PantryDto を返して保存する', async () => {

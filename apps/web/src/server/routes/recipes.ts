@@ -8,7 +8,7 @@ import {
 } from '@cookpit/application';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { recipeRepository } from '../repositories';
+import { recipeRepository, createWriteContext } from '../repositories';
 
 export const recipesRoute = new Hono()
   .get('/', async (c) => {
@@ -24,7 +24,8 @@ export const recipesRoute = new Hono()
   })
   .post('/', zValidator('json', createRecipeSchema), async (c) => {
     const body = c.req.valid('json');
-    const usecase = new CreateRecipeUseCase(recipeRepository());
+    const ctx = createWriteContext();
+    const usecase = new CreateRecipeUseCase(ctx.recipe, ctx.uow);
     const recipe = await usecase.execute(body);
     return c.json(recipe, 201);
   })
@@ -35,14 +36,16 @@ export const recipesRoute = new Hono()
     async (c) => {
       const { id } = c.req.valid('param');
       const body = c.req.valid('json');
-      const usecase = new UpdateRecipeUseCase(recipeRepository());
+      const ctx = createWriteContext();
+      const usecase = new UpdateRecipeUseCase(ctx.recipe, ctx.uow);
       const recipe = await usecase.execute({ id, ...body });
       return c.json(recipe);
     },
   )
   .delete('/:id', zValidator('param', idParamSchema), async (c) => {
     const { id } = c.req.valid('param');
-    const usecase = new DeleteRecipeUseCase(recipeRepository());
+    const { recipe, uow } = createWriteContext();
+    const usecase = new DeleteRecipeUseCase(recipe, uow);
     await usecase.execute(id);
     return c.body(null, 204);
   });

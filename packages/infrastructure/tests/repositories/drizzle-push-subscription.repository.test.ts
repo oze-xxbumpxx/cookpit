@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { PushSubscription, PushSubscriptionId } from '@cookpit/domain';
 import type { DrizzleClient } from '../../src/db/client';
 import { pushSubscriptions } from '../../src/db/schema';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzlePushSubscriptionRepository } from '../../src/repositories/drizzle-push-subscription.repository';
 
 function reconstructSubscription(
@@ -29,7 +29,7 @@ describe('DrizzlePushSubscriptionRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzlePushSubscriptionRepository(db);
+    repository = new DrizzlePushSubscriptionRepository(new DrizzleUnitOfWork(db));
   });
 
   it('空 DB での findAll() は空配列を返す (INF-PUSH-空)', async () => {

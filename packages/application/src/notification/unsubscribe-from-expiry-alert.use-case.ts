@@ -1,4 +1,4 @@
-import type { PushSubscriptionRepository } from '@cookpit/domain';
+import type { UnitOfWork, PushSubscriptionRepository } from '@cookpit/domain';
 
 export interface UnsubscribeFromExpiryAlertInputDto {
   endpoint: string;
@@ -6,9 +6,14 @@ export interface UnsubscribeFromExpiryAlertInputDto {
 
 /** 冪等。存在しない endpoint でも例外を投げない。 */
 export class UnsubscribeFromExpiryAlertUseCase {
-  constructor(private readonly pushSubscriptionRepository: PushSubscriptionRepository) {}
+  constructor(
+    private readonly pushSubscriptionRepository: PushSubscriptionRepository,
+    private readonly unitOfWork: UnitOfWork,
+  ) {}
 
   async execute(input: UnsubscribeFromExpiryAlertInputDto): Promise<void> {
-    await this.pushSubscriptionRepository.deleteByEndpoint(input.endpoint);
+    return this.unitOfWork.execute(async () => {
+      await this.pushSubscriptionRepository.deleteByEndpoint(input.endpoint);
+    });
   }
 }

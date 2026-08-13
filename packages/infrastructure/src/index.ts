@@ -4,6 +4,7 @@
  */
 export * from './db/schema';
 export * from './db/client';
+export * from './uow/drizzle-unit-of-work';
 
 /**
  * Drizzle の `drizzle(client, { schema })` に渡すためのテーブル定義名前空間。

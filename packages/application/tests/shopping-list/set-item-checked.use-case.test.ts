@@ -12,6 +12,7 @@ import {
   createRepositories,
 } from './test-helpers';
 import type { InMemoryShoppingListRepository } from './test-helpers';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 let shoppingListRepository: InMemoryShoppingListRepository;
 
@@ -25,7 +26,10 @@ describe('SetItemCheckedUseCase', () => {
   it('pending の品目に checked: true を送ると bought になる', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem({ status: 'pending' })]));
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute(input);
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(dto.status).toBe('bought');
     expect(dto.actualPrice).toBeNull();
@@ -43,7 +47,10 @@ describe('SetItemCheckedUseCase', () => {
       ]),
     );
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute({
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...input,
       checked: false,
     });
@@ -64,7 +71,10 @@ describe('SetItemCheckedUseCase', () => {
       ]),
     );
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute(input);
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(dto.status).toBe('bought');
     expect(dto.actualPrice).toEqual({ amount: 198, currency: 'JPY' });
@@ -74,7 +84,10 @@ describe('SetItemCheckedUseCase', () => {
   it('冪等: 既に pending の品目に checked: false を送っても例外を投げず pending のまま返す', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem({ status: 'pending' })]));
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute({
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...input,
       checked: false,
     });
@@ -87,13 +100,13 @@ describe('SetItemCheckedUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('completed'));
 
     await expect(
-      new SetItemCheckedUseCase(shoppingListRepository).execute(input),
+      new SetItemCheckedUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(InvalidShoppingListStateError);
   });
 
   it('存在しない ShoppingList は ShoppingListNotFoundError を投げる', async () => {
     await expect(
-      new SetItemCheckedUseCase(shoppingListRepository).execute(input),
+      new SetItemCheckedUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingListNotFoundError);
   });
 
@@ -101,14 +114,17 @@ describe('SetItemCheckedUseCase', () => {
     shoppingListRepository.seed(seededShoppingList('active', []));
 
     await expect(
-      new SetItemCheckedUseCase(shoppingListRepository).execute(input),
+      new SetItemCheckedUseCase(shoppingListRepository, passthroughUnitOfWork).execute(input),
     ).rejects.toBeInstanceOf(ShoppingItemNotFoundError);
   });
 
   it('skipped の品目に checked: true を送ると bought になる（非公開経路の挙動固定）', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem({ status: 'skipped' })]));
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute(input);
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute(input);
 
     expect(dto.status).toBe('bought');
   });
@@ -116,7 +132,10 @@ describe('SetItemCheckedUseCase', () => {
   it('skipped の品目に checked: false を送っても no-op で skipped のまま返る', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem({ status: 'skipped' })]));
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute({
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...input,
       checked: false,
     });
@@ -131,7 +150,10 @@ describe('SetItemCheckedUseCase', () => {
       ]),
     );
 
-    const dto = await new SetItemCheckedUseCase(shoppingListRepository).execute({
+    const dto = await new SetItemCheckedUseCase(
+      shoppingListRepository,
+      passthroughUnitOfWork,
+    ).execute({
       ...input,
       checked: false,
     });

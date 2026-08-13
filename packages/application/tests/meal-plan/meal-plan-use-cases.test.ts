@@ -17,6 +17,7 @@ import { InvalidMealPlanStateError } from '../../src/meal-plan/invalid-meal-plan
 import { MealPlanNotFoundError } from '../../src/meal-plan/meal-plan-not-found.error';
 import { PlannedRecipeNotFoundError } from '../../src/meal-plan/planned-recipe-not-found.error';
 import { RemoveRecipeFromMealPlanUseCase } from '../../src/meal-plan/remove-recipe-from-meal-plan.use-case';
+import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 
 class InMemoryMealPlanRepository implements MealPlanRepository {
   private readonly map = new Map<string, MealPlan>();
@@ -87,7 +88,7 @@ beforeEach(() => {
 
 describe('CreateMealPlanUseCase', () => {
   it('新規 MealPlan を draft で保存し、DTO を返す', async () => {
-    const dto = await new CreateMealPlanUseCase(repository).execute({
+    const dto = await new CreateMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       weekIdentifier: '2026-07-04',
     });
 
@@ -101,7 +102,7 @@ describe('CreateMealPlanUseCase', () => {
   });
 
   it('同一週の2回目作成は既存 MealPlan を返し、保存回数を増やさない', async () => {
-    const useCase = new CreateMealPlanUseCase(repository);
+    const useCase = new CreateMealPlanUseCase(repository, passthroughUnitOfWork);
 
     const first = await useCase.execute({ weekIdentifier: '2026-07-04' });
     const second = await useCase.execute({ weekIdentifier: '2026-07-04' });
@@ -114,7 +115,7 @@ describe('CreateMealPlanUseCase', () => {
   it('既存 MealPlan が draft 以外でも冪等にそのまま返す', async () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', 'cooking'));
 
-    const dto = await new CreateMealPlanUseCase(repository).execute({
+    const dto = await new CreateMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       weekIdentifier: '2026-07-04',
     });
 
@@ -124,7 +125,7 @@ describe('CreateMealPlanUseCase', () => {
   });
 
   it('非土曜の weekIdentifier は WeekIdentifier により週開始日へ正規化される', async () => {
-    const dto = await new CreateMealPlanUseCase(repository).execute({
+    const dto = await new CreateMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       weekIdentifier: '2026-07-05',
     });
 
@@ -136,7 +137,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
   it('draft の MealPlan にレシピを追加し、PlannedRecipeDto を返す', async () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
 
-    const dto = await new AddRecipeToMealPlanUseCase(repository).execute({
+    const dto = await new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       mealPlanId: 'meal-plan-1',
       recipeId: 'recipe-1',
       scaleFactor: 1,
@@ -154,7 +155,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
   it('shopping の MealPlan にもレシピを追加できる', async () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', 'shopping'));
 
-    const dto = await new AddRecipeToMealPlanUseCase(repository).execute({
+    const dto = await new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       mealPlanId: 'meal-plan-1',
       recipeId: 'recipe-1',
       scaleFactor: 1,
@@ -167,7 +168,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
   it('scaleFactor を PlannedRecipeDto に保持する', async () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
 
-    const dto = await new AddRecipeToMealPlanUseCase(repository).execute({
+    const dto = await new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       mealPlanId: 'meal-plan-1',
       recipeId: 'recipe-1',
       scaleFactor: 1.5,
@@ -178,7 +179,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
 
   it('同一 recipeId を複数回追加しても別 PlannedRecipeId で返る', async () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
-    const useCase = new AddRecipeToMealPlanUseCase(repository);
+    const useCase = new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork);
 
     const first = await useCase.execute({
       mealPlanId: 'meal-plan-1',
@@ -196,7 +197,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
 
   it('存在しない MealPlanId は MealPlanNotFoundError を投げる', async () => {
     await expect(
-      new AddRecipeToMealPlanUseCase(repository).execute({
+      new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'missing',
         recipeId: 'recipe-1',
         scaleFactor: 1,
@@ -210,7 +211,10 @@ describe('AddRecipeToMealPlanUseCase', () => {
     async (status) => {
       repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', status));
 
-      const result = await new AddRecipeToMealPlanUseCase(repository).execute({
+      const result = await new AddRecipeToMealPlanUseCase(
+        repository,
+        passthroughUnitOfWork,
+      ).execute({
         mealPlanId: 'meal-plan-1',
         recipeId: 'recipe-1',
         scaleFactor: 1,
@@ -225,7 +229,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04', 'completed'));
 
     await expect(
-      new AddRecipeToMealPlanUseCase(repository).execute({
+      new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'meal-plan-1',
         recipeId: 'recipe-1',
         scaleFactor: 1,
@@ -240,7 +244,7 @@ describe('AddRecipeToMealPlanUseCase', () => {
       repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
 
       await expect(
-        new AddRecipeToMealPlanUseCase(repository).execute({
+        new AddRecipeToMealPlanUseCase(repository, passthroughUnitOfWork).execute({
           mealPlanId: 'meal-plan-1',
           recipeId: 'recipe-1',
           scaleFactor,
@@ -259,7 +263,7 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
       ]),
     );
 
-    await new RemoveRecipeFromMealPlanUseCase(repository).execute({
+    await new RemoveRecipeFromMealPlanUseCase(repository, passthroughUnitOfWork).execute({
       mealPlanId: 'meal-plan-1',
       plannedRecipeId: 'planned-recipe-1',
     });
@@ -271,7 +275,7 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
 
   it('存在しない MealPlanId は MealPlanNotFoundError を投げる', async () => {
     await expect(
-      new RemoveRecipeFromMealPlanUseCase(repository).execute({
+      new RemoveRecipeFromMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'missing',
         plannedRecipeId: 'planned-recipe-1',
       }),
@@ -283,7 +287,7 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
     repository.seed(seededMealPlan('meal-plan-1', '2026-07-04'));
 
     await expect(
-      new RemoveRecipeFromMealPlanUseCase(repository).execute({
+      new RemoveRecipeFromMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'meal-plan-1',
         plannedRecipeId: 'missing',
       }),
@@ -300,7 +304,7 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
         ]),
       );
 
-      await new RemoveRecipeFromMealPlanUseCase(repository).execute({
+      await new RemoveRecipeFromMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'meal-plan-1',
         plannedRecipeId: 'planned-recipe-1',
       });
@@ -319,7 +323,7 @@ describe('RemoveRecipeFromMealPlanUseCase', () => {
     );
 
     await expect(
-      new RemoveRecipeFromMealPlanUseCase(repository).execute({
+      new RemoveRecipeFromMealPlanUseCase(repository, passthroughUnitOfWork).execute({
         mealPlanId: 'meal-plan-1',
         plannedRecipeId: 'planned-recipe-1',
       }),

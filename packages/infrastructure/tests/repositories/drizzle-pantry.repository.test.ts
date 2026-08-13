@@ -12,7 +12,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { DrizzleClient } from '../../src/db/client';
 import { stocks } from '../../src/db/schema';
-import { createTestDb } from '../testing/create-test-db';
+import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 import { DrizzlePantryRepository } from '../../src/repositories/drizzle-pantry.repository';
 
 const PURCHASED_AT = new Date('2026-07-11T10:00:00');
@@ -55,7 +55,7 @@ describe('DrizzlePantryRepository', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    repository = new DrizzlePantryRepository(db);
+    repository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
   });
 
   it('空 DB で find() は空の Pantry を返す', async () => {
@@ -139,7 +139,7 @@ describe('DrizzlePantryRepository', () => {
     await repository.save(createPantry([createStock()]));
     await repository.save(createPantry([createStock({ amount: Quantity.of(2.5, 'g') })]));
 
-    const reloadedRepository = new DrizzlePantryRepository(db);
+    const reloadedRepository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
     const found = requireStock((await reloadedRepository.find()).stocks[0]);
     expect(found.amount.value).toBe(2.5);
     expect(found.amount.unit).toBe('g');
@@ -157,7 +157,7 @@ describe('DrizzlePantryRepository', () => {
       ]),
     );
 
-    const reloadedRepository = new DrizzlePantryRepository(db);
+    const reloadedRepository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
     const found = requireStock((await reloadedRepository.find()).stocks[0]);
     expect(found.amount.value).toBe(1.25);
     expect(found.amount.unit).toBe('g');
@@ -169,7 +169,7 @@ describe('DrizzlePantryRepository', () => {
     await repository.save(createPantry([createStock()]));
     await repository.save(createPantry([createStock({ expiresAt: null })]));
 
-    const reloadedRepository = new DrizzlePantryRepository(db);
+    const reloadedRepository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
     const found = requireStock((await reloadedRepository.find()).stocks[0]);
     expect(found.expiresAt).toBeNull();
   });
@@ -178,7 +178,7 @@ describe('DrizzlePantryRepository', () => {
     await repository.save(createPantry([createStock()]));
     await repository.save(createPantry([createStock({ storedLocation: null })]));
 
-    const reloadedRepository = new DrizzlePantryRepository(db);
+    const reloadedRepository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
     const found = requireStock((await reloadedRepository.find()).stocks[0]);
     expect(found.storedLocation).toBeNull();
   });
@@ -194,7 +194,7 @@ describe('DrizzlePantryRepository', () => {
       ]),
     );
 
-    const reloadedRepository = new DrizzlePantryRepository(db);
+    const reloadedRepository = new DrizzlePantryRepository(new DrizzleUnitOfWork(db));
     const found = requireStock((await reloadedRepository.find()).stocks[0]);
     expect(toLocalDateString(requireDate(found.expiresAt))).toBe('2026-07-19');
     expect(found.storedLocation).toBe('freezer');
