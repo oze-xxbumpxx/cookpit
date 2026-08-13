@@ -113,6 +113,25 @@ export class ShoppingItem {
     this.itemStatus = 'skipped';
   }
 
+  /**
+   * 献立同期による数量の上書き専用。呼び出し元が対象品目を絞る。Domain は pending 以外と
+   * amountNote 品目（requiredAmount が null）を拒否するのみで、source は見ない。
+   *
+   * @throws Error status が pending 以外の場合
+   * @throws Error 現在の requiredAmount が null（amountNote 品目）の場合
+   */
+  updateRequiredAmount(amount: Quantity): void {
+    if (this.itemStatus !== 'pending') {
+      throw new Error(
+        `Cannot update required amount of a ShoppingItem with status '${this.itemStatus}'`,
+      );
+    }
+    if (this.itemRequiredAmount === null) {
+      throw new Error('Cannot update required amount of a ShoppingItem with amountNote');
+    }
+    this.itemRequiredAmount = amount;
+  }
+
   /** 購入予定店舗の変更は、確定済みの購入実績（actualPrice / actualStore）に影響させない。 */
   reassignStore(newStore: StoreId): void {
     this.itemTargetStore = newStore;
@@ -280,6 +299,15 @@ export class ShoppingList {
   reassignStore(itemId: ShoppingItemId, newStore: StoreId): void {
     this.assertActive('reassignStore');
     this.findItem(itemId).reassignStore(newStore);
+  }
+
+  /**
+   * @throws Error active でない、または itemId の品目が存在しない場合
+   *   （ShoppingItem.updateRequiredAmount の追加制約もそのまま伝播する）
+   */
+  updateItemRequiredAmount(itemId: ShoppingItemId, amount: Quantity): void {
+    this.assertActive('updateItemRequiredAmount');
+    this.findItem(itemId).updateRequiredAmount(amount);
   }
 
   /** @throws Error active でない、itemId の品目が存在しない、または品目が pending 以外の場合 */

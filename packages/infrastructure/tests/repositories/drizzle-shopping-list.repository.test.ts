@@ -384,6 +384,34 @@ describe('DrizzleShoppingListRepository', () => {
     expect(await repository.findAllByStore(StoreId.fromString('store-unused'))).toEqual([]);
   });
 
+  it('数量更新後の save() → find() で requiredAmount が保持される', async () => {
+    const item = createItem({
+      status: 'pending',
+      requiredAmount: Quantity.of(2, '個'),
+      actualPrice: null,
+      actualStore: null,
+    });
+    await repository.save(createList({ items: [item], status: 'active' }));
+
+    const loaded = requireList(
+      await repository.findById(ShoppingListId.fromString('shopping-list-1')),
+    );
+    const loadedItem = loaded.items[0];
+    if (loadedItem === undefined) {
+      throw new Error('Expected an item');
+    }
+    loaded.updateItemRequiredAmount(loadedItem.id, Quantity.of(5, '個'));
+    await repository.save(loaded);
+
+    const found = requireList(
+      await new DrizzleShoppingListRepository(db).findById(
+        ShoppingListId.fromString('shopping-list-1'),
+      ),
+    );
+    expect(found.items[0]?.requiredAmount?.value).toBe(5);
+    expect(found.items[0]?.requiredAmount?.unit).toBe('個');
+  });
+
   it('IR-04(SL): findAllByStore() は他リストを巻き込まない', async () => {
     await repository.save(
       createList({

@@ -82,6 +82,66 @@ export function describeRemoveConfirmation(item: ShoppingItemDto): string {
   return '削除すると元に戻せません。';
 }
 
+export interface SyncDiff {
+  addedCount: number;
+  removedCount: number;
+  updatedCount: number;
+}
+
+function isSameRequiredAmount(
+  left: ShoppingItemDto['requiredAmount'],
+  right: ShoppingItemDto['requiredAmount'],
+): boolean {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  return left.value === right.value && left.unit === right.unit;
+}
+
+export function diffSyncResult(before: ShoppingItemDto[], after: ShoppingItemDto[]): SyncDiff {
+  const beforeById = new Map(before.map((item) => [item.id, item]));
+  const afterIds = new Set(after.map((item) => item.id));
+
+  let addedCount = 0;
+  let updatedCount = 0;
+  for (const item of after) {
+    const prior = beforeById.get(item.id);
+    if (prior === undefined) {
+      addedCount += 1;
+      continue;
+    }
+    if (!isSameRequiredAmount(prior.requiredAmount, item.requiredAmount)) {
+      updatedCount += 1;
+    }
+  }
+
+  return {
+    addedCount,
+    removedCount: before.filter((item) => !afterIds.has(item.id)).length,
+    updatedCount,
+  };
+}
+
+export function describeSyncResult({ addedCount, removedCount, updatedCount }: SyncDiff): string {
+  if (addedCount === 0 && removedCount === 0 && updatedCount === 0) {
+    return '変更はありませんでした';
+  }
+  const parts: string[] = [];
+  if (addedCount > 0) {
+    parts.push(`追加${addedCount}件`);
+  }
+  if (updatedCount > 0) {
+    parts.push(`更新${updatedCount}件`);
+  }
+  if (removedCount > 0) {
+    parts.push(`削除${removedCount}件`);
+  }
+  return parts.join('・');
+}
+
 // shoppingDate "2026-07-11" → 「7/11（土）の買い物リスト」。
 // Date 構築は meal-plan-view.ts の formatWeekRange と同一のローカルタイム規約（'T00:00:00' 付与）。
 export function formatShoppingDate(shoppingDate: string): string {

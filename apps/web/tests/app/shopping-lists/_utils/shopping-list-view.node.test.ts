@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildStoreNameMap,
   describeRemoveConfirmation,
+  describeSyncResult,
+  diffSyncResult,
   formatShoppingDate,
   groupItemsByStore,
 } from '../../../../src/app/shopping-lists/_utils/shopping-list-view';
@@ -198,5 +200,114 @@ describe('describeRemoveConfirmation', () => {
     );
 
     expect(message).toBe('削除すると元に戻せません。');
+  });
+});
+
+describe('diffSyncResult / describeSyncResult', () => {
+  it('P-01: 追加のみを数える', () => {
+    const before = [createShoppingItemDto({ id: 'item-1' })];
+    const after = [
+      createShoppingItemDto({ id: 'item-1' }),
+      createShoppingItemDto({ id: 'item-2', displayName: '人参' }),
+    ];
+
+    expect(diffSyncResult(before, after)).toEqual({
+      addedCount: 1,
+      removedCount: 0,
+      updatedCount: 0,
+    });
+    expect(describeSyncResult(diffSyncResult(before, after))).toBe('追加1件');
+  });
+
+  it('P-02: 削除のみを数える', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1' }),
+      createShoppingItemDto({ id: 'item-2', displayName: '人参' }),
+    ];
+    const after = [createShoppingItemDto({ id: 'item-1' })];
+
+    expect(diffSyncResult(before, after)).toEqual({
+      addedCount: 0,
+      removedCount: 1,
+      updatedCount: 0,
+    });
+    expect(describeSyncResult(diffSyncResult(before, after))).toBe('削除1件');
+  });
+
+  it('P-03: 数量更新のみを数える', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 1, unit: '本' } }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 3, unit: '本' } }),
+    ];
+
+    expect(diffSyncResult(before, after)).toEqual({
+      addedCount: 0,
+      removedCount: 0,
+      updatedCount: 1,
+    });
+    expect(describeSyncResult(diffSyncResult(before, after))).toBe('更新1件');
+  });
+
+  it('P-04: 追加・更新・削除の複合を過不足なく数える', () => {
+    const before = [
+      createShoppingItemDto({ id: 'keep', requiredAmount: { value: 1, unit: '本' } }),
+      createShoppingItemDto({ id: 'update', requiredAmount: { value: 2, unit: '個' } }),
+      createShoppingItemDto({ id: 'remove', displayName: '消える' }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'keep', requiredAmount: { value: 1, unit: '本' } }),
+      createShoppingItemDto({ id: 'update', requiredAmount: { value: 5, unit: '個' } }),
+      createShoppingItemDto({ id: 'add', displayName: '追加' }),
+    ];
+
+    expect(diffSyncResult(before, after)).toEqual({
+      addedCount: 1,
+      removedCount: 1,
+      updatedCount: 1,
+    });
+    expect(describeSyncResult(diffSyncResult(before, after))).toBe('追加1件・更新1件・削除1件');
+  });
+
+  it('P-05: 差分が無ければ「変更はありませんでした」', () => {
+    const items = [createShoppingItemDto({ id: 'item-1' })];
+
+    expect(diffSyncResult(items, items)).toEqual({
+      addedCount: 0,
+      removedCount: 0,
+      updatedCount: 0,
+    });
+    expect(describeSyncResult(diffSyncResult(items, items))).toBe('変更はありませんでした');
+  });
+
+  it('P-04b: unit だけ変わっても更新と数える', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 2, unit: '個' } }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 2, unit: '袋' } }),
+    ];
+
+    expect(diffSyncResult(before, after).updatedCount).toBe(1);
+  });
+
+  it('P-07: requiredAmount が両方 null なら変化なし', () => {
+    const items = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: null, amountNote: '適量' }),
+    ];
+
+    expect(diffSyncResult(items, items).updatedCount).toBe(0);
+  });
+
+  it('P-08: null と数量の比較は例外を出さず更新扱いする', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: null, amountNote: '適量' }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 1, unit: '個' } }),
+    ];
+
+    expect(diffSyncResult(before, after).updatedCount).toBe(1);
   });
 });
