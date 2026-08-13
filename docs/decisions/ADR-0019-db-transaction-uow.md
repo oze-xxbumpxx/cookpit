@@ -57,6 +57,21 @@ Sprint 10 の完了条件は「集約横断の書き込みが部分失敗しな�
 2. `UnitOfWork.execute` を恒等関数（`work()` をそのまま呼ぶ）に差し替えるか、UseCase から除去する
 3. 部分失敗の自己修復（ADR-0006）は残っているので、戻しても生成・完了の再実行は従来どおり収束する
 
+### 実行記録（2026-08-13）
+
+本番で手順 1 と 2 を実施した。`@neondatabase/serverless` の WebSocket `Pool` が
+Vercel（`sin1`）から Neon へ接続できず、読み取りも含めて約 15 秒後に失敗していた。
+
+実測（`https://cookpit-web.vercel.app`）:
+
+- `GET /api/health` → `{"status":"ok","db":"error"}`（約 16 秒）
+- `GET /api/stores` / `GET /api/recipes` → 500（約 15 秒）
+- `/` は `loading.tsx` を先に返し、RSC ペイロードが `digest` 付きで失敗する
+
+PGlite（テスト・dev）は `useTransaction: true`（省略時）のまま原子性を維持する。
+本番の neon-http 経路だけ `useTransaction: false`。トランザクション再導入は、
+本番接続方式で Preview 確認してからにする（レビュー H-01 の未実施が今回の原因）。
+
 ## References（設計書・要件・関連 ADR・外部資料へのリンク）
 
 - 要件: `docs/requirements/uow.md`

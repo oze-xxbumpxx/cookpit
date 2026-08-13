@@ -235,7 +235,9 @@ export function RecipeListClient({ initialRecipes }) {
 ルートは BEGIN/COMMIT せず、`createWriteContext()` で同じ UoW から Repository と UseCase を組み立てる。
 
 読み取り専用（Get* / SSR）は従来どおり `recipeRepository()` 等を使う。本番 DB は
-`drizzle-orm/neon-serverless`（WebSocket Pool）。dev / テストの PGlite は維持する。
+`drizzle-orm/neon-http`（HTTPS）。WebSocket Pool は本番で接続できずロールバックした
+（ADR-0019 実行記録）。dev / テストの PGlite は維持する。本番の `execute` は
+トランザクションではなく `work()` の恒等実行。
 
 ```typescript
 // packages/application の UseCase（概念）

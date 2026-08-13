@@ -4,6 +4,8 @@
 - レベル: L3
 - 関連: `docs/requirements/uow.md` / [ADR-0019](../decisions/ADR-0019-db-transaction-uow.md) /
   [ADR-0006](../decisions/ADR-0006-shopping-list-generate-idempotent.md)
+- 本番: 2026-08-13 に neon-http へロールバック。UseCase の包みは残るが、本番 `execute` は
+  `work()` の恒等実行（ADR-0019 実行記録）。再導入は Preview で接続確認してから。
 
 ## 背景
 

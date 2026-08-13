@@ -24,9 +24,17 @@ export interface WriteContext {
   pushSubscription: DrizzlePushSubscriptionRepository;
 }
 
+/**
+ * 本番は neon-http。WebSocket Pool は Vercel 上で接続できず画面が RSC エラーで落ちたため戻した。
+ * neon-http は db.transaction() 非対応なので execute は work() をそのまま実行する。
+ */
+function createAppUnitOfWork(): DrizzleUnitOfWork {
+  return new DrizzleUnitOfWork(getDb(), { useTransaction: false });
+}
+
 /** 書き込み UseCase 用。1 リクエスト = 1 UoW。配下の Repository は皆同じ client を見る。 */
 export function createWriteContext(): WriteContext {
-  const uow = new DrizzleUnitOfWork(getDb());
+  const uow = createAppUnitOfWork();
   return {
     uow,
     recipe: new DrizzleRecipeRepository(uow),
@@ -40,7 +48,7 @@ export function createWriteContext(): WriteContext {
 }
 
 function readUow(): DrizzleUnitOfWork {
-  return new DrizzleUnitOfWork(getDb());
+  return createAppUnitOfWork();
 }
 
 export function recipeRepository(): DrizzleRecipeRepository {

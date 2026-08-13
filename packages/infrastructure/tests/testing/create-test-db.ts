@@ -125,7 +125,7 @@ export async function createTestDb(): Promise<DrizzleClient> {
   const pglite = new PGlite();
   await pglite.exec(DDL);
   const db = drizzle(pglite, { schema });
-  // Repository は neon-serverless ドライバ由来の DrizzleClient 型を受け取るが、
+  // Repository は neon-http ドライバ由来の DrizzleClient 型を受け取るが、
   // テストでは pglite ドライバを使うため型だけ合わせる。
   return db as unknown as DrizzleClient;
 }
