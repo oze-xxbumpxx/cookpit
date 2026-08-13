@@ -1,4 +1,4 @@
 {
   "crons": [{ "path": "/api/cron/expiry-alerts", "schedule": "0 23 * * *" }],
-  "regions": ["hnd1"]
+  "regions": ["sin1"]
 }
