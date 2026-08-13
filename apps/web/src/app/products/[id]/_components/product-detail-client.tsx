@@ -107,7 +107,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-4">
-        <header className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -117,7 +117,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-xl font-semibold text-foreground">
+          <h1 className="min-w-0 truncate text-center text-xl font-semibold text-foreground">
             {product.name}
           </h1>
           <Button
@@ -182,7 +182,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
                 <p className="text-lg font-semibold text-foreground">
                   {formatYen(latestPrice.priceAmount)}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {latestPrice.packageSizeValue}
                   {latestPrice.packageSizeUnit} /{' '}
                   {latestPrice.storeName === '' ? '店舗未設定' : latestPrice.storeName}
@@ -217,7 +217,7 @@ export function ProductDetailClient({ product, cheapestStore }: Props) {
               {recentPriceHistory.map((record) => (
                 <div
                   key={record.id}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-2.5 text-sm"
+                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-2.5 text-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">

@@ -96,11 +96,16 @@ export function PurchaseInputForm({
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="h-10 flex-1">
+      <div className="flex min-w-0 gap-2">
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          className="h-10 min-w-0 flex-1"
+        >
           購入を記録
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="h-10 flex-1">
+        <Button type="button" variant="outline" onClick={onCancel} className="h-10 min-w-0 flex-1">
           キャンセル
         </Button>
       </div>

@@ -181,7 +181,7 @@ export function CompleteShoppingPanel({ items, submitting, onCancel, onComplete 
           variant="outline"
           onClick={onCancel}
           disabled={submitting}
-          className="h-11 flex-1"
+          className="h-11 min-w-0 flex-1"
         >
           キャンセル
         </Button>
@@ -189,7 +189,7 @@ export function CompleteShoppingPanel({ items, submitting, onCancel, onComplete 
           type="button"
           onClick={handleComplete}
           disabled={submitting}
-          className="h-11 flex-1"
+          className="h-11 min-w-0 flex-1"
         >
           完了する
         </Button>
@@ -261,8 +261,8 @@ function StockAdditionRow({
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <div className="flex flex-1 flex-col gap-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,7rem)] gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={amountId} className="text-xs text-muted-foreground">
             数量
           </label>
@@ -275,7 +275,7 @@ function StockAdditionRow({
             className="h-11 rounded-xl bg-background"
           />
         </div>
-        <div className="flex w-28 flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={locationId} className="text-xs text-muted-foreground">
             保存場所
           </label>

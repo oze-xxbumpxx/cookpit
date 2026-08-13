@@ -69,7 +69,7 @@ export function RecipeDetailClient({ recipe }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-4">
-        <header className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -79,7 +79,7 @@ export function RecipeDetailClient({ recipe }: Props) {
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <h1 className="truncate text-center text-xl font-semibold text-foreground">
+          <h1 className="min-w-0 truncate text-center text-xl font-semibold text-foreground">
             {recipe.name}
           </h1>
           <Button
@@ -161,13 +161,13 @@ export function RecipeDetailClient({ recipe }: Props) {
             {recipe.ingredients.map((ingredient, index) => (
               <div
                 key={`${ingredient.displayName}-${index}`}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-3 py-2.5 text-sm"
+                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2.5 text-sm"
               >
-                <span className="min-w-0 text-foreground">{ingredient.displayName}</span>
+                <span className="min-w-0 truncate text-foreground">{ingredient.displayName}</span>
                 <span className="text-right font-medium text-foreground">
                   {formatIngredientAmount(ingredient.amountValue, ingredient.amountNote, scale)}
                 </span>
-                <span className="w-10 text-right text-muted-foreground">
+                <span className="min-w-[3rem] text-right text-muted-foreground">
                   {ingredient.amountUnit ?? ''}
                 </span>
               </div>

@@ -168,13 +168,13 @@ export function MealPlanClient({
           </EmptyState>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-foreground">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="min-w-0 text-sm font-medium text-foreground">
                 {formatWeekRange(mealPlan.weekIdentifier)}
               </p>
               <span
                 className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
+                  'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
                   mealPlanStatusChipClass(mealPlan.status),
                 )}
               >

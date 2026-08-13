@@ -123,7 +123,9 @@ export function ShoppingItemRow({
               : item.amountNote}
           </p>
           {priceDiff !== null && (
-            <p className="text-xs text-muted-foreground">{formatEstimatedDiffMessage(priceDiff)}</p>
+            <p className="text-xs break-words text-muted-foreground">
+              {formatEstimatedDiffMessage(priceDiff)}
+            </p>
           )}
           {bought && item.actualPrice !== null && (
             <p className="text-xs text-muted-foreground">
@@ -143,7 +145,7 @@ export function ShoppingItemRow({
         </div>
 
         {storeEditing ? (
-          <div className="w-28">
+          <div className="w-28 min-w-0">
             <label htmlFor={storeSelectId} className="sr-only">
               推奨店舗を変更
             </label>
@@ -161,7 +163,8 @@ export function ShoppingItemRow({
             type="button"
             onClick={() => setStoreEditing(true)}
             disabled={locked}
-            className="shrink-0 rounded-full border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+            title={resolveStoreName(item.targetStoreId, stores)}
+            className="min-w-0 max-w-[7rem] shrink-0 truncate rounded-full border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
           >
             {resolveStoreName(item.targetStoreId, stores)}
           </button>

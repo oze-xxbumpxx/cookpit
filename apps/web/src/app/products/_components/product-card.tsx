@@ -62,7 +62,7 @@ export function ProductCard({ product }: Props) {
         {latestPrice === null ? (
           <p className="text-xs text-muted-foreground">価格未登録</p>
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs break-words text-muted-foreground">
             最新 {formatYen(latestPrice.priceAmount)} / {latestPrice.packageSizeValue}
             {latestPrice.packageSizeUnit}
             <span className="ml-1">

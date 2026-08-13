@@ -25,7 +25,7 @@ export function LeaveConfirmationDialog({ open, onOpenChange, onConfirm }: Props
       <AlertDialogContent>
         <AlertDialogTitle>本当に戻りますか？</AlertDialogTitle>
         <AlertDialogDescription>入力した内容は保存されません。</AlertDialogDescription>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
           <AlertDialogClose
             render={
               <Button type="button" variant="outline" className="h-9">

@@ -107,17 +107,20 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-              <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
-              賞味期限が近い在庫
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+              <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="min-w-0">賞味期限が近い在庫</span>
               {expiringStocks.length > 0 && (
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
                   {expiringStocks.length}
                 </span>
               )}
             </h2>
-            <Link href="/pantry" className="-my-1 py-1 text-xs text-muted-foreground underline">
+            <Link
+              href="/pantry"
+              className="-my-1 shrink-0 py-1 text-xs text-muted-foreground underline"
+            >
               在庫を見る
             </Link>
           </div>
@@ -140,13 +143,13 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
                       <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
                     </span>
-                    <span className="flex flex-1 flex-col">
-                      <span className="text-sm font-medium text-foreground">
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {stock.displayName}
                       </span>
                       <span className="text-xs text-muted-foreground">{locationLabel(stock)}</span>
                     </span>
-                    <span className="flex flex-col items-end gap-1">
+                    <span className="flex shrink-0 flex-col items-end gap-1">
                       <span
                         className={cn(
                           'rounded-full px-2 py-0.5 text-xs font-medium',

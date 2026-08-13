@@ -107,7 +107,7 @@ export function RecipeFormClient() {
         onSubmit={handleSubmit}
         className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4"
       >
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex justify-start">
             <Button
               type="button"
@@ -119,7 +119,9 @@ export function RecipeFormClient() {
               キャンセル
             </Button>
           </div>
-          <h1 className="text-xl font-semibold text-foreground">レシピを追加</h1>
+          <h1 className="min-w-0 truncate text-center text-xl font-semibold text-foreground">
+            レシピを追加
+          </h1>
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={!canSubmit} className="h-9 px-4">
               {submitting ? '保存中' : '保存'}

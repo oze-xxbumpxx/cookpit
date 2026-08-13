@@ -449,7 +449,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex justify-start">
             <Link
               href="/meal-plans"
@@ -458,7 +458,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
               戻る
             </Link>
           </div>
-          <h1 className="truncate text-center text-xl font-semibold text-foreground">
+          <h1 className="min-w-0 truncate text-center text-xl font-semibold text-foreground">
             {formatShoppingDate(shoppingList.shoppingDate)}
           </h1>
           <div className="flex justify-end">
