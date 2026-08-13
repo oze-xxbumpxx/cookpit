@@ -143,4 +143,44 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
       expect(screen.getByText('更新1件')).toBeDefined();
     });
   });
+
+  it('SY-06: 失敗レスポンスではエラーを表示し品目は変えない', async () => {
+    const user = userEvent.setup();
+    const existing = createShoppingItemDto({ id: 'item-1', displayName: '醤油' });
+    postSync.mockResolvedValue({ ok: false, status: 500 });
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
+        stores={STORES}
+        products={PRODUCTS}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '献立の変更を反映' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('操作に失敗しました。')).toBeDefined();
+    });
+    expect(screen.getByRole('checkbox', { name: /醤油/ })).toBeDefined();
+  });
+
+  it('SY-07: 通信例外ではエラーを表示し自動リトライしない', async () => {
+    const user = userEvent.setup();
+    const existing = createShoppingItemDto({ id: 'item-1', displayName: '醤油' });
+    postSync.mockRejectedValue(new Error('network'));
+    render(
+      <ShoppingListClient
+        shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
+        stores={STORES}
+        products={PRODUCTS}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '献立の変更を反映' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
+    });
+    expect(postSync).toHaveBeenCalledTimes(1);
+  });
 });

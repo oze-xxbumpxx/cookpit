@@ -179,7 +179,11 @@ function applyQuantityUpdate(
 
   const delta = newAmount.value - currentAmount.value;
   if (delta < 0) {
-    return { action: 'update', amount: newAmount, consumed: false };
+    return {
+      action: 'update',
+      amount: Quantity.of(newAmount.value, currentAmount.unit),
+      consumed: false,
+    };
   }
   if (delta === 0) {
     return { action: 'none', consumed: false };

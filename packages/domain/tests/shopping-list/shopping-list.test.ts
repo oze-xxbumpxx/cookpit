@@ -213,6 +213,22 @@ describe('ShoppingItem', () => {
     );
   });
 
+  it('updateRequiredAmount は現在値と同じ値でも上書きする', () => {
+    const item = createItem();
+
+    item.updateRequiredAmount(Quantity.of(2, '個'));
+
+    expect(item.requiredAmount?.value).toBe(2);
+  });
+
+  it('updateRequiredAmount は 0 を受理する', () => {
+    const item = createItem();
+
+    item.updateRequiredAmount(Quantity.of(0, '個'));
+
+    expect(item.requiredAmount?.value).toBe(0);
+  });
+
   it('isBought は pending で false を返す', () => {
     expect(createItem().isBought()).toBe(false);
   });
@@ -463,6 +479,28 @@ describe('ShoppingList', () => {
     expect(() =>
       list.updateItemRequiredAmount(ShoppingItemId.fromString('missing'), Quantity.of(5, '個')),
     ).toThrow('ShoppingItem not found');
+  });
+
+  it('updateItemRequiredAmount は対象 item のみ更新し他は不変', () => {
+    const target = createItem();
+    const other = createItem();
+    const list = createList([target, other]);
+
+    list.updateItemRequiredAmount(target.id, Quantity.of(5, '個'));
+
+    expect(list.items[0]?.requiredAmount?.value).toBe(5);
+    expect(list.items[1]?.requiredAmount?.value).toBe(2);
+    expect(list.items[1]?.id.equals(other.id)).toBe(true);
+  });
+
+  it('updateItemRequiredAmount は bought のエラーを伝播する', () => {
+    const item = createItem();
+    item.markAsBought(Money.of(198, 'JPY'), StoreId.fromString('store-1'));
+    const list = createList([item]);
+
+    expect(() => list.updateItemRequiredAmount(item.id, Quantity.of(5, '個'))).toThrow(
+      "Cannot update required amount of a ShoppingItem with status 'bought'",
+    );
   });
 
   it('markAsSkipped は active 状態で対象 item を更新する', () => {

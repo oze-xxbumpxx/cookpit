@@ -280,4 +280,34 @@ describe('diffSyncResult / describeSyncResult', () => {
     });
     expect(describeSyncResult(diffSyncResult(items, items))).toBe('変更はありませんでした');
   });
+
+  it('P-04b: unit だけ変わっても更新と数える', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 2, unit: '個' } }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 2, unit: '袋' } }),
+    ];
+
+    expect(diffSyncResult(before, after).updatedCount).toBe(1);
+  });
+
+  it('P-07: requiredAmount が両方 null なら変化なし', () => {
+    const items = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: null, amountNote: '適量' }),
+    ];
+
+    expect(diffSyncResult(items, items).updatedCount).toBe(0);
+  });
+
+  it('P-08: null と数量の比較は例外を出さず更新扱いする', () => {
+    const before = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: null, amountNote: '適量' }),
+    ];
+    const after = [
+      createShoppingItemDto({ id: 'item-1', requiredAmount: { value: 1, unit: '個' } }),
+    ];
+
+    expect(diffSyncResult(before, after).updatedCount).toBe(1);
+  });
 });
