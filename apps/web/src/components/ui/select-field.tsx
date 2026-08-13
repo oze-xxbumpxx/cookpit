@@ -63,8 +63,8 @@ export function SelectField({
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner sideOffset={6} align="start" className="z-50">
-          <Select.Popup className="max-h-[min(var(--available-height),16rem)] w-[var(--anchor-width)] min-w-40 overflow-y-auto rounded-xl border border-border bg-card p-1 text-sm text-card-foreground shadow-lg outline-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+        <Select.Positioner sideOffset={6} align="start" collisionPadding={8} className="z-50">
+          <Select.Popup className="max-h-[min(var(--available-height),16rem)] w-[var(--anchor-width)] max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-border bg-card p-1 text-sm text-card-foreground shadow-lg outline-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             <Select.List>
               {options.map((option) => (
                 <Select.Item

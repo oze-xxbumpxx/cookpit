@@ -36,21 +36,23 @@ export function NavBar() {
       aria-label="メインナビゲーション"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur"
     >
-      <ul className="mx-auto flex w-full max-w-md items-stretch justify-around px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <ul className="mx-auto flex w-full max-w-md items-stretch justify-around px-0.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {TABS.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href);
           return (
-            <li key={href} className="flex-1">
+            <li key={href} className="min-w-0 flex-1">
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex flex-col items-center gap-0.5 rounded-lg py-2 text-xs font-medium transition-colors',
+                  // 6 タブを iPhone SE（320px）に収める。text-xs だとラベルが折り返し、
+                  // ナビが高さ超過して main の下余白（4.5rem）を食い潰す。
+                  'flex flex-col items-center gap-0.5 rounded-lg px-0.5 py-2 text-[10px] font-medium leading-none transition-colors',
                   active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon className="size-5" strokeWidth={active ? 2.4 : 2} aria-hidden="true" />
-                {label}
+                <span className="max-w-full truncate">{label}</span>
               </Link>
             </li>
           );

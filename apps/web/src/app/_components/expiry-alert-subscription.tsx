@@ -145,9 +145,9 @@ export function ExpiryAlertSubscription() {
 
   if (!supported) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
-        <p className="text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
-        <Button type="button" variant="outline" disabled className="h-9">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
+        <Button type="button" variant="outline" disabled className="h-9 shrink-0">
           通知に非対応
         </Button>
       </div>
@@ -159,12 +159,12 @@ export function ExpiryAlertSubscription() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
-        <span className="flex items-center gap-2 text-sm text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+        <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
           {subscribed ? (
-            <Bell className="size-4 text-muted-foreground" aria-hidden="true" />
+            <Bell className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           ) : (
-            <BellOff className="size-4 text-muted-foreground" aria-hidden="true" />
+            <BellOff className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           )}
           期限が近づいたら通知
         </span>
@@ -173,7 +173,7 @@ export function ExpiryAlertSubscription() {
           variant={subscribed ? 'outline' : 'default'}
           disabled={subscribeDisabled}
           onClick={() => void (subscribed ? handleUnsubscribe() : handleSubscribe())}
-          className="h-9"
+          className="h-9 shrink-0"
         >
           {action.pending ? '処理中' : subscribed ? '通知をオフにする' : '通知をオンにする'}
         </Button>

@@ -17,7 +17,7 @@ export function DetailSkeleton({ withStats = false, withChart = false, rows = 5 
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-4">
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Skeleton className="size-11 rounded-xl" />
           <Skeleton className="mx-auto h-6 w-1/2" />
           <Skeleton className="size-11 rounded-xl" />

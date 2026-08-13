@@ -5,7 +5,7 @@ export default function Loading() {
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Skeleton className="h-9 w-16" />
           <Skeleton className="h-6 w-28" />
           <div />

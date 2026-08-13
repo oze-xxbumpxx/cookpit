@@ -55,7 +55,13 @@ export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => onEdit(stock)} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onEdit(stock)}
+          disabled={submitting}
+          className="min-w-0 flex-1"
+        >
           <Pencil aria-hidden="true" />
           編集
         </Button>
@@ -64,6 +70,7 @@ export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard
           variant="outline"
           onClick={() => onConsume(stock.id)}
           disabled={submitting}
+          className="min-w-0 flex-1"
         >
           <Utensils aria-hidden="true" />
           消費
@@ -77,7 +84,7 @@ export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard
           variant="outline"
           onClick={() => onDiscard(stock.id)}
           disabled={submitting}
-          className="text-destructive/80 hover:text-destructive"
+          className="min-w-0 flex-1 text-destructive/80 hover:text-destructive"
         >
           <Trash2 aria-hidden="true" />
           廃棄

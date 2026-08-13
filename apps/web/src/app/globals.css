@@ -129,6 +129,12 @@
   }
   html {
     @apply font-sans;
+    /* 子要素の一時的な溢れでページ全体が横スクロールしないようにする（iOS PWA） */
+    overflow-x: clip;
+  }
+  input[type='date'] {
+    display: block;
+    max-width: 100%;
   }
   /* 固定のボトムナビに隠れないよう、全画面の下端に余白を確保する */
   main {

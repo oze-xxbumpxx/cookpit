@@ -11,8 +11,8 @@ interface Props {
 export function HistoryWeekCard({ mealPlan, recipeNameMap, isCurrentWeek }: Props) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-medium text-foreground">
+      <div className="flex min-w-0 items-center gap-2">
+        <p className="min-w-0 truncate text-sm font-medium text-foreground">
           {formatWeekRange(mealPlan.weekIdentifier)}
         </p>
         {isCurrentWeek && (
