@@ -10,6 +10,8 @@ interface Props {
   submittingItemId: string | null;
   /** 買い物リストが completed のとき true。各行を読み取り専用にする。 */
   readOnly: boolean;
+  /** 現在キューに残っている itemId の集合（P-6）。 */
+  pendingItemIds: ReadonlySet<string>;
   onToggleExpand: (itemId: string) => void;
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
@@ -28,6 +30,7 @@ export function StoreGroup({
   expandedItemId,
   submittingItemId,
   readOnly,
+  pendingItemIds,
   onToggleExpand,
   onSetChecked,
   onMarkAsBought,
@@ -58,6 +61,7 @@ export function StoreGroup({
             expanded={item.id === expandedItemId}
             submitting={item.id === submittingItemId}
             readOnly={readOnly}
+            unsynced={pendingItemIds.has(item.id)}
             onToggleExpand={onToggleExpand}
             onSetChecked={onSetChecked}
             onMarkAsBought={onMarkAsBought}

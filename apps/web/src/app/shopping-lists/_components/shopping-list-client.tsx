@@ -587,6 +587,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
                 expandedItemId={expandedItemId}
                 submittingItemId={submittingItemId}
                 readOnly={readOnly}
+                pendingItemIds={pendingItemIds}
                 onToggleExpand={handleToggleExpand}
                 onSetChecked={handleSetChecked}
                 onMarkAsBought={handleMarkAsBought}
