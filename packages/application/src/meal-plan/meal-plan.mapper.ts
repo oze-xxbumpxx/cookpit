@@ -1,4 +1,5 @@
 import type { MealPlan, PlannedRecipe } from '@cookpit/domain';
+import { toLocalDateString } from '../shared/date';
 import type { MealPlanDto, PlannedRecipeDto } from './meal-plan.dto';
 
 export function toMealPlanDto(mealPlan: MealPlan): MealPlanDto {
@@ -17,7 +18,8 @@ export function toPlannedRecipeDto(plannedRecipe: PlannedRecipe): PlannedRecipeD
     id: plannedRecipe.id.value,
     recipeId: plannedRecipe.recipeId.value,
     scaleFactor: plannedRecipe.scaleFactor,
-    scheduledDate: plannedRecipe.scheduledDate?.toISOString().slice(0, 10) ?? null,
+    scheduledDate:
+      plannedRecipe.scheduledDate === null ? null : toLocalDateString(plannedRecipe.scheduledDate),
     cookedAt: plannedRecipe.cookedAt?.toISOString() ?? null,
     notes: plannedRecipe.notes,
   };

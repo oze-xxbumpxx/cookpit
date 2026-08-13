@@ -880,9 +880,9 @@ export interface ReassignStoreInputDto {
 `toISOString().slice(0, 10)` を使わず、ローカル日付で整形する（getFullYear/getMonth/getDate。
 DrizzleMealPlanRepository の `toDateString` と同方式）。JST 環境ではローカル日付 00:00 の
 `toISOString()` が UTC 換算で**前日**になるため。
-（気づき・スコープ外報告: 既存 `meal-plan.mapper.ts` の `scheduledDate` は `toISOString().slice(0,10)`
-を使っており、JST で非 null 値を扱うと前日にずれる潜在問題がある。Sprint 3 時点では scheduledDate が
-常に null のため未顕在。本ユニットでは修正せず、改善候補として報告のみ。）
+（気づき: 既存 `meal-plan.mapper.ts` の `scheduledDate` は当初 `toISOString().slice(0,10)`
+を使っており、JST で非 null 値を扱うと前日にずれる潜在問題があった。Sprint 3 時点では scheduledDate が
+常に null のため未顕在。**Sprint 10 タスク 2 で `toLocalDateString` へ置換して解消。**）
 
 #### エラークラス
 
@@ -1096,8 +1096,7 @@ MVP1 は認証なし（ADR-0003 / ADR-0004。既存機能と同一前提）。Sh
 - item 単位の `boughtAt`（実際に買った日時）の要否（S-10 の別案吸収先）
 - 「明示的な再生成」UseCase（S-6 留意点。遷移 API 公開後に再訪）
 - AddItem の `amountNote` 付き手動追加の許容（S-5 注記）
-- meal-plan.mapper.ts の `toISOString().slice(0,10)` による JST 日付ずれの潜在問題（スコープ外の気づき。
-  改善候補として Orchestrator へ報告）
+- meal-plan.mapper.ts の JST 日付ずれ（当初スコープ外の気づき）→ **Sprint 10 タスク 2 で解消**
 
 ---
 
