@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
+import { LeaveConfirmationDialog } from '@/app/_components/leave-confirmation-dialog';
 import {
   ProductFormFields,
   buildProductFormBody,
@@ -9,7 +10,9 @@ import {
   toProductCategory,
   type ProductFormValue,
 } from '@/app/products/_components/product-form-fields';
+import { isProductFormDirty } from '@/app/products/_utils/product-form-dirty';
 import type { ProductDto } from '@cookpit/application';
+import { useLeaveConfirmation } from '@/lib/use-leave-confirmation';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
@@ -33,6 +36,11 @@ export function ProductEditFormClient({ product }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState(emptyProductFieldErrors);
+
+  const [initialSnapshot] = useState(() => value);
+  const dirty = isProductFormDirty(initialSnapshot, value);
+  const detailHref = `/products/${product.id}`;
+  const leave = useLeaveConfirmation({ dirty, fallbackHref: detailHref });
 
   const canSubmit = value.name.trim() !== '' && !submitting;
 
@@ -62,7 +70,7 @@ export function ProductEditFormClient({ product }: Props) {
         setErrorMessage('保存に失敗しました。入力内容を確認してください。');
         return;
       }
-      router.push(`/products/${product.id}`);
+      leave.leaveAfterSave(detailHref);
       router.refresh();
     } catch {
       setErrorMessage('通信エラーが発生しました。');
@@ -83,7 +91,7 @@ export function ProductEditFormClient({ product }: Props) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/products/${product.id}`)}
+              onClick={() => leave.requestLeave(detailHref)}
               className="h-9 px-2"
             >
               キャンセル
@@ -107,6 +115,12 @@ export function ProductEditFormClient({ product }: Props) {
 
         <ProductFormFields value={value} fieldErrors={fieldErrors} onChange={setValue} />
       </form>
+
+      <LeaveConfirmationDialog
+        open={leave.confirmOpen}
+        onOpenChange={leave.onConfirmOpenChange}
+        onConfirm={leave.confirmLeave}
+      />
     </main>
   );
 }

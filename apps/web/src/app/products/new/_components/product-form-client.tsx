@@ -2,12 +2,15 @@
 
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
+import { LeaveConfirmationDialog } from '@/app/_components/leave-confirmation-dialog';
 import {
   ProductFormFields,
   buildProductFormBody,
   createInitialProductFormValue,
   emptyProductFieldErrors,
 } from '@/app/products/_components/product-form-fields';
+import { isProductFormDirty } from '@/app/products/_utils/product-form-dirty';
+import { useLeaveConfirmation } from '@/lib/use-leave-confirmation';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
@@ -18,6 +21,12 @@ export function ProductFormClient() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState(emptyProductFieldErrors);
+
+  // 初回レンダーの値を離脱判定の基準にする。useState の初期化関数は 1 度しか走らないため
+  // スナップショットは以後不変（ref はレンダー中に読めないのでこちらを使う）。
+  const [initialSnapshot] = useState(() => value);
+  const dirty = isProductFormDirty(initialSnapshot, value);
+  const leave = useLeaveConfirmation({ dirty, fallbackHref: '/products' });
 
   const canSubmit = value.name.trim() !== '' && !submitting;
 
@@ -44,7 +53,7 @@ export function ProductFormClient() {
         setErrorMessage('保存に失敗しました。入力内容を確認してください。');
         return;
       }
-      router.push('/products');
+      leave.leaveAfterSave('/products');
       router.refresh();
     } catch {
       setErrorMessage('通信エラーが発生しました。');
@@ -65,7 +74,7 @@ export function ProductFormClient() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => router.push('/products')}
+              onClick={() => leave.requestLeave('/products')}
               className="h-9 px-2"
             >
               キャンセル
@@ -94,6 +103,12 @@ export function ProductFormClient() {
           autoFocusName
         />
       </form>
+
+      <LeaveConfirmationDialog
+        open={leave.confirmOpen}
+        onOpenChange={leave.onConfirmOpenChange}
+        onConfirm={leave.confirmLeave}
+      />
     </main>
   );
 }

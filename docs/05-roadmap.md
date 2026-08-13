@@ -767,7 +767,7 @@ Sprint 9 の成果を待つ必要は無い。**着手可能。**
 | 1   | 献立変更への自動削除追随・数量合算                     | ADR-0007 / ADR-0011 / `docs/designs/meal-plan-shopping-sync.md`                                                                                                                                        |
 | 2   | `meal-plan.mapper.ts` の JST 日付ずれ検証              | **再現確認済み**（2026-08-13）。`toISOString().slice(0,10)` が JST で前日ずれ。本番 UTC では隠れ、ローカル JST と `toLocalDate` 復元後に顕在化する。修正は既存 `toLocalDateString` への 1 行置換（L1） |
 | 3   | DB トランザクション / UoW 導入                         | ADR-0006 → `docs/designs/pantry-core.md` R-3（全 Repository 横断）                                                                                                                                     |
-| 4   | 小粒 UX（`useLeaveConfirmation` 適用・steps 並べ替え） | 2026-07-25 からの継続                                                                                                                                                                                  |
+| 4   | 小粒 UX（`useLeaveConfirmation` 適用・steps 並べ替え） | 2026-07-25 からの継続。**レビュー中**（`cursor/small-ux-c4d2`）                                                                                                                                        |
 | 5   | **Sprint 8 Unit B（expiry-alert）の実機確認**          | Sprint 8 からの繰り越し。`docs/tests/expiry-alert.md` §10（MB-01〜14）。本番 vapid が 500 のままなので、確認再開は環境変数の再デプロイが先行                                                           |
 | 6   | `ConsumeStock` の二重送信抑止（冪等性キー）            | Sprint 9 からの繰り越し。`docs/designs/pantry-core-contract.md`。オフラインキューを `consume` へ広げる先行条件                                                                                         |
 | 7   | フォント追加削減の判断                                 | Sprint 9 からの繰り越し（ウェイト 2 種で -33% / 常用漢字化で -28%。見た目の判断が必要）                                                                                                                |
@@ -792,7 +792,7 @@ Sprint 9 の成果を待つ必要は無い。**着手可能。**
 | Unit C: consume-idempotency     | タスク 6（`ConsumeStock` の二重送信抑止）                                                                                                      | L2〜L3（設計で確定） | 設計後に Codex 可                    | 余力。完了条件には含まれない。オフラインキューを `consume` へ広げる先行条件                             |
 | サイド: mapper-jst              | タスク 2                                                                                                                                       | **L1**               | メイン直接                           | **潜在 → 再現確認済み**。修正は独立 PR（`toLocalDateString` へ置換）。Unit A を待たない                 |
 | サイド: expiry-alert 実機       | タスク 5                                                                                                                                       | **L0**               | ユーザー実機 + Preview               | 完了条件 3 件目。**本番 `GET /api/push/vapid-public-key` が 500**（`Server misconfigured`）がブロッカー |
-| サイド: small-ux / フォント判断 | タスク 4 / タスク 7                                                                                                                            | L2 / L0              | Orchestrator（4）/ ユーザー判断（7） | 余力。完了条件には含まれない                                                                            |
+| サイド: small-ux / フォント判断 | タスク 4 / タスク 7                                                                                                                            | L2 / L0              | Orchestrator（4）/ ユーザー判断（7） | **レビュー中**（タスク 4）/ 余力（タスク 7）                                                            |
 
 キックオフ時点のスコープ判断:
 

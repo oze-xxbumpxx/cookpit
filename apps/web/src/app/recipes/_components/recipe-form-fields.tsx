@@ -52,19 +52,24 @@ export interface RecipeFormBuildResult {
 
 const TAG_OPTIONS = recipeTagSchema.options;
 
-/** dnd-kit の既定通知は英語のため、材料の並べ替えに合わせた日本語文言へ差し替える。 */
+/** dnd-kit の既定通知は英語のため、並べ替え対象に合わせた日本語文言へ差し替える。 */
 function sortablePosition(entry: { data: { current?: { sortable?: { index: number } } } }): number {
   return (entry.data.current?.sortable?.index ?? 0) + 1;
 }
 
-const REORDER_ANNOUNCEMENTS: Announcements = {
-  onDragStart: ({ active }) => `${sortablePosition(active)}番目の材料をつかみました`,
-  onDragOver: ({ over }) =>
-    over === null ? '並べ替えできない位置です' : `${sortablePosition(over)}番目へ移動します`,
-  onDragEnd: ({ over }) =>
-    over === null ? '並べ替えを取り消しました' : `${sortablePosition(over)}番目に移動しました`,
-  onDragCancel: () => '並べ替えを取り消しました',
-};
+function createReorderAnnouncements(kind: '材料' | '手順'): Announcements {
+  return {
+    onDragStart: ({ active }) => `${sortablePosition(active)}番目の${kind}をつかみました`,
+    onDragOver: ({ over }) =>
+      over === null ? '並べ替えできない位置です' : `${sortablePosition(over)}番目へ移動します`,
+    onDragEnd: ({ over }) =>
+      over === null ? '並べ替えを取り消しました' : `${sortablePosition(over)}番目に移動しました`,
+    onDragCancel: () => '並べ替えを取り消しました',
+  };
+}
+
+const INGREDIENT_REORDER_ANNOUNCEMENTS = createReorderAnnouncements('材料');
+const STEP_REORDER_ANNOUNCEMENTS = createReorderAnnouncements('手順');
 
 export function emptyRecipeFieldErrors(): RecipeFieldErrors {
   return {
@@ -204,10 +209,15 @@ export function RecipeFormFields({
   // DndContext は id 未指定だとインスタンス連番で aria-describedby を採番し、SSR と CSR で
   // 値がずれてハイドレーション不一致になる。useId は両者で一致するため id として渡す。
   const ingredientDndId = useId();
+  const stepDndId = useId();
   const nextIngredientId = useRef(value.ingredients.length);
   // distance の活性化条件でタップ・クリックとの誤爆を防ぐ。PointerSensor はタッチも扱うため
   // TouchSensor は併用しない（同一操作が二重に活性化しうる）。
   const ingredientSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const stepSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
@@ -266,6 +276,16 @@ export function RecipeFormFields({
 
   function removeStep(id: string): void {
     updateValue({ steps: value.steps.filter((row) => row.id !== id) });
+  }
+
+  function handleStepDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    if (over === null || active.id === over.id) {
+      return;
+    }
+    const from = value.steps.findIndex((row) => row.id === active.id);
+    const to = value.steps.findIndex((row) => row.id === over.id);
+    updateValue({ steps: moveArrayItem(value.steps, from, to) });
   }
 
   return (
@@ -347,7 +367,7 @@ export function RecipeFormFields({
             sensors={ingredientSensors}
             collisionDetection={closestCenter}
             onDragEnd={handleIngredientDragEnd}
-            accessibility={{ announcements: REORDER_ANNOUNCEMENTS }}
+            accessibility={{ announcements: INGREDIENT_REORDER_ANNOUNCEMENTS }}
           >
             <SortableContext
               items={value.ingredients.map((ingredient) => ingredient.id)}
@@ -380,15 +400,28 @@ export function RecipeFormFields({
       <section className="flex flex-col gap-2">
         <p className="text-sm font-medium text-foreground">作り方</p>
         <div className="flex flex-col gap-3">
-          {value.steps.map((step, index) => (
-            <StepRow
-              key={step.id}
-              index={index}
-              value={step}
-              onChange={updateStep}
-              onRemove={() => removeStep(step.id)}
-            />
-          ))}
+          <DndContext
+            id={stepDndId}
+            sensors={stepSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleStepDragEnd}
+            accessibility={{ announcements: STEP_REORDER_ANNOUNCEMENTS }}
+          >
+            <SortableContext
+              items={value.steps.map((step) => step.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {value.steps.map((step, index) => (
+                <StepRow
+                  key={step.id}
+                  index={index}
+                  value={step}
+                  onChange={updateStep}
+                  onRemove={() => removeStep(step.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <Button
             type="button"
             variant="outline"
