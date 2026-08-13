@@ -1,7 +1,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ShoppingItemDto } from '@cookpit/application';
 import { client } from '@/lib/api-client';
 import {
@@ -59,6 +59,16 @@ export function useCheckedSyncQueue({
 }: UseCheckedSyncQueueParams): UseCheckedSyncQueueResult {
   const [pendingItemIds, setPendingItemIds] = useState<ReadonlySet<string>>(() => new Set());
   const flushingRef = useRef(false);
+  // アンマウント後は送信を打ち切る。flush は IndexedDB の解決（マクロタスク）を挟むため、
+  // 画面を離れた後も途中の op が送信され続けうる。打ち切っても未送信の op はキューに
+  // 残るため失われず、次のマウント時に再送される（P-3 の再送契機）。
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const refreshPendingItemIds = useCallback(async () => {
     try {
@@ -121,6 +131,9 @@ export function useCheckedSyncQueue({
         return; // E-06
       }
       for (const op of ops) {
+        if (!mountedRef.current) {
+          return;
+        }
         if (Date.now() - op.enqueuedAt > TTL_MS) {
           await deleteCheckedOp(op.key).catch(() => {}); // E-05
           continue;

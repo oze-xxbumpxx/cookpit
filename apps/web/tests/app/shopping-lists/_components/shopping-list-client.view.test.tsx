@@ -271,7 +271,12 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
       window.dispatchEvent(new Event('focus'));
     });
 
-    expect(getShoppingList).toHaveBeenCalledTimes(1);
+    // handleFocus は flush（IndexedDB 経由）を先に完了させてから refetch する（P-4）。
+    // IDBRequest はマイクロタスクではなくタスクで解決するため、act() の 1 回の待機では
+    // 追いつかず waitFor で明示的に待つ必要がある（実装計画 Step 3「LC-22 の修正」）。
+    await waitFor(() => {
+      expect(getShoppingList).toHaveBeenCalledTimes(1);
+    });
     const refreshButton = screen.getByRole('button', { name: '更新' }) as HTMLButtonElement;
     expect(refreshButton.disabled).toBe(false);
   });
