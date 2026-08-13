@@ -230,6 +230,86 @@ describe('RecipeFormFields', () => {
     expect(result.input?.ingredients.map((row) => row.displayName)).toEqual(['人参', '玉ねぎ']);
   });
 
+  it('RFF-13: 手順行ごとに並べ替えハンドルが描画される', () => {
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          steps: [
+            { id: 'step-0', description: '切る' },
+            { id: 'step-1', description: '' },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '「切る」を並べ替え' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '2番目の手順を並べ替え' })).toBeDefined();
+  });
+
+  it('RFF-14: キーボード操作で手順を 1 つ下へ移動でき、入力値も一緒に移動する', async () => {
+    stubVerticalRects();
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          steps: [
+            { id: 'step-0', description: '切る' },
+            { id: 'step-1', description: '煮る' },
+          ],
+        }}
+      />,
+    );
+
+    await reorderWithKeyboard('「切る」を並べ替え', '[ArrowDown]');
+
+    const descriptions = screen
+      .getAllByLabelText(/手順 \d/)
+      .map((input) => (input as HTMLTextAreaElement).value);
+    expect(descriptions).toEqual(['煮る', '切る']);
+  });
+
+  it('RFF-15: 手順を並べ替えても材料の順序は変わらない', async () => {
+    stubVerticalRects();
+    render(
+      <Harness
+        initialValue={{
+          ...createInitialRecipeFormValue(),
+          ingredients: [
+            { id: 'ingredient-0', displayName: '玉ねぎ', amountText: '2個' },
+            { id: 'ingredient-1', displayName: '人参', amountText: '1本' },
+          ],
+          steps: [
+            { id: 'step-0', description: '切る' },
+            { id: 'step-1', description: '煮る' },
+          ],
+        }}
+      />,
+    );
+
+    await reorderWithKeyboard('「切る」を並べ替え', '[ArrowDown]');
+
+    const names = screen
+      .getAllByLabelText('食材名')
+      .map((input) => (input as HTMLInputElement).value);
+    expect(names).toEqual(['玉ねぎ', '人参']);
+  });
+
+  it('RFF-16: 並べ替え後の順序がそのまま送信ボディの steps 順になる', () => {
+    const value: RecipeFormValue = {
+      ...createInitialRecipeFormValue(),
+      name: '肉じゃが',
+      steps: [
+        { id: 'step-1', description: '煮る' },
+        { id: 'step-0', description: '切る' },
+      ],
+    };
+
+    const result = buildRecipeFormBody(value);
+
+    expect(result.input?.steps.map((row) => row.description)).toEqual(['煮る', '切る']);
+  });
+
   it('RFF-05: baseServingsSlot に渡した要素が描画される', () => {
     render(<Harness />);
 

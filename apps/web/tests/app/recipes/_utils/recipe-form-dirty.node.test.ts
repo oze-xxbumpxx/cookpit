@@ -146,4 +146,23 @@ describe('isRecipeFormDirty', () => {
       ),
     ).toBe(false);
   });
+
+  it('RFD-14: 手順の並べ替えを変更として検出する', () => {
+    expect(
+      isRecipeFormDirty(
+        snapshot({
+          steps: [
+            { id: 'step-0', description: '切る' },
+            { id: 'step-1', description: '煮る' },
+          ],
+        }),
+        snapshot({
+          steps: [
+            { id: 'step-1', description: '煮る' },
+            { id: 'step-0', description: '切る' },
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
 });

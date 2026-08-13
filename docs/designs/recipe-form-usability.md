@@ -2,7 +2,8 @@
 
 - ステータス: confirmed
 - レベル: L2
-- 関連: `docs/designs/recipe-edit-screen.md` / `docs/designs/recipe-form-refactor-test-backfill.md`
+- 関連: `docs/designs/recipe-edit-screen.md` / `docs/designs/recipe-form-refactor-test-backfill.md` /
+  後続 `docs/designs/small-ux.md`（手順並べ替え・商品フォーム離脱確認）
 
 ## 背景
 
