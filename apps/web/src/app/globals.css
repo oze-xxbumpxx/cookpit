@@ -129,8 +129,6 @@
   }
   html {
     @apply font-sans;
-    /* 子要素の一時的な溢れでページ全体が横スクロールしないようにする（iOS PWA） */
-    overflow-x: clip;
   }
   input[type='date'] {
     display: block;
@@ -139,6 +137,9 @@
   /* 固定のボトムナビに隠れないよう、全画面の下端に余白を確保する */
   main {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    /* html ではなく main に付ける。html の overflow-x: clip は overflow-y を auto に
+       計算し直し、App Router のクライアント遷移が URL 更新前に止まる。 */
+    overflow-x: clip;
   }
   /* 本文も見出しも --font-sans（丸ゴシック）で統一するため、見出し専用の指定は持たない。 */
 }
