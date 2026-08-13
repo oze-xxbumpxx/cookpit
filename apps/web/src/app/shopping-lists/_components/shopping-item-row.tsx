@@ -24,6 +24,8 @@ interface Props {
    * チェック・金額記録・店舗再割当をすべて 422 で拒否するため、UI 側でも操作させない。
    */
   readOnly: boolean;
+  /** true のとき、この品目はオフラインキューに積まれ未送信であることを示す（P-6）。 */
+  unsynced: boolean;
   onToggleExpand: (itemId: string) => void;
   onSetChecked: (itemId: string, checked: boolean) => void;
   onMarkAsBought: (itemId: string, actualPrice: number, actualStoreId: string) => void;
@@ -47,6 +49,7 @@ export function ShoppingItemRow({
   expanded,
   submitting,
   readOnly,
+  unsynced,
   onToggleExpand,
   onSetChecked,
   onMarkAsBought,
@@ -113,6 +116,7 @@ export function ShoppingItemRow({
           >
             {item.displayName}
           </p>
+          {unsynced && <span className="text-[10px] text-muted-foreground">未送信</span>}
           <p className="text-xs text-muted-foreground">
             {item.requiredAmount !== null
               ? `${item.requiredAmount.value}${item.requiredAmount.unit}`

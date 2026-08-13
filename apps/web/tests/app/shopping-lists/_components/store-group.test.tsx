@@ -67,6 +67,7 @@ function renderStoreGroup(props: Partial<Parameters<typeof StoreGroup>[0]> = {})
     expandedItemId: null,
     submittingItemId: null,
     readOnly: false,
+    pendingItemIds: new Set<string>(),
     onToggleExpand: vi.fn(),
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
@@ -186,5 +187,23 @@ describe('StoreGroup', () => {
     });
 
     expect(screen.getByRole('button', { name: '店舗別の単価を見る' })).toBeDefined();
+  });
+
+  it('SG-09: pendingItemIds に含まれる item は unsynced として ShoppingItemRow へ中継される', () => {
+    renderStoreGroup({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+      pendingItemIds: new Set(['item-1']),
+    });
+
+    expect(screen.getByText('未送信')).toBeDefined();
+  });
+
+  it('SG-10: pendingItemIds に含まれない item は未同期表示されない', () => {
+    renderStoreGroup({
+      items: [createShoppingItemDto({ id: 'item-1', displayName: '醤油' })],
+      pendingItemIds: new Set(['item-2']),
+    });
+
+    expect(screen.queryByText('未送信')).toBeNull();
   });
 });

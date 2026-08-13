@@ -92,6 +92,7 @@ function renderRow(props: Partial<Parameters<typeof ShoppingItemRow>[0]> = {}) {
     expanded: false,
     submitting: false,
     readOnly: false,
+    unsynced: false,
     onToggleExpand: vi.fn(),
     onSetChecked: vi.fn(),
     onMarkAsBought: vi.fn(),
@@ -482,5 +483,23 @@ describe('ShoppingItemRow', () => {
 
     expect(screen.getByRole('button', { name: '店舗B' })).toBeDefined();
     expect(screen.getByText('店舗Aの方が約90円安い')).toBeDefined();
+  });
+
+  it('IR-38: unsynced のとき「未送信」インジケーターが表示される', () => {
+    renderRow({ unsynced: true });
+
+    expect(screen.getByText('未送信')).toBeDefined();
+  });
+
+  it('IR-39: unsynced でないとき「未送信」インジケーターは表示されない', () => {
+    renderRow({ unsynced: false });
+
+    expect(screen.queryByText('未送信')).toBeNull();
+  });
+
+  it('IR-40: unsynced でもチェックボタンの disabled は submitting/readOnly のみで決まる', () => {
+    renderRow({ unsynced: true, submitting: false, readOnly: false });
+
+    expect(screen.getByRole('checkbox').hasAttribute('disabled')).toBe(false);
   });
 });

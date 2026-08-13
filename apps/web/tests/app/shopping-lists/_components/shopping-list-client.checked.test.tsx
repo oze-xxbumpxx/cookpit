@@ -481,7 +481,7 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
     });
   });
 
-  it('LC-28: チェック操作中のネットワークエラーでロールバックされる', async () => {
+  it('LC-28: チェック操作中のネットワークエラーではロールバックされず、チェック状態が保持される（P-2）', async () => {
     const user = userEvent.setup();
     let rejectChecked: (reason: unknown) => void = () => {};
     postChecked.mockReturnValue(
@@ -506,11 +506,14 @@ describe('ShoppingListClient（チェック・購入・店舗再割当）', () =
       rejectChecked(new Error('network'));
     });
 
+    // fake-indexeddb が setupFiles 経由でグローバルに有効なため enqueue は成功する
+    // （queued === true）。オフライン時はロールバックせず確定 state 側に望む状態を
+    // 直接反映する新仕様（P-2 案B）。
     await waitFor(() => {
       expect(screen.getByRole('checkbox', { name: /醤油/ }).getAttribute('aria-checked')).toBe(
-        'false',
+        'true',
       );
-      expect(screen.getByText('通信エラーが発生しました。')).toBeDefined();
+      expect(screen.queryByText('通信エラーが発生しました。')).toBeNull();
     });
   });
 

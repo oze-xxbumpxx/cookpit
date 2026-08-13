@@ -21,12 +21,13 @@ import type {
 import { EmptyState } from '@/app/_components/empty-state';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { startTransition, useEffect, useMemo, useOptimistic, useState } from 'react';
+import { startTransition, useEffect, useMemo, useOptimistic, useRef, useState } from 'react';
 import {
   describeRemoveConfirmation,
   formatShoppingDate,
   groupItemsByStore,
 } from '../_utils/shopping-list-view';
+import { useCheckedSyncQueue } from '../_utils/use-checked-sync-queue';
 import { AddItemForm, type AddItemFormInput } from './add-item-form';
 import { CompleteShoppingPanel } from './complete-shopping-panel';
 import { StoreGroup } from './store-group';
@@ -56,6 +57,14 @@ const COMPLETED_REJECTED_MESSAGE = '買い物完了後は変更できません�
 function resolveItemFailureMessage(status: number): string {
   return status === 422 ? COMPLETED_REJECTED_MESSAGE : API_FAILURE_MESSAGE;
 }
+
+/** キューに残っている未同期の変更がある間、画面上部に表示する案内文（P-6）。 */
+const OFFLINE_QUEUE_BANNER_MESSAGE =
+  'オフライン中の変更があります。オンラインになると自動的に送信されます。';
+
+/** キューの再送が上限回数に達し同期を断念したときの文言（E-04）。 */
+const QUEUE_SYNC_FAILED_MESSAGE =
+  '同期できなかった変更があります。品目を確認し、もう一度操作してください。';
 
 /**
  * 楽観的更新の操作。行の削除は `map` によるパッチでは表現できないため判別可能ユニオンにする。
@@ -98,6 +107,30 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
   const reopenAction = useApiAction();
   const syncAction = useApiAction();
 
+  function handleQueueError(kind: 'rejected' | 'exhausted'): void {
+    itemsAction.setErrorMessage(
+      kind === 'rejected' ? COMPLETED_REJECTED_MESSAGE : QUEUE_SYNC_FAILED_MESSAGE,
+    );
+  }
+
+  const { pendingItemIds, enqueue, flush } = useCheckedSyncQueue({
+    items,
+    setItems,
+    shoppingListId: shoppingList.id,
+    onQueueError: handleQueueError,
+  });
+  // online/focus/mount 用の useEffect は依存配列を空にする既存パターン（handleFocus）を踏襲する
+  // ため、`items` の変化で再生成される pendingItemIds/flush の最新値は ref 経由で読む
+  // （stale closure 対策。reviewer Should 2）。
+  const pendingItemIdsRef = useRef<ReadonlySet<string>>(pendingItemIds);
+  useEffect(() => {
+    pendingItemIdsRef.current = pendingItemIds;
+  }, [pendingItemIds]);
+  const flushRef = useRef(flush);
+  useEffect(() => {
+    flushRef.current = flush;
+  }, [flush]);
+
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   // 在庫化の候補は購入済みの品目のみ。楽観的更新中の値ではなく確定済みの items から取る。
@@ -128,7 +161,16 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
         key: REFRESH_KEY,
         silent,
         onSuccess: (dto) => {
-          setItems(dto.items);
+          // キューに残っている（未同期の）itemId はサーバー値で上書きせず、ローカルの
+          // 未同期値を優先する（P-4。flush が未完了のままサーバー応答を受けたときの
+          // データロス防止）。
+          setItems((current) =>
+            dto.items.map((serverItem) =>
+              pendingItemIdsRef.current.has(serverItem.id)
+                ? (current.find((c) => c.id === serverItem.id) ?? serverItem)
+                : serverItem,
+            ),
+          );
           // 再同期に成功したら過去の書き込み失敗のバナーは古い情報になるため消す
           itemsAction.setErrorMessage(null);
         },
@@ -138,13 +180,36 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
 
   useEffect(() => {
     function handleFocus(): void {
-      void handleRefetch({ silent: true });
+      void (async () => {
+        // キュー再送を先に完了させてから refetch する（P-4）。順序を逆にすると
+        // handleRefetch の onSuccess が未送信のローカル変更をサーバーの古い値で
+        // 上書きしてしまう（データロス）。
+        await flushRef.current();
+        await handleRefetch({ silent: true });
+      })();
     }
     window.addEventListener('focus', handleFocus);
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function handleOnline(): void {
+      void flushRef.current();
+    }
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    // マウント時に 1 度キューの再送を試みる（FR-5, N-06）。オフラインのままなら
+    // flush 内部の catch で attempts が増えるだけで実害はない。IndexedDB が未実装の
+    // 環境（checked-sync-queue.ts のガード）でも flush() は例外を投げず即座に戻る。
+    void flushRef.current();
   }, []);
 
   function handleMarkAsBought(itemId: string, actualPrice: number, actualStoreId: string): void {
@@ -209,14 +274,46 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
           itemsAction.setErrorMessage(resolveItemFailureMessage(response.status));
           return;
         }
-        const updated: ShoppingItemDto = await response.json();
+        let updated: ShoppingItemDto;
+        try {
+          updated = await response.json();
+        } catch {
+          // 200 だが本文の解析に失敗。オフラインではないためキューには積まず、
+          // 既存の一般失敗表示にとどめる（response.json() の失敗を誤ってオフライン判定
+          // しないための分岐。実装計画「実装計画作成時に補った論点」1）。
+          itemsAction.setErrorMessage(API_FAILURE_MESSAGE);
+          return;
+        }
         setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
         if (!checked) {
           // チェックを外したら展開中の価格フォームも閉じる（誤操作防止。設計書 §フロントエンド設計）
           setExpandedItemId((current) => (current === itemId ? null : current));
         }
       } catch {
-        itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
+        // fetch 自体の例外 = オフライン等のネットワーク例外（P-2 案B）。
+        const queued = await enqueue({ shoppingListId: shoppingList.id, itemId, checked });
+        if (queued) {
+          // ロールバックの代わりに確定 state 側へ望む状態を直接書き込む。useOptimistic は
+          // transition 終了時にこの確定値を基準に再計算されるため、チェック状態はついたまま
+          // 表示され続ける（P-2 の核心）。
+          setItems((current) =>
+            current.map((item) =>
+              item.id === itemId
+                ? checked
+                  ? { ...item, status: 'bought' }
+                  : { ...item, status: 'pending', actualPrice: null, actualStoreId: null }
+                : item,
+            ),
+          );
+          if (!checked) {
+            setExpandedItemId((current) => (current === itemId ? null : current));
+          }
+        } else {
+          // E-06: キューが使えない環境。従来どおりの挙動（ロールバック相当）へフォールバックする
+          // （設計書 §エラー処理 (e)）。setItems を呼ばないため useOptimistic は変化していない
+          // 確定 state に収束する。
+          itemsAction.setErrorMessage(NETWORK_ERROR_MESSAGE);
+        }
       } finally {
         setSubmittingItemId(null);
       }
@@ -384,6 +481,12 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
           </p>
         )}
 
+        {pendingItemIds.size > 0 && (
+          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {OFFLINE_QUEUE_BANNER_MESSAGE}
+          </p>
+        )}
+
         {status === 'active' && (
           <>
             <Button
@@ -484,6 +587,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
                 expandedItemId={expandedItemId}
                 submittingItemId={submittingItemId}
                 readOnly={readOnly}
+                pendingItemIds={pendingItemIds}
                 onToggleExpand={handleToggleExpand}
                 onSetChecked={handleSetChecked}
                 onMarkAsBought={handleMarkAsBought}

@@ -238,6 +238,13 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
   `docs/claude-code/improvements/candidates/test-runner-introduction.md` 事象 1）。
 - **Neon はコールドスタートで初回レスポンスが 1 秒超**になることがある（個人利用では許容。
   出典: `logs/2026-05-09.md`）。
+- **本番 Neon のリージョンは `ap-southeast-1`（シンガポール）**。sprint-0 の記録に加え、
+  2026-08-13 に Neon Console の Project Settings で
+  `AWS Asia Pacific 1 (Singapore)` を目視確認した。Vercel の同リージョンは `sin1`。
+- **本番 Vercel Function の既定リージョンは `iad1`（ワシントン D.C.）**。`x-vercel-id` が
+  `pdx1::iad1::...` の形（出典: `logs/2026-07-27.md`、2026-08-13 再実測で継続）。
+  Sprint 9 で `vercel.json` に `"regions": ["sin1"]` を入れた。`main` へマージするまで本番は
+  `iad1` のまま。マージ後は `x-vercel-id` が `::sin1::` になることを確認する。
 - **リモート（エフェメラル）環境では `DATABASE_URL` 未設定のため live DB 経路は動かない**。
   画面の手動確認は確認できた項目と BLOCKED（理由つき）を分けて報告し、コードリーディングで
   補完する（出典: `logs/2026-06-26.md` タスク3）。
