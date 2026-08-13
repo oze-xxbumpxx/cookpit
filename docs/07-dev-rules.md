@@ -247,6 +247,11 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
   Function↔Neon の 1 往復は、移設前の約 0.20 秒から測定誤差まで縮んだ
   （warm 中央値で vapid と `/api/stores` がどちらも約 0.25 秒。出典: `logs/2026-08-13.md` セッション3）。
   移設前は `pdx1::iad1::...` だった（`logs/2026-07-27.md`）。
+- **本番の Drizzle 接続は `neon-http`（HTTPS）**。Sprint 10 Unit B で `neon-serverless`
+  の WebSocket `Pool` に切り替えたところ、Vercel `sin1` から Neon へ接続できず
+  `GET /api/health` が `db: "error"`、画面は `loading.tsx` のあと RSC digest で落ちた
+  （2026-08-13 実測。ADR-0019 ロールバック実行記録）。対話型トランザクションの再導入は
+  Preview で接続確認してからにする。
 - **リモート（エフェメラル）環境では `DATABASE_URL` 未設定のため live DB 経路は動かない**。
   画面の手動確認は確認できた項目と BLOCKED（理由つき）を分けて報告し、コードリーディングで
   補完する（出典: `logs/2026-06-26.md` タスク3）。

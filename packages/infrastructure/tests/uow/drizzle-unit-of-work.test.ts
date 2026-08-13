@@ -113,6 +113,40 @@ describe('DrizzleUnitOfWork', () => {
     ).rejects.toThrow('Nested UnitOfWork.execute is not supported');
   });
 
+  it('useTransaction: false では例外後も先行書き込みが残る', async () => {
+    const db = await createTestDb();
+    const passthrough = new DrizzleUnitOfWork(db, { useTransaction: false });
+    const listRepository = new DrizzleShoppingListRepository(passthrough);
+    const list = createList();
+
+    await expect(
+      passthrough.execute(async () => {
+        await listRepository.save(list);
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+
+    expect(await listRepository.findById(list.id)).not.toBeNull();
+  });
+
+  it('useTransaction: false でも未完了の execute と並行した 2 本目は拒否する', async () => {
+    const db = await createTestDb();
+    const passthrough = new DrizzleUnitOfWork(db, { useTransaction: false });
+    let release: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const first = passthrough.execute(async () => {
+      await started;
+    });
+    await expect(passthrough.execute(async () => undefined)).rejects.toThrow(
+      'Nested UnitOfWork.execute is not supported',
+    );
+    release?.();
+    await first;
+  });
+
   it('execute 内のドメイン例外で書き込みが残らず例外は伝播する', async () => {
     const list = createList();
     class ShoppingListNotFoundError extends Error {
