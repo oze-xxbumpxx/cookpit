@@ -112,4 +112,39 @@ describe('DrizzleUnitOfWork', () => {
       }),
     ).rejects.toThrow('Nested UnitOfWork.execute is not supported');
   });
+
+  it('execute 内のドメイン例外で書き込みが残らず例外は伝播する', async () => {
+    const list = createList();
+    class ShoppingListNotFoundError extends Error {
+      constructor() {
+        super('shopping list not found');
+        this.name = 'ShoppingListNotFoundError';
+      }
+    }
+
+    await expect(
+      uow.execute(async () => {
+        await shoppingListRepository.save(list);
+        throw new ShoppingListNotFoundError();
+      }),
+    ).rejects.toThrow(ShoppingListNotFoundError);
+
+    expect(await shoppingListRepository.findById(list.id)).toBeNull();
+  });
+
+  it('未完了の execute と並行した 2 本目も拒否する', async () => {
+    let release: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const first = uow.execute(async () => {
+      await started;
+    });
+    await expect(uow.execute(async () => undefined)).rejects.toThrow(
+      'Nested UnitOfWork.execute is not supported',
+    );
+    release?.();
+    await first;
+  });
 });

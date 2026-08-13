@@ -95,7 +95,7 @@ Repository と同じポートとして Domain に置く。Application に置く�
 
 - `constructor(db: DrizzleClient)`
 - `get client(): DrizzleClient` → `currentTx ?? db`
-- `execute`: ネストなら throw。`db.transaction` 内で `currentTx` をセットし、finally で戻す
+- `execute`: 入場時に同期的に `busy` を立て、ネスト / 並行呼び出しなら throw。`db.transaction` 内で `currentTx` をセットし、finally で戻す
 - **リクエスト毎に new**。Pool は `globalThis` シングルトン
 
 `createDb`:
@@ -103,12 +103,15 @@ Repository と同じポートとして Domain に置く。Application に置く�
 - `Pool` + `drizzle-orm/neon-serverless`
 - Node 向け `neonConfig.webSocketConstructor = ws`
 - `max: 1`、Pool を `globalThis` に保持
+- idle 切断の未捕捉例外を避けるため `pool.on('error')` を登録する（`err.message` のみログ）
+- `connectionTimeoutMillis: 5000`。`max: 1` の取得待ちを無期限にしない
+- `databaseUrl` が変わったときは旧 Pool を `end()` してから差し替える
 
 Repository コンストラクタは `DrizzleUnitOfWork` を受け、`private get db()` で `uow.client` を返す。既存の `this.db.select()` はそのまま。
 
 ### Application
 
-書き込み UseCase の最後の引数に `UnitOfWork`。`execute` は `return this.unitOfWork.execute(() => this.run(input))`。本体は `private run` へ移す。保存順序・冪等分岐は変えない。
+書き込み UseCase の最後の引数に `UnitOfWork`。`execute` は `return this.unitOfWork.execute(async () => { ... })` で本体を包む。保存順序・冪等分岐は変えない。
 
 対象（uow を足す）:
 

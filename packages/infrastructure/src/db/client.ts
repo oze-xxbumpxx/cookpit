@@ -10,13 +10,28 @@ const globalStore = globalThis as unknown as {
   __cookpitNeonPoolUrl?: string;
 };
 
+const CONNECTION_TIMEOUT_MS = 5_000;
+
 export function createDb(databaseUrl: string) {
   if (
     globalStore.__cookpitNeonPool === undefined ||
     globalStore.__cookpitNeonPoolUrl !== databaseUrl
   ) {
-    globalStore.__cookpitNeonPool = new Pool({ connectionString: databaseUrl, max: 1 });
+    const previous = globalStore.__cookpitNeonPool;
+    const pool = new Pool({
+      connectionString: databaseUrl,
+      max: 1,
+      connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+    });
+    pool.on('error', (err: Error) => {
+      // eslint-disable-next-line no-console -- 接続層にロガーが無く、未捕捉例外を防ぐには listener が必要
+      console.error('neon pool error', err.message);
+    });
+    globalStore.__cookpitNeonPool = pool;
     globalStore.__cookpitNeonPoolUrl = databaseUrl;
+    if (previous !== undefined) {
+      void previous.end().catch(() => undefined);
+    }
   }
   return drizzle(globalStore.__cookpitNeonPool, { schema });
 }

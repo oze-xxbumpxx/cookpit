@@ -29,6 +29,7 @@ Application 層に UoW のモック検証を足さない。包みは構造的で
 | I-4 | execute 外の client | UoW を execute せず save | 通常の Repository.save                                                        | 現行どおり永続化される（自動コミット） | 境界 |
 | I-5 | ネスト              | execute 内から execute   | —                                                                             | throw（E-4）                           | 異常 |
 | I-6 | ドメイン例外        | execute 内で throw       | NotFound 相当の Error                                                         | ROLLBACK。例外は呼び出し元へ伝播       | 異常 |
+| I-7 | 並行 execute        | 1 本目が未完了           | 同じ UoW で 2 本目を開始                                                      | throw（E-4。busy フラグ）              | 異常 |
 
 配置: `packages/infrastructure/tests/uow/drizzle-unit-of-work.test.ts`
 
@@ -47,7 +48,7 @@ Application 層に UoW のモック検証を足さない。包みは構造的で
 | ------------------ | ---------------- | --------------------------------------------------------------------- |
 | UnitOfWork（IF）   | execute          | I-1, I-2, I-3, I-5, U-2                                               |
 | DrizzleUnitOfWork  | client（getter） | I-1, I-4                                                              |
-| DrizzleUnitOfWork  | execute          | I-1〜I-6, U-2                                                         |
+| DrizzleUnitOfWork  | execute          | I-1〜I-7, U-2                                                         |
 | createDb           | （factory）      | 型と既存 Repository テストの回帰。単独試験はしない（PGlite 経路が主） |
 | createWriteContext | （factory）      | web の既存ルートテスト回帰                                            |
 
@@ -64,7 +65,7 @@ PGlite の既存 DDL（`create-test-db.ts`）。ShoppingList 1 件 + 品目 1 �
 
 ## 完了条件
 
-- I-1〜I-6 が PGlite で PASS
+- I-1〜I-7 が PGlite で PASS
 - 既存 application / infrastructure / web テストが PASS
 - 要件 N/E/B のうちコードで担保するものが上表に対応している。N-5（読み取りが tx を開始しない）はコードレビュー（Get* に UoW を足していないこと）
 - FR-7（SendExpiryAlerts を包まない）はコードレビュー

@@ -7,6 +7,7 @@ import type { DrizzleClient } from '../db/client';
  */
 export class DrizzleUnitOfWork implements UnitOfWork {
   private currentTx: DrizzleClient | null = null;
+  private busy = false;
 
   constructor(private readonly db: DrizzleClient) {}
 
@@ -15,16 +16,21 @@ export class DrizzleUnitOfWork implements UnitOfWork {
   }
 
   async execute<T>(work: () => Promise<T>): Promise<T> {
-    if (this.currentTx !== null) {
+    if (this.busy) {
       throw new Error('Nested UnitOfWork.execute is not supported');
     }
-    return this.db.transaction(async (tx) => {
-      this.currentTx = tx as unknown as DrizzleClient;
-      try {
-        return await work();
-      } finally {
-        this.currentTx = null;
-      }
-    });
+    this.busy = true;
+    try {
+      return await this.db.transaction(async (tx) => {
+        this.currentTx = tx as unknown as DrizzleClient;
+        try {
+          return await work();
+        } finally {
+          this.currentTx = null;
+        }
+      });
+    } finally {
+      this.busy = false;
+    }
   }
 }
