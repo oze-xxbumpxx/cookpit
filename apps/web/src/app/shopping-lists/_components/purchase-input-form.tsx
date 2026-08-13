@@ -105,12 +105,7 @@ export function PurchaseInputForm({
         >
           購入を記録
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="h-10 min-w-0 flex-1"
-        >
+        <Button type="button" variant="outline" onClick={onCancel} className="h-10 min-w-0 flex-1">
           キャンセル
         </Button>
       </div>
