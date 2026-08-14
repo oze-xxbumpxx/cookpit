@@ -59,8 +59,8 @@ Sprint 10 の完了条件は「集約横断の書き込みが部分失敗しな�
 
 ### 実行記録（2026-08-13）
 
-本番で手順 1 と 2 を実施した。`@neondatabase/serverless` の WebSocket `Pool` が
-Vercel（`sin1`）から Neon へ接続できず、読み取りも含めて約 15 秒後に失敗していた。
+本番で手順 1 と 2 を実施した。`@neondatabase/serverless` の WebSocket `Pool` を使うと、
+読み取りも含めて約 15 秒後に失敗していた。
 
 実測（`https://cookpit-web.vercel.app`）:
 
@@ -71,6 +71,28 @@ Vercel（`sin1`）から Neon へ接続できず、読み取りも含めて約 1
 PGlite（テスト・dev）は `useTransaction: true`（省略時）のまま原子性を維持する。
 本番の neon-http 経路だけ `useTransaction: false`。トランザクション再導入は、
 本番接続方式で Preview 確認してからにする（レビュー H-01 の未実施が今回の原因）。
+
+### 原因の切り分けは未了（2026-08-14 追記）
+
+上の実行記録は原因を「Vercel `sin1` から Neon へ WebSocket 接続できない」と読める書き方を
+していたが、**それは観測ではなく推定であり、切り分けができていない**。差し戻し前のコード
+（`e3fe8f5^:packages/infrastructure/src/db/client.ts`）は
+`neonConfig.webSocketConstructor = WebSocket`（`ws`）を設定済みで、初歩的な設定漏れではない。
+同じ症状を説明できる候補が 3 つある。**再導入時に同じ変更を再適用せず、切り分けてから方式を選ぶ。**
+
+| 候補                             | 根拠                                                                                                                                                                                                                    | 反証方法                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| A: `ws` のバンドル事故           | `apps/web/next.config.ts` の `serverExternalPackages` は `@electric-sql/pglite` のみ。`ws` は Next の webpack ビルドに取り込まれ、`bufferutil` / `utf-8-validate` の動的 require が壊れやすい                           | `serverExternalPackages` に `ws` と `@neondatabase/serverless` を追加 |
+| B: `globalThis` の `Pool` 陳腐化 | 差し戻し前は `max: 1` の `Pool` を `globalThis` に載せていた。Vercel の freeze / thaw で WebSocket が切れ、死んだ接続を配る。`connectionTimeoutMillis` は**新規接続の取得**にしか効かないため、約 15 秒の滞留と符合する | Pool を使い捨てにする形（リクエスト単位の生成と `end()`）で検証       |
+| C: 本当に WebSocket が到達しない | 実行記録の当初の結論                                                                                                                                                                                                    | A・B を潰しても再現するなら確定                                       |
+
+C が確定した場合は却下案 A（neon-http の非対話バッチ）へ戻る前に、
+`drizzle-orm/node-postgres` + `pg` の TCP 接続（Vercel の Node ランタイムは TCP 可）を評価する。
+対話型トランザクションが得られ、`DrizzleUnitOfWork` の実装は現行のまま使えるため影響が小さい。
+
+いずれの案でも **Preview で書き込みを一巡させる工程（生成 / 完了 / 献立同期 / 店舗削除 +
+途中失敗時のロールバック）を通すまで本番へ入れない**。自動試験は PGlite だけで本番の接続方式を
+観測できず、前回の障害はコードの欠陥ではなく検証経路の欠落だった。
 
 ## References（設計書・要件・関連 ADR・外部資料へのリンク）
 
