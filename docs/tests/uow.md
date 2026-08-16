@@ -73,5 +73,16 @@ PGlite の既存 DDL（`create-test-db.ts`）。ShoppingList 1 件 + 品目 1 �
 ## 対象外（理由）
 
 - 真の同時実行レース（2 プロセス）: 既存試験計画（shopping-list-core 等）と同じく対象外。2 名利用の低頻度
-- 本番 Neon での transaction 実測: CI は PGlite。ドライバ API の差は型と公式ドキュメントで担保
+- 本番 Neon の WebSocket 経路の自動試験: CI は PGlite のため対象外。
+  2026-08-16 に本番で書き込み PASS を確認したが、自動カバレッジはゼロのまま。
+  `ws` / `@neondatabase/serverless` / Next の更新時は Preview で書き込みを一巡させる
 - E2E: 契約不変。任意
+
+## 最終実施結果（2026-08-17 クローズ監査）
+
+- `pnpm lint`: PASS（既存 warning 1 件のみ）
+- `pnpm type-check`: PASS
+- infrastructure: 118 件 PASS（UoW 17 件を含む）
+- application: 373 件 PASS
+- 本番: 2026-08-16 に `DB_WRITE_TRANSACTION=on` で書き込み PASS（ADR-0020）
+- 未実施: U-2 のレイテンシ数値記録、WebSocket 経路の自動試験

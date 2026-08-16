@@ -1,6 +1,7 @@
 # ADR-0019: 書き込み UseCase を DB トランザクション（UoW）で原子的に実行する
 
-- Status: Accepted（2026-08-13 ユーザー確定・Gate A）
+- Status: Accepted（2026-08-13 ユーザー確定・Gate A。接続方式と Rollback は
+  [ADR-0020](./ADR-0020-tx-connection-per-request.md) が上書き）
 - Date: 2026-08-13
 - 関連 feature: uow
 
@@ -16,6 +17,10 @@ Sprint 10 の完了条件は「集約横断の書き込みが部分失敗しな�
 `db.transaction()` を持たない。どこに境界を置くか（ルートか UseCase か）も決める必要がある。
 
 ## Decision（採用した決定）
+
+> 2026-08-16 更新: 本 ADR の UoW 境界と原子性の判断は有効。以下の「全経路 WebSocket」
+> 「グローバル Pool 再利用」「コードを戻す Rollback」は履歴として残すが、現行は ADR-0020 の
+> 読み取り neon-http / 書き込み WebSocket `Client` / 1 リクエスト 1 接続 / 環境変数 Rollback。
 
 1. **本番ドライバを `drizzle-orm/neon-serverless`（WebSocket `Pool`）へ切り替える。**
    PGlite（dev / テスト）は維持する。

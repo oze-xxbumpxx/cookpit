@@ -28,19 +28,19 @@
 
 ## 対象範囲
 
-| 層             | 実装対象                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------- |
-| Domain         | `UnitOfWork` ポート（`packages/domain/src/shared/unit-of-work.ts`）                                 |
-| Infrastructure | `createDb` を neon-serverless へ。`DrizzleUnitOfWork`。全 Drizzle Repository が `uow.client` を使う |
-| Application    | 書き込み UseCase のコンストラクタに `UnitOfWork` を追加し、`execute` を包む                         |
-| Presentation   | `createWriteContext()`。書き込み Hono ルートが同一 UoW から組み立てる                               |
-| テスト         | PGlite ロールバック。Application は passthrough UoW                                                 |
+| 層             | 実装対象                                                                                                                                     |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain         | `UnitOfWork` ポート（`packages/domain/src/shared/unit-of-work.ts`）                                                                          |
+| Infrastructure | 読み取りは neon-http、書き込み tx は都度生成する neon-serverless `Client`。`DrizzleUnitOfWork`。全 Drizzle Repository が `uow.client` を使う |
+| Application    | 書き込み UseCase のコンストラクタに `UnitOfWork` を追加し、`execute` を包む                                                                  |
+| Presentation   | `createWriteContext()`。書き込み Hono ルートが同一 UoW から組み立てる                                                                        |
+| テスト         | PGlite ロールバック。Application は passthrough UoW                                                                                          |
 
 ## 対象外
 
 要件書 §対象外と同一。`SendExpiryAlertsUseCase` 全体の包みは FR-7。
 
-## 現状構成
+## 着手前構成（2026-08-13）
 
 - [`packages/infrastructure/src/db/client.ts`](../../packages/infrastructure/src/db/client.ts): `drizzle(neon(url))`（neon-http）
 - Repository: `constructor(private readonly db: DrizzleClient)`
@@ -101,19 +101,21 @@ Repository と同じポートとして Domain に置く。Application に置く�
 
 `DrizzleUnitOfWork`:
 
-- `constructor(db: DrizzleClient)`
+- `constructor(db: DrizzleClient, options)`。本番書き込みは `createTxClient` に
+  `getTxConnection` を渡す
 - `get client(): DrizzleClient` → `currentTx ?? db`
-- `execute`: 入場時に同期的に `busy` を立て、ネスト / 並行呼び出しなら throw。`db.transaction` 内で `currentTx` をセットし、finally で戻す
-- **リクエスト毎に new**。Pool は `globalThis` シングルトン
+- `execute`: 入場時に同期的に `busy` を立て、ネスト / 並行呼び出しなら throw。
+  tx 用接続を取得し、`db.transaction` 内で `currentTx` をセットして finally で戻し、
+  外側の finally で接続を閉じる
+- **リクエスト毎に new**。接続も `execute` ごとに張り、使い回さない
 
 `createDb`:
 
-- `Pool` + `drizzle-orm/neon-serverless`
-- Node 向け `neonConfig.webSocketConstructor = ws`
-- `max: 1`、Pool を `globalThis` に保持
-- idle 切断の未捕捉例外を避けるため `pool.on('error')` を登録する（`err.message` のみログ）
-- `connectionTimeoutMillis: 5000`。`max: 1` の取得待ちを無期限にしない
-- `databaseUrl` が変わったときは旧 Pool を `end()` してから差し替える
+- 読み取り・SSR の既定接続は `neon-http`
+- `createTxConnection` は `neon-serverless` の `Client` を都度生成し、
+  `{ db, close }` を返す。`connectionTimeoutMillis: 5000`
+- `Client` の非同期 error を未捕捉例外にしないため listener を登録する
+- Next のバンドルでは `WS_NO_BUFFER_UTIL=1` を埋め込み、`ws` の純 JS mask 実装を使う
 
 Repository コンストラクタは `DrizzleUnitOfWork` を受け、`private get db()` で `uow.client` を返す。既存の `this.db.select()` はそのまま。
 
@@ -137,7 +139,11 @@ Repository コンストラクタは `DrizzleUnitOfWork` を受け、`private get
 
 ```ts
 export function createWriteContext(): WriteContext {
-  const uow = new DrizzleUnitOfWork(getDb());
+  const enabled = process.env.DB_WRITE_TRANSACTION === 'on';
+  const uow = new DrizzleUnitOfWork(getDb(), {
+    useTransaction: enabled,
+    createTxClient: enabled ? getTxConnection : null,
+  });
   return {
     uow,
     recipe: new DrizzleRecipeRepository(uow),
@@ -164,11 +170,14 @@ export function createWriteContext(): WriteContext {
 
 ## セキュリティ
 
-新規認証・新規公開面なし。Pool のリーク防止として isolate あたり `max: 1`、UoW はリクエストスコープ。未コミットの tx は Drizzle が throw 時に ROLLBACK する。
+新規認証・新規公開面なし。UoW と WebSocket `Client` はリクエストスコープで、
+接続文字列は既存の `DATABASE_URL` だけを使う。未コミットの tx は Drizzle が throw 時に ROLLBACK する。
 
 ## 性能
 
-WebSocket セッション上の複文は、Sprint 9 で測った HTTPS 4 往復より安い想定。Pool をリクエスト毎に new+end しない。`save()` の SQL 形は変えない。
+WebSocket セッション上の複文は、Sprint 9 で測った HTTPS 4 往復より安い想定。
+書き込みごとに接続確立コストを払うため、同一リージョンで 10〜30 ms と見積もるが未実測（U-2）。
+`save()` の SQL 形は変えない。
 
 ## テスト方針
 
@@ -180,14 +189,16 @@ WebSocket セッション上の複文は、Sprint 9 で測った HTTPS 4 往復�
 
 ## 移行とリリース
 
-スキーマ移行なし。マージ後のデプロイでドライバが切り替わる。ロールバックは ADR-0019 参照。
+スキーマ移行なし。本番は `DB_WRITE_TRANSACTION=on` で有効化済み。
+事故時は環境変数を削除または `on` 以外へ変更して再デプロイし、書き込みも neon-http の
+恒等実行へ戻す（ADR-0020）。
 
 ## リスク
 
 | #   | リスク                                                           | 対応                                            |
 | --- | ---------------------------------------------------------------- | ----------------------------------------------- |
 | R-1 | コンストラクタ時に `uow.client` を値キャプチャして tx に乗らない | Repository は getter で都度 `uow.client` を見る |
-| R-2 | UoW をシングルトンにして currentTx が混線                        | リクエスト毎に new。Pool だけ使い回す           |
+| R-2 | UoW をシングルトンにして currentTx が混線                        | UoW と tx 接続をリクエスト毎に new              |
 | R-3 | ルートが別々の UoW から repo と UseCase を作る                   | `createWriteContext()` で一組にする             |
 | R-4 | PGlite と neon-serverless の型不一致                             | 現行どおり `as unknown as DrizzleClient`        |
 | R-5 | SendExpiryAlerts を包んで Push 中に tx を保持                    | FR-7 で除外                                     |
@@ -195,8 +206,9 @@ WebSocket セッション上の複文は、Sprint 9 で測った HTTPS 4 往復�
 ## トランザクション再導入（2026-08-15・案 S 採用確定）
 
 **ユーザー確定（2026-08-15）: 案 S を採用し、実装済み。** ADR-0019 の実行記録
-（2026-08-13 ロールバック）を受けた再検討。**ただし本番での有効化はまだ行っていない** —
-キルスイッチ `DB_WRITE_TRANSACTION` は既定で無効で、Preview 検証を通してから ON にする。
+（2026-08-13 ロールバック）を受けた再検討。2026-08-16 に ADR-0020 と PR #174 の修正後、
+本番で `DB_WRITE_TRANSACTION=on` を有効化した。本節の Pool 実装は途中経過であり、
+現在の接続方式は後続の「接続の寿命」節を正典とする。
 
 ### 出発点の問題（2026-08-15 時点）
 
@@ -292,7 +304,7 @@ findById(shoppingList) → ドメイン検証 → pantry.find() → pantry.save(
 - 1 リクエスト内で `neon-http` と `neon-serverless` の 2 接続を併用したときの
   cold start 実コスト（案 S の悪影響）。実測が要る。
 
-### 実装（2026-08-15 完了。有効化は未実施）
+### 実装（2026-08-15 完了。後続の ADR-0020 で接続寿命を変更）
 
 | ファイル                                                  | 変更                                                                                                                                                                       |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -310,7 +322,7 @@ WebSocket 接続を張ることもない。テスト
 **品質ゲート**: lint / type-check / test すべて PASS（`pnpm test` 全体、UoW は 14 件）。
 `pnpm build` も PASS（`ws` のバンドルを含めて Next のビルドが通ることの確認）。
 
-### 有効化の手順（**未実施。ユーザーの手が要る**）
+### 有効化の手順（2026-08-16 実施済み）
 
 1. Preview Deployment に `DB_WRITE_TRANSACTION=on` を設定して再デプロイする
 2. `GET /api/health` と一覧画面で**読み取りが生きている**ことを確認する
@@ -319,6 +331,10 @@ WebSocket 接続を張ることもない。テスト
    前回の直接原因はこの未実施）
 4. 失敗したら §H-1〜H-4 の切り分けへ。成功したら本番へ同じ環境変数を設定する
 5. 事故時は環境変数を落として再デプロイするだけで戻る（PR は不要）
+
+実施中に `globalThis` Pool と `ws` バンドルの障害が判明し、PR #173 / #174 で修正した。
+最終的な本番 PASS は ADR-0020 の実行記録を正典とする。書き込みレイテンシの数値だけは
+記録できず、U-2 として持ち越す。
 
 ## 接続の寿命 — 1 リクエスト 1 接続へ（2026-08-16・ADR-0020）
 
@@ -374,13 +390,13 @@ export interface DrizzleUnitOfWorkOptions {
 `pipelineConnect: "password"` が既定であることは `@neondatabase/serverless@1.1.0` の
 `index.d.mts` で確認済み（認証で何往復もするわけではない）。
 
-有効化手順の §2〜3 で**実測して U-2 を閉じる**。
+次回の性能計測で U-2 を閉じる。
 
 ## 未決事項
 
 | #   | 未決事項                                    | 状態                                                                                                                                                                                                                              |
 | --- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **決着（2026-08-16）。本番 PASS** — PR #174 マージ後に ON にして書き込みが通ることをユーザーが確認。Sprint 10 完了条件 2 は達成。途中の「Preview PASS」は撤回済み（WS 経路が実行されていなかった可能性が高い。ADR-0020 実行記録） |
-| U-2 | 2 接続併用の cold start 実コスト            | **未計測のまま**。Preview の一巡は通ったが数値を記録していない。同一リージョンで 10〜30 ms という見積もり（計算値）の裏取りは未了                                                                                                 |
+| U-2 | 2 接続併用の cold start 実コスト            | **未計測のまま**。本番の書き込みは通ったが数値を記録していない。同一リージョンで 10〜30 ms という見積もり（計算値）の裏取りは未了                                                                                                 |
 | U-3 | 本番 `DATABASE_URL` が pooled か            | **確認不能**。Vercel の Sensitive 変数は書き込み専用で読み出せない。ローカル `.env.local` には `-pooler` が含まれる（値は読まずマッチ数のみ）                                                                                     |
 | U-4 | transaction pooling とセッション機能の両立  | **未確認**。`-pooler` 経由なら PG レベルの prepared statement・`LISTEN/NOTIFY`・文跨ぎ advisory lock は使えない。drizzle 側の依存を要確認                                                                                         |
