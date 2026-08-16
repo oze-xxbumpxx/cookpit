@@ -186,17 +186,23 @@ WebSocket セッション上の複文は、Sprint 9 で測った HTTPS 4 往復�
 | R-4 | PGlite と neon-serverless の型不一致                             | 現行どおり `as unknown as DrizzleClient`        |
 | R-5 | SendExpiryAlerts を包んで Push 中に tx を保持                    | FR-7 で除外                                     |
 
-## トランザクション再導入の設計案（2026-08-15・提案。未確定）
+## トランザクション再導入（2026-08-15・案 S 採用確定）
 
-**本節は提案であり、採用は未確定。** 実装前にユーザー確認を要する（CLAUDE.md「提案 → 確認 →
-実装」）。ADR-0019 の実行記録（2026-08-13 ロールバック）を受けた再検討。
+**ユーザー確定（2026-08-15）: 案 S を採用し、実装済み。** ADR-0019 の実行記録
+（2026-08-13 ロールバック）を受けた再検討。**ただし本番での有効化はまだ行っていない** —
+キルスイッチ `DB_WRITE_TRANSACTION` は既定で無効で、Preview 検証を通してから ON にする。
 
-### 現状の問題
+### 出発点の問題（2026-08-15 時点）
 
-`apps/web/src/server/repositories.ts:32` が `new DrizzleUnitOfWork(getDb(), { useTransaction: false })`
-であり、**本番ではトランザクションが効いていない**。`useTransaction: false` は `work()` を
-そのまま実行するだけなので、Sprint 10 完了条件 2「集約横断の書き込みが部分失敗しない」は
-**構造だけ入って実質未達**の状態にある。PGlite（dev・テスト）だけが原子性を持つ。
+`apps/web/src/server/repositories.ts` が読み書きとも
+`new DrizzleUnitOfWork(getDb(), { useTransaction: false })` を返しており、**本番では
+トランザクションが効いていなかった**。`useTransaction: false` は `work()` をそのまま実行する
+だけなので、Sprint 10 完了条件 2「集約横断の書き込みが部分失敗しない」は
+**構造だけ入って実質未達**の状態にあった。PGlite（dev・テスト）だけが原子性を持つ。
+
+この節以降が、その状態を解消するための再導入である。なお本節より前の本文
+（§対象範囲・§Infrastructure など）は 2026-08-13 時点の「全経路 neon-serverless」を
+前提に書かれている。**接続構成の正典は本節**とする。
 
 ### 非対話バッチ（ADR-0019 案 A）では代替できない理由 — 再確認
 
@@ -274,14 +280,37 @@ findById(shoppingList) → ドメイン検証 → pantry.find() → pantry.save(
 - 1 リクエスト内で `neon-http` と `neon-serverless` の 2 接続を併用したときの
   cold start 実コスト（案 S の悪影響）。実測が要る。
 
-### 次のステップ（採用が決まった場合）
+### 実装（2026-08-15 完了。有効化は未実施）
 
-1. H-1〜H-4 を Preview で切り分け、失敗原因を 1 つに特定する（**ユーザーの手が要る**）
-2. 原因に応じて案 S の接続構成を確定し、設計書本文へ反映する
-3. 実装 → Preview で書き込み一巡 → 本番
+| ファイル                                                  | 変更                                                                                                                                                                       |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/infrastructure/src/db/client.ts`                | `createDb`（neon-http）は据え置き。`createTxDb`（neon-serverless `Pool`）を**追加**。`neonConfig` の書き換えは `createTxDb` の中で行い、未使用時はグローバル設定に触れない |
+| `packages/infrastructure/src/uow/drizzle-unit-of-work.ts` | `createTxClient?: (() => DrizzleClient) \| null` を追加。`useTransaction: false` の間は**一度も呼ばない**（遅延評価）                                                      |
+| `apps/web/src/db/client.ts`                               | `getTxDb()` を追加。PGlite（dev）は `getDb()` と同じインスタンスを返す                                                                                                     |
+| `apps/web/src/server/repositories.ts`                     | `createReadUnitOfWork` / `createWriteUnitOfWork` に分離。書き込みだけ `DB_WRITE_TRANSACTION=on` で tx を有効化                                                             |
+| `packages/infrastructure/package.json`                    | `ws` / `@types/ws` を再追加                                                                                                                                                |
+
+**キルスイッチの仕様**: `DB_WRITE_TRANSACTION=on` のときだけ有効。**既定は無効**
+（未設定・他の値はすべて無効）。無効時の挙動は現行と完全に同じ — `work()` の恒等実行で、
+WebSocket 接続を張ることもない。テスト
+`useTransaction: false のとき createTxClient は呼ばれない` がこれを固定している。
+
+**品質ゲート**: lint / type-check / test すべて PASS（`pnpm test` 全体、UoW は 14 件）。
+`pnpm build` も PASS（`ws` のバンドルを含めて Next のビルドが通ることの確認）。
+
+### 有効化の手順（**未実施。ユーザーの手が要る**）
+
+1. Preview Deployment に `DB_WRITE_TRANSACTION=on` を設定して再デプロイする
+2. `GET /api/health` と一覧画面で**読み取りが生きている**ことを確認する
+   （案 S が正しければ、WS が失敗しても読み取りは無傷のはず）
+3. **書き込みを一巡させる**: 買い物完了・献立同期・チェック操作（レビュー H-01。
+   前回の直接原因はこの未実施）
+4. 失敗したら §H-1〜H-4 の切り分けへ。成功したら本番へ同じ環境変数を設定する
+5. 事故時は環境変数を落として再デプロイするだけで戻る（PR は不要）
 
 ## 未決事項
 
-| #   | 未決事項                                                     | 状態                                                                           |
-| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| U-1 | 本番でトランザクションを再導入するか、完了条件を再定義するか | **未決**（2026-08-15）。上記「トランザクション再導入の設計案」を提案として提示 |
+| #   | 未決事項                                    | 状態                                                                                                 |
+| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **未決**。実装は入ったが Preview 検証が未実施。WS 接続が通るか（H-1〜H-4）はこの環境から確認できない |
+| U-2 | 2 接続併用の cold start 実コスト            | **未計測**。案 S の悪影響として想定はしているが実測がない。有効化後に体感が悪化するようなら再訪する  |

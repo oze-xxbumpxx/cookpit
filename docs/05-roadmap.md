@@ -803,10 +803,10 @@ Sprint 9 の成果を待つ必要は無い。**着手可能。**
       `SyncShoppingListFromMealPlanUseCase` に削除追随・数量上書きを実装し、
       `bought` / `manually_added` は残す分岐までテスト済み
 - [ ] 集約横断の書き込みが部分失敗しない（トランザクション境界が引かれている）
-      — **構造は入ったが本番では未達**。PR #168 のロールバックで
-      `apps/web/src/server/repositories.ts` が `useTransaction: false` のため、
-      原子性が効いているのは PGlite（dev・テスト）だけ。再導入案は
-      `docs/designs/uow.md`「トランザクション再導入の設計案」（2026-08-15・提案）
+      — **実装は入ったが本番では未達**。2026-08-15 に案 S（書き込み経路だけ WebSocket）を
+      実装済みだが、キルスイッチ `DB_WRITE_TRANSACTION` が既定無効で、有効化には
+      Preview 検証が要る。原子性が効いているのは現状 PGlite（dev・テスト）だけ。
+      詳細と有効化手順は `docs/designs/uow.md`「トランザクション再導入（案 S 採用確定）」
 - [x] **Sprint 8 の完了条件 3 件目**「期限が近い在庫にアプリを開かずに気づける」が
       実機で確認できている（タスク 5）— 2026-08-15・iPhone PWA で MB-08 / MB-09 PASS
       （`docs/tests/expiry-alert.md` §10-5）

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getDb } from '@/db/client';
+import { getDb, getTxDb } from '@/db/client';
 import {
   DrizzleMealPlanRepository,
   DrizzlePantryRepository,
@@ -25,16 +25,40 @@ export interface WriteContext {
 }
 
 /**
- * 本番は neon-http。WebSocket Pool は Vercel 上で接続できず画面が RSC エラーで落ちたため戻した。
- * neon-http は db.transaction() 非対応なので execute は work() をそのまま実行する。
+ * 書き込みトランザクションのキルスイッチ。`DB_WRITE_TRANSACTION=on` のときだけ有効。
+ *
+ * **既定は無効**（フェイルセーフ）。2026-08-13 に WebSocket 接続の失敗で全画面が落ちた際、
+ * 復旧にコード変更とロールバック PR（#168）が要った。環境変数にしておけば再デプロイだけで
+ * 戻せる。有効化は Preview で書き込みを一巡させてから（レビュー H-01）。
  */
-function createAppUnitOfWork(): DrizzleUnitOfWork {
+function isWriteTransactionEnabled(): boolean {
+  return process.env.DB_WRITE_TRANSACTION === 'on';
+}
+
+/**
+ * 読み取り経路の UoW。`execute` を呼ばないので常に自動コミットで、
+ * WebSocket 接続を張ることはない。
+ */
+function createReadUnitOfWork(): DrizzleUnitOfWork {
   return new DrizzleUnitOfWork(getDb(), { useTransaction: false });
+}
+
+/**
+ * 書き込み経路の UoW。キルスイッチが有効なときだけ、トランザクションを
+ * WebSocket 接続（`getTxDb`）の上で開く。読み取りは neon-http のまま
+ * （設計書「トランザクション再導入の設計案」案 S）。
+ */
+function createWriteUnitOfWork(): DrizzleUnitOfWork {
+  const enabled = isWriteTransactionEnabled();
+  return new DrizzleUnitOfWork(getDb(), {
+    useTransaction: enabled,
+    createTxClient: enabled ? getTxDb : null,
+  });
 }
 
 /** 書き込み UseCase 用。1 リクエスト = 1 UoW。配下の Repository は皆同じ client を見る。 */
 export function createWriteContext(): WriteContext {
-  const uow = createAppUnitOfWork();
+  const uow = createWriteUnitOfWork();
   return {
     uow,
     recipe: new DrizzleRecipeRepository(uow),
@@ -48,7 +72,7 @@ export function createWriteContext(): WriteContext {
 }
 
 function readUow(): DrizzleUnitOfWork {
-  return createAppUnitOfWork();
+  return createReadUnitOfWork();
 }
 
 export function recipeRepository(): DrizzleRecipeRepository {

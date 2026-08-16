@@ -83,6 +83,28 @@
 
 ADR-0019 §Rollback。
 
+**2026-08-15 以降**は先に環境変数を試す。`DB_WRITE_TRANSACTION` を未設定に戻して再デプロイ
+すれば、コード変更なしで 2026-08-13〜15 と同じ挙動（`work()` の恒等実行）に戻る。
+コードのロールバックが要るのはそれで直らない場合だけ。
+
+## 追加実装: 案 S（2026-08-15）
+
+ADR-0019 のロールバック後、完了条件 2 を満たし直すための再導入。設計は
+`docs/designs/uow.md`「トランザクション再導入（案 S 採用確定）」。
+
+| #   | ステップ                     | 対象                                                                        | 完了条件                                     |
+| --- | ---------------------------- | --------------------------------------------------------------------------- | -------------------------------------------- |
+| S-1 | tx 専用の接続を足す          | `packages/infrastructure/src/db/client.ts` に `createTxDb`                  | 既存 `createDb`（neon-http）が変わらないこと |
+| S-2 | UoW に接続の差し替え口を作る | `drizzle-unit-of-work.ts` の `createTxClient`                               | 無効時に呼ばれないことをテストで固定         |
+| S-3 | apps/web の配線              | `apps/web/src/db/client.ts` の `getTxDb` / `repositories.ts` の読み書き分離 | 読み取り経路が WS を張らないこと             |
+| S-4 | 依存の再追加                 | `packages/infrastructure/package.json` に `ws` / `@types/ws`                | `pnpm build` が通ること                      |
+| S-5 | テスト                       | `tests/uow/drizzle-unit-of-work.test.ts` に `createTxClient` の 5 件        | 14 件 PASS                                   |
+
+**S-1〜S-5 は完了（2026-08-15）。** 品質ゲート lint / type-check / test / build すべて PASS。
+
+**未完了**: 本番・Preview での有効化。`DB_WRITE_TRANSACTION` は既定無効のままで、
+デプロイしても挙動は変わらない。手順は設計書「有効化の手順」。
+
 ## ドキュメント更新対象
 
 - `docs/03-architecture.md` の DI 節に UoW とドライバ
