@@ -10,7 +10,7 @@ import {
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DrizzlePantryRepository } from '../../src/repositories/drizzle-pantry.repository';
 import { DrizzleShoppingListRepository } from '../../src/repositories/drizzle-shopping-list.repository';
-import type { DrizzleClient, TxConnection } from '../../src/db/client';
+import type { DrizzleClient, TxConnectionProvider } from '../../src/db/client';
 import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
 
 const CREATED_AT = new Date('2026-07-12T03:00:00');
@@ -184,26 +184,47 @@ describe('DrizzleUnitOfWork', () => {
   });
 
   // 案 S（書き込み経路だけ別接続）の配線。本番は読み取りが neon-http、
-  // トランザクションだけ WebSocket に載る。
-  describe('createTxConnection', () => {
-    function connectionTo(db: DrizzleClient): { connection: TxConnection; closed: () => number } {
-      let closeCount = 0;
+  // トランザクションだけ WebSocket に載る。接続は使い回し、死んでいたら張り直す。
+  describe('txConnectionProvider', () => {
+    /** acquire 回数と discard 回数を数えるだけの provider。 */
+    function providerOf(...clients: DrizzleClient[]): {
+      provider: TxConnectionProvider;
+      acquired: () => number;
+      discarded: () => number;
+    } {
+      let acquireCount = 0;
+      let discardCount = 0;
       return {
-        connection: {
-          client: db,
-          close: async () => {
-            closeCount += 1;
+        provider: {
+          acquire: () => {
+            const client = clients[Math.min(acquireCount, clients.length - 1)];
+            acquireCount += 1;
+            if (client === undefined) {
+              throw new Error('no client configured');
+            }
+            return client;
+          },
+          discard: async () => {
+            discardCount += 1;
           },
         },
-        closed: () => closeCount,
+        acquired: () => acquireCount,
+        discarded: () => discardCount,
       };
     }
 
-    it('execute 内の書き込みは createTxConnection 側の接続に載る', async () => {
+    /** begin の時点で落ちる接続。凍結中に切られた WebSocket を模す。 */
+    function deadClient(): DrizzleClient {
+      return {
+        transaction: () => Promise.reject(new Error('Connection terminated unexpectedly')),
+      } as unknown as DrizzleClient;
+    }
+
+    it('execute 内の書き込みは provider 側の接続に載る', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const { connection } = connectionTo(txDb);
-      const separated = new DrizzleUnitOfWork(readDb, { createTxConnection: () => connection });
+      const { provider } = providerOf(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { txConnectionProvider: provider });
       const repository = new DrizzleShoppingListRepository(separated);
       const list = createList();
 
@@ -220,11 +241,11 @@ describe('DrizzleUnitOfWork', () => {
       expect(await txRepository.findById(list.id)).not.toBeNull();
     });
 
-    it('createTxConnection 側でも例外でロールバックする', async () => {
+    it('provider 側でも例外でロールバックする', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const { connection } = connectionTo(txDb);
-      const separated = new DrizzleUnitOfWork(readDb, { createTxConnection: () => connection });
+      const { provider } = providerOf(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { txConnectionProvider: provider });
       const repository = new DrizzleShoppingListRepository(separated);
       const list = createList();
 
@@ -241,43 +262,66 @@ describe('DrizzleUnitOfWork', () => {
       expect(await txRepository.findById(list.id)).toBeNull();
     });
 
-    // 接続を残すと、次の execute が死んだソケットを掴んで begin で落ちる（H-3・本番実測）。
-    it('成功しても接続を閉じる', async () => {
+    // 本番障害（2026-08-15）の再現と回復。凍結明けの最初の書き込みで begin が落ちる。
+    it('使い回した接続が死んでいたら捨てて張り直し、書き込みは成功する', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const { connection, closed } = connectionTo(txDb);
-      const separated = new DrizzleUnitOfWork(readDb, { createTxConnection: () => connection });
+      const { provider, acquired, discarded } = providerOf(deadClient(), txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { txConnectionProvider: provider });
+      const repository = new DrizzleShoppingListRepository(separated);
+      const list = createList();
 
-      await separated.execute(async () => undefined);
+      await separated.execute(async () => {
+        await repository.save(list);
+      });
 
-      expect(closed()).toBe(1);
+      expect(discarded()).toBe(1);
+      expect(acquired()).toBe(2);
+
+      const txRepository = new DrizzleShoppingListRepository(
+        new DrizzleUnitOfWork(txDb, { useTransaction: false }),
+      );
+      expect(await txRepository.findById(list.id)).not.toBeNull();
     });
 
-    it('例外でも接続を閉じる', async () => {
+    it('張り直した接続も死んでいたら例外を伝播する（無限リトライしない）', async () => {
+      const readDb = await createTestDb();
+      const { provider, acquired } = providerOf(deadClient(), deadClient());
+      const separated = new DrizzleUnitOfWork(readDb, { txConnectionProvider: provider });
+
+      await expect(separated.execute(async () => undefined)).rejects.toThrow(
+        'Connection terminated unexpectedly',
+      );
+      expect(acquired()).toBe(2);
+    });
+
+    // work が始まった後の失敗は COMMIT 到達済みか判別できない。再実行してはいけない。
+    it('work が始まった後の失敗はリトライしない', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const { connection, closed } = connectionTo(txDb);
-      const separated = new DrizzleUnitOfWork(readDb, { createTxConnection: () => connection });
+      const { provider, acquired, discarded } = providerOf(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { txConnectionProvider: provider });
+      let workRuns = 0;
 
       await expect(
         separated.execute(async () => {
-          throw new Error('boom');
+          workRuns += 1;
+          throw new Error('Connection terminated unexpectedly');
         }),
-      ).rejects.toThrow('boom');
+      ).rejects.toThrow('Connection terminated unexpectedly');
 
-      expect(closed()).toBe(1);
+      expect(workRuns).toBe(1);
+      expect(discarded()).toBe(0);
+      expect(acquired()).toBe(1);
     });
 
     // キルスイッチの肝。無効の間は WebSocket 接続を張らせない。
-    it('useTransaction: false のとき createTxConnection は呼ばれない', async () => {
+    it('useTransaction: false のとき provider に触らない', async () => {
       const readDb = await createTestDb();
-      let called = 0;
+      const { provider, acquired } = providerOf(readDb);
       const disabled = new DrizzleUnitOfWork(readDb, {
         useTransaction: false,
-        createTxConnection: () => {
-          called += 1;
-          return { client: readDb, close: async () => undefined };
-        },
+        txConnectionProvider: provider,
       });
       const repository = new DrizzleShoppingListRepository(disabled);
       const list = createList();
@@ -286,28 +330,11 @@ describe('DrizzleUnitOfWork', () => {
         await repository.save(list);
       });
 
-      expect(called).toBe(0);
+      expect(acquired()).toBe(0);
       expect(await repository.findById(list.id)).not.toBeNull();
     });
 
-    it('execute のたびに接続を張り直す', async () => {
-      const readDb = await createTestDb();
-      const txDb = await createTestDb();
-      let called = 0;
-      const separated = new DrizzleUnitOfWork(readDb, {
-        createTxConnection: () => {
-          called += 1;
-          return { client: txDb, close: async () => undefined };
-        },
-      });
-
-      await separated.execute(async () => undefined);
-      await separated.execute(async () => undefined);
-
-      expect(called).toBe(2);
-    });
-
-    it('createTxConnection 省略時は db 自身でトランザクションを張る', async () => {
+    it('provider 省略時は db 自身でトランザクションを張る', async () => {
       const readDb = await createTestDb();
       const fallback = new DrizzleUnitOfWork(readDb);
       const repository = new DrizzleShoppingListRepository(fallback);

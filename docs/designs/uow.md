@@ -279,6 +279,8 @@ findById(shoppingList) → ドメイン検証 → pantry.find() → pantry.save(
   公式ドキュメントへ到達できないため未確認。案 B を採るなら裏取りが先。
 - 1 リクエスト内で `neon-http` と `neon-serverless` の 2 接続を併用したときの
   cold start 実コスト（案 S の悪影響）。実測が要る。
+- 凍結明けの「失敗した `begin` + 張り直し」が体感に出るか。理屈上は書き込み 1 回分の
+  余分な往復だが、実測していない。
 
 ### 本番での失敗と原因確定（2026-08-15・H-3 が的中）
 
@@ -305,23 +307,37 @@ WebSocket 接続を常駐させる前提が誤りだった。**
 - **キルスイッチも機能する。** 環境変数を落として再デプロイするだけで復旧した（前回は
   ロールバック PR #168 が必要だった）
 
-**修正**: 接続を使い回さず、**`execute` ごとに 1 本張って必ず閉じる**（下記実装）。
-代償は書き込み 1 回あたりの接続確立コスト。読み取りは `neon-http` のままなので影響しない。
+**修正の方針（一度やり直した）**: 最初は「接続を使い回さず `execute` ごとに張って閉じる」に
+したが、**これは過剰だった**。`SetItemCheckedUseCase` も UoW に包まれているため、買い物中の
+チェック操作のたびに WebSocket を張り直すことになり、Sprint 9 で `sin1` 移設して削った
+往復を足し戻してしまう（ユーザー指摘・2026-08-15）。
+
+採ったのは **「使い回す + work が始まる前の失敗に限って 1 度だけ張り直す」**。
+
+- 障害は `begin` で起きていた。つまり **`work()` が 1 行も走る前**で、副作用はゼロ。
+  ここでのやり直しは二重適用を起こさない
+- `work()` が始まった後の失敗は**やり直さない**。COMMIT に到達済みかを判別できず、
+  再実行すると二重適用の恐れがある（in-doubt）
+- 結果、温まっている間は使い回しの速度のまま、凍結明けの最初の 1 回だけ
+  「失敗した `begin` + 張り直し」の往復を払う
+
+判定に文字列マッチは使わない。`work()` が始まったかのフラグだけで決める
+（`DrizzleUnitOfWork.runInTransaction` の `workStarted`）。
 
 ### 実装（2026-08-15 完了。有効化は未実施）
 
-| ファイル                                                  | 変更                                                                                                                                                                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/infrastructure/src/db/client.ts`                | `createDb`（neon-http）は据え置き。`createTxConnection`（neon-serverless）を**追加**。**接続は使い回さず 1 トランザクション 1 本**。`neonConfig` の書き換えは関数内で行い、未使用時はグローバル設定に触れない |
-| `packages/infrastructure/src/uow/drizzle-unit-of-work.ts` | `createTxConnection?: (() => TxConnection) \| null` を追加。`useTransaction: false` の間は**一度も呼ばない**。成否によらず `finally` で `close()`                                                             |
-| `apps/web/src/db/client.ts`                               | `createTxConnection()` を追加。PGlite（dev）は `getDb()` を返し `close()` は no-op                                                                                                                            |
-| `apps/web/src/server/repositories.ts`                     | `createReadUnitOfWork` / `createWriteUnitOfWork` に分離。書き込みだけ `DB_WRITE_TRANSACTION=on` で tx を有効化                                                                                                |
-| `packages/infrastructure/package.json`                    | `ws` / `@types/ws` を再追加                                                                                                                                                                                   |
+| ファイル                                                  | 変更                                                                                                                                                                                                                                            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/infrastructure/src/db/client.ts`                | `createDb`（neon-http）は据え置き。`createTxConnectionProvider`（neon-serverless）を**追加**。Pool は `globalThis` で**使い回し**、`discard()` で捨てられる。`neonConfig` の書き換えは `acquire` の中で行い、未使用時はグローバル設定に触れない |
+| `packages/infrastructure/src/uow/drizzle-unit-of-work.ts` | `txConnectionProvider?: TxConnectionProvider \| null` を追加。`useTransaction: false` の間は**一度も触らない**。work 開始前の失敗なら `discard()` → 再 `acquire()` で 1 度だけやり直す                                                          |
+| `apps/web/src/db/client.ts`                               | `txConnectionProvider()` を追加。PGlite（dev）は `getDb()` を返し `discard()` は no-op                                                                                                                                                          |
+| `apps/web/src/server/repositories.ts`                     | `createReadUnitOfWork` / `createWriteUnitOfWork` に分離。書き込みだけ `DB_WRITE_TRANSACTION=on` で tx を有効化                                                                                                                                  |
+| `packages/infrastructure/package.json`                    | `ws` / `@types/ws` を再追加                                                                                                                                                                                                                     |
 
 **キルスイッチの仕様**: `DB_WRITE_TRANSACTION=on` のときだけ有効。**既定は無効**
 （未設定・他の値はすべて無効）。無効時の挙動は現行と完全に同じ — `work()` の恒等実行で、
 WebSocket 接続を張ることもない。テスト
-`useTransaction: false のとき createTxConnection は呼ばれない` がこれを固定している。
+`useTransaction: false のとき provider に触らない` がこれを固定している。
 
 **品質ゲート**: lint / type-check / test すべて PASS（`pnpm test` 全体、UoW は 16 件）。
 `pnpm build` も PASS（`ws` のバンドルを含めて Next のビルドが通ることの確認）。

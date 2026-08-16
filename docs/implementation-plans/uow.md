@@ -92,20 +92,21 @@ ADR-0019 §Rollback。
 ADR-0019 のロールバック後、完了条件 2 を満たし直すための再導入。設計は
 `docs/designs/uow.md`「トランザクション再導入（案 S 採用確定）」。
 
-| #   | ステップ                     | 対象                                                                                   | 完了条件                                     |
-| --- | ---------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------- |
-| S-1 | tx 専用の接続を足す          | `packages/infrastructure/src/db/client.ts` に `createTxConnection`                     | 既存 `createDb`（neon-http）が変わらないこと |
-| S-2 | UoW に接続の差し替え口を作る | `drizzle-unit-of-work.ts` の `createTxConnection`                                      | 無効時に呼ばれないことをテストで固定         |
-| S-3 | apps/web の配線              | `apps/web/src/db/client.ts` の `createTxConnection` / `repositories.ts` の読み書き分離 | 読み取り経路が WS を張らないこと             |
-| S-4 | 依存の再追加                 | `packages/infrastructure/package.json` に `ws` / `@types/ws`                           | `pnpm build` が通ること                      |
-| S-5 | テスト                       | `tests/uow/drizzle-unit-of-work.test.ts` に `createTxConnection` の 7 件               | 16 件 PASS                                   |
+| #   | ステップ                     | 対象                                                                                     | 完了条件                                     |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
+| S-1 | tx 専用の接続を足す          | `packages/infrastructure/src/db/client.ts` に `createTxConnectionProvider`               | 既存 `createDb`（neon-http）が変わらないこと |
+| S-2 | UoW に接続の差し替え口を作る | `drizzle-unit-of-work.ts` の `txConnectionProvider`                                      | 無効時に呼ばれないことをテストで固定         |
+| S-3 | apps/web の配線              | `apps/web/src/db/client.ts` の `txConnectionProvider` / `repositories.ts` の読み書き分離 | 読み取り経路が WS を張らないこと             |
+| S-4 | 依存の再追加                 | `packages/infrastructure/package.json` に `ws` / `@types/ws`                             | `pnpm build` が通ること                      |
+| S-5 | テスト                       | `tests/uow/drizzle-unit-of-work.test.ts` に provider の 7 件                             | 16 件 PASS                                   |
 
 **S-1〜S-5 は完了（2026-08-15）。** 品質ゲート lint / type-check / test / build すべて PASS。
 
-**S-6（2026-08-15 追加）: 接続の使い回しをやめた。** 本番で `on` にしたところ書き込みが
+**S-6（2026-08-15 追加）: 死んだ接続からの回復を入れた。** 本番で `on` にしたところ書き込みが
 全滅し（`begin` で `Connection terminated unexpectedly`）、原因が Pool の使い回し（H-3）と
-確定した。`execute` ごとに 1 本張って必ず閉じる形へ修正。詳細は設計書
-「本番での失敗と原因確定」。
+確定した。接続の使い回しは**維持**したまま（チェック操作が書き込みの hot path のため）、
+work が始まる前の失敗に限って `discard()` → 再 `acquire()` で 1 度だけやり直す。
+詳細は設計書「本番での失敗と原因確定」。
 
 **未完了**: 本番・Preview での再有効化。`DB_WRITE_TRANSACTION` は既定無効のままで、
 デプロイしても挙動は変わらない。手順は設計書「有効化の手順」。
