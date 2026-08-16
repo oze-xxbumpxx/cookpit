@@ -252,6 +252,21 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
   `GET /api/health` が `db: "error"`、画面は `loading.tsx` のあと RSC digest で落ちた
   （2026-08-13 実測。ADR-0019 ロールバック実行記録）。対話型トランザクションの再導入は
   Preview で接続確認してからにする。
+  - **2026-08-15 以降**: 書き込み経路だけ WebSocket に載せる案 S を実装した
+    （`docs/designs/uow.md`）。**読み取り・SSR は引き続き `neon-http`** で、ここは変えない。
+    切り替えは環境変数 `DB_WRITE_TRANSACTION=on` で、**既定は無効**。未設定なら
+    WebSocket 接続を張らないので、上記の障害は再現しない。
+  - **`GET /api/health` は書き込み経路を見ていない。** `@/db/client` の `db`（neon-http）を
+    直接叩くだけなので、`db: "connected"` が返っても**トランザクション経路が生きている
+    証拠にはならない**。案 S の確認には実際の書き込み操作が要る。
+- **本番の Web Push 環境変数（VAPID 3 点 + `CRON_SECRET`）は 2026-08-15 に Production へ設定済み。**
+  `GET /api/push/vapid-public-key` は 200。`TZ` は Vercel の予約変数なので設定しない。
+  `VAPID_SUBJECT` は `mailto:` か `https://` のみ。メールアドレスだけだと
+  `web-push` が `Vapid subject is not a valid URL` を throw し、Cron は
+  `{ error: "Internal Server Error" }` になる（未設定時の `Server misconfigured` とは別）。
+  出典: `logs/2026-08-15.md`。
+- **VAPID 鍵生成は `pnpm dlx web-push generate-vapid-keys`**（または `npx`）。
+  `pnpm exec web-push` はローカル `node_modules` に CLI が無いと失敗する。
 - **リモート（エフェメラル）環境では `DATABASE_URL` 未設定のため live DB 経路は動かない**。
   画面の手動確認は確認できた項目と BLOCKED（理由つき）を分けて報告し、コードリーディングで
   補完する（出典: `logs/2026-06-26.md` タスク3）。
