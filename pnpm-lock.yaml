@@ -280,6 +280,9 @@ importers:
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
+      ws:
+        specifier: ^8.18.0
+        version: 8.21.1
     devDependencies:
       '@cookpit/config':
         specifier: workspace:*
@@ -293,6 +296,9 @@ importers:
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4
+      '@types/ws':
+        specifier: ^8.5.12
+        version: 8.18.1
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@2.7.0)

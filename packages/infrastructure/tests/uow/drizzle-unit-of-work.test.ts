@@ -181,4 +181,100 @@ describe('DrizzleUnitOfWork', () => {
     release?.();
     await first;
   });
+
+  // 案 S（書き込み経路だけ別接続）の配線。本番は読み取りが neon-http、
+  // トランザクションだけ neon-serverless に載る。
+  describe('createTxClient', () => {
+    it('execute 内の書き込みは createTxClient 側の接続に載る', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: () => txDb });
+      const repository = new DrizzleShoppingListRepository(separated);
+      const list = createList();
+
+      await separated.execute(async () => {
+        await repository.save(list);
+      });
+
+      // execute の外では readDb を見るので、書き込み先が分かれていれば読めない。
+      expect(await repository.findById(list.id)).toBeNull();
+
+      const txRepository = new DrizzleShoppingListRepository(
+        new DrizzleUnitOfWork(txDb, { useTransaction: false }),
+      );
+      expect(await txRepository.findById(list.id)).not.toBeNull();
+    });
+
+    it('createTxClient 側でも例外でロールバックする', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: () => txDb });
+      const repository = new DrizzleShoppingListRepository(separated);
+      const list = createList();
+
+      await expect(
+        separated.execute(async () => {
+          await repository.save(list);
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+
+      const txRepository = new DrizzleShoppingListRepository(
+        new DrizzleUnitOfWork(txDb, { useTransaction: false }),
+      );
+      expect(await txRepository.findById(list.id)).toBeNull();
+    });
+
+    // キルスイッチの肝。無効の間は WebSocket 接続を張らせない。
+    it('useTransaction: false のとき createTxClient は呼ばれない', async () => {
+      const readDb = await createTestDb();
+      let called = 0;
+      const disabled = new DrizzleUnitOfWork(readDb, {
+        useTransaction: false,
+        createTxClient: () => {
+          called += 1;
+          return readDb;
+        },
+      });
+      const repository = new DrizzleShoppingListRepository(disabled);
+      const list = createList();
+
+      await disabled.execute(async () => {
+        await repository.save(list);
+      });
+
+      expect(called).toBe(0);
+      expect(await repository.findById(list.id)).not.toBeNull();
+    });
+
+    it('createTxClient は execute のたびに評価される', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      let called = 0;
+      const separated = new DrizzleUnitOfWork(readDb, {
+        createTxClient: () => {
+          called += 1;
+          return txDb;
+        },
+      });
+
+      await separated.execute(async () => undefined);
+      await separated.execute(async () => undefined);
+
+      expect(called).toBe(2);
+    });
+
+    it('createTxClient 省略時は db 自身でトランザクションを張る', async () => {
+      const readDb = await createTestDb();
+      const fallback = new DrizzleUnitOfWork(readDb);
+      const repository = new DrizzleShoppingListRepository(fallback);
+      const list = createList();
+
+      await fallback.execute(async () => {
+        await repository.save(list);
+      });
+
+      expect(await repository.findById(list.id)).not.toBeNull();
+    });
+  });
 });
