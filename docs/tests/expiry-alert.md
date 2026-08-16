@@ -522,6 +522,12 @@ PASS として報告することを禁止する（stock-edit の manual-browser-
 > 3 件目は未達扱い**とする（`docs/05-roadmap.md`「Unit B の実機確認の繰り越し」）。
 > 再開時は**まず Preview Deployment の再デプロイから**始めること。Vercel の環境変数
 > （2026-08-10 に登録済み）は、設定後に作られたデプロイにしか反映されない。
+>
+> **実施結果（2026-08-15）**: Sprint 8 完了条件 3 件目は **達成**。Preview ではなく
+> **本番**で確認した（Preview の Deployment Protection が iPhone PWA を阻むため）。
+> MB-04 PASS（vapid 200）/ MB-10 PASS（401 / 401 / 200）/ MB-03 PASS（iPhone PWA 購読）/
+> MB-08 PASS（Cron 手動実行後に通知。`sentCount: 1`）。MB-08b ほか Android 項目は
+> `BLOCKED`（実機なし）。MB-05〜07・MB-11〜14 は未実施。詳細は `logs/2026-08-15.md`。
 
 ### 10-1. 環境変数の準備チェックリスト（実施前提。**M-2/M-3 反映**）
 
