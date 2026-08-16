@@ -5,9 +5,11 @@
 - 関連: `docs/requirements/uow.md` / [ADR-0019](../decisions/ADR-0019-db-transaction-uow.md) /
   [ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md) /
   [ADR-0006](../decisions/ADR-0006-shopping-list-generate-idempotent.md)
-- 本番: 2026-08-16 時点でトランザクションは**無効**（`DB_WRITE_TRANSACTION` 未設定＝
-  `work()` の恒等実行）。2026-08-13 のロールバック（ADR-0019 実行記録）と、2026-08-16 に
-  案 S を有効化して再発した障害（ADR-0020）の 2 度、WebSocket 接続で本番を落としている。
+- 本番: **2026-08-16 に有効化済み**（`DB_WRITE_TRANSACTION=on`。書き込みのみ WebSocket、
+  読み取り・SSR は neon-http）。書き込みが通ることをユーザーが確認し、Sprint 10 完了条件 2 を
+  達成した。ここに至るまでに WebSocket 接続で本番を 3 度落としている（2026-08-13 の
+  全経路 WS / 08-16 の `globalThis` Pool / 08-16 の `ws` バンドル）。経緯は
+  [ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md) と `logs/2026-08-16.md`。
 - **接続方式の正典は §接続の寿命 — 1 リクエスト 1 接続へ**（2026-08-16・ADR-0020）。
   それ以前の節にある「グローバル `Pool` を使い回す」記述は破棄済み。
 
@@ -376,9 +378,9 @@ export interface DrizzleUnitOfWorkOptions {
 
 ## 未決事項
 
-| #   | 未決事項                                    | 状態                                                                                                                                               |
-| --- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **Preview は PASS**（2026-08-16・PR #173。読み取り生存 + 書き込み一巡をユーザーが確認）。**本番 ON は未実施** — ここが Sprint 10 完了条件 2 の残り |
-| U-2 | 2 接続併用の cold start 実コスト            | **未計測のまま**。Preview の一巡は通ったが数値を記録していない。同一リージョンで 10〜30 ms という見積もり（計算値）の裏取りは未了                  |
-| U-3 | 本番 `DATABASE_URL` が pooled か            | **確認不能**。Vercel の Sensitive 変数は書き込み専用で読み出せない。ローカル `.env.local` には `-pooler` が含まれる（値は読まずマッチ数のみ）      |
-| U-4 | transaction pooling とセッション機能の両立  | **未確認**。`-pooler` 経由なら PG レベルの prepared statement・`LISTEN/NOTIFY`・文跨ぎ advisory lock は使えない。drizzle 側の依存を要確認          |
+| #   | 未決事項                                    | 状態                                                                                                                                                                                                                              |
+| --- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **決着（2026-08-16）。本番 PASS** — PR #174 マージ後に ON にして書き込みが通ることをユーザーが確認。Sprint 10 完了条件 2 は達成。途中の「Preview PASS」は撤回済み（WS 経路が実行されていなかった可能性が高い。ADR-0020 実行記録） |
+| U-2 | 2 接続併用の cold start 実コスト            | **未計測のまま**。Preview の一巡は通ったが数値を記録していない。同一リージョンで 10〜30 ms という見積もり（計算値）の裏取りは未了                                                                                                 |
+| U-3 | 本番 `DATABASE_URL` が pooled か            | **確認不能**。Vercel の Sensitive 変数は書き込み専用で読み出せない。ローカル `.env.local` には `-pooler` が含まれる（値は読まずマッチ数のみ）                                                                                     |
+| U-4 | transaction pooling とセッション機能の両立  | **未確認**。`-pooler` 経由なら PG レベルの prepared statement・`LISTEN/NOTIFY`・文跨ぎ advisory lock は使えない。drizzle 側の依存を要確認                                                                                         |

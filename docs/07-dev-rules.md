@@ -259,6 +259,31 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
   - **`GET /api/health` は書き込み経路を見ていない。** `@/db/client` の `db`（neon-http）を
     直接叩くだけなので、`db: "connected"` が返っても**トランザクション経路が生きている
     証拠にはならない**。案 S の確認には実際の書き込み操作が要る。
+  - **2026-08-16 以降: 本番で `DB_WRITE_TRANSACTION=on` が有効**（書き込みのみ WebSocket、
+    読み取り・SSR は neon-http）。到達までに本番障害 2 回。詳細は
+    [ADR-0020](decisions/ADR-0020-tx-connection-per-request.md) と `logs/2026-08-16.md`。
+    - **書き込み用の WebSocket 接続は 1 リクエスト 1 接続。使い回してはいけない。**
+      `globalThis` に `Pool` を保持するとソケットがリクエストより長生きし、FaaS の
+      インスタンス凍結中に死ぬ。その死亡イベントが**無関係なリクエストを巻き添えにする**
+      （読み取りも止まるが、書き込みとの相関は無い）。
+    - **`ws` をバンドルすると `bufferutil` 問題を踏む。** Next は `ws` の optional な
+      ネイティブ依存 `bufferutil` / `utf-8-validate` を**空モジュールにエイリアス**する。
+      `ws` は `require` が throw する前提で JS 実装へフォールバックするため、空モジュールが
+      返ると `catch` が働かず、48 バイト以上のフレームで `b.mask is not a function` になる。
+      `coalesceWrites` の `setTimeout` 内で起きるので**未捕捉例外＝プロセスごと落ちる**。
+      `next.config.ts` の `env: { WS_NO_BUFFER_UTIL: '1' }` で回避している。**この設定を
+      外さないこと。** `serverExternalPackages: ['ws']` では回避できない（効果なしを確認済み）。
+- **WebSocket 書き込み経路の自動テストは存在しない。** テストは全層 PGlite で、
+  `pnpm build` が通ってもバンドルの実行時挙動は検証できない。**`ws` /
+  `@neondatabase/serverless` / Next のいずれかを上げたら、Preview で
+  `DB_WRITE_TRANSACTION=on` にして書き込みを一巡させること。** 2026-08-13 / 08-16 の
+  本番障害 3 件はすべてこの工程の欠落で起きている。**環境変数を変えたら再デプロイが要る**
+  （しないと実行中の関数に反映されず、「変更したのに動いた／落ちた」の誤判定になる）。
+- **Vercel の `Sensitive` 環境変数は書き込み専用で、値を読み出せない。** ダッシュボードにも
+  `Show value` は無く（`Copy to Clipboard` は鍵アイコンで無効）、`vercel env pull` でも
+  返らない。`DATABASE_URL` が該当するため、本番の接続文字列が pooled かどうかは
+  **リポジトリ側からは確認不能**（`docs/designs/uow.md` U-3）。Neon のリージョンは
+  Neon Console 側で確認できる（2026-08-16 時点で AWS `ap-southeast-1`。Vercel は `sin1` で同一メトロ）。
 - **本番の Web Push 環境変数（VAPID 3 点 + `CRON_SECRET`）は 2026-08-15 に Production へ設定済み。**
   `GET /api/push/vapid-public-key` は 200。`TZ` は Vercel の予約変数なので設定しない。
   `VAPID_SUBJECT` は `mailto:` か `https://` のみ。メールアドレスだけだと

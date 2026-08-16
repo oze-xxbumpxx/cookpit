@@ -1,6 +1,6 @@
 # ADR-0020: 書き込みトランザクションの WebSocket 接続をリクエストごとに張り捨てる
 
-- Status: Accepted（決定内容は維持。ただし 2026-08-16 の Preview PASS は撤回 — 下記 実行記録）
+- Status: Accepted（2026-08-16 本番 PASS。途中の Preview PASS は撤回済み — 下記 実行記録）
 - Date: 2026-08-16
 - 関連 feature: uow
 
@@ -169,6 +169,25 @@ Uncaught Exception: TypeError: b.mask is not a function
 **残る問題**: 自動テストは全層 PGlite で、**WebSocket 経路の実行時カバレッジがゼロ**である。
 `pnpm build` が通ってもバンドルの実行時挙動は検証できない。2026-08-13 / 08-16 の 3 度の
 障害はいずれもこの穴から出ている。
+
+### 実行記録（2026-08-16・本番 PASS）
+
+PR #174 をマージした本番で `DB_WRITE_TRANSACTION=on` にし、**書き込みが通ることを
+ユーザーが確認した。** 対話型トランザクションが本番で動いたのはこれが初めてである。
+
+- 判定: **PASS**（本番・ユーザー実施）
+- 同時刻の実測: `GET /api/health` 200 / `db:"connected"` / 0.23s、読み取り API と SSR も
+  すべて 200 / 0.2〜0.45s。読み取り経路（neon-http）に影響なし
+- これをもって **Sprint 10 完了条件 2「集約横断の書き込みが部分失敗しない」を達成**
+- 本 ADR の決定（1 リクエスト 1 接続 / `Client` / `finally` で `close`）は有効
+
+**未了のまま残すもの**
+
+- **U-2（レイテンシ実測）は開いたまま。** 見積もり 10〜30 ms の裏取りは取れていない
+- **U-3 / U-4**（本番 `DATABASE_URL` が pooled か、transaction pooling とセッション機能）も未確認
+- **WS 経路の自動テストは依然ゼロ。** 今回動いたことは、次のバンドル変更で壊れないことを
+  保証しない。`ws` / `@neondatabase/serverless` / Next のいずれかを上げるときは、
+  Preview で書き込みを一巡させること（3 度の障害すべてがこの工程の欠落で起きている）
 
 ## References（設計書・要件・関連 ADR・外部資料へのリンク）
 

@@ -799,11 +799,11 @@ Sprint 9 の成果を待つ必要は無い。**着手可能。**
 - [x] 献立からレシピを外すと買い物リストが追随する — Unit A（PR #162）。
       `SyncShoppingListFromMealPlanUseCase` に削除追随・数量上書きを実装し、
       `bought` / `manually_added` は残す分岐までテスト済み
-- [ ] 集約横断の書き込みが部分失敗しない（トランザクション境界が引かれている）
-      — **実装は入ったが有効化は未確認**。2026-08-15 に案 S（書き込み経路だけ WebSocket）を
-      実装済み（本ブランチ）だが、**main には未マージ**で、キルスイッチ
-      `DB_WRITE_TRANSACTION` も既定無効。詳細と有効化手順は
-      `docs/designs/uow.md`「トランザクション再導入（案 S 採用確定）」
+- [x] 集約横断の書き込みが部分失敗しない（トランザクション境界が引かれている）
+      — **2026-08-16 達成**。本番で `DB_WRITE_TRANSACTION=on` にして書き込みが通ることを
+      ユーザーが確認した。到達までに障害 3 回（`globalThis` Pool の使い回し → PR #173、
+      `ws` の `bufferutil` 空モジュール → PR #174）。判断は
+      [ADR-0020](decisions/ADR-0020-tx-connection-per-request.md)、経緯は `logs/2026-08-16.md`
 - [x] **Sprint 8 の完了条件 3 件目**「期限が近い在庫にアプリを開かずに気づける」が
       実機で確認できている（タスク 5。2026-08-15 iPhone。`logs/2026-08-15.md`）
 
