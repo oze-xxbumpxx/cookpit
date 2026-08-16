@@ -1,6 +1,6 @@
 # ADR-0020: 書き込みトランザクションの WebSocket 接続をリクエストごとに張り捨てる
 
-- Status: Accepted（2026-08-16。Preview で有効化し書き込み一巡を確認・下記 実行記録）
+- Status: Accepted（決定内容は維持。ただし 2026-08-16 の Preview PASS は撤回 — 下記 実行記録）
 - Date: 2026-08-16
 - 関連 feature: uow
 
@@ -123,6 +123,52 @@ PR [#173](https://github.com/oze-xxbumpxx/cookpit/pull/173) の Preview Deployme
 - **書き込みレイテンシの実測値は未記録。** 設計書 U-2 は開いたまま。
   見積もり 10〜30 ms が当たっていたかは確認できていない
 - **本番での有効化はこの時点で未実施。** Sprint 10 完了条件 2 は本番 ON をもって達成となる
+
+> **この PASS は撤回する（2026-08-16 追記）。** 下記のとおり本番で `b.mask is not a function`
+> が出た。この不具合は環境に依存せず、WS 経路で書き込みが走れば Preview でも必ず落ちる。
+> **したがって上記の Preview 検証では WS 経路が一度も実行されていなかった可能性が高い**
+> （環境変数の設定後に再デプロイしていなければ、書き込みは neon-http を通って正常に見える）。
+> 「本番でいきなり試さない運用の最初の実施例」という評価も撤回する。
+> **観測できたのは「画面が正常に動いた」ことだけで、「WS 経路が動いた」ことではなかった。**
+> 08-15 のログにある「報告 ≠ 観測」を、記録する側の私が繰り返した。
+
+### 実行記録（2026-08-16・本番）— `b.mask is not a function`
+
+PR #173 をマージし本番で `DB_WRITE_TRANSACTION=on` にしたところ、別の障害が出た。
+
+```
+Uncaught Exception: TypeError: b.mask is not a function
+    at a.exports.mask (.next/server/chunks/686.js:12:51886)
+    at s.frame / s.dispatch / s.send / J.send
+    at Timeout._onTimeout
+```
+
+**原因は接続の寿命ではなくバンドルである。** ビルド成果物から確認した。
+
+1. Next.js は `ws` の optional なネイティブ依存 `bufferutil` / `utf-8-validate` を
+   **空モジュールへエイリアスする**（`chunks/219.js` に `91840:()=>{}`）
+2. `ws/lib/buffer-util.js` は `require('bufferutil')` が throw することを前提に
+   純 JS 実装へフォールバックする設計。**空モジュールが返ると throw しないので
+   catch が働かず**、「ネイティブを呼ぶラッパー」が入る
+3. そのラッパーは `length < 48` なら JS、**48 バイト以上なら `bufferUtil.mask`** を呼ぶ。
+   `bufferUtil` は `{}` なので `TypeError`
+4. `@neondatabase/serverless` は `coalesceWrites`（既定 ON）で同一 tick の書き込みを
+   1 フレームに連結し **`setTimeout(0)` で送る**。reject される Promise が無いため
+   **未捕捉例外となり、Vercel の関数プロセスごと落ちる**
+
+15 秒後の `neon tx client error Connection terminated unexpectedly` は、本 ADR で追加した
+`client.on('error')` が後始末を拾ったログ。この listener 自体は意図どおり機能している。
+
+**対処**: `apps/web/next.config.ts` に `env: { WS_NO_BUFFER_UTIL: '1' }` を追加し、
+ビルド時に `ws` 側のガードを静的に false にして try ブロックごと除去する。
+`serverExternalPackages: ['ws']` も試したが**効果なし**（`ws` はバンドルされたまま）。
+
+検証（ビルド成果物）: `WS_NO_BUFFER_UTIL` の文字列と 48 バイト分岐が消え、`mask` が
+純 JS 実装 `c[d+f]=a[f]^b[3&f]` に固定されることを確認した。
+
+**残る問題**: 自動テストは全層 PGlite で、**WebSocket 経路の実行時カバレッジがゼロ**である。
+`pnpm build` が通ってもバンドルの実行時挙動は検証できない。2026-08-13 / 08-16 の 3 度の
+障害はいずれもこの穴から出ている。
 
 ## References（設計書・要件・関連 ADR・外部資料へのリンク）
 
