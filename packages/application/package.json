@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@cookpit/config": "workspace:*",
-    "@types/node": "^20",
+    "@types/node": "^26",
     "eslint": "^9.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
