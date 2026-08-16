@@ -1,6 +1,6 @@
 # ADR-0020: 書き込みトランザクションの WebSocket 接続をリクエストごとに張り捨てる
 
-- Status: Proposed（2026-08-16。実装と Preview 実測の完了をもって Accepted に上げる）
+- Status: Accepted（2026-08-16。Preview で有効化し書き込み一巡を確認・下記 実行記録）
 - Date: 2026-08-16
 - 関連 feature: uow
 
@@ -106,9 +106,23 @@ ADR-0019 は Consequences で「WebSocket 接続は HTTP より cold start が�
 実行中の関数へ反映されない。
 
 これで `createWriteUnitOfWork` が `useTransaction: false` / `createTxClient: null` を返し、
-`getTxDb` も `createTxDb` も呼ばれず、`neonConfig` にも触れない。全経路 neon-http の
-状態（2026-08-13 〜 08-15 と同じ）に戻る。原子性は失われるが、ADR-0006 の冪等・前方回復は
-残っているので生成・完了の再実行は従来どおり収束する。
+`getTxConnection` も `createTxConnection` も呼ばれず、`neonConfig` にも触れない。全経路
+neon-http の状態（2026-08-13 〜 08-15 と同じ）に戻る。原子性は失われるが、ADR-0006 の
+冪等・前方回復は残っているので生成・完了の再実行は従来どおり収束する。
+
+### 実行記録（2026-08-16・Preview）
+
+PR [#173](https://github.com/oze-xxbumpxx/cookpit/pull/173) の Preview Deployment に
+`DB_WRITE_TRANSACTION=on` を設定し、**ユーザーが**読み取りの生存確認と書き込みの一巡を
+実施した。**問題なし。**
+
+これは 2026-08-13 と 08-16 の 2 度の事故で**どちらも省略されていた工程**である
+（レビュー H-01）。有効化を本番でいきなり試さない運用に切り替えた最初の実施例。
+
+- 判定: PASS（ユーザー実施・観測はユーザーによる報告）
+- **書き込みレイテンシの実測値は未記録。** 設計書 U-2 は開いたまま。
+  見積もり 10〜30 ms が当たっていたかは確認できていない
+- **本番での有効化はこの時点で未実施。** Sprint 10 完了条件 2 は本番 ON をもって達成となる
 
 ## References（設計書・要件・関連 ADR・外部資料へのリンク）
 
