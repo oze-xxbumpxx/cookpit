@@ -8,7 +8,7 @@ import * as schema from './schema';
  * 読み取り・SSR を含む既定の接続。HTTPS 1 往復で、`db.transaction()` は使えない。
  *
  * 全経路をここに寄せるのが基本。対話型トランザクションが要る書き込みだけ
- * {@link createTxDb} を使う（ADR-0019 実行記録・設計書「トランザクション再導入の設計案」案 S）。
+ * {@link createTxConnection} を使う（設計書「トランザクション再導入」案 S）。
  */
 export function createDb(databaseUrl: string) {
   return drizzle(neon(databaseUrl), { schema });
@@ -16,52 +16,53 @@ export function createDb(databaseUrl: string) {
 
 export type DrizzleClient = ReturnType<typeof createDb>;
 
-const globalStore = globalThis as unknown as {
-  __cookpitNeonPool?: Pool;
-  __cookpitNeonPoolUrl?: string;
-};
+/** 使い終わったら必ず {@link TxConnection.close} を呼ぶ。呼ばないとソケットが残る。 */
+export interface TxConnection {
+  client: DrizzleClient;
+  close: () => Promise<void>;
+}
 
 const CONNECTION_TIMEOUT_MS = 5_000;
 
 /**
- * 対話型トランザクション専用の接続（WebSocket `Pool`）。書き込み経路だけが使う。
+ * 対話型トランザクション専用の接続（WebSocket）。**1 トランザクションにつき 1 本張り、
+ * 終わったら閉じる。**
  *
- * 読み取りと分けているのは影響範囲の限定が目的。2026-08-13 に全経路を WebSocket へ
- * 寄せたところ Vercel から Neon へ接続できず、読み取りまで巻き添えで落ちて全画面が
- * クラッシュした（ADR-0019 実行記録）。分けておけば同じ障害が起きても閲覧は生き残る。
+ * 接続を使い回さないのは、サーバーレスでは使い回せないため。Vercel の Function は
+ * リクエスト間で凍結され、その間に Neon 側が idle な WebSocket を切る。Pool を
+ * `globalThis` に載せて再利用すると、次の書き込みで**死んだソケットを掴み**、
+ * 最初の `begin` が `Connection terminated unexpectedly` で落ちる
+ * （2026-08-15 本番実測。設計書 H-3）。`connectionTimeoutMillis` は Pool から見て
+ * 「接続は在る」ため発火しない。
  *
- * Pool は `globalThis` で使い回す。`neonConfig` の書き換えを module スコープではなく
- * ここで行うのは、キルスイッチが無効な間はグローバル設定に一切触れないため。
+ * 代償は書き込み 1 回ごとの接続確立（WS ハンドシェイク + 認証）。読み取りは
+ * `createDb`（neon-http）のままなので、この経路が落ちても閲覧は生き残る。
  *
- * @param databaseUrl 接続文字列。前回と異なる値なら旧 Pool を閉じてから張り替える
+ * @param databaseUrl 接続文字列
  */
-export function createTxDb(databaseUrl: string): DrizzleClient {
+export function createTxConnection(databaseUrl: string): TxConnection {
+  // グローバル設定の書き換えは、キルスイッチが有効でこの関数が呼ばれたときだけ行う。
   neonConfig.webSocketConstructor = WebSocket;
 
-  if (
-    globalStore.__cookpitNeonPool === undefined ||
-    globalStore.__cookpitNeonPoolUrl !== databaseUrl
-  ) {
-    const previous = globalStore.__cookpitNeonPool;
-    const pool = new Pool({
-      connectionString: databaseUrl,
-      max: 1,
-      connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
-    });
-    pool.on('error', (err: Error) => {
-      // eslint-disable-next-line no-console -- 接続層にロガーが無く、未捕捉例外を防ぐには listener が必要
-      console.error('neon pool error', err.message);
-    });
-    globalStore.__cookpitNeonPool = pool;
-    globalStore.__cookpitNeonPoolUrl = databaseUrl;
-    if (previous !== undefined) {
-      void previous.end().catch(() => undefined);
-    }
-  }
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    max: 1,
+    connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+  });
+  pool.on('error', (err: Error) => {
+    // eslint-disable-next-line no-console -- 接続層にロガーが無く、未捕捉例外を防ぐには listener が必要
+    console.error('neon pool error', err.message);
+  });
 
   // neon-http と neon-serverless で drizzle の型が異なる。Repository が使う API は同じ
   // （設計書 R-4 の PGlite と同じ扱い）。
-  return drizzleOverWebSocket(globalStore.__cookpitNeonPool, {
-    schema,
-  }) as unknown as DrizzleClient;
+  const client = drizzleOverWebSocket(pool, { schema }) as unknown as DrizzleClient;
+
+  return {
+    client,
+    close: async () => {
+      // 後始末の失敗で本体の結果を潰さない。接続は Function 終了時にどのみち回収される。
+      await pool.end().catch(() => undefined);
+    },
+  };
 }

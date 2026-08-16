@@ -1,7 +1,8 @@
 import {
   createDb as createInfrastructureDb,
-  createTxDb as createInfrastructureTxDb,
+  createTxConnection as createInfrastructureTxConnection,
   type DrizzleClient,
+  type TxConnection,
 } from '@cookpit/infrastructure';
 
 export function createDb(databaseUrl: string): DrizzleClient {
@@ -35,20 +36,21 @@ export function getDb(): DrizzleClient {
 }
 
 /**
- * 対話型トランザクション用のクライアントを返す。書き込み経路だけが呼ぶ。
+ * 対話型トランザクション用の接続を張る。書き込み経路が `execute` ごとに 1 本使い、
+ * 終わったら `close()` する。
  *
- * PGlite（dev）は `getDb()` と同じインスタンスを返す。単一プロセス上の接続で、
- * 既に `db.transaction()` が使えるため分ける理由がない。Neon は WebSocket 接続を
- * 別に張る（`createTxDb`）。
+ * PGlite（dev）は `getDb()` と同じインスタンスを返し、`close()` は何もしない
+ * （単一プロセス上の接続で、既に `db.transaction()` が使えるため分ける理由がない）。
+ * Neon は WebSocket 接続を都度張る。
  *
  * @throws Error DATABASE_URL が未設定
  */
-export function getTxDb(): DrizzleClient {
+export function createTxConnection(): TxConnection {
   if (databaseUrl === null) {
     throw new Error('DATABASE_URL is not configured');
   }
   if (databaseUrl.startsWith('pglite:')) {
-    return getDb();
+    return { client: getDb(), close: async () => undefined };
   }
-  return createInfrastructureTxDb(databaseUrl);
+  return createInfrastructureTxConnection(databaseUrl);
 }

@@ -256,6 +256,11 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
     （`docs/designs/uow.md`）。**読み取り・SSR は引き続き `neon-http`** で、ここは変えない。
     切り替えは環境変数 `DB_WRITE_TRANSACTION=on` で、**既定は無効**。未設定なら
     WebSocket 接続を張らないので、上記の障害は再現しない。
+  - **WebSocket 接続をサーバーレスで使い回してはいけない**（2026-08-15 本番実測）。
+    Function はリクエスト間で凍結され、その間に Neon が idle な WS を切る。Pool を
+    `globalThis` に載せると次の書き込みで死んだソケットを掴み、最初の `begin` が
+    `Connection terminated unexpectedly` で落ちる。`connectionTimeoutMillis` は
+    「接続は在る」ため発火しない。**1 トランザクションにつき 1 本張って必ず閉じる。**
   - **`GET /api/health` は書き込み経路を見ていない。** `@/db/client` の `db`（neon-http）を
     直接叩くだけなので、`db: "connected"` が返っても**トランザクション経路が生きている
     証拠にはならない**。案 S の確認には実際の書き込み操作が要る。
