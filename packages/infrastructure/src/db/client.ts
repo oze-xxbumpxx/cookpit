@@ -1,4 +1,4 @@
-import { neon, Pool, neonConfig } from '@neondatabase/serverless';
+import { neon, Client, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { drizzle as drizzleOverWebSocket } from 'drizzle-orm/neon-serverless';
 import { WebSocket } from 'ws';
@@ -8,7 +8,7 @@ import * as schema from './schema';
  * 読み取り・SSR を含む既定の接続。HTTPS 1 往復で、`db.transaction()` は使えない。
  *
  * 全経路をここに寄せるのが基本。対話型トランザクションが要る書き込みだけ
- * {@link createTxDb} を使う（ADR-0019 実行記録・設計書「トランザクション再導入の設計案」案 S）。
+ * {@link createTxConnection} を使う（設計書「接続の寿命 — 1 リクエスト 1 接続へ」）。
  */
 export function createDb(databaseUrl: string) {
   return drizzle(neon(databaseUrl), { schema });
@@ -16,52 +16,63 @@ export function createDb(databaseUrl: string) {
 
 export type DrizzleClient = ReturnType<typeof createDb>;
 
-const globalStore = globalThis as unknown as {
-  __cookpitNeonPool?: Pool;
-  __cookpitNeonPoolUrl?: string;
-};
+/**
+ * トランザクション 1 回分の接続。**使い終わったら必ず `close()` を await すること。**
+ *
+ * 閉じ忘れるとソケットがリクエストより長生きし、ADR-0020 の障害が再発する。
+ * 呼び出し側で握らずに済むよう、`DrizzleUnitOfWork.execute` が `finally` で閉じる。
+ */
+export interface TxConnection {
+  db: DrizzleClient;
+  close: () => Promise<void>;
+}
 
+/** ハンドシェイクが詰まったままリクエストを占有させないための上限。 */
 const CONNECTION_TIMEOUT_MS = 5_000;
 
 /**
- * 対話型トランザクション専用の接続（WebSocket `Pool`）。書き込み経路だけが使う。
+ * 対話型トランザクション専用の接続（WebSocket）。書き込み経路だけが使う。
  *
- * 読み取りと分けているのは影響範囲の限定が目的。2026-08-13 に全経路を WebSocket へ
- * 寄せたところ Vercel から Neon へ接続できず、読み取りまで巻き添えで落ちて全画面が
- * クラッシュした（ADR-0019 実行記録）。分けておけば同じ障害が起きても閲覧は生き残る。
+ * **1 リクエスト 1 接続。使い回さない**（ADR-0020）。2026-08-16 に `globalThis` へ
+ * `Pool` を保持したところ、ソケットがリクエストより長生きし、FaaS のインスタンス凍結中に
+ * 死んだ。その死亡イベントが無関係なリクエストの処理中に飛んで巻き添えで落ちていた。
+ * 接続の寿命をリクエストに揃えると、この失敗モードが構造的に消える。
  *
- * Pool は `globalThis` で使い回す。`neonConfig` の書き換えを module スコープではなく
- * ここで行うのは、キルスイッチが無効な間はグローバル設定に一切触れないため。
+ * `Pool`（`max: 1`）ではなく `Client` を使うのは、1 回使って捨てる用途に対して
+ * Pool の待ち行列とアイドル管理が不要なため。
  *
- * @param databaseUrl 接続文字列。前回と異なる値なら旧 Pool を閉じてから張り替える
+ * `neonConfig` の書き換えを module スコープではなくここで行うのは、キルスイッチが
+ * 無効な間はグローバル設定に一切触れないため。
+ *
+ * @param databaseUrl 接続文字列
+ * @throws Error 接続に失敗した場合（`CONNECTION_TIMEOUT_MS` 超過を含む）
  */
-export function createTxDb(databaseUrl: string): DrizzleClient {
+export async function createTxConnection(databaseUrl: string): Promise<TxConnection> {
   neonConfig.webSocketConstructor = WebSocket;
 
-  if (
-    globalStore.__cookpitNeonPool === undefined ||
-    globalStore.__cookpitNeonPoolUrl !== databaseUrl
-  ) {
-    const previous = globalStore.__cookpitNeonPool;
-    const pool = new Pool({
-      connectionString: databaseUrl,
-      max: 1,
-      connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
-    });
-    pool.on('error', (err: Error) => {
-      // eslint-disable-next-line no-console -- 接続層にロガーが無く、未捕捉例外を防ぐには listener が必要
-      console.error('neon pool error', err.message);
-    });
-    globalStore.__cookpitNeonPool = pool;
-    globalStore.__cookpitNeonPoolUrl = databaseUrl;
-    if (previous !== undefined) {
-      void previous.end().catch(() => undefined);
-    }
-  }
+  const client = new Client({
+    connectionString: databaseUrl,
+    // Pool のときは「接続の取得待ち」にしか効かず握り潰されていた（ADR-0019 実行記録の
+    // 15 秒）。Client では接続確立そのものに効く。
+    connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+  });
 
-  // neon-http と neon-serverless で drizzle の型が異なる。Repository が使う API は同じ
-  // （設計書 R-4 の PGlite と同じ扱い）。
-  return drizzleOverWebSocket(globalStore.__cookpitNeonPool, {
-    schema,
-  }) as unknown as DrizzleClient;
+  // listener が無いと、クエリ外でソケットが死んだときの 'error' が未捕捉例外になり
+  // プロセスごと落ちる。実行中のクエリは _errorAllQueries 経由で個別に reject されるので、
+  // ここで握り潰しても UseCase 側のエラーは失われない。
+  client.on('error', (err: Error) => {
+    // eslint-disable-next-line no-console -- 接続層にロガーが無く、未捕捉例外を防ぐには listener が必要
+    console.error('neon tx client error', err.message);
+  });
+
+  await client.connect();
+
+  return {
+    // neon-http と neon-serverless で drizzle の型が異なる。Repository が使う API は同じ
+    // （設計書 R-4 の PGlite と同じ扱い）。
+    db: drizzleOverWebSocket(client, { schema }) as unknown as DrizzleClient,
+    close: async () => {
+      await client.end();
+    },
+  };
 }

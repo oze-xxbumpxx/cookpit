@@ -3,9 +3,13 @@
 - ステータス: confirmed（Gate A ユーザー確定・2026-08-13。トランザクション境界は UseCase）
 - レベル: L3
 - 関連: `docs/requirements/uow.md` / [ADR-0019](../decisions/ADR-0019-db-transaction-uow.md) /
+  [ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md) /
   [ADR-0006](../decisions/ADR-0006-shopping-list-generate-idempotent.md)
-- 本番: 2026-08-13 に neon-http へロールバック。UseCase の包みは残るが、本番 `execute` は
-  `work()` の恒等実行（ADR-0019 実行記録）。再導入は Preview で接続確認してから。
+- 本番: 2026-08-16 時点でトランザクションは**無効**（`DB_WRITE_TRANSACTION` 未設定＝
+  `work()` の恒等実行）。2026-08-13 のロールバック（ADR-0019 実行記録）と、2026-08-16 に
+  案 S を有効化して再発した障害（ADR-0020）の 2 度、WebSocket 接続で本番を落としている。
+- **接続方式の正典は §接続の寿命 — 1 リクエスト 1 接続へ**（2026-08-16・ADR-0020）。
+  それ以前の節にある「グローバル `Pool` を使い回す」記述は破棄済み。
 
 ## 背景
 
@@ -225,11 +229,17 @@ findById(shoppingList) → ドメイン検証 → pantry.find() → pantry.save(
 差し戻したコード（`c28123e`）を読み直したところ、WebSocket 接続の典型的な失敗要因は
 **すでに対処済み**だった。
 
-| よくある原因                             | 前回の実装                                      | 判定     |
-| ---------------------------------------- | ----------------------------------------------- | -------- |
-| `neonConfig.webSocketConstructor` 未設定 | `ws` の `WebSocket` を設定済み                  | 該当せず |
-| Edge Runtime で `ws` が動かない          | `route.ts` は `export const runtime = 'nodejs'` | 該当せず |
-| Pool の error リスナ未登録で落ちる       | `pool.on('error', ...)` 登録済み                | 該当せず |
+| よくある原因                             | 前回の実装                                      | 判定                     |
+| ---------------------------------------- | ----------------------------------------------- | ------------------------ |
+| `neonConfig.webSocketConstructor` 未設定 | `ws` の `WebSocket` を設定済み                  | 該当せず                 |
+| Edge Runtime で `ws` が動かない          | `route.ts` は `export const runtime = 'nodejs'` | 該当せず                 |
+| Pool の error リスナ未登録で落ちる       | `pool.on('error', ...)` 登録済み                | **該当する**（下記訂正） |
+
+> **訂正（2026-08-16）**: 最終行の「該当せず」は実質的に誤りだった。リスナは登録されているが、
+> 2026-08-16 に本番で観測されたログは**素のスタックトレース**であり、
+> `console.error('neon pool error', err.message)` を通っていない（このハンドラはメッセージ
+> だけを出すのでスタックは出ない）。**登録済みリスナはこの経路を拾えていない。**
+> 詳細は [ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md)。
 
 **最も有力な手がかりは、設定した 5 秒のタイムアウトが効かなかったこと。**
 `connectionTimeoutMillis: 5_000` を入れているのに実測は約 15 秒で失敗している
@@ -237,16 +247,16 @@ findById(shoppingList) → ドメイン検証 → pantry.find() → pantry.save(
 これが発火していないなら、詰まっているのは Pool の待ち行列ではなく
 **その先（WebSocket ハンドシェイクまたは名前解決・TLS）**である可能性が高い。
 
-| #   | 仮説                                                                    | 切り分け方（Preview で 1 回ずつ）                                              |
-| --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| H-1 | `DATABASE_URL` が WebSocket を受けないホスト（pooler の有無違い）を指す | 接続文字列のホストを確認し、pooler 有無の両方で `GET /api/health` を叩き分ける |
-| H-2 | Vercel `sin1` から Neon への WS 経路が通らない                          | `regions` を外した（既定）Preview で同じ計測を行い、リージョン依存かを判定する |
-| H-3 | グローバル Pool の使い回しで死んだソケットを掴む                        | Pool をリクエスト毎生成にした Preview で計測。改善するなら warm 再利用側の問題 |
-| H-4 | Neon の compute サスペンドからの復帰待ち                                | 直前に別経路（neon-http）で 1 回叩いて起こしてから WS 経路を叩く               |
+| #   | 仮説                                                                    | 切り分け方（Preview で 1 回ずつ）                                              | 結論（2026-08-16）     |
+| --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------- |
+| H-1 | `DATABASE_URL` が WebSocket を受けないホスト（pooler の有無違い）を指す | 接続文字列のホストを確認し、pooler 有無の両方で `GET /api/health` を叩き分ける | **一部否定**（下記）   |
+| H-2 | Vercel `sin1` から Neon への WS 経路が通らない                          | `regions` を外した（既定）Preview で同じ計測を行い、リージョン依存かを判定する | **否定**               |
+| H-3 | グローバル Pool の使い回しで死んだソケットを掴む                        | Pool をリクエスト毎生成にした Preview で計測。改善するなら warm 再利用側の問題 | **確定（これが原因）** |
+| H-4 | Neon の compute サスペンドからの復帰待ち                                | 直前に別経路（neon-http）で 1 回叩いて起こしてから WS 経路を叩く               | 未判定（影響は残る）   |
 
-**この 4 つはこの環境からは切り分けられない。** Vercel / Neon への egress がプロキシで
-遮断されており（`orm.drizzle.team` / `neon.com` も 403）、ドライバの一次情報にも到達できない。
-**Preview Deployment での実測はユーザーの手が要る。**
+この 4 つは 2026-08-15 時点ではこの環境から切り分けられなかった。Vercel / Neon への egress が
+プロキシで遮断されており（`orm.drizzle.team` / `neon.com` も 403）、ドライバの一次情報にも
+到達できない。**2026-08-16 に本番実測とユーザーからの情報で決着した（次節）。**
 
 ### 案の比較
 
@@ -308,9 +318,67 @@ WebSocket 接続を張ることもない。テスト
 4. 失敗したら §H-1〜H-4 の切り分けへ。成功したら本番へ同じ環境変数を設定する
 5. 事故時は環境変数を落として再デプロイするだけで戻る（PR は不要）
 
+## 接続の寿命 — 1 リクエスト 1 接続へ（2026-08-16・ADR-0020）
+
+**接続方式の正典はこの節**。前節までの「グローバル `Pool` を使い回す」記述は破棄する。
+
+### 何が起きたか
+
+2026-08-16、本番で `DB_WRITE_TRANSACTION=on` にしたところ
+`Error: Connection terminated unexpectedly` が再発した。切り分けの結果は
+[ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md) の Context に詳しいが、要点は 3 つ。
+
+1. **案 S の経路分離自体は成功していた。** 同時刻の実測で `GET /api/health` は 200 /
+   `db:"connected"` / 0.66s、読み取り API と SSR ページは全て 200 / 0.2〜0.3s。
+   2026-08-13 のように読み取りごと落ちてはいない。
+2. **原因は H-3（グローバル Pool の使い回し）。** `globalThis.__cookpitNeonPool` の WS ソケットは
+   リクエストより長生きし、FaaS のインスタンス凍結中に死ぬ。死亡イベントが飛ぶ時刻は
+   それを張った書き込みリクエストと切り離されているため、**無関係なリクエストが巻き添えになる**。
+   ユーザー報告「読み取りも止まる。書き込みの有無とは無関係」はこれで説明できる。
+3. **H-2 は否定。** Vercel `sin1` と Neon `ap-southeast-1` は同一メトロ。
+
+### 決定（ADR-0020）
+
+書き込み用接続は **1 リクエスト 1 接続**。`globalThis` キャッシュを廃止し、`Pool`（`max: 1`）を
+`Client` に置き換え、`UnitOfWork.execute` が `finally` で必ず閉じる。
+
+読み取り・SSR は `neon-http` のまま（案 S の経路分離は継続）。キルスイッチ
+`DB_WRITE_TRANSACTION` も既定 OFF のまま維持する。
+
+### インターフェース変更
+
+現行の `createTxClient?: (() => DrizzleClient) | null` は**接続を閉じる手段を持たない**。
+`Client.connect()` が非同期でもあるため、次の形へ変える。
+
+```ts
+export interface TxConnection {
+  db: DrizzleClient;
+  close: () => Promise<void>;
+}
+
+export interface DrizzleUnitOfWorkOptions {
+  useTransaction?: boolean;
+  createTxClient?: (() => Promise<TxConnection>) | null;
+}
+```
+
+`execute` は `const conn = await this.createTxClient()` の後、`try { ... } finally { await conn.close() }`
+で閉じ切る。PGlite（dev / テスト）は `close` を no-op とする。
+
+### 性能の見積もり（**計算値。未実測**）
+
+同一リージョンなので TCP 1 RTT + TLS 1.3 1 RTT + WS アップグレード 1 RTT +
+パイプライン化された PG 認証 ≒ 4 RTT で、**おおむね 10〜30 ms**。読み取り・SSR には乗らない。
+`pipelineConnect: "password"` が既定であることは `@neondatabase/serverless@1.1.0` の
+`index.d.mts` で確認済み（認証で何往復もするわけではない）。
+
+有効化手順の §2〜3 で**実測して U-2 を閉じる**。
+
 ## 未決事項
 
-| #   | 未決事項                                    | 状態                                                                                                 |
-| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **未決**。実装は入ったが Preview 検証が未実施。WS 接続が通るか（H-1〜H-4）はこの環境から確認できない |
-| U-2 | 2 接続併用の cold start 実コスト            | **未計測**。案 S の悪影響として想定はしているが実測がない。有効化後に体感が悪化するようなら再訪する  |
+| #   | 未決事項                                    | 状態                                                                                                                                          |
+| --- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| U-1 | 本番で `DB_WRITE_TRANSACTION=on` にできるか | **未決**。2026-08-16 に一度 ON にして障害が出たため OFF へ戻した。ADR-0020 の実装後、Preview で再挑戦する                                     |
+| U-2 | 2 接続併用の cold start 実コスト            | **未計測**。同一リージョンで 10〜30 ms と見積もった（計算値）。ADR-0020 の有効化手順で実測する                                                |
+| U-3 | 本番 `DATABASE_URL` が pooled か            | **確認不能**。Vercel の Sensitive 変数は書き込み専用で読み出せない。ローカル `.env.local` には `-pooler` が含まれる（値は読まずマッチ数のみ） |
+| U-4 | transaction pooling とセッション機能の両立  | **未確認**。`-pooler` 経由なら PG レベルの prepared statement・`LISTEN/NOTIFY`・文跨ぎ advisory lock は使えない。drizzle 側の依存を要確認     |

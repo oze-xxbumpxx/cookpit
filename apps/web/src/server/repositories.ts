@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getDb, getTxDb } from '@/db/client';
+import { getDb, getTxConnection } from '@/db/client';
 import {
   DrizzleMealPlanRepository,
   DrizzlePantryRepository,
@@ -45,14 +45,16 @@ function createReadUnitOfWork(): DrizzleUnitOfWork {
 
 /**
  * 書き込み経路の UoW。キルスイッチが有効なときだけ、トランザクションを
- * WebSocket 接続（`getTxDb`）の上で開く。読み取りは neon-http のまま
+ * WebSocket 接続（`getTxConnection`）の上で開く。読み取りは neon-http のまま
  * （設計書「トランザクション再導入の設計案」案 S）。
+ *
+ * 接続は `execute` のたびに張られ、`execute` の `finally` で閉じられる（ADR-0020）。
  */
 function createWriteUnitOfWork(): DrizzleUnitOfWork {
   const enabled = isWriteTransactionEnabled();
   return new DrizzleUnitOfWork(getDb(), {
     useTransaction: enabled,
-    createTxClient: enabled ? getTxDb : null,
+    createTxClient: enabled ? getTxConnection : null,
   });
 }
 

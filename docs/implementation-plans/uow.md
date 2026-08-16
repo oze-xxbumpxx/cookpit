@@ -105,6 +105,57 @@ ADR-0019 のロールバック後、完了条件 2 を満たし直すための�
 **未完了**: 本番・Preview での有効化。`DB_WRITE_TRANSACTION` は既定無効のままで、
 デプロイしても挙動は変わらない。手順は設計書「有効化の手順」。
 
+## 追加実装: 接続の寿命をリクエストに揃える（2026-08-16・ADR-0020）
+
+案 S の有効化で本番障害が再発したことを受けた修正。設計は `docs/designs/uow.md`
+「接続の寿命 — 1 リクエスト 1 接続へ」、判断は
+[ADR-0020](../decisions/ADR-0020-tx-connection-per-request.md)。
+
+| #   | ステップ                          | 対象                                                             | 完了条件                                                                               |
+| --- | --------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| #   | ステップ                          | 対象                                                             | 完了条件                                                                               | 状態 |
+| --- | --------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---- |
+| T-1 | `TxConnection` 型を定義           | `packages/infrastructure/src/db/client.ts`                       | `{ db, close }` を export し、`index.ts` から公開                                      | 完了 |
+| T-2 | `createTxDb` を都度接続に作り直す | 同上                                                             | `globalThis` キャッシュと `Pool` を削除。`Client` を生成し `TxConnection` を返す       | 完了 |
+| T-3 | UoW が接続を閉じる                | `packages/infrastructure/src/uow/drizzle-unit-of-work.ts`        | `createTxClient` を `() => Promise<TxConnection>` に変更。`finally` で `await close()` | 完了 |
+| T-4 | apps/web の配線を追従             | `apps/web/src/db/client.ts` の `getTxDb`                         | PGlite 経路は `close` を no-op に。`repositories.ts` は原則そのまま                    | 完了 |
+| T-5 | テスト追加・既存の追従            | `packages/infrastructure/tests/uow/drizzle-unit-of-work.test.ts` | 下記 3 観点を追加し、既存 14 件も async 化に追従して PASS                              | 完了 |
+| T-6 | 品質ゲート                        | `pnpm lint` / `type-check` / `test` / `build`                    | すべて PASS（`build` は `ws` 同梱で Next が通ることの確認）                            | 完了 |
+
+**計画からの逸脱（1 件）**: `createTxDb` を **`createTxConnection`** へ改名した。戻り値が
+`DrizzleClient` から「閉じる義務のある `TxConnection`」へ変わったため、名前を据え置くと
+呼び出し側が閉じ忘れる。`apps/web` 側も `getTxDb` → `getTxConnection` に合わせた。
+`index.ts` は `export * from './db/client'` なので `TxConnection` は自動的に公開され、変更不要。
+
+**実施結果（2026-08-16）**: lint PASS（既存 warning 1 件のみ。`product-form-fields.test.tsx`
+の未使用変数で本変更と無関係）/ type-check PASS / infrastructure UoW **17 件 PASS**（14 → 17）/
+`pnpm build` PASS。
+
+`apps/web` のフルスイートは `shopping-list-client.offline-queue.test.tsx` が
+**既存のフレーキー**で、クリーン HEAD でも 5 回中 3 回落ちることを確認済み（本変更とは無関係。
+単体実行では 21 件 PASS）。別課題として切り出す。
+
+### T-5 のテスト観点
+
+| 観点                                                               | 意図                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------- |
+| `work()` が正常終了したとき `close()` が呼ばれる                   | 通常経路のリーク防止                                    |
+| **`work()` が例外を投げても `close()` が呼ばれる**                 | **これが漏れると障害が即再発する。最重要**              |
+| `useTransaction: false` の間は `createTxClient` が一度も呼ばれない | 既存テストの維持。キルスイッチ OFF で WS を張らない保証 |
+
+### 有効化（コードと分離。ユーザーの手が要る）
+
+1. Preview に `DB_WRITE_TRANSACTION=on` を設定して再デプロイ
+2. 読み取りの生存確認 → 書き込みを一巡（買い物完了・献立同期・チェック操作）
+3. **書き込みのレイテンシを実測して U-2 を閉じる**（見積もりは 10〜30 ms）
+4. 問題なければ本番へ。事故時は環境変数を落として再デプロイするだけで戻る
+
+### スコープ外
+
+- `repositories.ts` のキルスイッチ仕様（`DB_WRITE_TRANSACTION=on` のみ有効・既定 OFF）は変更しない
+- 読み取り・SSR の `neon-http` 経路は一切触らない
+- U-3（本番 `DATABASE_URL` が pooled か）・U-4（transaction pooling とセッション機能）は本ステップで解決しない
+
 ## ドキュメント更新対象
 
 - `docs/03-architecture.md` の DI 節に UoW とドライバ

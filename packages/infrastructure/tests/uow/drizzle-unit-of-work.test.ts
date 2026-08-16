@@ -8,6 +8,7 @@ import {
   ShoppingListId,
 } from '@cookpit/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { DrizzleClient, TxConnection } from '../../src/db/client';
 import { DrizzlePantryRepository } from '../../src/repositories/drizzle-pantry.repository';
 import { DrizzleShoppingListRepository } from '../../src/repositories/drizzle-shopping-list.repository';
 import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
@@ -183,12 +184,38 @@ describe('DrizzleUnitOfWork', () => {
   });
 
   // 案 S（書き込み経路だけ別接続）の配線。本番は読み取りが neon-http、
-  // トランザクションだけ neon-serverless に載る。
+  // トランザクションだけ neon-serverless に載る。接続は 1 回の execute ごとに
+  // 張って閉じる（ADR-0020）。
   describe('createTxClient', () => {
+    /** `close` の呼ばれ方を数えられる TxConnection を作る。 */
+    function trackedConnection(db: DrizzleClient): {
+      create: () => Promise<TxConnection>;
+      created: () => number;
+      closed: () => number;
+    } {
+      let created = 0;
+      let closed = 0;
+      return {
+        create: () => {
+          created += 1;
+          return Promise.resolve({
+            db,
+            close: () => {
+              closed += 1;
+              return Promise.resolve();
+            },
+          });
+        },
+        created: () => created,
+        closed: () => closed,
+      };
+    }
+
     it('execute 内の書き込みは createTxClient 側の接続に載る', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: () => txDb });
+      const tx = trackedConnection(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: tx.create });
       const repository = new DrizzleShoppingListRepository(separated);
       const list = createList();
 
@@ -208,7 +235,8 @@ describe('DrizzleUnitOfWork', () => {
     it('createTxClient 側でも例外でロールバックする', async () => {
       const readDb = await createTestDb();
       const txDb = await createTestDb();
-      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: () => txDb });
+      const tx = trackedConnection(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: tx.create });
       const repository = new DrizzleShoppingListRepository(separated);
       const list = createList();
 
@@ -225,16 +253,76 @@ describe('DrizzleUnitOfWork', () => {
       expect(await txRepository.findById(list.id)).toBeNull();
     });
 
+    it('execute が成功したら接続を閉じる', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const tx = trackedConnection(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: tx.create });
+
+      await separated.execute(async () => undefined);
+
+      expect(tx.created()).toBe(1);
+      expect(tx.closed()).toBe(1);
+    });
+
+    // ADR-0020 の中核。ここが漏れるとソケットがリクエストより長生きし、
+    // 無関係なリクエストを巻き添えにする障害が再発する。
+    it('execute 内で例外が出ても接続を閉じる', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const tx = trackedConnection(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: tx.create });
+      const repository = new DrizzleShoppingListRepository(separated);
+      const list = createList();
+
+      await expect(
+        separated.execute(async () => {
+          await repository.save(list);
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+
+      expect(tx.closed()).toBe(1);
+    });
+
+    it('close の失敗は work の例外を握り潰さない', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const separated = new DrizzleUnitOfWork(readDb, {
+        createTxClient: () =>
+          Promise.resolve({
+            db: txDb,
+            close: () => Promise.reject(new Error('close failed')),
+          }),
+      });
+
+      await expect(
+        separated.execute(async () => {
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+    });
+
+    it('接続は execute のたびに張り直され、使い回されない', async () => {
+      const readDb = await createTestDb();
+      const txDb = await createTestDb();
+      const tx = trackedConnection(txDb);
+      const separated = new DrizzleUnitOfWork(readDb, { createTxClient: tx.create });
+
+      await separated.execute(async () => undefined);
+      await separated.execute(async () => undefined);
+
+      expect(tx.created()).toBe(2);
+      expect(tx.closed()).toBe(2);
+    });
+
     // キルスイッチの肝。無効の間は WebSocket 接続を張らせない。
     it('useTransaction: false のとき createTxClient は呼ばれない', async () => {
       const readDb = await createTestDb();
-      let called = 0;
+      const tx = trackedConnection(readDb);
       const disabled = new DrizzleUnitOfWork(readDb, {
         useTransaction: false,
-        createTxClient: () => {
-          called += 1;
-          return readDb;
-        },
+        createTxClient: tx.create,
       });
       const repository = new DrizzleShoppingListRepository(disabled);
       const list = createList();
@@ -243,25 +331,8 @@ describe('DrizzleUnitOfWork', () => {
         await repository.save(list);
       });
 
-      expect(called).toBe(0);
+      expect(tx.created()).toBe(0);
       expect(await repository.findById(list.id)).not.toBeNull();
-    });
-
-    it('createTxClient は execute のたびに評価される', async () => {
-      const readDb = await createTestDb();
-      const txDb = await createTestDb();
-      let called = 0;
-      const separated = new DrizzleUnitOfWork(readDb, {
-        createTxClient: () => {
-          called += 1;
-          return txDb;
-        },
-      });
-
-      await separated.execute(async () => undefined);
-      await separated.execute(async () => undefined);
-
-      expect(called).toBe(2);
     });
 
     it('createTxClient 省略時は db 自身でトランザクションを張る', async () => {

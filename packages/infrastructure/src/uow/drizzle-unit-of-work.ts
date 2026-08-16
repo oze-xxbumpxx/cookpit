@@ -1,5 +1,5 @@
 import type { UnitOfWork } from '@cookpit/domain';
-import type { DrizzleClient } from '../db/client';
+import type { DrizzleClient, TxConnection } from '../db/client';
 
 export interface DrizzleUnitOfWorkOptions {
   /**
@@ -9,24 +9,24 @@ export interface DrizzleUnitOfWorkOptions {
    */
   useTransaction?: boolean;
   /**
-   * トランザクションを開くクライアントの遅延生成。省略・null なら `db` 自身を使う。
+   * トランザクション 1 回分の接続を張る。省略・null なら `db` 自身を使う。
    *
-   * 本番は読み取りを neon-http、書き込みだけ neon-serverless に分けるため別を渡す
-   * （設計書「トランザクション再導入の設計案」案 S）。`useTransaction` が false の間は
-   * **一度も呼ばれない** — キルスイッチを切れば WebSocket 接続を張らずに済む。
+   * 本番は読み取りを neon-http、書き込みだけ neon-serverless に分けるため別を渡す。
+   * **`execute` のたびに呼ばれ、終わったら必ず `close()` される**（ADR-0020）。
+   * `useTransaction` が false の間は**一度も呼ばれない** — キルスイッチを切れば
+   * WebSocket 接続を張らずに済む。
    */
-  createTxClient?: (() => DrizzleClient) | null;
+  createTxClient?: (() => Promise<TxConnection>) | null;
 }
 
 /**
  * 1 リクエストにつき 1 インスタンス。`currentTx` をフィールドに持つのでシングルトンにしない。
- * 接続の再利用は `createDb` / `createTxDb` 側の責務。
  */
 export class DrizzleUnitOfWork implements UnitOfWork {
   private currentTx: DrizzleClient | null = null;
   private busy = false;
   private readonly useTransaction: boolean;
-  private readonly createTxClient: (() => DrizzleClient) | null;
+  private readonly createTxClient: (() => Promise<TxConnection>) | null;
 
   constructor(
     private readonly db: DrizzleClient,
@@ -49,17 +49,44 @@ export class DrizzleUnitOfWork implements UnitOfWork {
       if (!this.useTransaction) {
         return await work();
       }
-      const txClient = this.createTxClient === null ? this.db : this.createTxClient();
-      return await txClient.transaction(async (tx) => {
-        this.currentTx = tx as unknown as DrizzleClient;
-        try {
-          return await work();
-        } finally {
-          this.currentTx = null;
-        }
-      });
+      if (this.createTxClient === null) {
+        return await this.runInTransaction(this.db, work);
+      }
+      const connection = await this.createTxClient();
+      try {
+        return await this.runInTransaction(connection.db, work);
+      } finally {
+        await this.closeQuietly(connection);
+      }
     } finally {
       this.busy = false;
+    }
+  }
+
+  private async runInTransaction<T>(client: DrizzleClient, work: () => Promise<T>): Promise<T> {
+    return await client.transaction(async (tx) => {
+      this.currentTx = tx as unknown as DrizzleClient;
+      try {
+        return await work();
+      } finally {
+        this.currentTx = null;
+      }
+    });
+  }
+
+  /**
+   * 切断の失敗で `work()` の例外を握り潰さないために、close の例外は再送出しない。
+   * COMMIT / ROLLBACK は `runInTransaction` の中で完了済みなので、ここは後始末だけ。
+   */
+  private async closeQuietly(connection: TxConnection): Promise<void> {
+    try {
+      await connection.close();
+    } catch (error) {
+      // eslint-disable-next-line no-console -- 接続層にロガーが無い。握り潰しの記録は残す
+      console.error(
+        'failed to close tx connection',
+        error instanceof Error ? error.message : error,
+      );
     }
   }
 }
