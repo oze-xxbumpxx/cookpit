@@ -2,6 +2,9 @@
 
 - task-id / 変更レベル: Sprint 10 Unit B（roadmap タスク3「DB トランザクション / UoW 導入」）/ L3
 - 作成日: 2026-08-13（Gate A ユーザー確定・2026-08-13。推奨案を採用し、トランザクション境界は UseCase が貼ると訂正）
+- 最終状態: 2026-08-16 に本番有効化済み。初期 Gate A の「全経路 WebSocket + warm Pool」は
+  本番障害を受けて撤回し、読み取りは neon-http、書き込みだけ WebSocket の
+  **1 リクエスト 1 接続**へ変更した（ADR-0019 / ADR-0020）。境界・原子性・契約不変の要求は維持する。
 
 ## 背景
 
@@ -19,15 +22,19 @@ ADR-0006 は Generate の 2 集約更新を非トランザクションのまま�
 
 - roadmap Sprint 10 完了条件 2 件目: 「集約横断の書き込みが部分失敗しない（トランザクション境界が引かれている）」
 - Sprint 9 申し送り: `DrizzleShoppingListRepository.save()` の 3 往復をトランザクション導入と同時に扱う
-- Gate A（2026-08-13、ユーザー確定）:
+- Gate A（2026-08-13、ユーザー確定。当初案。接続方式は ADR-0020 が上書き）:
   1. 本番ドライバは `drizzle-orm/neon-serverless` + `Pool`（WebSocket）へ全面切替
   2. トランザクションは **UseCase が `unitOfWork.execute` で貼る**。HTTP ルートは BEGIN/COMMIT しない
   3. 包む範囲は書き込み UseCase すべて（集約横断の 4 本に限定しない）
-- 確認不要: 読み取り HTTP / 書き込み WS のハイブリッドは作らない。`save()` の SQL 形は変えない。既存の冪等・前方回復は残す。
+- 当初の確認不要事項: 読み取り HTTP / 書き込み WS のハイブリッドは作らない。
+  この接続方針だけは 2026-08-15 の案 S と ADR-0020 により撤回した。`save()` の SQL 形を
+  変えず、既存の冪等・前方回復を残す判断は維持する。
 
 ## 機能要件
 
-- FR-1: 本番の Drizzle 接続を `neon-http` から `neon-serverless`（WebSocket `Pool`）へ切り替える。dev / テストの PGlite は維持する。
+- FR-1: 本番は読み取り・SSR を `neon-http`、書き込みトランザクションだけを
+  `neon-serverless`（WebSocket `Client`）に分ける。書き込み接続は使い回さず、
+  `UnitOfWork.execute()` ごとに張って必ず閉じる。dev / テストの PGlite は維持する。
 - FR-2: Domain に `UnitOfWork` ポートを置き、Infrastructure が `db.transaction()` で実装する。
 - FR-3: 書き込み UseCase は `execute()` の本体を `this.unitOfWork.execute(...)` で包む。Repository は同じ UoW インスタンスの接続（tx 中は tx）を使う。
 - FR-4: 集約横断 UseCase（Generate / CompleteShopping / Sync / DeleteStore）で、後段の保存が例外を投げたら先行した保存も残らない。
@@ -39,7 +46,8 @@ ADR-0006 は Generate の 2 集約更新を非トランザクションのまま�
 
 ## 非機能要件
 
-- Pool は isolate あたり小さく（`max: 1` 程度）、`globalThis` で warm 再利用する。リクエスト毎の WebSocket ハンドシェイクは Sprint 9 の sin1 改善を打ち消すため禁止。
+- WebSocket 接続を `globalThis` や Pool で再利用しない。FaaS のリクエスト寿命に合わせ、
+  `Client` を 1 回使って閉じる。接続確立コストは U-2 として実測課題に残す。
 - UoW インスタンスはリクエスト毎に `new` する（`currentTx` をフィールドに持つためシングルトンにしない）。
 - 追加費用なし（Neon / Vercel 現行プランのまま）。
 
@@ -88,7 +96,8 @@ ADR-0006 は Generate の 2 集約更新を非トランザクションのまま�
 ## 対象範囲
 
 - Domain: `UnitOfWork` ポート
-- Infrastructure: `createDb` のドライバ、`DrizzleUnitOfWork`、全 Drizzle Repository の接続の取り方
+- Infrastructure: 読み取り用 `createDb`（neon-http）、書き込み用 `createTxConnection`
+  （neon-serverless）、`DrizzleUnitOfWork`、全 Drizzle Repository の接続の取り方
 - Application: 書き込み UseCase への `UnitOfWork` 注入と `execute` の包み
 - Presentation: 書き込みルートが同一 UoW から Repository と UseCase を組み立てる。読み取り factory は維持
 - テスト: PGlite での ROLLBACK、Application は passthrough UoW
@@ -100,7 +109,6 @@ ADR-0006 は Generate の 2 集約更新を非トランザクションのまま�
 - UseCase の保存順序・冪等ロジックの組み替え（包むだけ）
 - `save()` の SQL 統合、部分 UPDATE 化
 - Unit C（ConsumeStock 冪等キー）、タスク 2（mapper JST）、タスク 5（Push 実機）
-- 読み取りと書き込みでドライバを分けるハイブリッド
 - `SendExpiryAlertsUseCase` 全体の DB トランザクション化（FR-7）
 
 ## 後方互換性・データ移行
@@ -117,4 +125,7 @@ ADR-0006 は Generate の 2 集約更新を非トランザクションのまま�
 
 ## 未決事項
 
-なし（Gate A 確定済み。FR-7 は設計裁量として本書で固定する）。
+- U-2: 書き込み用 WebSocket 接続のレイテンシ実測（見積もり 10〜30 ms の裏取り）
+- U-3: 本番 `DATABASE_URL` が pooled endpoint か（Vercel Sensitive 変数のため確認不能）
+- U-4: transaction pooling とセッション機能の両立
+- WebSocket 経路の自動テストは未整備。依存更新時は Preview で書き込みを一巡させる。

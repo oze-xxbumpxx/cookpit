@@ -234,10 +234,12 @@ export function RecipeListClient({ initialRecipes }) {
 `execute()` の本体を `unitOfWork.execute(...)` で包み、1 トランザクションにする（ADR-0019）。
 ルートは BEGIN/COMMIT せず、`createWriteContext()` で同じ UoW から Repository と UseCase を組み立てる。
 
-読み取り専用（Get* / SSR）は従来どおり `recipeRepository()` 等を使う。本番 DB は
-`drizzle-orm/neon-http`（HTTPS）。WebSocket Pool は本番で接続できずロールバックした
-（ADR-0019 実行記録）。dev / テストの PGlite は維持する。本番の `execute` は
-トランザクションではなく `work()` の恒等実行。
+読み取り専用（Get* / SSR）は従来どおり `recipeRepository()` 等を使い、
+`drizzle-orm/neon-http`（HTTPS）へ接続する。書き込みは本番の
+`DB_WRITE_TRANSACTION=on` のときだけ `drizzle-orm/neon-serverless`（WebSocket）の
+`Client` を **1 リクエスト 1 接続**で張り、`UnitOfWork.execute()` の `finally` で閉じる。
+キルスイッチが無効なら `work()` の恒等実行へ戻る。dev / テストの PGlite は維持する
+（ADR-0019 / ADR-0020）。
 
 ```typescript
 // packages/application の UseCase（概念）
