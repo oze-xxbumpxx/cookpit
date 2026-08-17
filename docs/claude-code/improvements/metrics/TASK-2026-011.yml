@@ -1,0 +1,143 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-2026-011
+feature_name: uow
+change_level: 3
+date: 2026-08-13 # 着手日。2026-08-16 に本番有効化、2026-08-17 に最終レビューでクローズ
+
+agents:
+  calls: unknown # Agent 呼び出し回数
+  retries: unknown # 再依頼回数
+  unnecessary_calls: unknown
+
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+# IMP-2026-025 の効果実測をモデル条件込みで比較するための記録（2026-07-18 追加）。
+codex:
+  model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
+  reasoning_effort: unknown # 例: low | medium | high（Task/層で変えた場合は notes に内訳）
+  notes: 'Codex 委譲なし。Orchestrator 経路（Cursor Cloud Agent → Claude Code）。machine セクションは 08-16 以降のローカルセッションのみを捕捉'
+
+quality:
+  tests_added: 17 # UoW テスト（PR #164 で 14 → PR #173 で 17）。Infrastructure 全体は 118 tests
+  initial_test_failures: unknown
+  reviewer_block_open: 0 # Task 1 の open BLOCK 1 件は後続コミットで resolved
+  reviewer_high_impact_unverified: 0
+  reviewer_follow_up_open: 3 # R-02（BEGIN 失敗時の接続未返却）/ R-03=R-08（U-2 未計測）/ R-09（U-3・U-4・WS 実行時テスト）
+  reviewer_pre_existing: 2 # R-05（過去文書の neon-http 記述）/ SEC-5（pnpm audit の推移依存）
+  # 旧 severity の時系列比較用。新規 review では impact 別件数として記録し、不明なら unknown。
+  reviewer_critical: unknown
+  reviewer_major: 5 # high impact の互換欄（R-01 / R-02 / R-06 / R-07 / SEC-5）
+  reviewer_minor: 8 # medium / low impact の互換欄
+  user_corrections: 0
+  escaped_defects: 3 # 本番到達: PR #164 の読み取り全断 / globalThis Pool 使い回し / ws bufferutil 空モジュール
+
+process:
+  requirement_rework: 0
+  design_rework: 2 # ADR-0019 の warm Pool 方針を破棄（ADR-0020）/ 全経路 WebSocket → 案 S（読み書き分離）
+  implementation_rework: 3 # PR #168 ロールバック / PR #173 接続方式変更 / PR #174 バンドル修正
+  missing_documents: 0
+  unresolved_items: 3 # U-2 / U-3・U-4 / WebSocket 実行時の自動テスト
+  # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
+  # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
+  meta_work_ratio: unknown
+
+# 人間レビューの負荷を測る。秒単位の計時や長いアンケートは要求しない。
+# active_time_bucket / confidence / full_diff_opened だけ人間が任意で回答し、その他は
+# review packet / audit から取得できる場合に記録する。不明なら推測せず unknown。
+review:
+  active_time_bucket: unknown # lt5m | 5to15m | 15to30m | gt30m
+  confidence: unknown # 1〜5（変更を理解してマージ判断できる確信度）
+  full_diff_opened: unknown # true | false
+  handoff_items: 0 # Task 2 でクローズ依頼が明示されたため人間判断項目 0
+  rounds: 2 # Task 1（2026-08-13 実装レビュー）/ Task 2（2026-08-17 最終レビュー）
+  stale_invalidations: 1 # PR #173 / #174 で Task 1 のパケットが陳腐化し再生成
+  verified_findings: unknown
+  false_positive_findings: unknown
+
+machine:
+  # collect-task-metrics.mjs による自動集計。手で編集しない（--write の再実行で更新）
+  collected_at: 2026-08-17
+  branch_filters: ['uow']
+  sessions: # session_id 単位でマージ・累積（1 行 = 1 セッション）
+    - {
+        'id': '01da73db-6176-4175-a63c-49fc998d3253',
+        'date': '2026-08-16',
+        'branches':
+          [
+            'claude/tx-connection-per-request',
+            'claude/ws-bufferutil-mask-fix',
+            'docs/uow-production-verified-0816',
+            'main',
+          ],
+        'matched_by': 'branch',
+        'active_minutes': 171,
+        'tokens':
+          { 'input': 6205, 'output': 152480, 'cache_creation': 483801, 'cache_read': 33550808 },
+        'tool_uses': 171,
+        'user_prompts': 20,
+        'agent_calls': {},
+        'models': ['claude-opus-5'],
+      }
+    - {
+        'id': '4595b640-9b67-4adc-9082-109feea50fa3',
+        'date': '2026-08-17',
+        'branches': ['docs/uow-production-verified-0816'],
+        'matched_by': 'branch',
+        'active_minutes': 2,
+        'tokens': { 'input': 4581, 'output': 221, 'cache_creation': 77075, 'cache_read': 745716 },
+        'tool_uses': 25,
+        'user_prompts': 1,
+        'agent_calls': {},
+        'models': ['claude-opus-4-5-20251101'],
+      }
+    - {
+        'id': '61c8538b-c871-40d1-9e41-cdf7d14b0be6',
+        'date': '2026-08-17',
+        'branches': ['docs/uow-production-verified-0816'],
+        'matched_by': 'branch',
+        'active_minutes': 3,
+        'tokens': { 'input': 8375, 'output': 191, 'cache_creation': 151772, 'cache_read': 2240240 },
+        'tool_uses': 42,
+        'user_prompts': 1,
+        'agent_calls': {},
+        'models': ['claude-opus-4-5-20251101'],
+      }
+    - {
+        'id': 'bbdd93a3-8e57-4e82-8619-37de9e47fa85',
+        'date': '2026-08-17',
+        'branches': ['docs/uow-production-verified-0816'],
+        'matched_by': 'branch',
+        'active_minutes': 13,
+        'tokens':
+          { 'input': 1576, 'output': 44581, 'cache_creation': 124629, 'cache_read': 4804259 },
+        'tool_uses': 63,
+        'user_prompts': 3,
+        'agent_calls': {},
+        'models': ['claude-opus-5'],
+      }
+  gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
+    []
+  totals:
+    sessions: 4
+    active_minutes: 189 # 約3時間9分（活動時間ベース・空白30分超は除外）
+    tokens_input: 20737
+    tokens_output: 197473
+    tokens_cache_creation: 837277
+    tokens_cache_read: 41341023
+    tokens_total: 42396510
+    tool_uses: 301
+    user_prompts: 25
+    agent_calls: 0
+    agent_calls_by_type: {}
+    agent_restarts: 0 # 同一 Subagent 種の再起動数（手戻りプロキシ）
+    gate_runs: 0
+    gate_fail_runs: 0
+    gate_rework_rate: unknown # ゲート実行記録なし
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+# 機械自動では埋めない。不明な欄は unknown のまま。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }
