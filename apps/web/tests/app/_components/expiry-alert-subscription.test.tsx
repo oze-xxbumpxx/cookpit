@@ -1,5 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { getVapidPublicKey, postSubscribe, postUnsubscribe } = vi.hoisted(() => ({
@@ -93,7 +95,8 @@ describe('ExpiryAlertSubscription', () => {
 
     render(<ExpiryAlertSubscription />);
 
-    expect(screen.getByText('このブラウザは通知に対応していません。')).toBeDefined();
+    // 対応可否の判定はマウント後に行うため、非対応の案内も判定後に現れる。
+    expect(await screen.findByText('このブラウザは通知に対応していません。')).toBeDefined();
     const button = screen.getByRole('button', { name: '通知に非対応' });
     expect(button.hasAttribute('disabled')).toBe(true);
   });
@@ -175,13 +178,11 @@ describe('ExpiryAlertSubscription', () => {
 
     render(<ExpiryAlertSubscription />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText('通知の設定を読み込めませんでした。時間をおいて再度お試しください。'),
-      ).toBeDefined();
-    });
-    const button = screen.getByRole('button', { name: '通知をオンにする' });
+    const button = await screen.findByRole('button', { name: '通知をオンにする' });
     expect(button.hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByText('通知の設定を読み込めませんでした。時間をおいて再度お試しください。'),
+    ).toBeDefined();
   });
 
   it('EAS-07: subscribe が 422 のとき上限到達メッセージを表示する', async () => {
@@ -242,5 +243,55 @@ describe('ExpiryAlertSubscription', () => {
     render(<ExpiryAlertSubscription />);
 
     expect(await screen.findByRole('button', { name: '通知をオフにする' })).toBeDefined();
+  });
+
+  it('EAS-11: 購読状態の判定中は ON/OFF を断定せず「確認中」の無効ボタンを表示する', async () => {
+    stubPushSupportedEnvironment({ existingSubscription: createMockSubscription() });
+
+    render(<ExpiryAlertSubscription />);
+
+    const waiting = screen.getByRole('button', { name: '確認中' });
+    expect(waiting.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('button', { name: '通知をオンにする' })).toBeNull();
+
+    expect(await screen.findByRole('button', { name: '通知をオフにする' })).toBeDefined();
+  });
+
+  it('EAS-12: サーバー描画も待機表示になる（ハイドレーション不一致を起こさない）', () => {
+    // サーバーには window の Push API が無く、非対応ブラウザと同じ判定結果になる。この
+    // 条件でも非対応ブランチを描画しないことが、初期表示の切り替わりを防ぐ条件。
+    stubPushUnsupportedEnvironment();
+
+    const html = renderToString(<ExpiryAlertSubscription />);
+
+    expect(html).toContain('期限が近づいたら通知');
+    expect(html).toContain('確認中');
+    expect(html).not.toContain('このブラウザは通知に対応していません。');
+  });
+
+  it('EAS-13: サーバー描画の HTML を対応ブラウザでハイドレーションしても不一致にならない', async () => {
+    // サーバー相当（Push API 無し）で描画した HTML を、Push 対応ブラウザでハイドレーションする。
+    // 描画結果が食い違うと React が復旧エラーを報告し、画面が作り直されて表示が切り替わる。
+    stubPushUnsupportedEnvironment();
+    const html = renderToString(<ExpiryAlertSubscription />);
+    stubPushSupportedEnvironment({ existingSubscription: createMockSubscription() });
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const recoverableErrors: string[] = [];
+
+    const root = await act(async () =>
+      hydrateRoot(container, <ExpiryAlertSubscription />, {
+        onRecoverableError: (error) => recoverableErrors.push(String(error)),
+      }),
+    );
+
+    expect(recoverableErrors).toEqual([]);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
   });
 });
