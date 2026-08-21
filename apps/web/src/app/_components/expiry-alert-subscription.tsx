@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api-client';
 import { API_FAILURE_MESSAGE, useApiAction } from '@/lib/use-api-action';
 import { Bell, BellOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 const UNSUPPORTED_MESSAGE = 'このブラウザは通知に対応していません。';
 const PERMISSION_DENIED_MESSAGE = '通知が許可されなかったため、設定できませんでした。';
@@ -34,20 +34,42 @@ function isPushSupported(): boolean {
   return typeof window !== 'undefined' && 'PushManager' in window && 'serviceWorker' in navigator;
 }
 
+/** 対応可否は起動後に変化しないため、購読（変更通知）は行わない。 */
+function subscribeToPushSupport(): () => void {
+  return () => {};
+}
+
+function getPushSupportedSnapshot(): boolean | null {
+  return isPushSupported();
+}
+
+/**
+ * サーバー描画・ハイドレーション時のスナップショット。`null` は「対応可否がまだ分からない」
+ * を表す。ブラウザ API の有無を初回レンダーで直接読むと、サーバー（window が無く常に非対応）と
+ * クライアント（対応）で別の分岐を描画してハイドレーション不一致になり、React が画面を
+ * 作り直すため表示が切り替わって見える。判定はハイドレーション後の再レンダーに委ねる。
+ */
+function getPushSupportedServerSnapshot(): boolean | null {
+  return null;
+}
+
 export function ExpiryAlertSubscription() {
   const action = useApiAction();
-  const [supported] = useState<boolean>(isPushSupported);
+  const supported = useSyncExternalStore(
+    subscribeToPushSupport,
+    getPushSupportedSnapshot,
+    getPushSupportedServerSnapshot,
+  );
   const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
   const [vapidUnavailable, setVapidUnavailable] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
-  // 初期表示時に navigator.serviceWorker.ready 経由で現在の購読状態を判定するまでの間、
-  // ON/OFF どちらか誤った状態でボタン操作をさせないための待機フラグ。非対応ブラウザでは
-  // 判定自体を行わないため初期値を `false` にする（effect 内での同期 setState を避けるため、
-  // 「非対応なら判定不要」を早期 return ではなく初期値そのもので表現する）。
-  const [checkingSubscription, setCheckingSubscription] = useState<boolean>(isPushSupported);
+  // navigator.serviceWorker.ready 経由で現在の購読状態を判定するまでの待機フラグ。
+  // 判定前に ON/OFF どちらかを断定して表示しないために使う（非対応ブラウザでは
+  // 購読判定自体を行わず、このフラグを読まない分岐を描画する）。
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
 
   useEffect(() => {
-    if (!supported) {
+    if (supported !== true) {
       return;
     }
     let cancelled = false;
@@ -143,7 +165,7 @@ export function ExpiryAlertSubscription() {
     });
   }
 
-  if (!supported) {
+  if (supported === false) {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
         <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
@@ -154,14 +176,26 @@ export function ExpiryAlertSubscription() {
     );
   }
 
-  const subscribeDisabled =
-    action.pending || checkingSubscription || (vapidUnavailable && !subscribed);
+  // 対応可否の判定と購読状態の判定が終わるまでを「待機中」として一括で扱う。
+  const initializing = supported === null || checkingSubscription;
+  const subscribeDisabled = action.pending || initializing || (vapidUnavailable && !subscribed);
+  const buttonLabel = action.pending
+    ? '処理中'
+    : initializing
+      ? '確認中'
+      : subscribed
+        ? '通知をオフにする'
+        : '通知をオンにする';
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
         <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
-          {subscribed ? (
+          {initializing ? (
+            // 判定前はアイコンでも ON/OFF を断定しない。場所だけ確保しておき、判定後に
+            // ベルアイコンが入っても行内の文字位置がずれないようにする。
+            <span className="size-4 shrink-0" aria-hidden="true" />
+          ) : subscribed ? (
             <Bell className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           ) : (
             <BellOff className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -170,12 +204,12 @@ export function ExpiryAlertSubscription() {
         </span>
         <Button
           type="button"
-          variant={subscribed ? 'outline' : 'default'}
+          variant={subscribed || initializing ? 'outline' : 'default'}
           disabled={subscribeDisabled}
           onClick={() => void (subscribed ? handleUnsubscribe() : handleSubscribe())}
           className="h-9 shrink-0"
         >
-          {action.pending ? '処理中' : subscribed ? '通知をオフにする' : '通知をオンにする'}
+          {buttonLabel}
         </Button>
       </div>
       {vapidUnavailable && !subscribed && (
