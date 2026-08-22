@@ -275,9 +275,13 @@ export function amountIngredient(
   });
 }
 
-export function noteIngredient(displayName: string, amountNote: string): RecipeIngredient {
+export function noteIngredient(
+  displayName: string,
+  amountNote: string,
+  productId: string | null = null,
+): RecipeIngredient {
   return RecipeIngredient.create({
-    productRef: null,
+    productRef: productId === null ? null : ProductId.fromString(productId),
     displayName,
     amount: null,
     amountNote,

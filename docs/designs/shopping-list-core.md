@@ -218,6 +218,8 @@ Sprint 5 で Pantry の実設計（`calculateRequiredAmount` の端数・切り�
 - 集計キー: `productId` が非 null なら `productId.value`、null なら `displayName.trim()`。これに `unit` を連結
 - 合算行の `displayName` は最初に出現した材料のものを使う
 - `amount = null` の材料は合算対象外（S-5 参照）。同一 displayName でも単位が異なれば別行
+  - **改定（2026-08-22, `docs/designs/shopping-list-ingredient-merge.md`）**: `amount = null` の材料も
+    材料キーごとに 1 行へ集約するようになった（注記は `・` で併記）。単位違いが別行である点は不変
 - 手動追加（AddItem）は既存行と合算**しない**（ユーザーの明示操作をそのまま尊重する）
 - 端数: 合算後の値をそのまま保持する。販売単位への切り上げは Product 側に概念がないため Sprint 4 では扱わない
   （要件書 §4 論点 4 の整理どおり。Pantry 在庫引き算の切り上げは Sprint 5 の論点）

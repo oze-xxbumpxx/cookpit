@@ -509,6 +509,15 @@ export type ShoppingListStatus = 'active' | 'completed';
 > を追加した。献立同期は `from_meal_plan` かつ `pending` の品目だけ削除・数量上書きする。
 > `bought`（画面のチェック済みを含む）と手動追加は触らない。
 
+> 実装追記（2026-08-22, `docs/designs/shopping-list-ingredient-merge.md`）: `ShoppingItem` に
+> `updateAmountNote(note)` を追加した（`updateRequiredAmount` の対称メソッド）。`pending` 以外・
+> 数量品目（`amountNote` が null）・空白のみの注記を拒否する。`ShoppingList` にも
+> `updateItemAmountNote(itemId, note)` を追加した。あわせて、献立からの材料集計で**数量なし材料
+> （「適量」「少々」）を材料キーごとに 1 行へ集約**するようになった（注記は初出順に `・` で併記し、
+> 同じ注記は重複排除する）。材料名の照合は単位と同じく trim + NFKC 正規化で行う。献立同期は
+> 旧仕様で生成された同一キーの重複行を 1 行へ寄せる（消すのは `from_meal_plan` かつ `pending` の
+> 2 件目以降のみ）。
+
 > 実装追記（2026-07-25, `docs/designs/shopping-item-remove.md` / ADR-0011）: `ShoppingList` に
 > `removeItem(itemId)` を追加した。`assertActive('removeItem')` を通し、存在しない itemId は
 > `Error('ShoppingItem not found')`。**status / source を問わず削除できる**（`bought` の品目を

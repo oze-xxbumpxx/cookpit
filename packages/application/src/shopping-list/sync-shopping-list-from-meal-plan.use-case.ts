@@ -26,10 +26,11 @@ import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 /**
  * 献立の変更を既存の買い物リストへ差分マージする（ADR-0007 / ADR-0018）。
  * 対象 MealPlan の現在の材料を再集計し、(a) 新規キーを追加 (b) from_meal_plan かつ pending の
- * 数量を上書き (c) 集計に無い from_meal_plan かつ pending を削除する。bought と手動追加は
+ * 数量を上書き (c) 同じく注記（「適量」等）を上書き (d) 集計に無い from_meal_plan かつ pending を
+ * 削除 (e) 照合キーが重複する from_meal_plan かつ pending の行を 1 行へ寄せる。bought と手動追加は
  * 変更・削除しない。数量増加分にのみ在庫引き算を適用する。
  *
- * 追加・更新・削除が 0 件なら no-op で現状のリストを返す。
+ * 追加・更新・削除・重複解消が 0 件なら no-op で現状のリストを返す。
  *
  * @throws ShoppingListNotFoundError shoppingListId の ShoppingList が存在しない
  * @throws InvalidShoppingListStateError ShoppingList が completed（再開してから同期する）
@@ -70,14 +71,14 @@ export class SyncShoppingListFromMealPlanUseCase {
       const aggregatedByKey = new Map(
         aggregated.map((ingredient) => [ingredientMatchKey(ingredient), ingredient]),
       );
-      const existingItems = shoppingList.items;
-      const existingKeys = new Set(existingItems.map(itemMatchKey));
+      const { uniqueItems, duplicateItems } = splitDuplicateItems(shoppingList.items);
+      const existingKeys = new Set(shoppingList.items.map(itemMatchKey));
 
       const newIngredients = aggregated.filter(
         (ingredient) => !existingKeys.has(ingredientMatchKey(ingredient)),
       );
 
-      const updateCandidates = existingItems.filter((item) => {
+      const updateCandidates = uniqueItems.filter((item) => {
         if (item.source !== 'from_meal_plan' || item.status !== 'pending') {
           return false;
         }
@@ -91,7 +92,9 @@ export class SyncShoppingListFromMealPlanUseCase {
         return aggregatedIngredient.requiredAmount.value !== item.requiredAmount.value;
       });
 
-      const removalCandidates = existingItems.filter(
+      const noteUpdates = collectNoteUpdates(uniqueItems, aggregatedByKey);
+
+      const removalCandidates = uniqueItems.filter(
         (item) =>
           item.source === 'from_meal_plan' &&
           item.status === 'pending' &&
@@ -101,7 +104,9 @@ export class SyncShoppingListFromMealPlanUseCase {
       if (
         newIngredients.length === 0 &&
         updateCandidates.length === 0 &&
-        removalCandidates.length === 0
+        noteUpdates.length === 0 &&
+        removalCandidates.length === 0 &&
+        duplicateItems.length === 0
       ) {
         return toShoppingListDto(shoppingList);
       }
@@ -122,7 +127,12 @@ export class SyncShoppingListFromMealPlanUseCase {
         }
       }
 
-      for (const item of removalCandidates) {
+      for (const { item, note } of noteUpdates) {
+        shoppingList.updateItemAmountNote(item.id, note);
+        listChanged = true;
+      }
+
+      for (const item of [...removalCandidates, ...duplicateItems]) {
         shoppingList.removeItem(item.id);
         listChanged = true;
       }
@@ -162,6 +172,62 @@ export class SyncShoppingListFromMealPlanUseCase {
       return toShoppingListDto(shoppingList);
     });
   }
+}
+
+/**
+ * 照合キーが重複する品目を分離する。旧仕様（数量なし材料を集計しなかった頃）に生成された
+ * リストには同じ材料の行が複数あるため、同期のたびに 1 行へ寄せる。残すのは最初の 1 件で、
+ * 2 件目以降のうち `from_meal_plan` かつ `pending` のものだけを重複として扱う
+ * （bought は購入実績を、manually_added はユーザーの明示操作を失わせないため残す）。
+ */
+function splitDuplicateItems(items: ShoppingItem[]): {
+  uniqueItems: ShoppingItem[];
+  duplicateItems: ShoppingItem[];
+} {
+  const seenKeys = new Set<string>();
+  const uniqueItems: ShoppingItem[] = [];
+  const duplicateItems: ShoppingItem[] = [];
+
+  for (const item of items) {
+    const key = itemMatchKey(item);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      uniqueItems.push(item);
+      continue;
+    }
+    if (item.source === 'from_meal_plan' && item.status === 'pending') {
+      duplicateItems.push(item);
+    } else {
+      uniqueItems.push(item);
+    }
+  }
+
+  return { uniqueItems, duplicateItems };
+}
+
+/** 数量なし材料の注記が集計結果と食い違う品目を集める（対象は数量更新と同じ絞り込み）。 */
+function collectNoteUpdates(
+  items: ShoppingItem[],
+  aggregatedByKey: Map<string, ResolvedIngredient>,
+): Array<{ item: ShoppingItem; note: string }> {
+  const updates: Array<{ item: ShoppingItem; note: string }> = [];
+
+  for (const item of items) {
+    if (item.source !== 'from_meal_plan' || item.status !== 'pending') {
+      continue;
+    }
+    const currentNote = item.amountNote;
+    if (currentNote === null) {
+      continue;
+    }
+    const nextNote = aggregatedByKey.get(itemMatchKey(item))?.amountNote ?? null;
+    if (nextNote === null || nextNote === currentNote) {
+      continue;
+    }
+    updates.push({ item, note: nextNote });
+  }
+
+  return updates;
 }
 
 type QuantityUpdateResult =
