@@ -390,7 +390,7 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     expect(dto.items.some((item) => item.displayName === '人参')).toBe(false);
   });
 
-  it('キーが続く amountNote 品目は更新も削除もしない', async () => {
+  it('キーが続く amountNote 品目は削除せず、注記だけを集計結果で上書きする', async () => {
     shoppingListRepository.seed(
       seededShoppingList('active', [
         seededItem({
@@ -409,8 +409,161 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
 
     expect(dto.items).toHaveLength(1);
+    expect(dto.items[0]?.amountNote).toBe('少々');
+    expect(shoppingListRepository.saveCount).toBe(1);
+  });
+
+  it('amountNote 品目の注記が集計結果と同じなら no-op（保存しない）', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          displayName: '三つ葉',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('三つ葉', '適量')]));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
     expect(dto.items[0]?.amountNote).toBe('適量');
     expect(shoppingListRepository.saveCount).toBe(0);
+  });
+
+  it('bought の amountNote 品目は注記を上書きしない', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          displayName: '三つ葉',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+          status: 'bought',
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('三つ葉', '少々')]));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toHaveLength(1);
+    expect(dto.items[0]?.amountNote).toBe('適量');
+    expect(shoppingListRepository.saveCount).toBe(0);
+  });
+
+  it('旧仕様で生成された同一材料の重複行を 1 行に寄せる', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          id: 'item-1',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+        seededItem({
+          id: 'item-2',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('小ねぎ', '適量')]));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toHaveLength(1);
+    expect(dto.items[0]?.id).toBe('item-1');
+    expect(shoppingListRepository.saveCount).toBe(1);
+  });
+
+  it('重複解消は 1 度で収束し、再同期は no-op になる', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          id: 'item-1',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+        seededItem({
+          id: 'item-2',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('小ねぎ', '適量')]));
+
+    await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toHaveLength(1);
+    expect(shoppingListRepository.saveCount).toBe(1);
+  });
+
+  it('重複行のうち manually_added と bought は消さない', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          id: 'item-1',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+        seededItem({
+          id: 'item-2',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+          source: 'manually_added',
+        }),
+        seededItem({
+          id: 'item-3',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+          status: 'bought',
+        }),
+        seededItem({
+          id: 'item-4',
+          displayName: '小ねぎ',
+          productId: null,
+          requiredAmount: null,
+          amountNote: '適量',
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('小ねぎ', '適量')]));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items.map((item) => item.id)).toEqual(['item-1', 'item-2', 'item-3']);
   });
 
   it('manually_added の数量は献立が増えても変えない', async () => {

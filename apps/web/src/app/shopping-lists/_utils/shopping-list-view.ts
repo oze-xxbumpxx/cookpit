@@ -113,7 +113,10 @@ export function diffSyncResult(before: ShoppingItemDto[], after: ShoppingItemDto
       addedCount += 1;
       continue;
     }
-    if (!isSameRequiredAmount(prior.requiredAmount, item.requiredAmount)) {
+    if (
+      !isSameRequiredAmount(prior.requiredAmount, item.requiredAmount) ||
+      prior.amountNote !== item.amountNote
+    ) {
       updatedCount += 1;
     }
   }

@@ -13,6 +13,7 @@ import type {
   ProductId as ProductIdType,
   ProductRepository,
   Recipe,
+  RecipeIngredient,
   RecipeRepository,
   ShoppingItem,
   Stock,
@@ -24,6 +25,17 @@ import type {
  * MealPlan の材料を集計・在庫引き算・店舗解決する共通ロジック。
  * GenerateShoppingList（初回生成）と SyncShoppingListFromMealPlan（差分マージ）で共有する。
  */
+
+/** 数量なし材料の注記を併記するときの区切り（例: 「少々・適量」）。 */
+const AMOUNT_NOTE_SEPARATOR = '・';
+
+/**
+ * 材料名・注記の照合用の正規化（trim + NFKC）。単位の `normalizeUnit` と同じ規約で、
+ * 半角カナ・全角英数・前後空白の表記ゆれを同一視する。表示には原文を使う。
+ */
+function normalizeName(value: string): string {
+  return value.trim().normalize('NFKC');
+}
 
 export interface ResolvedIngredient {
   productId: ProductId | null;
@@ -80,7 +92,10 @@ function aggregateIngredients(
     string,
     { productId: ProductId | null; displayName: string; requiredAmount: Quantity }
   >();
-  const individual: ResolvedIngredient[] = [];
+  const noted = new Map<
+    string,
+    { productId: ProductId | null; displayName: string; notes: string[] }
+  >();
 
   for (const { plannedRecipe, recipe } of resolved) {
     const scaled = recipe.scaleIngredients(plannedRecipe.scaleFactor);
@@ -92,16 +107,11 @@ function aggregateIngredients(
       const productId = ingredient.productRef;
 
       if (ingredient.amount === null) {
-        individual.push({
-          productId,
-          displayName: ingredient.displayName,
-          requiredAmount: null,
-          amountNote: ingredient.amountNote,
-        });
+        collectAmountNote(noted, ingredient);
         continue;
       }
 
-      const key = `${productId === null ? ingredient.displayName.trim() : productId.value}|${normalizeUnit(ingredient.amount.unit)}`;
+      const key = matchKey(productId, ingredient.displayName, ingredient.amount.unit);
       const existing = aggregated.get(key);
       if (existing === undefined) {
         aggregated.set(key, {
@@ -122,7 +132,42 @@ function aggregateIngredients(
     ...ingredient,
     amountNote: null,
   }));
-  return [...aggregatedResult, ...individual];
+  const notedResult: ResolvedIngredient[] = [...noted.values()].map((ingredient) => ({
+    productId: ingredient.productId,
+    displayName: ingredient.displayName,
+    requiredAmount: null,
+    amountNote: ingredient.notes.join(AMOUNT_NOTE_SEPARATOR),
+  }));
+  return [...aggregatedResult, ...notedResult];
+}
+
+/**
+ * 数量なし材料（「適量」「少々」）を材料キーごとに 1 行へ寄せる。異なる注記は初出順に併記し、
+ * 同じ注記は重複排除する（正規化して比較）。表示は入力原文（前後空白のみ除去）を保つ。
+ */
+function collectAmountNote(
+  noted: Map<string, { productId: ProductId | null; displayName: string; notes: string[] }>,
+  ingredient: RecipeIngredient,
+): void {
+  // RecipeIngredient は amount xor amountNote を保証するため、ここでは常に注記がある。
+  const note = ingredient.amountNote?.trim() ?? '';
+  if (note === '') {
+    return;
+  }
+
+  const key = matchKey(ingredient.productRef, ingredient.displayName, null);
+  const existing = noted.get(key);
+  if (existing === undefined) {
+    noted.set(key, {
+      productId: ingredient.productRef,
+      displayName: ingredient.displayName,
+      notes: [note],
+    });
+    return;
+  }
+  if (!existing.notes.some((candidate) => normalizeName(candidate) === normalizeName(note))) {
+    existing.notes.push(note);
+  }
 }
 
 /**
@@ -220,10 +265,10 @@ export async function resolveTargetStores(
 
 /**
  * 差分マージ（Sync）用のマッチキー。集計キーと同一の規則で「同じ材料か」を判定する:
- * productId（無ければ displayName の trim）× 単位（requiredAmount が null の材料は 'note'）。
+ * productId（無ければ正規化した displayName）× 単位（requiredAmount が null の材料は 'note'）。
  */
 function matchKey(productId: ProductIdType | null, displayName: string, unit: Unit | null): string {
-  const base = productId === null ? displayName.trim() : productId.value;
+  const base = productId === null ? normalizeName(displayName) : productId.value;
   return `${base}|${unit === null ? 'note' : normalizeUnit(unit)}`;
 }
 

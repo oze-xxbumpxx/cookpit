@@ -160,7 +160,7 @@ describe('GenerateShoppingListUseCase', () => {
     expect(result.shoppingList.items).toEqual([]);
   });
 
-  it('集計キーの単位境界、適量の個別行、小数 scaleFactor を保持する', async () => {
+  it('集計キーの単位境界、注記の併記、小数 scaleFactor を保持する', async () => {
     mealPlanRepository.seed(
       seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID, 1.5)]),
     );
@@ -175,16 +175,85 @@ describe('GenerateShoppingListUseCase', () => {
 
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
-    expect(result.shoppingList.items).toHaveLength(4);
+    // 単位違いの小麦粉は別行のまま。同じ材料の注記は 1 行に併記する。
+    expect(result.shoppingList.items).toHaveLength(3);
     expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 150, unit: 'g' });
     expect(result.shoppingList.items[1]?.requiredAmount).toEqual({
       value: 0.15000000000000002,
       unit: 'kg',
     });
-    expect(result.shoppingList.items.slice(2).map((item) => item.amountNote)).toEqual([
-      '少々',
-      '適量',
-    ]);
+    expect(result.shoppingList.items[2]?.displayName).toBe('豚肉');
+    expect(result.shoppingList.items[2]?.amountNote).toBe('少々・適量');
+  });
+
+  it('複数レシピの同じ注記材料を 1 行にまとめる', async () => {
+    mealPlanRepository.seed(
+      seededMealPlan('draft', [
+        seededPlannedRecipe('planned-1', RECIPE_ID),
+        seededPlannedRecipe('planned-2', 'recipe-2'),
+      ]),
+    );
+    recipeRepository.seed(seededRecipe(RECIPE_ID, [noteIngredient('小ねぎ', '適量')]));
+    recipeRepository.seed(seededRecipe('recipe-2', [noteIngredient('小ねぎ', '適量')]));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(1);
+    expect(result.shoppingList.items[0]?.displayName).toBe('小ねぎ');
+    expect(result.shoppingList.items[0]?.amountNote).toBe('適量');
+  });
+
+  it('注記材料は productId が一致すれば displayName が違っても 1 行にまとめる', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [
+        noteIngredient('小ねぎ', '適量', PRODUCT_ID),
+        noteIngredient('万能ねぎ', '少々', PRODUCT_ID),
+      ]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID, false));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(1);
+    expect(result.shoppingList.items[0]?.displayName).toBe('小ねぎ');
+    expect(result.shoppingList.items[0]?.amountNote).toBe('適量・少々');
+  });
+
+  it('材料名の表記ゆれ（半角カナ・全角空白）を同一材料として合算する', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [
+        amountIngredient('ﾀﾏﾈｷﾞ', 1, '個'),
+        amountIngredient('タマネギ', 2, '個'),
+        noteIngredient('　小ねぎ ', '適量'),
+        noteIngredient('小ねぎ', '適量'),
+      ]),
+    );
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(2);
+    // 表示は初出の原文を保つ（正規化は照合にだけ使う）。
+    expect(result.shoppingList.items[0]?.displayName).toBe('ﾀﾏﾈｷﾞ');
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 3, unit: '個' });
+    expect(result.shoppingList.items[1]?.amountNote).toBe('適量');
+  });
+
+  it('数量あり材料と注記材料は同じ材料でも別行のまま残す', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [
+        amountIngredient('にんじん', 1, '個'),
+        noteIngredient('にんじん', '適量'),
+      ]),
+    );
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(2);
+    expect(result.shoppingList.items[0]?.requiredAmount).toEqual({ value: 1, unit: '個' });
+    expect(result.shoppingList.items[1]?.amountNote).toBe('適量');
   });
 
   it('productId なし、価格履歴なしでは targetStoreId を null にする', async () => {
