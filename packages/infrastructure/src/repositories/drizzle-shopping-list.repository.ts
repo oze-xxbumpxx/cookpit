@@ -10,6 +10,7 @@ import {
   StoreId,
 } from '@cookpit/domain';
 import type {
+  CoveredIngredient,
   ItemSource,
   ItemStatus,
   ShoppingListRepository,
@@ -36,6 +37,13 @@ interface ShoppingListWithItemRow {
 interface ShoppingListGroup {
   shoppingList: ShoppingListRow;
   items: ShoppingItemRow[];
+}
+
+interface CoveredIngredientRow {
+  displayName: string;
+  productId: string;
+  requiredAmount: { value: number; unit: string };
+  coveredAmount: { value: number; unit: string };
 }
 
 export class DrizzleShoppingListRepository implements ShoppingListRepository {
@@ -78,7 +86,10 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       .values(listRow)
       .onConflictDoUpdate({
         target: shoppingLists.id,
-        set: { status: listRow.status },
+        set: {
+          status: listRow.status,
+          coveredIngredients: listRow.coveredIngredients,
+        },
       });
 
     const itemRows = this.toShoppingItemRows(shoppingList);
@@ -111,6 +122,8 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
             requiredAmountValue: sql`excluded.required_amount_value`,
             requiredAmountUnit: sql`excluded.required_amount_unit`,
             amountNote: sql`excluded.amount_note`,
+            pantryDeductedAmountValue: sql`excluded.pantry_deducted_amount_value`,
+            pantryDeductedAmountUnit: sql`excluded.pantry_deducted_amount_unit`,
             targetStoreId: sql`excluded.target_store_id`,
             status: sql`excluded.status`,
             actualPriceAmount: sql`excluded.actual_price_amount`,
@@ -181,6 +194,7 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       shoppingDate: toLocalDate(listRow.shoppingDate),
       status: toShoppingListStatus(listRow.status),
       createdAt: listRow.createdAt,
+      coveredIngredients: toCoveredIngredients(listRow.coveredIngredients),
       items: itemRows.map((row) =>
         ShoppingItem.reconstruct({
           id: ShoppingItemId.fromString(row.id),
@@ -191,6 +205,13 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
               ? Quantity.of(Number(row.requiredAmountValue), toUnit(row.requiredAmountUnit))
               : null,
           amountNote: row.amountNote,
+          pantryDeductedAmount:
+            row.pantryDeductedAmountValue !== null && row.pantryDeductedAmountUnit !== null
+              ? Quantity.of(
+                  Number(row.pantryDeductedAmountValue),
+                  toUnit(row.pantryDeductedAmountUnit),
+                )
+              : null,
           targetStore: row.targetStoreId === null ? null : StoreId.fromString(row.targetStoreId),
           status: toItemStatus(row.status),
           actualPrice:
@@ -208,6 +229,21 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       mealPlanId: shoppingList.mealPlanId.value,
       shoppingDate: toLocalDateString(shoppingList.shoppingDate),
       status: shoppingList.status,
+      coveredIngredients:
+        shoppingList.coveredIngredients === null
+          ? null
+          : shoppingList.coveredIngredients.map((covered) => ({
+              displayName: covered.displayName,
+              productId: covered.productId.value,
+              requiredAmount: {
+                value: covered.requiredAmount.value,
+                unit: covered.requiredAmount.unit,
+              },
+              coveredAmount: {
+                value: covered.coveredAmount.value,
+                unit: covered.coveredAmount.unit,
+              },
+            })),
       createdAt: shoppingList.createdAt,
     };
   }
@@ -221,6 +257,10 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       requiredAmountValue: item.requiredAmount ? item.requiredAmount.value.toString() : null,
       requiredAmountUnit: item.requiredAmount?.unit ?? null,
       amountNote: item.amountNote,
+      pantryDeductedAmountValue: item.pantryDeductedAmount
+        ? item.pantryDeductedAmount.value.toString()
+        : null,
+      pantryDeductedAmountUnit: item.pantryDeductedAmount?.unit ?? null,
       targetStoreId: item.targetStore?.value ?? null,
       status: item.status,
       actualPriceAmount: item.actualPrice ? item.actualPrice.amount.toString() : null,
@@ -228,6 +268,21 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       source: item.source,
     }));
   }
+}
+
+function toCoveredIngredients(value: unknown): CoveredIngredient[] | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error('Invalid covered_ingredients JSON');
+  }
+  return (value as CoveredIngredientRow[]).map((row) => ({
+    displayName: row.displayName,
+    productId: ProductId.fromString(row.productId),
+    requiredAmount: Quantity.of(row.requiredAmount.value, toUnit(row.requiredAmount.unit)),
+    coveredAmount: Quantity.of(row.coveredAmount.value, toUnit(row.coveredAmount.unit)),
+  }));
 }
 
 function toShoppingListStatus(value: string): ShoppingListStatus {

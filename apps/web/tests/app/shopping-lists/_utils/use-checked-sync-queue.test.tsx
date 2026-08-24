@@ -34,6 +34,7 @@ const ITEM: ShoppingItemDto = {
   actualPrice: null,
   actualStoreId: null,
   source: 'manually_added',
+  pantryDeductedAmount: null,
 };
 
 /** DB スキーマを import せず直接レコードを注入する（TTL/attempts の境界値を作るため）。 */

@@ -31,11 +31,13 @@ function createList(): ShoppingList {
         actualPrice: null,
         actualStore: null,
         source: 'from_meal_plan',
+        pantryDeductedAmount: null,
       }),
     ],
     shoppingDate: new Date('2026-07-11T00:00:00'),
     status: 'active',
     createdAt: CREATED_AT,
+    coveredIngredients: null,
   });
 }
 

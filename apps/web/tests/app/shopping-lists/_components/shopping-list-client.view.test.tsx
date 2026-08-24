@@ -82,6 +82,38 @@ describe('ShoppingListClient（表示・手動追加・再取得）', () => {
     expect(screen.getByRole('button', { name: '手動で追加' }).hasAttribute('disabled')).toBe(false);
   });
 
+  it('covered-only のときは EmptyState を出さず「在庫で足りる」を折りたたみ表示する（P-1）', () => {
+    const shoppingList = createShoppingListDto({
+      items: [],
+      coveredIngredients: [
+        {
+          displayName: '玉ねぎ',
+          productId: 'product-onion',
+          requiredAmount: { value: 2, unit: '個' },
+          coveredAmount: { value: 2, unit: '個' },
+        },
+      ],
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
+
+    expect(screen.queryByText('リストにアイテムがありません')).toBeNull();
+    expect(screen.getByText('在庫で足りる（1）')).toBeDefined();
+    expect(screen.getByText('玉ねぎ')).toBeDefined();
+    expect(screen.queryByRole('checkbox', { name: /玉ねぎ/ })).toBeNull();
+    expect(screen.queryByText('やっぱり買う')).toBeNull();
+  });
+
+  it('既存リスト（coveredIngredients null）では折りたたみを出さない', () => {
+    const shoppingList = createShoppingListDto({
+      items: [createShoppingItemDto({ displayName: '醤油' })],
+      coveredIngredients: null,
+    });
+    render(<ShoppingListClient shoppingList={shoppingList} stores={STORES} products={PRODUCTS} />);
+
+    expect(screen.queryByText(/在庫で足りる/)).toBeNull();
+    expect(screen.queryByText(/在庫で /)).toBeNull();
+  });
+
   it('LC-09: 手動追加が成功すると一覧に追加される', async () => {
     const user = userEvent.setup();
     postItem.mockResolvedValue({

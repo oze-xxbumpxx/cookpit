@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
   meal_plan_id text NOT NULL UNIQUE,
   shopping_date date NOT NULL,
   status text NOT NULL,
+  covered_ingredients jsonb,
   created_at timestamp NOT NULL DEFAULT now()
 );
 
@@ -87,6 +88,8 @@ CREATE TABLE IF NOT EXISTS shopping_items (
   required_amount_value numeric(10, 3),
   required_amount_unit text,
   amount_note text,
+  pantry_deducted_amount_value numeric(10, 3),
+  pantry_deducted_amount_unit text,
   target_store_id text,
   status text NOT NULL,
   actual_price_amount numeric(10, 1),

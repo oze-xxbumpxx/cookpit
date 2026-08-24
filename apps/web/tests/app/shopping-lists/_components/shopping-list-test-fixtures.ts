@@ -31,6 +31,7 @@ export function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}):
     actualPrice: null,
     actualStoreId: null,
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
     ...overrides,
   };
 }
@@ -42,6 +43,7 @@ export function createShoppingListDto(overrides: Partial<ShoppingListDto> = {}):
     shoppingDate: '2026-07-11',
     status: 'active',
     items: [],
+    coveredIngredients: null,
     createdAt: '2026-07-11T00:00:00.000Z',
     ...overrides,
   };

@@ -18,6 +18,7 @@ export const shoppingItemDto: ShoppingItemDto = {
   actualPrice: null,
   actualStoreId: null,
   source: 'from_meal_plan',
+  pantryDeductedAmount: null,
 };
 
 export const shoppingListDto: ShoppingListDto = {
@@ -26,6 +27,7 @@ export const shoppingListDto: ShoppingListDto = {
   shoppingDate: '2026-07-11',
   status: 'active',
   items: [shoppingItemDto],
+  coveredIngredients: null,
   createdAt: '2026-07-11T00:00:00.000Z',
 };
 

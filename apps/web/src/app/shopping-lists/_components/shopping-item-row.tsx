@@ -122,6 +122,12 @@ export function ShoppingItemRow({
               ? `${item.requiredAmount.value}${item.requiredAmount.unit}`
               : item.amountNote}
           </p>
+          {item.pantryDeductedAmount !== null && (
+            <p className="text-xs text-muted-foreground">
+              在庫で {item.pantryDeductedAmount.value}
+              {item.pantryDeductedAmount.unit}
+            </p>
+          )}
           {priceDiff !== null && (
             <p className="text-xs break-words text-muted-foreground">
               {formatEstimatedDiffMessage(priceDiff)}

@@ -17,6 +17,15 @@ export interface ShoppingItemDto {
   actualPrice: { amount: number; currency: string } | null;
   actualStoreId: string | null;
   source: ItemSource;
+  /** Generate / Sync 時点の在庫引き算量。null = 引き算なし。 */
+  pantryDeductedAmount: { value: number; unit: Unit } | null;
+}
+
+export interface CoveredIngredientDto {
+  displayName: string;
+  productId: string;
+  requiredAmount: { value: number; unit: Unit };
+  coveredAmount: { value: number; unit: Unit };
 }
 
 export interface ShoppingListDto {
@@ -26,6 +35,11 @@ export interface ShoppingListDto {
   shoppingDate: string;
   status: ShoppingListStatus;
   items: ShoppingItemDto[];
+  /**
+   * 在庫で必要量をすべてまかなった食材のスナップショット。
+   * null = 未記録（既存リスト）。空配列 = 記録済みだが該当なし。
+   */
+  coveredIngredients: CoveredIngredientDto[] | null;
   /** ISO 8601 datetime。 */
   createdAt: string;
 }

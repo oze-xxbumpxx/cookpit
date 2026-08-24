@@ -3,6 +3,7 @@ import type { ProductId } from '../product/product-id';
 import type { Money } from '../shared/money';
 import type { Quantity } from '../shared/quantity';
 import type { StoreId } from '../shared/store';
+import type { CoveredIngredient } from './covered-ingredient';
 import { ShoppingItemId } from './shopping-item-id';
 import { ShoppingListId } from './shopping-list-id';
 
@@ -17,6 +18,8 @@ export interface CreateShoppingItemInput {
   amountNote: string | null;
   targetStore: StoreId | null;
   source: ItemSource;
+  /** Generate / Sync 時の在庫引き算スナップショット。未指定は null。 */
+  pantryDeductedAmount?: Quantity | null;
 }
 
 export interface ShoppingItemProps {
@@ -30,6 +33,8 @@ export interface ShoppingItemProps {
   actualPrice: Money | null;
   actualStore: StoreId | null;
   source: ItemSource;
+  /** null = 引き算なし（手動追加・amountNote・既存リスト含む）。 */
+  pantryDeductedAmount: Quantity | null;
 }
 
 export class ShoppingItem {
@@ -44,6 +49,7 @@ export class ShoppingItem {
     private itemActualPrice: Money | null,
     private itemActualStore: StoreId | null,
     private readonly itemSource: ItemSource,
+    private itemPantryDeductedAmount: Quantity | null,
   ) {}
 
   /**
@@ -76,6 +82,7 @@ export class ShoppingItem {
       null,
       null,
       input.source,
+      input.pantryDeductedAmount ?? null,
     );
   }
 
@@ -91,6 +98,7 @@ export class ShoppingItem {
       props.actualPrice,
       props.actualStore,
       props.source,
+      props.pantryDeductedAmount,
     );
   }
 
@@ -130,6 +138,21 @@ export class ShoppingItem {
       throw new Error('Cannot update required amount of a ShoppingItem with amountNote');
     }
     this.itemRequiredAmount = amount;
+  }
+
+  /**
+   * Generate / Sync が記録した在庫引き算量のスナップショットを更新する。
+   * GET では再計算せずこの値を返すため、呼び出し元は引き算が発生したタイミングでのみ書く。
+   *
+   * @throws Error status が pending 以外の場合
+   */
+  updatePantryDeductedAmount(amount: Quantity | null): void {
+    if (this.itemStatus !== 'pending') {
+      throw new Error(
+        `Cannot update pantry deducted amount of a ShoppingItem with status '${this.itemStatus}'`,
+      );
+    }
+    this.itemPantryDeductedAmount = amount;
   }
 
   /**
@@ -254,6 +277,10 @@ export class ShoppingItem {
   get source(): ItemSource {
     return this.itemSource;
   }
+
+  get pantryDeductedAmount(): Quantity | null {
+    return this.itemPantryDeductedAmount;
+  }
 }
 
 export interface ShoppingListProps {
@@ -263,12 +290,19 @@ export interface ShoppingListProps {
   shoppingDate: Date;
   status: ShoppingListStatus;
   createdAt: Date;
+  /**
+   * null = スナップショット未記録（既存リスト）。Generate / Sync 後は配列
+   * （該当なしは空配列）。
+   */
+  coveredIngredients: CoveredIngredient[] | null;
 }
 
 export interface CreateShoppingListInput {
   mealPlanId: MealPlanId;
   items: ShoppingItem[];
   shoppingDate: Date;
+  /** Generate 時点の全量まかないスナップショット。該当なしは空配列。 */
+  coveredIngredients: CoveredIngredient[];
 }
 
 /**
@@ -284,6 +318,7 @@ export class ShoppingList {
     private readonly listShoppingDate: Date,
     private listStatus: ShoppingListStatus,
     private readonly createdDate: Date,
+    private listCoveredIngredients: CoveredIngredient[] | null,
   ) {}
 
   static create(input: CreateShoppingListInput): ShoppingList {
@@ -294,6 +329,7 @@ export class ShoppingList {
       new Date(input.shoppingDate),
       'active',
       new Date(),
+      [...input.coveredIngredients],
     );
   }
 
@@ -305,6 +341,7 @@ export class ShoppingList {
       new Date(props.shoppingDate),
       props.status,
       new Date(props.createdAt),
+      props.coveredIngredients === null ? null : [...props.coveredIngredients],
     );
   }
 
@@ -332,6 +369,26 @@ export class ShoppingList {
   updateItemRequiredAmount(itemId: ShoppingItemId, amount: Quantity): void {
     this.assertActive('updateItemRequiredAmount');
     this.findItem(itemId).updateRequiredAmount(amount);
+  }
+
+  /**
+   * Sync による在庫引き算スナップショットの更新。
+   *
+   * @throws Error active でない、または itemId の品目が存在しない場合
+   */
+  updateItemPantryDeductedAmount(itemId: ShoppingItemId, amount: Quantity | null): void {
+    this.assertActive('updateItemPantryDeductedAmount');
+    this.findItem(itemId).updatePantryDeductedAmount(amount);
+  }
+
+  /**
+   * Sync 時に全量まかないスナップショットを書き換える。null（未記録）から配列への遷移もここで行う。
+   *
+   * @throws Error active でない場合
+   */
+  replaceCoveredIngredients(covered: CoveredIngredient[]): void {
+    this.assertActive('replaceCoveredIngredients');
+    this.listCoveredIngredients = [...covered];
   }
 
   /**
@@ -435,6 +492,11 @@ export class ShoppingList {
 
   get createdAt(): Date {
     return new Date(this.createdDate);
+  }
+
+  /** null = 未記録。配列は防御的コピー。 */
+  get coveredIngredients(): CoveredIngredient[] | null {
+    return this.listCoveredIngredients === null ? null : [...this.listCoveredIngredients];
   }
 
   private assertActive(operation: string): void {

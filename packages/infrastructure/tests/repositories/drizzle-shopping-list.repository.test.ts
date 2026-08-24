@@ -31,6 +31,7 @@ function createItem(overrides: Partial<ShoppingItemProps> = {}): ShoppingItem {
     actualPrice: Money.of(198.5, 'JPY'),
     actualStore: StoreId.fromString('store-2'),
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
     ...overrides,
   });
 }
@@ -42,6 +43,7 @@ interface CreateListOptions {
   shoppingDate?: Date;
   status?: 'active' | 'completed';
   createdAt?: Date;
+  coveredIngredients?: ShoppingList['coveredIngredients'];
 }
 
 function createList(options: CreateListOptions = {}): ShoppingList {
@@ -52,6 +54,7 @@ function createList(options: CreateListOptions = {}): ShoppingList {
     shoppingDate: options.shoppingDate ?? new Date('2026-07-11T00:00:00'),
     status: options.status ?? 'active',
     createdAt: options.createdAt ?? CREATED_AT,
+    coveredIngredients: options.coveredIngredients ?? null,
   });
 }
 

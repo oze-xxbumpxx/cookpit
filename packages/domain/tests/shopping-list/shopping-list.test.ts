@@ -35,6 +35,7 @@ function createList(items: ShoppingItem[] = [createItem()]): ShoppingList {
     mealPlanId: MealPlanId.fromString('meal-plan-1'),
     items,
     shoppingDate: new Date('2026-07-11T00:00:00'),
+    coveredIngredients: [],
   });
 }
 
@@ -46,6 +47,7 @@ function reconstructCompletedList(items: ShoppingItem[] = [createItem()]): Shopp
     shoppingDate: new Date('2026-07-11T00:00:00'),
     status: 'completed',
     createdAt: new Date('2026-07-10T00:00:00'),
+    coveredIngredients: null,
   });
 }
 

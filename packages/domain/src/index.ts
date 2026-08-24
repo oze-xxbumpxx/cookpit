@@ -38,6 +38,7 @@ export * from './meal-plan/meal-plan.repository';
 export * from './meal-plan/planned-recipe-id';
 
 // ShoppingList 集約
+export * from './shopping-list/covered-ingredient';
 export * from './shopping-list/shopping-item-id';
 export * from './shopping-list/shopping-list';
 export * from './shopping-list/shopping-list-id';

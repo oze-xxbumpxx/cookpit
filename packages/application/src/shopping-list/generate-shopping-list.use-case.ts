@@ -65,7 +65,11 @@ export class GenerateShoppingListUseCase {
 
       const aggregated = await resolveMealPlanIngredients(mealPlan, this.recipeRepository);
       const pantry = await this.pantryRepository.find();
-      const { ingredients: afterDeduction, consumed } = applyPantryDeduction(aggregated, pantry);
+      const {
+        ingredients: afterDeduction,
+        coveredIngredients,
+        consumed,
+      } = applyPantryDeduction(aggregated, pantry);
       const targetStoreMap = await resolveTargetStores(afterDeduction, this.productRepository);
 
       const items = afterDeduction.map((ingredient) =>
@@ -79,6 +83,7 @@ export class GenerateShoppingListUseCase {
               ? null
               : (targetStoreMap.get(ingredient.productId.value) ?? null),
           source: 'from_meal_plan',
+          pantryDeductedAmount: ingredient.pantryDeductedAmount,
         }),
       );
 
@@ -86,6 +91,7 @@ export class GenerateShoppingListUseCase {
         mealPlanId,
         items,
         shoppingDate: mealPlan.weekOf.startDate(),
+        coveredIngredients,
       });
 
       // 集約横断の永続化順序（D-7）: ShoppingList → Pantry → MealPlan。同一 UoW で原子的に保存する。

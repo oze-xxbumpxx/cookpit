@@ -242,6 +242,7 @@ function seededItem(options: SeededItemOptions = {}): ShoppingItem {
     actualPrice,
     actualStore,
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
   });
 }
 
@@ -256,6 +257,7 @@ function seededShoppingList(
     shoppingDate: new Date(2026, 6, 11),
     status,
     createdAt: new Date('2026-07-10T12:00:00.000Z'),
+    coveredIngredients: null,
   });
 }
 

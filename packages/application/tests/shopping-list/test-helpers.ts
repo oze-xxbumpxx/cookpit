@@ -25,6 +25,7 @@ import {
   WeekIdentifier,
 } from '@cookpit/domain';
 import type {
+  CoveredIngredient,
   CreateStockInput,
   MealPlanRepository,
   MealPlanStatus,
@@ -324,6 +325,7 @@ export interface SeededItemOptions {
   targetStoreId?: string | null;
   actualPrice?: Money | null;
   actualStoreId?: string | null;
+  pantryDeductedAmount?: Quantity | null;
 }
 
 export function seededItem(options: SeededItemOptions = {}): ShoppingItem {
@@ -346,12 +348,14 @@ export function seededItem(options: SeededItemOptions = {}): ShoppingItem {
           ? null
           : StoreId.fromString(options.actualStoreId),
     source: options.source ?? 'from_meal_plan',
+    pantryDeductedAmount: options.pantryDeductedAmount ?? null,
   });
 }
 
 export function seededShoppingList(
   status: 'active' | 'completed' = 'active',
   items: ShoppingItem[] = [seededItem()],
+  coveredIngredients: CoveredIngredient[] | null = null,
 ): ShoppingList {
   return ShoppingList.reconstruct({
     id: ShoppingListId.fromString(SHOPPING_LIST_ID),
@@ -360,6 +364,7 @@ export function seededShoppingList(
     shoppingDate: new Date(2026, 6, 11),
     status,
     createdAt: new Date('2026-07-10T12:00:00.000Z'),
+    coveredIngredients,
   });
 }
 
