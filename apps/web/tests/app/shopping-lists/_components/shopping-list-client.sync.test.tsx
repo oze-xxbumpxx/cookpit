@@ -36,11 +36,27 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
     const added = createShoppingItemDto({ id: 'item-2', displayName: '人参' });
     postSync.mockResolvedValue({
       ok: true,
-      json: async () => createShoppingListDto({ status: 'active', items: [existing, added] }),
+      json: async () =>
+        createShoppingListDto({
+          status: 'active',
+          items: [existing, added],
+          coveredIngredients: [
+            {
+              displayName: 'にんにく',
+              productId: 'product-garlic',
+              requiredAmount: { value: 1, unit: '個' },
+              coveredAmount: { value: 1, unit: '個' },
+            },
+          ],
+        }),
     });
     render(
       <ShoppingListClient
-        shoppingList={createShoppingListDto({ status: 'active', items: [existing] })}
+        shoppingList={createShoppingListDto({
+          status: 'active',
+          items: [existing],
+          coveredIngredients: [],
+        })}
         stores={STORES}
         products={PRODUCTS}
       />,
@@ -52,6 +68,8 @@ describe('ShoppingListClient（献立の変更を反映）', () => {
       expect(postSync).toHaveBeenCalledWith({ param: { id: 'shopping-list-1' } });
       expect(screen.getByText('追加1件')).toBeDefined();
       expect(screen.getByRole('checkbox', { name: /人参/ })).toBeDefined();
+      expect(screen.getByText('在庫で足りる（1）')).toBeDefined();
+      expect(screen.getByText('にんにく')).toBeDefined();
     });
   });
 

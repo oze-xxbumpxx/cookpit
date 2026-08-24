@@ -323,6 +323,7 @@ describe('shoppingItemResponseSchema', () => {
         actualPrice: null,
         actualStoreId: null,
         source: 'from_meal_plan',
+        pantryDeductedAmount: null,
       }),
     ).toThrow('Exactly one of requiredAmount or amountNote must be set');
   });
@@ -340,6 +341,7 @@ describe('shoppingItemResponseSchema', () => {
         actualPrice: { amount: 198, currency: 'JPY' },
         actualStoreId: VALID_ACTUAL_STORE_ID,
         source: 'from_meal_plan',
+        pantryDeductedAmount: null,
       }),
     ).toThrow('Exactly one of requiredAmount or amountNote must be set');
   });
@@ -356,6 +358,7 @@ describe('shoppingItemResponseSchema', () => {
       actualPrice: null,
       actualStoreId: null,
       source: 'from_meal_plan',
+      pantryDeductedAmount: null,
     };
 
     expect(shoppingItemResponseSchema.parse(item)).toEqual(item);
@@ -373,6 +376,7 @@ describe('shoppingItemResponseSchema', () => {
       actualPrice: { amount: 128, currency: 'JPY' },
       actualStoreId: VALID_ACTUAL_STORE_ID,
       source: 'manually_added',
+      pantryDeductedAmount: null,
     };
 
     expect(shoppingItemResponseSchema.parse(item)).toEqual(item);
@@ -398,6 +402,15 @@ describe('shoppingListResponseSchema', () => {
           actualPrice: { amount: 198, currency: 'JPY' },
           actualStoreId: VALID_ACTUAL_STORE_ID,
           source: 'from_meal_plan',
+          pantryDeductedAmount: { value: 1, unit: '個' },
+        },
+      ],
+      coveredIngredients: [
+        {
+          displayName: 'にんにく',
+          productId: VALID_PRODUCT_ID,
+          requiredAmount: { value: 1, unit: '個' },
+          coveredAmount: { value: 1, unit: '個' },
         },
       ],
       createdAt: '2026-07-11T01:00:00.000Z',
@@ -415,6 +428,7 @@ describe('shoppingListResponseSchema', () => {
       shoppingDate: '2026-07-11',
       status: 'completed',
       items: [],
+      coveredIngredients: null,
       createdAt: '2026-07-11T01:00:00.000Z',
     };
 

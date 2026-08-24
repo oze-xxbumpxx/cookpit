@@ -15,6 +15,7 @@ import {
   amountIngredient,
   noteIngredient,
   seededProduct,
+  seededItem,
   seededShoppingList,
   createRepositories,
 } from './test-helpers';
@@ -294,6 +295,14 @@ describe('GenerateShoppingListUseCase', () => {
     const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
 
     expect(result.shoppingList.items).toHaveLength(0);
+    expect(result.shoppingList.coveredIngredients).toEqual([
+      {
+        displayName: '玉ねぎ',
+        productId: PRODUCT_ID,
+        requiredAmount: { value: 2, unit: '個' },
+        coveredAmount: { value: 2, unit: '個' },
+      },
+    ]);
     expect(pantryRepository.saveCount).toBe(1);
     const stocks = pantryRepository.current().stocks;
     expect(stocks).toHaveLength(1);
@@ -419,5 +428,50 @@ describe('GenerateShoppingListUseCase', () => {
 
     expect(result.shoppingList.items).toHaveLength(1);
     expect(result.shoppingList.items[0]?.displayName).toBe('玉ねぎ');
+  });
+
+  it('部分引き算・全量まかない・amountNote を混ぜてスナップショットする', async () => {
+    mealPlanRepository.seed(seededMealPlan('draft', [seededPlannedRecipe('planned-1', RECIPE_ID)]));
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [
+        amountIngredient('玉ねぎ', 3, '個', PRODUCT_ID),
+        amountIngredient('人参', 2, '個', 'product-2'),
+        noteIngredient('小ねぎ', '少々', 'product-3'),
+      ]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+    productRepository.seed(seededProduct('product-2'));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 1, '個'));
+    pantryRepository.seedStock(stockInput('product-2', 5, '個', { displayName: '人参' }));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.shoppingList.items).toHaveLength(2);
+    const onion = result.shoppingList.items.find((item) => item.productId === PRODUCT_ID);
+    const note = result.shoppingList.items.find((item) => item.amountNote === '少々');
+    expect(onion?.requiredAmount).toEqual({ value: 2, unit: '個' });
+    expect(onion?.pantryDeductedAmount).toEqual({ value: 1, unit: '個' });
+    expect(note?.pantryDeductedAmount).toBeNull();
+    expect(result.shoppingList.coveredIngredients).toEqual([
+      {
+        displayName: '人参',
+        productId: 'product-2',
+        requiredAmount: { value: 2, unit: '個' },
+        coveredAmount: { value: 2, unit: '個' },
+      },
+    ]);
+  });
+
+  it('冪等 GET 相当（既存リスト）では coveredIngredients を再計算しない', async () => {
+    mealPlanRepository.seed(seededMealPlan());
+    shoppingListRepository.seed(seededShoppingList('active', [seededItem()], null));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 100, '個'));
+
+    const result = await generateUseCase().execute({ mealPlanId: MEAL_PLAN_ID });
+
+    expect(result.created).toBe(false);
+    expect(result.shoppingList.coveredIngredients).toBeNull();
+    expect(result.shoppingList.items[0]?.pantryDeductedAmount).toBeNull();
+    expect(pantryRepository.saveCount).toBe(0);
   });
 });

@@ -585,7 +585,7 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     expect(shoppingListRepository.saveCount).toBe(0);
   });
 
-  it('増加分を在庫でまかなえるとリストは変えず Pantry だけ保存する', async () => {
+  it('増加分を在庫でまかなえると買う量は変えず Pantry と引き算スナップショットを保存する', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem()]));
     mealPlanRepository.seed(
       seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID, 2)]),
@@ -599,7 +599,9 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
 
     expect(dto.items[0]?.requiredAmount).toEqual({ value: 2, unit: '個' });
-    expect(shoppingListRepository.saveCount).toBe(0);
+    expect(dto.items[0]?.pantryDeductedAmount).toEqual({ value: 2, unit: '個' });
+    expect(dto.coveredIngredients).toEqual([]);
+    expect(shoppingListRepository.saveCount).toBe(1);
     expect(pantryRepository.saveCount).toBe(1);
     expect(pantryRepository.current().stocks).toHaveLength(0);
   });
@@ -641,5 +643,37 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     await expect(
       syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID }),
     ).resolves.toBeDefined();
+  });
+
+  it('Sync は新規の全量まかないを coveredIngredients に書き換える', async () => {
+    shoppingListRepository.seed(seededShoppingList('active', [seededItem()], []));
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [
+        seededPlannedRecipe('planned-1', RECIPE_ID),
+        seededPlannedRecipe('planned-2', 'recipe-2'),
+      ]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    recipeRepository.seed(
+      seededRecipe('recipe-2', [amountIngredient('人参', 3, '個', 'product-2')]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+    productRepository.seed(seededProduct('product-2'));
+    pantryRepository.seedStock(stockInput('product-2', 5, '個', { displayName: '人参' }));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toHaveLength(1);
+    expect(dto.items[0]?.productId).toBe(PRODUCT_ID);
+    expect(dto.coveredIngredients).toEqual([
+      {
+        displayName: '人参',
+        productId: 'product-2',
+        requiredAmount: { value: 3, unit: '個' },
+        coveredAmount: { value: 3, unit: '個' },
+      },
+    ]);
   });
 });

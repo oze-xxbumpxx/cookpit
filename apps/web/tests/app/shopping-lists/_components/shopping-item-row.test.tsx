@@ -25,6 +25,7 @@ function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): Shoppi
     actualPrice: null,
     actualStoreId: null,
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
     ...overrides,
   };
 }
@@ -116,6 +117,25 @@ describe('ShoppingItemRow', () => {
 
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('部分引き算があるとき数量の下に「在庫で n」を表示する（P-2）', () => {
+    renderRow({
+      item: createShoppingItemDto({
+        requiredAmount: { value: 2, unit: '個' },
+        pantryDeductedAmount: { value: 1, unit: '個' },
+      }),
+    });
+
+    expect(screen.getByText('2個')).toBeDefined();
+    expect(screen.getByText('在庫で 1個')).toBeDefined();
+    expect(screen.queryByText('やっぱり買う')).toBeNull();
+  });
+
+  it('pantryDeductedAmount が null のときは「在庫で」を出さない', () => {
+    renderRow({ item: createShoppingItemDto({ pantryDeductedAmount: null }) });
+
+    expect(screen.queryByText(/在庫で/)).toBeNull();
   });
 
   it('IR-02: bought item は購入実績が併記される', () => {

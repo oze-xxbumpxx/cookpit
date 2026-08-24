@@ -79,6 +79,7 @@ export const shoppingItemResponseSchema = z
     actualPrice: z.object({ amount: z.number(), currency: z.literal('JPY') }).nullable(),
     actualStoreId: z.uuid().nullable(),
     source: itemSourceSchema,
+    pantryDeductedAmount: z.object({ value: z.number(), unit: unitSchema }).nullable(),
   })
   .superRefine((value, ctx) => {
     const hasRequiredAmount = value.requiredAmount !== null;
@@ -92,12 +93,20 @@ export const shoppingItemResponseSchema = z
     }
   });
 
+export const coveredIngredientResponseSchema = z.object({
+  displayName: z.string(),
+  productId: z.uuid(),
+  requiredAmount: z.object({ value: z.number(), unit: unitSchema }),
+  coveredAmount: z.object({ value: z.number(), unit: unitSchema }),
+});
+
 export const shoppingListResponseSchema = z.object({
   id: z.uuid(),
   mealPlanId: z.uuid(),
   shoppingDate: z.iso.date(),
   status: shoppingListStatusSchema,
   items: z.array(shoppingItemResponseSchema),
+  coveredIngredients: z.array(coveredIngredientResponseSchema).nullable(),
   createdAt: z.iso.datetime(),
 });
 
@@ -114,4 +123,5 @@ export type ItemStatusSchemaType = z.infer<typeof itemStatusSchema>;
 export type ItemSourceSchemaType = z.infer<typeof itemSourceSchema>;
 export type ShoppingListStatusSchemaType = z.infer<typeof shoppingListStatusSchema>;
 export type ShoppingItemResponse = z.infer<typeof shoppingItemResponseSchema>;
+export type CoveredIngredientResponse = z.infer<typeof coveredIngredientResponseSchema>;
 export type ShoppingListResponse = z.infer<typeof shoppingListResponseSchema>;

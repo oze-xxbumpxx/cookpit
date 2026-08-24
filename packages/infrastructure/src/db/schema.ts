@@ -110,6 +110,8 @@ export const shoppingLists = pgTable('shopping_lists', {
   //   UNIQUE = 「1 MealPlan : 最大 1 ShoppingList」不変条件（S-6）＋ findByMealPlanId のインデックスを兼ねる
   shoppingDate: date('shopping_date').notNull(),
   status: text('status').notNull(),
+  // null = スナップショット未記録（既存リスト）。Generate / Sync 後は配列。
+  coveredIngredients: jsonb('covered_ingredients'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -128,6 +130,8 @@ export const shoppingItems = pgTable(
     requiredAmountValue: numeric('required_amount_value', { precision: 10, scale: 3 }),
     requiredAmountUnit: text('required_amount_unit'),
     amountNote: text('amount_note'),
+    pantryDeductedAmountValue: numeric('pantry_deducted_amount_value', { precision: 10, scale: 3 }),
+    pantryDeductedAmountUnit: text('pantry_deducted_amount_unit'),
     targetStoreId: text('target_store_id'),
     status: text('status').notNull(),
     actualPriceAmount: numeric('actual_price_amount', { precision: 10, scale: 1 }),

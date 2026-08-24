@@ -7,6 +7,7 @@ import {
   RecipeId,
 } from '@cookpit/domain';
 import type {
+  CoveredIngredient,
   MealPlan,
   Pantry,
   PlannedRecipe,
@@ -42,6 +43,18 @@ export interface ResolvedIngredient {
   displayName: string;
   requiredAmount: Quantity | null;
   amountNote: string | null;
+}
+
+/** 引き算後に買う量へ調整された食材。部分引き算時のみ pantryDeductedAmount が非 null。 */
+export interface DeductedIngredient extends ResolvedIngredient {
+  pantryDeductedAmount: Quantity | null;
+}
+
+export interface PantryDeductionResult {
+  ingredients: DeductedIngredient[];
+  /** 在庫で必要量をすべてまかなった食材（ShoppingItem にしない）。 */
+  coveredIngredients: CoveredIngredient[];
+  consumed: boolean;
 }
 
 /**
@@ -173,22 +186,24 @@ function collectAmountNote(
 /**
  * 集約済みの必要量から Pantry の在庫分を差し引き、買う量に調整した食材配列を返す。
  * 差し引いた在庫は `pantry` から消費する（副作用）。productId・単位が一致する在庫のみ対象。
- * 在庫でまかなえた食材は結果から除外する。
+ * 在庫でまかなえた食材は結果から除外し、`coveredIngredients` にスナップショットする。
+ * 引き算ルール（D-1〜D-5）は変更しない。
  *
- * @returns ingredients 買う量に調整済みの食材配列 / consumed 在庫を 1 件でも消費したか
+ * @returns ingredients 買う量に調整済み / coveredIngredients 全量まかない / consumed 消費したか
  */
 export function applyPantryDeduction(
   aggregated: ResolvedIngredient[],
   pantry: Pantry,
-): { ingredients: ResolvedIngredient[]; consumed: boolean } {
-  const result: ResolvedIngredient[] = [];
+): PantryDeductionResult {
+  const result: DeductedIngredient[] = [];
+  const coveredIngredients: CoveredIngredient[] = [];
   let consumed = false;
 
   for (const ingredient of aggregated) {
     const required = ingredient.requiredAmount;
     const productId = ingredient.productId;
     if (required === null || productId === null) {
-      result.push(ingredient);
+      result.push({ ...ingredient, pantryDeductedAmount: null });
       continue;
     }
 
@@ -204,22 +219,33 @@ export function applyPantryDeduction(
       .sort(compareStockForConsumption);
     const available = matching.reduce((sum, stock) => sum + stock.amount.value, 0);
     if (available === 0) {
-      result.push(ingredient);
+      result.push({ ...ingredient, pantryDeductedAmount: null });
       continue;
     }
 
-    consumeFromStocks(pantry, matching, Math.min(required.value, available), unit);
+    const deductedValue = Math.min(required.value, available);
+    consumeFromStocks(pantry, matching, deductedValue, unit);
     consumed = true;
 
     const buyRaw = required.value - available;
     if (buyRaw <= 0) {
+      coveredIngredients.push({
+        displayName: ingredient.displayName,
+        productId,
+        requiredAmount: required,
+        coveredAmount: Quantity.of(required.value, unit),
+      });
       continue;
     }
     const buy = isCountableUnit(unit) ? Math.ceil(buyRaw) : buyRaw;
-    result.push({ ...ingredient, requiredAmount: Quantity.of(buy, unit) });
+    result.push({
+      ...ingredient,
+      requiredAmount: Quantity.of(buy, unit),
+      pantryDeductedAmount: Quantity.of(deductedValue, unit),
+    });
   }
 
-  return { ingredients: result, consumed };
+  return { ingredients: result, coveredIngredients, consumed };
 }
 
 function consumeFromStocks(
