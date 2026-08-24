@@ -12,6 +12,7 @@ import { client } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, useApiAction } from '@/lib/use-api-action';
 import type {
+  CoveredIngredientDto,
   ProductDto,
   ShoppingItemDto,
   ShoppingListDto,
@@ -32,6 +33,7 @@ import {
 import { useCheckedSyncQueue } from '../_utils/use-checked-sync-queue';
 import { AddItemForm, type AddItemFormInput } from './add-item-form';
 import { CompleteShoppingPanel } from './complete-shopping-panel';
+import { CoveredIngredientsSection } from './covered-ingredients-section';
 import { StoreGroup } from './store-group';
 
 interface Props {
@@ -89,6 +91,9 @@ function applyOptimisticAction(
 /** 詳細画面の状態管理・全体統括（Client。S-4/D-7）。 */
 export function ShoppingListClient({ shoppingList, stores, products }: Props) {
   const [items, setItems] = useState<ShoppingItemDto[]>(shoppingList.items);
+  const [coveredIngredients, setCoveredIngredients] = useState<CoveredIngredientDto[] | null>(
+    shoppingList.coveredIngredients,
+  );
   const [optimisticItems, setOptimisticItems] = useOptimistic(items, applyOptimisticAction);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [addFormOpen, setAddFormOpen] = useState(false);
@@ -146,6 +151,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
         onSuccess: (dto) => {
           const diff = diffSyncResult(items, dto.items);
           setItems(dto.items);
+          setCoveredIngredients(dto.coveredIngredients);
           setSyncMessage(describeSyncResult(diff));
         },
       },
@@ -169,6 +175,8 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
                 : serverItem,
             ),
           );
+          // カバー節はオフラインキュー対象外のため、サーバーのスナップショットで置換する。
+          setCoveredIngredients(dto.coveredIngredients);
           // 再同期に成功したら過去の書き込み失敗のバナーは古い情報になるため消す
           itemsAction.setErrorMessage(null);
         },
@@ -443,6 +451,9 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
   // 完了済みリストへの品目操作はサーバーが 422 で拒否する（ADR-0009 決定 3）。
   // UI 側でも操作できないようにし、ルールと表示を一致させる。
   const readOnly = status !== 'active';
+  // D-6: buyable 空 ≠ covered-only。カバーだけある土曜は EmptyState を出さない。
+  const hasCoveredIngredients = coveredIngredients !== null && coveredIngredients.length > 0;
+  const showEmptyState = optimisticItems.length === 0 && !hasCoveredIngredients;
 
   return (
     <main className="min-h-dvh bg-background">
@@ -572,7 +583,7 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
           </div>
         )}
 
-        {optimisticItems.length === 0 ? (
+        {showEmptyState ? (
           <EmptyState Icon={ShoppingCart} message="リストにアイテムがありません" />
         ) : (
           <div className="flex flex-col gap-4">
@@ -597,6 +608,9 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
                 productMap={productMap}
               />
             ))}
+            {coveredIngredients !== null && coveredIngredients.length > 0 && (
+              <CoveredIngredientsSection ingredients={coveredIngredients} />
+            )}
           </div>
         )}
 

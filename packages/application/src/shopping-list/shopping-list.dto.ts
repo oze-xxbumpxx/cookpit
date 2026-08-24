@@ -17,6 +17,22 @@ export interface ShoppingItemDto {
   actualPrice: { amount: number; currency: string } | null;
   actualStoreId: string | null;
   source: ItemSource;
+  /**
+   * Generate/Sync 時点の部分在庫控除量。控除なし・レガシーリストは null。
+   * GET は現在の Pantry から再計算しない（スナップショット）。
+   */
+  pantryDeductedAmount: { value: number; unit: Unit } | null;
+}
+
+/**
+ * Generate/Sync 時点で在庫全量カバーされ ShoppingItem にならなかった材料のスナップショット。
+ * amountNote のみの材料は含まれない。
+ */
+export interface CoveredIngredientDto {
+  displayName: string;
+  productId: string;
+  requiredAmount: { value: number; unit: Unit };
+  coveredAmount: { value: number; unit: Unit };
 }
 
 export interface ShoppingListDto {
@@ -26,6 +42,11 @@ export interface ShoppingListDto {
   shoppingDate: string;
   status: ShoppingListStatus;
   items: ShoppingItemDto[];
+  /**
+   * 全量カバー材料のスナップショット。未対応・レガシーは null。
+   * 空配列は「スナップショットあり・カバー 0 件」を表す（null とは別）。
+   */
+  coveredIngredients: CoveredIngredientDto[] | null;
   /** ISO 8601 datetime。 */
   createdAt: string;
 }

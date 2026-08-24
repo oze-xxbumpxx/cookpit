@@ -67,18 +67,32 @@ export const itemStatusSchema = z.enum(['pending', 'bought', 'skipped']);
 export const itemSourceSchema = z.enum(['from_meal_plan', 'manually_added']);
 export const shoppingListStatusSchema = z.enum(['active', 'completed']);
 
+const quantityResponseSchema = z.object({
+  value: z.number(),
+  unit: unitSchema,
+});
+
+export const coveredIngredientResponseSchema = z.object({
+  displayName: z.string(),
+  productId: z.uuid(),
+  requiredAmount: quantityResponseSchema,
+  coveredAmount: quantityResponseSchema,
+});
+
 export const shoppingItemResponseSchema = z
   .object({
     id: z.uuid(),
     productId: z.uuid().nullable(),
     displayName: z.string(),
-    requiredAmount: z.object({ value: z.number(), unit: unitSchema }).nullable(),
+    requiredAmount: quantityResponseSchema.nullable(),
     amountNote: z.string().nullable(),
     targetStoreId: z.uuid().nullable(),
     status: itemStatusSchema,
     actualPrice: z.object({ amount: z.number(), currency: z.literal('JPY') }).nullable(),
     actualStoreId: z.uuid().nullable(),
     source: itemSourceSchema,
+    // キー欠落はレガシー応答。段階ロールアウト中も parse できるように default null。
+    pantryDeductedAmount: quantityResponseSchema.nullable().default(null),
   })
   .superRefine((value, ctx) => {
     const hasRequiredAmount = value.requiredAmount !== null;
@@ -98,6 +112,7 @@ export const shoppingListResponseSchema = z.object({
   shoppingDate: z.iso.date(),
   status: shoppingListStatusSchema,
   items: z.array(shoppingItemResponseSchema),
+  coveredIngredients: z.array(coveredIngredientResponseSchema).nullable().default(null),
   createdAt: z.iso.datetime(),
 });
 
@@ -115,3 +130,4 @@ export type ItemSourceSchemaType = z.infer<typeof itemSourceSchema>;
 export type ShoppingListStatusSchemaType = z.infer<typeof shoppingListStatusSchema>;
 export type ShoppingItemResponse = z.infer<typeof shoppingItemResponseSchema>;
 export type ShoppingListResponse = z.infer<typeof shoppingListResponseSchema>;
+export type CoveredIngredientResponse = z.infer<typeof coveredIngredientResponseSchema>;

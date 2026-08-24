@@ -20,6 +20,8 @@ export function toShoppingItemDto(item: ShoppingItem): ShoppingItemDto {
         : { amount: item.actualPrice.amount, currency: item.actualPrice.currency },
     actualStoreId: item.actualStore?.value ?? null,
     source: item.source,
+    // スナップショット永続化は別バックエンド切片。未着の間は常に null（レガシーと同形）。
+    pantryDeductedAmount: null,
   };
 }
 
@@ -30,6 +32,8 @@ export function toShoppingListDto(shoppingList: ShoppingList): ShoppingListDto {
     shoppingDate: toLocalDateString(shoppingList.shoppingDate),
     status: shoppingList.status,
     items: shoppingList.items.map(toShoppingItemDto),
+    // スナップショット永続化は別バックエンド切片。未着の間は常に null（レガシーと同形）。
+    coveredIngredients: null,
     createdAt: shoppingList.createdAt.toISOString(),
   };
 }

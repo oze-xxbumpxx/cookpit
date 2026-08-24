@@ -358,7 +358,10 @@ describe('shoppingItemResponseSchema', () => {
       source: 'from_meal_plan',
     };
 
-    expect(shoppingItemResponseSchema.parse(item)).toEqual(item);
+    expect(shoppingItemResponseSchema.parse(item)).toEqual({
+      ...item,
+      pantryDeductedAmount: null,
+    });
   });
 
   it('amountNote のみ非 null かつ nullable フィールドが非 null の場合を受け入れる', () => {
@@ -373,6 +376,27 @@ describe('shoppingItemResponseSchema', () => {
       actualPrice: { amount: 128, currency: 'JPY' },
       actualStoreId: VALID_ACTUAL_STORE_ID,
       source: 'manually_added',
+    };
+
+    expect(shoppingItemResponseSchema.parse(item)).toEqual({
+      ...item,
+      pantryDeductedAmount: null,
+    });
+  });
+
+  it('pantryDeductedAmount に数量オブジェクトを受け入れる', () => {
+    const item = {
+      id: VALID_ITEM_ID,
+      productId: VALID_PRODUCT_ID,
+      displayName: '玉ねぎ',
+      requiredAmount: { value: 1, unit: '個' },
+      amountNote: null,
+      targetStoreId: null,
+      status: 'pending',
+      actualPrice: null,
+      actualStoreId: null,
+      source: 'from_meal_plan',
+      pantryDeductedAmount: { value: 1, unit: '個' },
     };
 
     expect(shoppingItemResponseSchema.parse(item)).toEqual(item);
@@ -398,8 +422,10 @@ describe('shoppingListResponseSchema', () => {
           actualPrice: { amount: 198, currency: 'JPY' },
           actualStoreId: VALID_ACTUAL_STORE_ID,
           source: 'from_meal_plan',
+          pantryDeductedAmount: null,
         },
       ],
+      coveredIngredients: null,
       createdAt: '2026-07-11T01:00:00.000Z',
     };
 
@@ -415,11 +441,44 @@ describe('shoppingListResponseSchema', () => {
       shoppingDate: '2026-07-11',
       status: 'completed',
       items: [],
+      coveredIngredients: null,
       createdAt: '2026-07-11T01:00:00.000Z',
     };
 
     const parsed: ShoppingListResponse = shoppingListResponseSchema.parse(dto);
 
     expect(parsed).toEqual(dto);
+  });
+
+  it('coveredIngredients 配列とキー欠落（default null）を受け入れる', () => {
+    const covered = {
+      displayName: '牛乳',
+      productId: VALID_PRODUCT_ID,
+      requiredAmount: { value: 1, unit: '本' },
+      coveredAmount: { value: 1, unit: '本' },
+    };
+    const withCovered = {
+      id: VALID_SHOPPING_LIST_ID,
+      mealPlanId: VALID_MEAL_PLAN_ID,
+      shoppingDate: '2026-07-11',
+      status: 'active',
+      items: [],
+      coveredIngredients: [covered],
+      createdAt: '2026-07-11T01:00:00.000Z',
+    };
+    expect(shoppingListResponseSchema.parse(withCovered)).toEqual(withCovered);
+
+    const legacy = {
+      id: VALID_SHOPPING_LIST_ID,
+      mealPlanId: VALID_MEAL_PLAN_ID,
+      shoppingDate: '2026-07-11',
+      status: 'active',
+      items: [],
+      createdAt: '2026-07-11T01:00:00.000Z',
+    };
+    expect(shoppingListResponseSchema.parse(legacy)).toEqual({
+      ...legacy,
+      coveredIngredients: null,
+    });
   });
 });

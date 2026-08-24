@@ -25,6 +25,7 @@ function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): Shoppi
     actualPrice: null,
     actualStoreId: null,
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
     ...overrides,
   };
 }

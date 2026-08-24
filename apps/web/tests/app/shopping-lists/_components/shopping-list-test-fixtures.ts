@@ -1,4 +1,5 @@
 import type {
+  CoveredIngredientDto,
   PriceRecordDto,
   ProductDto,
   ShoppingItemDto,
@@ -31,6 +32,19 @@ export function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}):
     actualPrice: null,
     actualStoreId: null,
     source: 'from_meal_plan',
+    pantryDeductedAmount: null,
+    ...overrides,
+  };
+}
+
+export function createCoveredIngredientDto(
+  overrides: Partial<CoveredIngredientDto> = {},
+): CoveredIngredientDto {
+  return {
+    displayName: '牛乳',
+    productId: '44444444-4444-4444-8444-444444444444',
+    requiredAmount: { value: 1, unit: '本' },
+    coveredAmount: { value: 1, unit: '本' },
     ...overrides,
   };
 }
@@ -42,6 +56,7 @@ export function createShoppingListDto(overrides: Partial<ShoppingListDto> = {}):
     shoppingDate: '2026-07-11',
     status: 'active',
     items: [],
+    coveredIngredients: null,
     createdAt: '2026-07-11T00:00:00.000Z',
     ...overrides,
   };
