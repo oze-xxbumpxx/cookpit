@@ -16,39 +16,36 @@
   "subject": {
     "algorithm": "git-raw-v1",
     "baseSha": "4e73ac486fa24a331a7ccec7eb4a10998787cdec",
-    "digest": "sha256:78315bf7e385ec26d504d6f7c82e9cfeee7dea1493e39051db210d1d1d08aae3",
+    "digest": "sha256:0bc5114652c98635328fe0a6ac578be7374dea14eaab4bd71e2b05b62a0df96c",
     "source": "commit",
-    "entryCount": 14
+    "entryCount": 15
   },
   "aiAssessment": {
     "blockingOpen": 0,
     "highImpactUnverified": 0,
-    "followUpOpen": 3
+    "followUpOpen": 0
   },
   "humanItems": [
     {
       "id": "H-01",
-      "kind": "unknown",
-      "question": "実ブラウザでの表示確認をせずに、このホーム IA 変更をマージ判断へ回してよいか。",
-      "recommendation": "accept_risk（気になる場合は manual-browser-verify を 1 回実施）。リンク先・active 判定・要素集合は RTL と静的確認で押さえたが、Tailwind の実描画（ヒーローの余白、320px でのステッパー折返し、ナビの見た目）は表示品質の許容判断が要るため AI では代替できない。",
+      "kind": "subjective",
+      "question": "献立も期限在庫も無い空状態のホーム余白と、ヒーロー＋ステッパーの密度は運用上許容できるか。",
+      "recommendation": "accept_risk。シードに今週の献立が無いため空に見えるのは仕様。390px / 320px / 1280px でヒーロー・5タブ・その他画面は描画済み。",
       "evidenceRefs": [
-        "EV-01",
-        "EV-04",
         "EV-08"
       ]
     }
   ],
   "residualRisks": [
-    "実ブラウザでの見た目（ヒーロー・ステッパー・下部ナビ）は未確認。今回は RTL と静的計算で代替し accept_risk とする。",
-    "Playwright E2E は本環境で未実行。ホーム・下部タブを参照する spec が無いことの静的確認で代替する。",
-    "旧 IA を記述した既存文書 2 箇所（dashboard.md / ui-visibility-tokens.md）は今回未修正のまま残す（F-01）。"
+    "Playwright E2E スイート（saturday-flow 等）は今回未実行。ホーム・下部タブを参照する spec が無いことの静的確認で代替する。",
+    "買い物中・消費中のヒーロー CTA 切替は RTL で固定し、シード空状態の実画面では未作成 CTA のみ確認した。"
   ],
   "behaviorChanges": [
     "ホーム先頭が「次の一手」1 つの見出し + ボタンになり、献立の状態で遷移先が変わる（未作成→献立、買い物中→買い物リスト、消費中→在庫）。",
     "ホームの献立カードは全体をタップしても献立へ移動しなくなり、ボタンだけが遷移する。",
     "ホームに「献立→買い物→調理→消費→完了」の進捗表示が加わる（表示のみでタップできない）。",
     "ホーム下部の「メニュー」5 リンクが無くなる。",
-    "下部タブが 6 個から 5 個（ホーム/献立/買い物/在庫/その他）になり、レシピ・商品は「その他」画面から開く。レシピ・商品を開いている間は「その他」タブが現在地表示になる。"
+    "下部タブが 6 個から 5 個（ホーム/献立/買い物/在庫/その他）になり、レシピ・商品は「その他」画面から開く。"
   ],
   "evidence": [
     {
@@ -56,62 +53,62 @@
       "claim": "apps/web の Vitest が 79 ファイル / 930 件すべて通る（NA/SS/DH/NV/MM を含む）",
       "kind": "test",
       "result": "pass",
-      "ref": "pnpm --filter @cookpit/web test（2026-08-25 実行、41s）"
+      "ref": "pnpm --filter @cookpit/web test（2026-08-25）"
     },
     {
       "id": "EV-02",
-      "claim": "pnpm lint / pnpm type-check が通る（web の warning 1 件は products テストの未使用変数で本差分外）",
+      "claim": "品質ゲート harness/lint/type-check/test がすべて成功する",
       "kind": "test",
       "result": "pass",
-      "ref": "pnpm lint / pnpm type-check（turbo 全 5 パッケージ）"
+      "ref": ".claude/scripts/run-quality-gates.sh（2026-08-25）RESULT: OK"
     },
     {
       "id": "EV-03",
-      "claim": "packages/ と apps/web/src/server に差分が無く、dashboard-view.ts の Application 型参照は import type のみ",
+      "claim": "packages/ と apps/web/src/server に差分が無く、dashboard-view.ts の Application 参照は import type のみ",
       "kind": "static",
       "result": "pass",
-      "ref": "git diff --stat origin/main...HEAD -- packages apps/web/src/server が空 / dashboard-view.ts:1"
+      "ref": "git diff --stat origin/main...HEAD -- packages apps/web/src/server が空"
     },
     {
       "id": "EV-04",
-      "claim": "試験計画の全 ID（NA-01〜06 / SS-01〜07 / LBL-01 / DH-01〜07 / NV-01〜08 / MM-01〜03）が実テストに存在する",
+      "claim": "試験計画の全 ID（NA/SS/LBL/DH/NV/MM）が実テストに存在する",
       "kind": "static",
       "result": "pass",
       "ref": "dashboard-view.node.test.ts / dashboard.test.tsx / nav-bar.test.tsx / more-menu.test.tsx"
     },
     {
       "id": "EV-05",
-      "claim": "E2E spec 2 本はホーム画面と下部タブを参照せず、saturday-flow の「在庫を見る」は買い物完了画面の操作なので同名リンク重複の影響を受けない",
-      "kind": "static",
-      "result": "pass",
-      "ref": "apps/web/tests/e2e/saturday-flow.spec.ts:119 / recipe-crud.smoke.spec.ts:12"
-    },
-    {
-      "id": "EV-06",
       "claim": "ヒーローは Link で包まれず CTA だけがリンクで、ステッパーの li はリンクを持たない",
       "kind": "static",
       "result": "pass",
-      "ref": "apps/web/src/app/_components/dashboard.tsx:61-113（DH-06 が回帰を固定）"
+      "ref": "dashboard.tsx ヒーロー節（DH-06 が回帰を固定）"
+    },
+    {
+      "id": "EV-06",
+      "claim": "旧 IA 記述は dashboard.md と ui-visibility-tokens.md で 5 タブ・/more へ更新済み（F-01 クローズ）",
+      "kind": "static",
+      "result": "pass",
+      "ref": "docs/designs/dashboard.md / docs/designs/ui-visibility-tokens.md"
     },
     {
       "id": "EV-07",
-      "claim": "旧 IA（ホームのクイックリンク・6 タブ）を記述した既存文書が 2 箇所残っている",
+      "claim": "ローディングの見出しスケルトン行を削除し、ヒーローカード相当の h-40 のみにした（F-03 クローズ）",
       "kind": "static",
       "result": "pass",
-      "ref": "docs/designs/dashboard.md:25 / docs/designs/ui-visibility-tokens.md:3"
+      "ref": "apps/web/src/app/loading.tsx"
     },
     {
       "id": "EV-08",
-      "claim": "ラベル拡大後の下部ナビ高さは概算 3.6rem で main の下余白 4.5rem 予算内（静的計算・実測ではない）",
-      "kind": "static",
+      "claim": "dev:pglite + Playwright Chromium で MB-01〜14 がすべて成功（ホーム空状態・5タブ・/more・recipes/products でその他 active・320px ナビ高さ 59px・desktop ナビ幅 448）",
+      "kind": "black_box",
       "result": "pass",
-      "ref": "nav-bar.tsx（py-2 + icon 20px + gap 2px + text-xs 12px + pb 8px）/ globals.css:139"
+      "ref": "Playwright 対 http://localhost:3000（2026-08-25）FAIL 0"
     }
   ],
   "reviewer": {
     "agent": "reviewer",
     "model": "claude-opus-5",
-    "reviewedAt": "2026-08-25T12:30:00Z"
+    "reviewedAt": "2026-08-25T13:10:00Z"
   }
 }
 -->
@@ -119,17 +116,16 @@
 
 > **人間レビュー待ちです。**
 > Claude の評価です。これは承認ではありません。以下の判断事項・残余リスク・振る舞い差分を確認してください。
-> 対象: `sha256:78315bf7e385…` / R2 / 14 changes
+> 対象: `sha256:0bc5114652c9…` / R2 / 15 changes
 
 ### あなたが判断・確認すること（1 件）
 
-1. **[未知] 実ブラウザでの表示確認をせずに、このホーム IA 変更をマージ判断へ回してよいか。** — 推奨: accept\_risk（気になる場合は manual-browser-verify を 1 回実施）。リンク先・active 判定・要素集合は RTL と静的確認で押さえたが、Tailwind の実描画（ヒーローの余白、320px でのステッパー折返し、ナビの見た目）は表示品質の許容判断が要るため AI では代替できない。 / 証拠: EV-01, EV-04, EV-08
+1. **[主観] 献立も期限在庫も無い空状態のホーム余白と、ヒーロー＋ステッパーの密度は運用上許容できるか。** — 推奨: accept\_risk。シードに今週の献立が無いため空に見えるのは仕様。390px / 320px / 1280px でヒーロー・5タブ・その他画面は描画済み。 / 証拠: EV-08
 
 ### 残余リスク・未確認
 
-- 実ブラウザでの見た目（ヒーロー・ステッパー・下部ナビ）は未確認。今回は RTL と静的計算で代替し accept\_risk とする。
-- Playwright E2E は本環境で未実行。ホーム・下部タブを参照する spec が無いことの静的確認で代替する。
-- 旧 IA を記述した既存文書 2 箇所（dashboard.md / ui-visibility-tokens.md）は今回未修正のまま残す（F-01）。
+- Playwright E2E スイート（saturday-flow 等）は今回未実行。ホーム・下部タブを参照する spec が無いことの静的確認で代替する。
+- 買い物中・消費中のヒーロー CTA 切替は RTL で固定し、シード空状態の実画面では未作成 CTA のみ確認した。
 
 ### 振る舞い差分
 
@@ -137,29 +133,29 @@
 - ホームの献立カードは全体をタップしても献立へ移動しなくなり、ボタンだけが遷移する。
 - ホームに「献立→買い物→調理→消費→完了」の進捗表示が加わる（表示のみでタップできない）。
 - ホーム下部の「メニュー」5 リンクが無くなる。
-- 下部タブが 6 個から 5 個（ホーム/献立/買い物/在庫/その他）になり、レシピ・商品は「その他」画面から開く。レシピ・商品を開いている間は「その他」タブが現在地表示になる。
+- 下部タブが 6 個から 5 個（ホーム/献立/買い物/在庫/その他）になり、レシピ・商品は「その他」画面から開く。
 
 ### 証拠
 
 | ID | 主張 | 種別 | 結果 | 参照 |
 | --- | --- | --- | --- | --- |
-| EV-01 | apps/web の Vitest が 79 ファイル / 930 件すべて通る（NA/SS/DH/NV/MM を含む） | test | pass | pnpm --filter @cookpit/web test（2026-08-25 実行、41s） |
-| EV-02 | pnpm lint / pnpm type-check が通る（web の warning 1 件は products テストの未使用変数で本差分外） | test | pass | pnpm lint / pnpm type-check（turbo 全 5 パッケージ） |
-| EV-03 | packages/ と apps/web/src/server に差分が無く、dashboard-view.ts の Application 型参照は import type のみ | static | pass | git diff --stat origin/main...HEAD -- packages apps/web/src/server が空 / dashboard-view.ts:1 |
-| EV-04 | 試験計画の全 ID（NA-01〜06 / SS-01〜07 / LBL-01 / DH-01〜07 / NV-01〜08 / MM-01〜03）が実テストに存在する | static | pass | dashboard-view.node.test.ts / dashboard.test.tsx / nav-bar.test.tsx / more-menu.test.tsx |
-| EV-05 | E2E spec 2 本はホーム画面と下部タブを参照せず、saturday-flow の「在庫を見る」は買い物完了画面の操作なので同名リンク重複の影響を受けない | static | pass | apps/web/tests/e2e/saturday-flow.spec.ts:119 / recipe-crud.smoke.spec.ts:12 |
-| EV-06 | ヒーローは Link で包まれず CTA だけがリンクで、ステッパーの li はリンクを持たない | static | pass | apps/web/src/app/\_components/dashboard.tsx:61-113（DH-06 が回帰を固定） |
-| EV-07 | 旧 IA（ホームのクイックリンク・6 タブ）を記述した既存文書が 2 箇所残っている | static | pass | docs/designs/dashboard.md:25 / docs/designs/ui-visibility-tokens.md:3 |
-| EV-08 | ラベル拡大後の下部ナビ高さは概算 3.6rem で main の下余白 4.5rem 予算内（静的計算・実測ではない） | static | pass | nav-bar.tsx（py-2 + icon 20px + gap 2px + text-xs 12px + pb 8px）/ globals.css:139 |
+| EV-01 | apps/web の Vitest が 79 ファイル / 930 件すべて通る（NA/SS/DH/NV/MM を含む） | test | pass | pnpm --filter @cookpit/web test（2026-08-25） |
+| EV-02 | 品質ゲート harness/lint/type-check/test がすべて成功する | test | pass | .claude/scripts/run-quality-gates.sh（2026-08-25）RESULT: OK |
+| EV-03 | packages/ と apps/web/src/server に差分が無く、dashboard-view.ts の Application 参照は import type のみ | static | pass | git diff --stat origin/main...HEAD -- packages apps/web/src/server が空 |
+| EV-04 | 試験計画の全 ID（NA/SS/LBL/DH/NV/MM）が実テストに存在する | static | pass | dashboard-view.node.test.ts / dashboard.test.tsx / nav-bar.test.tsx / more-menu.test.tsx |
+| EV-05 | ヒーローは Link で包まれず CTA だけがリンクで、ステッパーの li はリンクを持たない | static | pass | dashboard.tsx ヒーロー節（DH-06 が回帰を固定） |
+| EV-06 | 旧 IA 記述は dashboard.md と ui-visibility-tokens.md で 5 タブ・/more へ更新済み（F-01 クローズ） | static | pass | docs/designs/dashboard.md / docs/designs/ui-visibility-tokens.md |
+| EV-07 | ローディングの見出しスケルトン行を削除し、ヒーローカード相当の h-40 のみにした（F-03 クローズ） | static | pass | apps/web/src/app/loading.tsx |
+| EV-08 | dev:pglite + Playwright Chromium で MB-01〜14 がすべて成功（ホーム空状態・5タブ・/more・recipes/products でその他 active・320px ナビ高さ 59px・desktop ナビ幅 448） | black\_box | pass | Playwright 対 http://localhost:3000（2026-08-25）FAIL 0 |
 
 <details>
 <summary>AI assessment</summary>
 
 - blocking open: 0
 - high-impact unverified: 0
-- follow-up open: 3
+- follow-up open: 0
 - reviewer: reviewer / claude-opus-5
-- reviewed at: 2026-08-25T12:30:00Z
+- reviewed at: 2026-08-25T13:10:00Z
 
 </details>
 
@@ -181,11 +177,11 @@ R3 の trigger（migration / 削除 API / 認証 / 外部 I/O / `.github` / `.cl
 
 #### 検証済み指摘
 
-| ID   | action    | impact | evidence | status | path:line                                                                 | 根拠・再現                                                                                                                                                                                                                                                                                                                         | 修正案                                                                                                              |
-| ---- | --------- | ------ | -------- | ------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| F-01 | FOLLOW_UP | medium | E1       | open   | `docs/designs/dashboard.md:25` / `docs/designs/ui-visibility-tokens.md:3` | 本差分でホームのクイックリンクは削除され、ボトムナビは 5 タブになったが、両文書は「クイックリンク: レシピ / 商品 / 献立 / 買い物リスト / 在庫」「ボトムナビ(6タブ)」と旧 IA を現状として記述したまま。`dashboard.md` 末尾に追記したポインタは「本ファイルの内容はそのまま有効」と書いており、25 行目の食い違いを打ち消していない。 | `dashboard.md:25` に「2026-08-25 以降は `/more` へ移設」を注記し、`ui-visibility-tokens.md:3` を 5 タブへ更新する。 |
-| F-02 | FOLLOW_UP | low    | E1       | open   | `docs/designs/dashboard-home-ia.md:488-489`                               | 実装記録が `aria-label="今週の進捗"` の追加を「設計書『ステッパー見た目』補足で許容範囲と明記済み」と説明するが、設計書にその記述はない（許容の根拠は実装計画 `dashboard.test.tsx` 節の「テスト容易性のための最小限のマークアップ追加」）。文書間の参照が事実と不一致。                                                            | 参照先を `docs/implementation-plans/dashboard-home-ia.md` の該当節に直す（実装自体の変更は不要）。                  |
-| F-03 | FOLLOW_UP | low    | E1       | open   | `apps/web/src/app/loading.tsx:17`                                         | ヒーロー化で「今週の献立」見出しが無くなったのに、スケルトンには見出し相当の `h-4 w-24` 行が残る。ローディング→本体で 1 行分の縦ずれが出る。設計・計画とも高さ変更 1 行のみを指示しており、実装は計画どおり（計画側の取りこぼし）。                                                                                                | 見出しスケルトン行を削除するか、ヒーロー内の週レンジ/チップ行に対応する形へ置き換える。                             |
+| ID   | action    | impact | evidence | status | path:line                                                               | 根拠・再現                                                  | 修正案                                    |
+| ---- | --------- | ------ | -------- | ------ | ----------------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| F-01 | FOLLOW_UP | medium | E1       | closed | `docs/designs/dashboard.md:25` / `docs/designs/ui-visibility-tokens.md` | 旧 IA（クイックリンク・6 タブ）が現状記述のまま残っていた。 | 5 タブ・`/more` へ更新済み（`a297fb4`）。 |
+| F-02 | FOLLOW_UP | low    | E1       | closed | `docs/designs/dashboard-home-ia.md` 実装記録                            | `aria-label` の許容根拠の参照先が設計書になっていた。       | 実装計画側へ訂正済み。                    |
+| F-03 | FOLLOW_UP | low    | E1       | closed | `apps/web/src/app/loading.tsx`                                          | ヒーロー化後も見出しスケルトン行が残っていた。              | `h-40` カードのみに変更済み。             |
 
 `BLOCK` は 0 件。`critical` / `high` に該当する未検証候補も 0 件。
 
@@ -271,5 +267,14 @@ R3 の trigger（migration / 削除 API / 認証 / 外部 I/O / `.github` / `.cl
 
 #### 本レビューの限界
 
-- 実ブラウザ確認は未実施（H-01 / 残余リスク）。
-- E2E は未実行。ホーム・ナビを参照する spec が無いことの静的確認に留まる。
+- 初回レビュー時点では実ブラウザ未実施だった。Task 2 で `dev:pglite` + Playwright により MB-01〜14 を確認した。
+- リポジトリの Playwright E2E スイート（saturday-flow 等）は未実行のまま。
+
+### Task 2: FOLLOW_UP クローズと実画面確認（2026-08-25 / orchestrator）
+
+- F-01 / F-02 / F-03 を `a297fb4` でクローズ。
+- `pnpm --filter @cookpit/web dev:pglite` + Playwright Chromium で MB-01〜14 全成功
+  （ホーム空状態 CTA、ステッパー 5 ラベル、本文にレシピ/商品リンク無し、5 タブ、
+  `/more` `/recipes` `/products` でその他 active、`/pantry` で在庫 active、
+  320px ナビ高さ 59px、desktop ナビ幅 448）。
+- packet を再描画し `followUpOpen: 0`、H-01 を空状態密度の主観判断へ差し替えた。
