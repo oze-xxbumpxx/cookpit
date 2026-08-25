@@ -486,4 +486,4 @@ export function MoreMenu() {
 - 品質ゲート結果: `pnpm lint`（turbo 全パッケージ）/ `pnpm type-check`（turbo 全パッケージ）/
   `pnpm --filter @cookpit/web test` すべて成功（lint は本変更と無関係な既存 warning 1 件のみ）。
 - 設計・計画からの逸脱: なし。テスト容易性のための最小追加として `aria-label="今週の進捗"` を
-  ステッパー `<ol>` に付与（設計書「ステッパー見た目」補足で許容範囲と明記済み）。
+  ステッパー `<ol>` に付与（許容根拠は実装計画の `dashboard.test.tsx` 節。設計書本文には未記載）。
