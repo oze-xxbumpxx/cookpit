@@ -79,6 +79,10 @@ docs/{requirements,designs,implementation-plans,tests,decisions,reviews}/  featu
 詳細：[agent-responsibilities.md](./agent-responsibilities.md)。表の Model は短縮表記
 （正典は各 `.claude/agents/<name>.md` の frontmatter、例: `claude-sonnet-5`）。
 
+Cursor Agent / Cloud Agent で実装するときは、上表の `implementer = sonnet-5` ではなく
+GPT-5.6 Luna Max（`.cursor/agents/implementer.md`）を使う。Claude Code CLI は上表のまま。
+正典は [orchestration-policy.md](./orchestration-policy.md) §Cursor Agent 経路。
+
 ### Skills（17）
 
 Claude が場面に応じて自動選択する。`/<skill-name>` で明示的にも呼べる。

@@ -1,0 +1,36 @@
+---
+description: Cursor 経路の実装は GPT-5.6 Luna Max を既定にする。例外があるときだけ別モデルを使う。
+alwaysApply: true
+---
+
+# 実装の既定モデル（Cursor Agent）
+
+このルールは **Cursor Agent / Cloud Agent** にだけ適用する。
+Claude Code CLI のモデル割り当て（`.claude/agents/` の `claude-*`）は変更しない。
+
+## 既定
+
+アプリケーションコード・テストコード・実装に伴う設定の追加・修正をエージェントが書くときは、
+**GPT-5.6 Luna Max** を使う。
+
+| 用途 | 指定 |
+| ---- | ---- |
+| Subagent frontmatter（正本） | `gpt-5.6-luna[effort=max]` |
+| Task ツールが slug 必須で `effort=max` を渡せないとき | `gpt-5.6-luna-high`（フォールバック。報告に「Max ではなく high」と書く） |
+
+親セッションが Grok / Composer / Auto 等でも、実装そのものを親モデルで書かない。
+`implementer` Subagent（`.cursor/agents/implementer.md`）へ委譲する。
+
+Task の `model` を省略すると親モデルを継承することがある。実装委譲では **明示指定する**。
+
+## 例外（このときだけ既定を外してよい）
+
+次のいずれかが成り立つときだけ、別モデル・親での実装を許可する。
+
+1. ユーザーが別モデルを明示した。
+2. Luna が使えない（プラン制限・管理ブロック・起動失敗）。使えた代替と理由を報告する。
+3. 実装ではない作業（検索、設計、計画、レビュー、オーケストレーション、質問応答）。
+4. Claude Code CLI 経路（正典は `.claude/agents/implementer.md` の `claude-sonnet-5`）。
+5. エージェント設定そのもの（`.cursor/` / `.claude/agents/` 等）の修正で、委譲すると循環するとき。
+
+「速いから」「親が Grok だから」は例外にしない。
