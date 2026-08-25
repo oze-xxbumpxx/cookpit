@@ -56,6 +56,9 @@
 | agent-evaluator           | sonnet-5 | 固定評価ケースで回帰評価                              |
 | agent-improvement-manager | opus-5   | 横断分析・改善提案（重要設定は提案のみ）              |
 
+Cursor Agent / Cloud Agent の実装は上表と別に GPT-5.6 Luna Max を既定とする
+（`.cursor/agents/implementer.md`。正典は [orchestration-policy.md](./orchestration-policy.md) §Cursor Agent 経路）。
+
 ## 運用開始
 
 - Orchestrator 起動：`claude --agent orchestrator`

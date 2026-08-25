@@ -285,6 +285,22 @@ agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定�
 > 一律上書きし、Agent 定義の `model` より優先されてしまう。モデルは各 Agent ファイルの
 > `model` で個別指定する。
 
+### Cursor Agent 経路（Claude Code とは別）
+
+Cursor Agent / Cloud Agent で **実装** を行うときの既定モデルは GPT-5.6 Luna Max とする。
+Claude Code の implementer（`claude-sonnet-5`）は変更しない。
+
+| 経路 | implementer の定義 | 既定 model |
+| ---- | ------------------ | ---------- |
+| Claude Code CLI | `.claude/agents/implementer.md` | `claude-sonnet-5` |
+| Cursor Agent / Cloud Agent | `.cursor/agents/implementer.md`（同名のため Cursor ではこちらが優先） | `gpt-5.6-luna[effort=max]` |
+
+例外・Task slug のフォールバックは
+[`.cursor/rules/implementation-default-model.mdc`](../../.cursor/rules/implementation-default-model.mdc)
+が正典。設計・レビュー・オーケストレーションのモデルは上表の Claude Code 4 層を維持する。
+
+親セッションが Grok 等でも、アプリケーション実装を親モデルで書かない。implementer へ委譲する。
+
 ## 起動方法（正規ルート）
 
 **Orchestrator 役はメインセッションが務める。**
