@@ -1,11 +1,7 @@
 'use client';
 
 import { client } from '@/lib/api-client';
-import {
-  API_FAILURE_MESSAGE,
-  NETWORK_ERROR_MESSAGE,
-  type ApiAction,
-} from '@/lib/use-api-action';
+import { API_FAILURE_MESSAGE, NETWORK_ERROR_MESSAGE, type ApiAction } from '@/lib/use-api-action';
 import type { ShoppingItemDto } from '@cookpit/application';
 import {
   startTransition,
