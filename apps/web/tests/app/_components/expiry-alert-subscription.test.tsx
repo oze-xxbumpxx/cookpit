@@ -294,4 +294,89 @@ describe('ExpiryAlertSubscription', () => {
     });
     container.remove();
   });
+
+  it('EAS-14: iOS かつ非 standalone ではホーム画面追加の案内を出す（ボタンは無効化しない）', async () => {
+    stubPushSupportedEnvironment();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(display-mode: standalone)' ? false : false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    });
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'iPhone',
+    });
+
+    render(<ExpiryAlertSubscription />);
+
+    expect(
+      await screen.findByText(
+        'iPhone / iPad では、ホーム画面に追加したアプリから開くと通知を受け取れます。',
+      ),
+    ).toBeDefined();
+    const button = await screen.findByRole('button', { name: '通知をオンにする' });
+    expect(button.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('EAS-15: standalone（PWA）ではホーム画面追加の案内を出さない', async () => {
+    stubPushSupportedEnvironment();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(display-mode: standalone)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    });
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'iPhone',
+    });
+
+    render(<ExpiryAlertSubscription />);
+
+    await screen.findByRole('button', { name: '通知をオンにする' });
+    expect(
+      screen.queryByText(
+        'iPhone / iPad では、ホーム画面に追加したアプリから開くと通知を受け取れます。',
+      ),
+    ).toBeNull();
+  });
+
+  it('EAS-16: 非 iOS ではホーム画面追加の案内を出さない', async () => {
+    stubPushSupportedEnvironment();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    });
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'Linux armv8l',
+    });
+
+    render(<ExpiryAlertSubscription />);
+
+    await screen.findByRole('button', { name: '通知をオンにする' });
+    expect(
+      screen.queryByText(
+        'iPhone / iPad では、ホーム画面に追加したアプリから開くと通知を受け取れます。',
+      ),
+    ).toBeNull();
+  });
 });

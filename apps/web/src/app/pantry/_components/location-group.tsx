@@ -7,6 +7,7 @@ interface Props {
   stocks: StockDto[];
   asOf: Date;
   submittingStockId: string | null;
+  highlightedStockId?: string | null;
   onEdit: (stock: StockDto) => void;
   onConsume: (stockId: string) => void;
   onDiscard: (stockId: string) => void;
@@ -17,6 +18,7 @@ export function LocationGroup({
   stocks,
   asOf,
   submittingStockId,
+  highlightedStockId = null,
   onEdit,
   onConsume,
   onDiscard,
@@ -33,6 +35,7 @@ export function LocationGroup({
             stock={stock}
             asOf={asOf}
             submitting={submittingStockId === stock.id}
+            highlighted={highlightedStockId === stock.id}
             onEdit={onEdit}
             onConsume={onConsume}
             onDiscard={onDiscard}

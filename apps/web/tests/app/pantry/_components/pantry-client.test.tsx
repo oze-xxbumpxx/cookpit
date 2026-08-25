@@ -540,4 +540,62 @@ describe('PantryClient', () => {
 
     expect(screen.getByText('あと3日')).toBeDefined();
   });
+
+  it('PC-DEEP-01: highlightStockId が一致する在庫行を強調し EmptyState にしない', () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const targetId = '30000000-0000-4000-8000-000000000030';
+    const otherId = '30000000-0000-4000-8000-000000000031';
+
+    render(
+      <PantryClient
+        asOf={AS_OF}
+        highlightStockId={targetId}
+        pantry={createPantryDto([
+          createStockDto({
+            id: otherId,
+            displayName: '卵',
+            amount: { value: 6, unit: '個' },
+            storedLocation: 'fridge',
+          }),
+          createStockDto({
+            id: targetId,
+            displayName: '牛乳',
+            storedLocation: 'freezer',
+          }),
+        ])}
+      />,
+    );
+
+    expect(screen.queryByText('在庫がありません')).toBeNull();
+    const highlighted = document.getElementById(`stock-${targetId}`);
+    expect(highlighted).not.toBeNull();
+    expect(highlighted?.className).toContain('border-primary');
+    expect(highlighted?.className).toContain('ring-2');
+    expect(document.getElementById(`stock-${otherId}`)?.className).not.toContain('border-primary');
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: '在庫を編集' })).toBeNull();
+  });
+
+  it('PC-DEEP-02: 未知の highlightStockId では EmptyState にせず強調もしない', () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stock = createStockDto({
+      id: '30000000-0000-4000-8000-000000000032',
+      displayName: '牛乳',
+    });
+
+    render(
+      <PantryClient
+        asOf={AS_OF}
+        highlightStockId="30000000-0000-4000-8000-000000000099"
+        pantry={createPantryDto([stock])}
+      />,
+    );
+
+    expect(screen.queryByText('在庫がありません')).toBeNull();
+    expect(screen.getByText('牛乳')).toBeDefined();
+    expect(document.getElementById(`stock-${stock.id}`)?.className).not.toContain('border-primary');
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
 });

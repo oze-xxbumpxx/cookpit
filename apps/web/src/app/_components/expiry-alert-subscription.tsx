@@ -11,6 +11,9 @@ const PERMISSION_DENIED_MESSAGE = '通知が許可されなかったため、設
 const VAPID_UNAVAILABLE_MESSAGE =
   '通知の設定を読み込めませんでした。時間をおいて再度お試しください。';
 const SUBSCRIPTION_LIMIT_MESSAGE = '通知を設定できる端末数の上限に達しています。';
+/** iOS はホーム画面追加済み PWA でのみ Web Push が届く（ADR-0017 / 設計書罠 3）。 */
+const IOS_HOME_SCREEN_HINT =
+  'iPhone / iPad では、ホーム画面に追加したアプリから開くと通知を受け取れます。';
 
 /**
  * VAPID 公開鍵（base64url）を `PushManager.subscribe()` の `applicationServerKey` が
@@ -53,12 +56,50 @@ function getPushSupportedServerSnapshot(): boolean | null {
   return null;
 }
 
+function isIosDevice(): boolean {
+  const nav = window.navigator;
+  if (/iPhone|iPad|iPod/i.test(nav.userAgent)) {
+    return true;
+  }
+  // iPadOS 13+ はデスクトップ Mac の UA になることがある
+  return nav.platform === 'MacIntel' && nav.maxTouchPoints > 1;
+}
+
+function isStandaloneDisplay(): boolean {
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return nav.standalone === true;
+}
+
+/**
+ * iOS かつインストール済み PWA ではないとき true。ボタンは無効化しない（案内のみ）。
+ * ハイドレーション不一致を避けるため、サーバー側スナップショットは常に false。
+ */
+function getIosNonStandaloneHintSnapshot(): boolean {
+  return isIosDevice() && !isStandaloneDisplay();
+}
+
+function getIosNonStandaloneHintServerSnapshot(): boolean {
+  return false;
+}
+
+function subscribeToIosNonStandaloneHint(): () => void {
+  return () => {};
+}
+
 export function ExpiryAlertSubscription() {
   const action = useApiAction();
   const supported = useSyncExternalStore(
     subscribeToPushSupport,
     getPushSupportedSnapshot,
     getPushSupportedServerSnapshot,
+  );
+  const showIosHomeScreenHint = useSyncExternalStore(
+    subscribeToIosNonStandaloneHint,
+    getIosNonStandaloneHintSnapshot,
+    getIosNonStandaloneHintServerSnapshot,
   );
   const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
   const [vapidUnavailable, setVapidUnavailable] = useState(false);
@@ -167,11 +208,16 @@ export function ExpiryAlertSubscription() {
 
   if (supported === false) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
-        <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
-        <Button type="button" variant="outline" disabled className="h-9 shrink-0">
-          通知に非対応
-        </Button>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
+          <Button type="button" variant="outline" disabled className="h-9 shrink-0">
+            通知に非対応
+          </Button>
+        </div>
+        {showIosHomeScreenHint && (
+          <p className="text-xs text-muted-foreground">{IOS_HOME_SCREEN_HINT}</p>
+        )}
       </div>
     );
   }
@@ -212,6 +258,9 @@ export function ExpiryAlertSubscription() {
           {buttonLabel}
         </Button>
       </div>
+      {showIosHomeScreenHint && (
+        <p className="text-xs text-muted-foreground">{IOS_HOME_SCREEN_HINT}</p>
+      )}
       {vapidUnavailable && !subscribed && (
         <p className="text-xs text-destructive">{VAPID_UNAVAILABLE_MESSAGE}</p>
       )}

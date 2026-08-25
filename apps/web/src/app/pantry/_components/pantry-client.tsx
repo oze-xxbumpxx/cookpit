@@ -11,23 +11,31 @@ import { groupStocksByLocation } from '../_utils/pantry-view';
 import { AddStockForm, type AddStockFormInput } from './add-stock-form';
 import { LocationGroup } from './location-group';
 import { StockEditDialog } from './stock-edit-dialog';
+import { stockRowDomId } from './stock-row';
 
 interface Props {
   pantry: PantryDto;
   asOf: Date;
+  /** 通知 deep link（`?stock=`）。一致する在庫が無ければ無視する。 */
+  highlightStockId?: string | null;
 }
 
 /** 在庫追加・再取得を表す実行中キー。在庫行の操作は stockId をキーにする。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
-export function PantryClient({ pantry, asOf }: Props) {
+export function PantryClient({ pantry, asOf, highlightStockId = null }: Props) {
   const [stocks, setStocks] = useState<StockDto[]>(pantry.stocks);
   const [addFormOpen, setAddFormOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<StockDto | null>(null);
   // 在庫行の操作・追加・再取得はエラーバナーを共有するため 1 インスタンスにまとめ、
   // 「どれが実行中か」は キーごとの isPending で区別する。
   const action = useApiAction();
+
+  const activeHighlightStockId =
+    highlightStockId !== null && stocks.some((stock) => stock.id === highlightStockId)
+      ? highlightStockId
+      : null;
 
   async function handleConsume(stockId: string): Promise<void> {
     const stock = stocks.find((candidate) => candidate.id === stockId) ?? null;
@@ -101,6 +109,16 @@ export function PantryClient({ pantry, asOf }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 通知 deep link: 一致する在庫があれば画面中央付近へスクロール（max-w-md・場所グループ下も想定）。
+  // 編集ダイアログは開かない。存在しない id は no-op（EmptyState にしない）。
+  useEffect(() => {
+    if (activeHighlightStockId === null) {
+      return;
+    }
+    const row = document.getElementById(stockRowDomId(activeHighlightStockId));
+    row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activeHighlightStockId]);
+
   const groupedStocks = groupStocksByLocation(stocks);
 
   return (
@@ -141,6 +159,7 @@ export function PantryClient({ pantry, asOf }: Props) {
                 submittingStockId={
                   group.stocks.find((stock) => action.isPending(stock.id))?.id ?? null
                 }
+                highlightedStockId={activeHighlightStockId}
                 onEdit={setEditingStock}
                 onConsume={(stockId) => void handleConsume(stockId)}
                 onDiscard={(stockId) => void handleDiscard(stockId)}

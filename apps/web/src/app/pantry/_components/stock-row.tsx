@@ -15,12 +15,26 @@ interface Props {
   stock: StockDto;
   asOf: Date;
   submitting: boolean;
+  highlighted?: boolean;
   onEdit: (stock: StockDto) => void;
   onConsume: (stockId: string) => void;
   onDiscard: (stockId: string) => void;
 }
 
-export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard }: Props) {
+/** DOM id。UUID は数字始まりになり得るため `stock-` 接頭辞を付ける。 */
+export function stockRowDomId(stockId: string): string {
+  return `stock-${stockId}`;
+}
+
+export function StockRow({
+  stock,
+  asOf,
+  submitting,
+  highlighted = false,
+  onEdit,
+  onConsume,
+  onDiscard,
+}: Props) {
   const remainingDays =
     stock.expiresAt === null ? null : getExpiryRemainingDays(stock.expiresAt, asOf);
   const urgency: ExpiryUrgency | null =
@@ -31,7 +45,13 @@ export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard
     stock.storedLocation === null ? UNSET_LOCATION_LABEL : LOCATION_LABELS[stock.storedLocation];
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <li
+      id={stockRowDomId(stock.id)}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm',
+        highlighted && 'border-primary ring-2 ring-primary/30',
+      )}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="truncate text-sm font-medium text-foreground">{stock.displayName}</p>
         <p className="text-xs text-muted-foreground">

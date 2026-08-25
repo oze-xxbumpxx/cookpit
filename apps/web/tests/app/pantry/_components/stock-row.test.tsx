@@ -154,4 +154,14 @@ describe('StockRow', () => {
 
     expect(screen.getByText('期限切れ')).toBeDefined();
   });
+
+  it('SR-DEEP-01: highlighted のとき border-primary / ring を付ける', () => {
+    const stock = createStockDto({ id: '10000000-0000-4000-8000-000000000009' });
+    renderRow({ stock, highlighted: true });
+
+    const row = document.getElementById(`stock-${stock.id}`);
+    expect(row).not.toBeNull();
+    expect(row?.className).toContain('border-primary');
+    expect(row?.className).toContain('ring-2');
+  });
 });
