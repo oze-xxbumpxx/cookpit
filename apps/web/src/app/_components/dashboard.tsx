@@ -9,17 +9,7 @@ import { ThemeToggle } from '@/app/_components/theme-toggle';
 import { expiryUrgencyChipClass, mealPlanStatusChipClass } from '@/app/_utils/category-color';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  CalendarDays,
-  ChefHat,
-  CircleHelp,
-  Clock,
-  Package,
-  Refrigerator,
-  ShoppingCart,
-  Snowflake,
-  Tag,
-} from 'lucide-react';
+import { CircleHelp, Clock, Package, Refrigerator, Snowflake } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -28,21 +18,18 @@ import {
   formatExpiresAt,
 } from '../pantry/_utils/pantry-view';
 import { formatWeekRange } from '../meal-plans/_utils/meal-plan-view';
-import { MEAL_PLAN_STATUS_LABELS } from '../_utils/dashboard-view';
+import {
+  getNextAction,
+  getStepState,
+  MEAL_PLAN_STATUS_LABELS,
+  MEAL_PLAN_STATUS_STEPS,
+} from '../_utils/dashboard-view';
 
 interface Props {
   mealPlan: MealPlanDto | null;
   expiringStocks: StockDto[];
   asOf: Date;
 }
-
-const QUICK_LINKS: { href: string; label: string; Icon: LucideIcon }[] = [
-  { href: '/meal-plans', label: '献立', Icon: CalendarDays },
-  { href: '/shopping-lists', label: '買い物リスト', Icon: ShoppingCart },
-  { href: '/pantry', label: '在庫', Icon: Refrigerator },
-  { href: '/recipes', label: 'レシピ', Icon: ChefHat },
-  { href: '/products', label: '商品', Icon: Tag },
-];
 
 const LOCATION_ICONS: Record<StorageLocation, LucideIcon> = {
   fridge: Refrigerator,
@@ -61,6 +48,8 @@ function locationIcon(stock: StockDto): LucideIcon {
 }
 
 export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
+  const nextAction = getNextAction(mealPlan);
+
   return (
     <main className="min-h-dvh bg-background">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-4">
@@ -69,27 +58,13 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
           <ThemeToggle />
         </div>
 
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-foreground">今週の献立</h2>
-          {mealPlan === null ? (
-            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">今週の献立はまだありません</p>
-              <Link
-                href="/meal-plans"
-                className={cn(buttonVariants({ variant: 'default' }), 'h-11')}
-              >
-                今週の献立を作る
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href="/meal-plans"
-              className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4"
-            >
-              <span className="text-sm font-medium text-foreground">
-                {formatWeekRange(mealPlan.weekIdentifier)}
-              </span>
-              <span className="flex items-center gap-2">
+        <section>
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+            {mealPlan !== null && (
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {formatWeekRange(mealPlan.weekIdentifier)}
+                </span>
                 <span
                   className={cn(
                     'rounded-full px-2 py-0.5 text-xs font-medium',
@@ -102,8 +77,40 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
                   レシピ {mealPlan.plannedRecipes.length} 品
                 </span>
               </span>
+            )}
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-semibold text-foreground">{nextAction.title}</h2>
+              <p className="text-sm text-muted-foreground">{nextAction.description}</p>
+            </div>
+            <Link
+              href={nextAction.href}
+              className={cn(buttonVariants({ variant: 'default' }), 'h-11')}
+            >
+              {nextAction.ctaLabel}
             </Link>
-          )}
+            <ol aria-label="今週の進捗" className="flex items-center gap-1">
+              {MEAL_PLAN_STATUS_STEPS.map((step, index) => {
+                const state = getStepState(mealPlan?.status ?? null, step.status);
+                return (
+                  <li key={step.status} className="flex flex-1 items-center gap-1 last:flex-none">
+                    <span
+                      className={cn(
+                        'whitespace-nowrap text-xs',
+                        state === 'current' && 'font-medium text-primary',
+                        state === 'complete' && 'text-foreground',
+                        state === 'upcoming' && 'text-muted-foreground',
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                    {index < MEAL_PLAN_STATUS_STEPS.length - 1 && (
+                      <span aria-hidden="true" className="h-0 flex-1 border-t border-border" />
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </section>
 
         <section className="flex flex-col gap-2">
@@ -167,22 +174,6 @@ export function Dashboard({ mealPlan, expiringStocks, asOf }: Props) {
               })}
             </ul>
           )}
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-foreground">メニュー</h2>
-          <nav className="grid grid-cols-2 gap-2">
-            {QUICK_LINKS.map(({ href, label, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-3 text-sm font-medium text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
-              >
-                <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-                {label}
-              </Link>
-            ))}
-          </nav>
         </section>
       </div>
     </main>
