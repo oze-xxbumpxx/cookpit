@@ -11,6 +11,8 @@ const PERMISSION_DENIED_MESSAGE = '通知が許可されなかったため、設
 const VAPID_UNAVAILABLE_MESSAGE =
   '通知の設定を読み込めませんでした。時間をおいて再度お試しください。';
 const SUBSCRIPTION_LIMIT_MESSAGE = '通知を設定できる端末数の上限に達しています。';
+const IOS_PWA_HINT =
+  'iOS ではホーム画面に追加したアプリからのみ通知が使えます（Safari のタブでは動作しません）。';
 
 /**
  * VAPID 公開鍵（base64url）を `PushManager.subscribe()` の `applicationServerKey` が
@@ -167,11 +169,14 @@ export function ExpiryAlertSubscription() {
 
   if (supported === false) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
-        <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
-        <Button type="button" variant="outline" disabled className="h-9 shrink-0">
-          通知に非対応
-        </Button>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">{UNSUPPORTED_MESSAGE}</p>
+          <Button type="button" variant="outline" disabled className="h-9 shrink-0">
+            通知に非対応
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">{IOS_PWA_HINT}</p>
       </div>
     );
   }
@@ -212,6 +217,7 @@ export function ExpiryAlertSubscription() {
           {buttonLabel}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">{IOS_PWA_HINT}</p>
       {vapidUnavailable && !subscribed && (
         <p className="text-xs text-destructive">{VAPID_UNAVAILABLE_MESSAGE}</p>
       )}

@@ -294,4 +294,16 @@ describe('ExpiryAlertSubscription', () => {
     });
     container.remove();
   });
+
+  it('EAS-14: iOS はホーム画面追加 PWA でのみ通知が使える旨の一文を表示する', () => {
+    stubPushSupportedEnvironment();
+
+    render(<ExpiryAlertSubscription />);
+
+    expect(
+      screen.getByText(
+        'iOS ではホーム画面に追加したアプリからのみ通知が使えます（Safari のタブでは動作しません）。',
+      ),
+    ).toBeDefined();
+  });
 });

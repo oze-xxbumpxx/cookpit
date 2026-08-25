@@ -11,7 +11,6 @@ export interface SendExpiryAlertsResultDto {
 }
 
 const DIGEST_HEAD_COUNT = 3; // P-7 確定: 先頭 3 件 + 「他 n 件」
-const DIGEST_TAP_URL = '/pantry'; // P-7 確定
 
 /**
  * 期限が近い在庫の日次ダイジェストを、購読中の全デバイスへ Push 送信する（Vercel Cron から
@@ -92,6 +91,11 @@ function buildDigestPayload(stocks: StockDto[], asOf: Date): PushPayload {
     return `${stock.displayName}（${formatExpiryUrgencyLabel(remainingDays)}）`;
   });
   const body = rest > 0 ? `${lines.join(' / ')} / 他${rest}件` : lines.join(' / ');
+  // expiry-alert-ops P-1 / P-3: タップ遷移は先頭（最も期限が近い）1 件のみ deep-link。
+  // 本文は従来どおり先頭 3 件 + 「他 n 件」のダイジェストのまま。
+  const firstStockId = stocks[0]?.id;
+  const url =
+    firstStockId === undefined ? '/pantry' : `/pantry?stock=${encodeURIComponent(firstStockId)}`;
 
-  return { title: '賞味期限が近い在庫があります', body, url: DIGEST_TAP_URL };
+  return { title: '賞味期限が近い在庫があります', body, url };
 }

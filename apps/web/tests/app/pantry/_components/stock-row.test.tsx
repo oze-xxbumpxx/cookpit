@@ -22,6 +22,7 @@ function renderRow(props: Partial<Parameters<typeof StockRow>[0]> = {}) {
     stock: createStockDto(),
     asOf: new Date('2026-08-08T09:00:00'),
     submitting: false,
+    highlighted: false,
     onEdit: vi.fn(),
     onConsume: vi.fn(),
     onDiscard: vi.fn(),
@@ -153,5 +154,15 @@ describe('StockRow', () => {
     renderRow({ stock: createStockDto({ expiresAt: '2026-08-07' }) });
 
     expect(screen.getByText('期限切れ')).toBeDefined();
+  });
+
+  it('SR-HIGHLIGHT-01: highlighted のとき ring クラスが付き、チェックボックスは出ない', () => {
+    const stock = createStockDto();
+    renderRow({ stock, highlighted: true });
+
+    const row = screen.getByRole('listitem');
+    expect(row.getAttribute('data-stock-id')).toBe(stock.id);
+    expect(row.className).toContain('ring-2');
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });

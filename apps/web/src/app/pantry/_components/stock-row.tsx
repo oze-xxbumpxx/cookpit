@@ -15,12 +15,21 @@ interface Props {
   stock: StockDto;
   asOf: Date;
   submitting: boolean;
+  highlighted: boolean;
   onEdit: (stock: StockDto) => void;
   onConsume: (stockId: string) => void;
   onDiscard: (stockId: string) => void;
 }
 
-export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard }: Props) {
+export function StockRow({
+  stock,
+  asOf,
+  submitting,
+  highlighted,
+  onEdit,
+  onConsume,
+  onDiscard,
+}: Props) {
   const remainingDays =
     stock.expiresAt === null ? null : getExpiryRemainingDays(stock.expiresAt, asOf);
   const urgency: ExpiryUrgency | null =
@@ -31,7 +40,13 @@ export function StockRow({ stock, asOf, submitting, onEdit, onConsume, onDiscard
     stock.storedLocation === null ? UNSET_LOCATION_LABEL : LOCATION_LABELS[stock.storedLocation];
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <li
+      data-stock-id={stock.id}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm',
+        highlighted ? 'border-primary ring-2 ring-primary/40' : 'border-border',
+      )}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="truncate text-sm font-medium text-foreground">{stock.displayName}</p>
         <p className="text-xs text-muted-foreground">

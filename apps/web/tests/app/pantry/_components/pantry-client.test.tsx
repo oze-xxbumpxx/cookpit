@@ -540,4 +540,46 @@ describe('PantryClient', () => {
 
     expect(screen.getByText('あと3日')).toBeDefined();
   });
+
+  it('PC-DEEPLINK-01: highlightStockId が一致する行を強調し scrollIntoView する', () => {
+    const targetId = '30000000-0000-4000-8000-000000000099';
+    const otherId = '30000000-0000-4000-8000-000000000098';
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <PantryClient
+        asOf={AS_OF}
+        highlightStockId={targetId}
+        pantry={createPantryDto([
+          createStockDto({ id: otherId, displayName: '卵', storedLocation: 'fridge' }),
+          createStockDto({ id: targetId, displayName: '牛乳', storedLocation: 'fridge' }),
+        ])}
+      />,
+    );
+
+    const targetRow = getStockRow('牛乳');
+    expect(targetRow.className).toContain('ring-2');
+    expect(getStockRow('卵').className).not.toContain('ring-2');
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('PC-DEEPLINK-02: 存在しない highlightStockId は無視し EmptyState にしない', () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <PantryClient
+        asOf={AS_OF}
+        highlightStockId="30000000-0000-4000-8000-000000000000"
+        pantry={createPantryDto([createStockDto({ displayName: '牛乳' })])}
+      />,
+    );
+
+    expect(screen.queryByText('在庫がありません')).toBeNull();
+    expect(screen.getByText('牛乳')).toBeDefined();
+    expect(getStockRow('牛乳').className).not.toContain('ring-2');
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
 });

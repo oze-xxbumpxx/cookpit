@@ -272,7 +272,7 @@ describe('SendExpiryAlertsUseCase', () => {
     expect(result.removedCount).toBe(0);
   });
 
-  it('SEA-10: 通知本文は formatExpiryUrgencyLabel を用いて先頭 3 件 +「他 n 件」、url は /pantry', async () => {
+  it('SEA-10: 通知本文は先頭 3 件 +「他 n 件」、url は先頭在庫への deep-link', async () => {
     const pushSender = new MockPushSender();
     await new SendExpiryAlertsUseCase(
       new FakeGetExpiringStocksUseCase([
@@ -287,12 +287,14 @@ describe('SendExpiryAlertsUseCase', () => {
     ).execute(asOf);
 
     const [payload] = pushSender.payloads;
-    expect(payload?.url).toBe('/pantry');
+    // expiry-alert-ops P-1 / P-3: タップ先は先頭 1 件のみ。本文のダイジェスト件数は変えない。
+    expect(payload?.url).toBe('/pantry?stock=1');
     expect(payload?.body).toContain('牛乳（本日まで）');
     expect(payload?.body).toContain('卵（明日まで）');
     expect(payload?.body).toContain('豆腐（あと2日）');
     expect(payload?.body).toContain('他2件');
     expect(payload?.body).not.toContain('納豆');
+    expect(payload?.url).not.toContain('stock=2');
   });
 
   it('SEA-11: asOf を内部で mutate しない', async () => {
