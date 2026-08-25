@@ -35,14 +35,63 @@ describe('Dashboard', () => {
     cleanup();
   });
 
-  it('今週の献立が無いとき作成 CTA を表示する', () => {
+  it('DH-01: メニュー（レシピ・商品リンク）が存在しない', () => {
+    render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
+
+    expect(screen.queryByRole('link', { name: 'レシピ' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '商品' })).toBeNull();
+  });
+
+  it('DH-02: 今週の献立が無いとき作成 CTA を表示する', () => {
     render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
 
     const cta = screen.getByRole('link', { name: '今週の献立を作る' });
     expect(cta.getAttribute('href')).toBe('/meal-plans');
   });
 
-  it('今週の献立があるとき状態ラベルとレシピ件数を表示する', () => {
+  it('DH-03: shopping のとき買い物リストを開く CTA と href を表示する', () => {
+    const mealPlan = createMealPlanDto({ status: 'shopping' });
+
+    render(<Dashboard mealPlan={mealPlan} expiringStocks={[]} asOf={ASOF} />);
+
+    const cta = screen.getByRole('link', { name: '買い物リストを開く' });
+    expect(cta.getAttribute('href')).toBe('/shopping-lists');
+  });
+
+  it('DH-04: ステッパーの 5 ラベルが表示される', () => {
+    render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
+
+    expect(screen.getByText('献立')).toBeTruthy();
+    expect(screen.getByText('買い物')).toBeTruthy();
+    expect(screen.getByText('調理')).toBeTruthy();
+    expect(screen.getByText('消費')).toBeTruthy();
+    expect(screen.getByText('完了')).toBeTruthy();
+  });
+
+  it('DH-05: consuming のとき「在庫を見る」リンクが 2 件、両方 /pantry を指す', () => {
+    const mealPlan = createMealPlanDto({ status: 'consuming' });
+
+    render(<Dashboard mealPlan={mealPlan} expiringStocks={[]} asOf={ASOF} />);
+
+    const links = screen.getAllByRole('link', { name: '在庫を見る' });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link.getAttribute('href')).toBe('/pantry');
+    }
+  });
+
+  it('DH-06: ヒーロー全体は /meal-plans へのリンクで包まれない（CTA だけが主リンク）', () => {
+    const mealPlan = createMealPlanDto({ status: 'shopping' });
+
+    render(<Dashboard mealPlan={mealPlan} expiringStocks={[]} asOf={ASOF} />);
+
+    const mealPlanLinks = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href') === '/meal-plans');
+    expect(mealPlanLinks).toHaveLength(0);
+  });
+
+  it('DH-07: 今週の献立があるとき状態ラベルとレシピ件数を表示する', () => {
     const mealPlan = createMealPlanDto({
       status: 'shopping',
       plannedRecipes: [
@@ -87,13 +136,6 @@ describe('Dashboard', () => {
     expect(screen.getByText('鶏むね肉')).toBeTruthy();
     expect(screen.getByText('冷凍')).toBeTruthy();
     expect(screen.getByText('7/22まで')).toBeTruthy();
-  });
-
-  it('主要画面へのクイックリンクを表示する', () => {
-    render(<Dashboard mealPlan={null} expiringStocks={[]} asOf={ASOF} />);
-
-    expect(screen.getByRole('link', { name: '在庫' }).getAttribute('href')).toBe('/pantry');
-    expect(screen.getByRole('link', { name: 'レシピ' }).getAttribute('href')).toBe('/recipes');
   });
 
   it('DC-01: 期限切れの在庫は赤バッジ + 「期限切れ」文言で表示する', () => {

@@ -14,8 +14,7 @@ export default function Loading() {
         </div>
 
         <section className="flex flex-col gap-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-40 w-full rounded-lg" />
         </section>
 
         <section className="flex flex-col gap-2">
