@@ -15,19 +15,37 @@ import { StockEditDialog } from './stock-edit-dialog';
 interface Props {
   pantry: PantryDto;
   asOf: Date;
+  /** 通知タップからの deep-link。一致する在庫があればスクロール＋強調。無ければ無視。 */
+  highlightStockId?: string | null;
 }
 
 /** 在庫追加・再取得を表す実行中キー。在庫行の操作は stockId をキーにする。 */
 const ADD_KEY = 'add';
 const REFRESH_KEY = 'refresh';
 
-export function PantryClient({ pantry, asOf }: Props) {
+export function PantryClient({ pantry, asOf, highlightStockId = null }: Props) {
   const [stocks, setStocks] = useState<StockDto[]>(pantry.stocks);
   const [addFormOpen, setAddFormOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<StockDto | null>(null);
   // 在庫行の操作・追加・再取得はエラーバナーを共有するため 1 インスタンスにまとめ、
   // 「どれが実行中か」は キーごとの isPending で区別する。
   const action = useApiAction();
+
+  // 通知 deep-link: 該当行があればスクロール。無ければ EmptyState にせず何もしない（P-1）。
+  const activeHighlightStockId =
+    highlightStockId !== null && stocks.some((stock) => stock.id === highlightStockId)
+      ? highlightStockId
+      : null;
+
+  useEffect(() => {
+    if (activeHighlightStockId === null) {
+      return;
+    }
+    const row = document.querySelector<HTMLElement>(
+      `[data-stock-id="${CSS.escape(activeHighlightStockId)}"]`,
+    );
+    row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activeHighlightStockId]);
 
   async function handleConsume(stockId: string): Promise<void> {
     const stock = stocks.find((candidate) => candidate.id === stockId) ?? null;
@@ -141,6 +159,7 @@ export function PantryClient({ pantry, asOf }: Props) {
                 submittingStockId={
                   group.stocks.find((stock) => action.isPending(stock.id))?.id ?? null
                 }
+                highlightStockId={activeHighlightStockId}
                 onEdit={setEditingStock}
                 onConsume={(stockId) => void handleConsume(stockId)}
                 onDiscard={(stockId) => void handleDiscard(stockId)}
