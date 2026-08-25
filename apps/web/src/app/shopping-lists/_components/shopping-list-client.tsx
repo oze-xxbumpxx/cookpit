@@ -22,10 +22,7 @@ import {
 } from '../_utils/shopping-list-view';
 import { useCheckedSyncQueue } from '../_utils/use-checked-sync-queue';
 import { ADD_KEY, useShoppingListItemMutations } from '../_utils/use-shopping-list-item-mutations';
-import {
-  REFRESH_KEY,
-  useShoppingListLifecycle,
-} from '../_utils/use-shopping-list-lifecycle';
+import { REFRESH_KEY, useShoppingListLifecycle } from '../_utils/use-shopping-list-lifecycle';
 import { AddItemForm } from './add-item-form';
 import { CompleteShoppingPanel } from './complete-shopping-panel';
 import { CoveredIngredientsSection } from './covered-ingredients-section';
@@ -54,7 +51,7 @@ const QUEUE_SYNC_FAILED_MESSAGE =
 
 /**
  * 詳細画面の状態管理・全体統括（Client。S-4/D-7）。
- * 品目操作は {@link useShoppingListItemMutations}、リスト生命周期は
+ * 品目操作は {@link useShoppingListItemMutations}、リスト lifecycle は
  * {@link useShoppingListLifecycle} に委譲する（構造分割のみ・挙動は不変）。
  */
 export function ShoppingListClient({ shoppingList, stores, products }: Props) {
@@ -313,6 +310,10 @@ export function ShoppingListClient({ shoppingList, stores, products }: Props) {
                 variant="destructive"
                 onClick={() => {
                   const target = mutations.pendingRemoveItem;
+                  // ダイアログ表示中は非 null。プロパティ経由だと TS が狭められないためガードする。
+                  if (target === null) {
+                    return;
+                  }
                   mutations.setPendingRemoveItem(null);
                   mutations.handleRemoveItem(target.id);
                 }}
