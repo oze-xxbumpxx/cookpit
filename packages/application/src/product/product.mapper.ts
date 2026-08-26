@@ -1,10 +1,29 @@
-import type { PriceRecord, Product, Store } from '@cookpit/domain';
-import type { PriceRecordDto, ProductDto } from './product.dto';
+import type { PriceRecord, Product, Store, StoreId } from '@cookpit/domain';
+import type { CheapestStoreResultDto, PriceRecordDto, ProductDto } from './product.dto';
 
 export type StoreNameMap = Map<string, string>;
 
 export function toStoreNameMap(stores: Store[]): StoreNameMap {
   return new Map(stores.map((store) => [store.id.value, store.name]));
+}
+
+export function toCheapestStoreResultDto(
+  product: Product,
+  cheapestStoreId: StoreId,
+  storeName: string,
+): CheapestStoreResultDto | null {
+  const latestPriceRecord = product.latestPriceRecordAt(cheapestStoreId);
+  if (latestPriceRecord === null) {
+    return null;
+  }
+
+  return {
+    storeId: cheapestStoreId.value,
+    storeName,
+    latestPrice: latestPriceRecord.price.amount,
+    unitPrice: latestPriceRecord.unitPrice.amount,
+    packageSizeUnit: latestPriceRecord.packageSize.unit,
+  };
 }
 
 export function normalizeAliases(aliases: string[]): string[] {
