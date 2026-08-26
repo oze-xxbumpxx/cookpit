@@ -278,8 +278,10 @@ export function reconcileItemDeduction(
 
 ### `sync-shopping-list-from-meal-plan.use-case.ts` の変更
 
-「変更あり」判定を `previousGrossRequiredAmount` 基準に変更し、呼び出しを
-`reconcileItemDeduction` に切り替える。
+数量のある `from_meal_plan` pending はすべて `reconcileItemDeduction` の対象にする
+（生必要量が同じ未引き算行も Generate と同じ控除を当てる）。呼び出しを
+`reconcileItemDeduction` に切り替える。`previousGrossRequiredAmount` は候補フィルタには使わず、
+再構成した生必要量の説明用ヘルパー（テストから直接検証）として残す。
 
 ```typescript
 const updateCandidates = uniqueItems.filter((item) => {
@@ -559,6 +561,11 @@ DB マイグレーション・API 契約変更なし。Application 層内のロ�
 
 いずれもユーザーから見て「買い過ぎない／在庫で足りると正しく表示される」方向の改善であり、
 後方互換上の懸念（データ破壊・API 形の変化）はない。
+
+既知の非一致（本タスクでは直さない）: 可算単位で生必要量に端数がある材料（例: 4.5 個）は、
+`applyPantryDeduction` が在庫 0 のとき切り上げない既存仕様のため、部分引き算後の再同期で
+買う量が Generate 時の切り上げ値とずれることがある。D-5 の切り上げ条件を変えると在庫なし
+Generate の買う量も変わるため、別タスクとする。
 
 ## リスク
 

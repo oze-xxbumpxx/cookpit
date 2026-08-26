@@ -84,7 +84,10 @@ type QuantityUpdateResult =
       pantryDeductedAmount?: Quantity | null;
     };
 
-/** 品目の直前の生必要量を、買う量と既に引いた量の合計として返す。 */
+/**
+ * 品目の直前の生必要量（買う量 + 既に引いた量）。候補フィルタには使わない。
+ * Sync の照合式とテストで sunk 込みの生値を説明するヘルパー。
+ */
 export function previousGrossRequiredAmount(item: ShoppingItemType): number {
   const buy = item.requiredAmount?.value ?? 0;
   const deducted = item.pantryDeductedAmount?.value ?? 0;
@@ -112,11 +115,7 @@ export function reconcileItemDeduction(
   const prevDeducted = item.pantryDeductedAmount?.value ?? 0;
   const additionalNeeded = newGross.value - prevDeducted;
 
-  if (
-    additionalNeeded <= 0 &&
-    item.productId !== null &&
-    aggregatedIngredient.productId !== null
-  ) {
+  if (additionalNeeded <= 0 && item.productId !== null && aggregatedIngredient.productId !== null) {
     return {
       action: 'remove',
       consumed: false,

@@ -89,13 +89,12 @@
      を
 
      ```typescript
-     // 買う量ではなく「直前の生必要量」と比較する（買う量は在庫引き算後の値なので、
-     // 買う量と比較すると在庫を引いた品目は常に「変更あり」と誤検知する）。
-     return aggregatedIngredient.requiredAmount.value !== previousGrossRequiredAmount(item);
+     // 生必要量が同じでも、未引き算の pending は Generate と同じフル控除を当てる。
+     return true;
      ```
 
      に変更する（`item.requiredAmount === null` の早期リターンなど、他の filter 内条件は
-     変更しない）。
+     変更しない）。`previousGrossRequiredAmount` は候補判定には使わない。
 
   3. `for (const item of updateCandidates)` ループ内の呼び出しを変更する。
 
@@ -119,7 +118,7 @@
      `pantryRepository.save`）・コンストラクタ引数は変更しない。
 - 完了条件:
   - `applyQuantityUpdate` という識別子がファイル内に存在しない。
-  - `updateCandidates` フィルタが `previousGrossRequiredAmount(item)` を使っている。
+  - `updateCandidates` フィルタが数量のある from_meal_plan pending をすべて対象にする（`return true`）。
   - `pnpm --filter @cookpit/application type-check` が通る。
   - 既存の `packages/application/tests/shopping-list/sync-shopping-list-from-meal-plan.use-case.test.ts`
     が green（テスト方針 A: 値が変わらないケース。テスト方針 B: R-4 テストの強化は
