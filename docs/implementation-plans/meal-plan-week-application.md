@@ -20,19 +20,19 @@
 
 ## 変更対象ファイル
 
-| path | 変更する理由 |
-| --- | --- |
-| `packages/application/src/meal-plan/meal-plan.dto.ts` | `MealPlanWeekSelection` 型を追記する（新規ヘルパーの戻り値型） |
-| `packages/application/src/meal-plan/index.ts` | 新規モジュールをバレル export に追加する |
-| `apps/web/src/app/meal-plans/page.tsx` | `@cookpit/domain` の直接 import と `resolveSelectedWeek` を削除し、`resolveMealPlanWeekQuery` 呼び出しに置き換える |
-| `apps/web/src/app/meal-plans/history/page.tsx` | `@cookpit/domain` の直接 import と `WeekIdentifier.current().toString()` を削除し、`currentWeekIdentifier()` 呼び出しに置き換える |
-| `docs/designs/meal-plan-week-selection.md` | 変更なし（D-5 の追記は設計フェーズで既に完了済み。本計画では diff が発生しないことを確認するだけ） |
+| path                                                  | 変更する理由                                                                                                                      |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/application/src/meal-plan/meal-plan.dto.ts` | `MealPlanWeekSelection` 型を追記する（新規ヘルパーの戻り値型）                                                                    |
+| `packages/application/src/meal-plan/index.ts`         | 新規モジュールをバレル export に追加する                                                                                          |
+| `apps/web/src/app/meal-plans/page.tsx`                | `@cookpit/domain` の直接 import と `resolveSelectedWeek` を削除し、`resolveMealPlanWeekQuery` 呼び出しに置き換える                |
+| `apps/web/src/app/meal-plans/history/page.tsx`        | `@cookpit/domain` の直接 import と `WeekIdentifier.current().toString()` を削除し、`currentWeekIdentifier()` 呼び出しに置き換える |
+| `docs/designs/meal-plan-week-selection.md`            | 変更なし（D-5 の追記は設計フェーズで既に完了済み。本計画では diff が発生しないことを確認するだけ）                                |
 
 ## 新規作成ファイル
 
-| path | 役割 |
-| --- | --- |
-| `packages/application/src/meal-plan/meal-plan-week-query.ts` | 週クエリ解釈の純関数 2 つ（`currentWeekIdentifier` / `resolveMealPlanWeekQuery`）を提供する。Domain の `WeekIdentifier` を内部実装詳細としてのみ利用する |
+| path                                                                | 役割                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/application/src/meal-plan/meal-plan-week-query.ts`        | 週クエリ解釈の純関数 2 つ（`currentWeekIdentifier` / `resolveMealPlanWeekQuery`）を提供する。Domain の `WeekIdentifier` を内部実装詳細としてのみ利用する                                                                                                                                                                        |
 | `packages/application/tests/meal-plan/meal-plan-week-query.test.ts` | 上記モジュールの単体テスト。現行 `page.tsx` の挙動（正規表現・Invalid Date フォールバック・土曜スナップ・prev/next ±7日）をロックする。`@cookpit/application` の vitest `include` は `tests/**/*.test.ts`（`packages/application/vitest.config.ts` → `@cookpit/config/vitest/base` を確認済み）なのでこのファイル名で収集される |
 
 ## ファイルごとの変更内容
@@ -147,11 +147,11 @@ function parseSelectedWeek(raw: string | undefined, fallback: WeekIdentifier): W
 }
 ```
 
-  - `parseSelectedWeek` は非公開（export しない）。土曜スナップ自体は
-    `WeekIdentifier.fromDate` に委譲しており、Application 側で再実装していないことを
-    レビュー時に確認する。
-  - `any` を使わない。型はすべて明示する（`raw: string | undefined` はそのまま維持し、
-    `null` へ変換しない＝ Next.js `searchParams` の契約に合わせる）。
+- `parseSelectedWeek` は非公開（export しない）。土曜スナップ自体は
+  `WeekIdentifier.fromDate` に委譲しており、Application 側で再実装していないことを
+  レビュー時に確認する。
+- `any` を使わない。型はすべて明示する（`raw: string | undefined` はそのまま維持し、
+  `null` へ変換しない＝ Next.js `searchParams` の契約に合わせる）。
 
 - 完了条件:
   - Step 1 で作成した `meal-plan-week-query.test.ts`（MPWQ-01〜MPWQ-20、20 ケース）が
@@ -208,7 +208,7 @@ export default async function MealPlansPage({ searchParams }: Props) {
 }
 ```
 
-  - `resolveMealPlanWeekQuery` を呼ぶ際に `asOf` を渡さない（ページは常に「現在時刻」基準）。
+- `resolveMealPlanWeekQuery` を呼ぶ際に `asOf` を渡さない（ページは常に「現在時刻」基準）。
 
 - 完了条件:
   - `rg "@cookpit/domain" apps/web/src/app/meal-plans/page.tsx` がマッチしない
@@ -292,23 +292,23 @@ export default async function MealPlansPage({ searchParams }: Props) {
 
 ## テスト計画
 
-| 対象 | ファイル | 内容 |
-| --- | --- | --- |
-| 新規（先行作成） | `packages/application/tests/meal-plan/meal-plan-week-query.test.ts` | `docs/tests/meal-plan-week-application.md` の MPWQ-01〜MPWQ-20（20 ケース）。`@cookpit/application` の vitest include（`tests/**/*.test.ts`）に一致するファイル名・配置 |
-| 変更なし（回帰確認のみ） | `packages/application/tests/meal-plan/meal-plan-use-cases.test.ts` | `GetMealPlanByWeekUseCase` のシグネチャ・実装を変えないため無改修で green のまま |
-| 変更なし（回帰確認のみ） | `packages/domain/tests/shared/week-identifier.test.ts` | Domain の土曜スナップ不変条件は変更しないため無改修で green のまま |
-| 変更なし（回帰確認のみ） | `apps/web/tests/app/meal-plans/_components/meal-plan-client.test.tsx` | `MealPlanClient` の props 形が不変のため WC-M-14/15/16 を含め無改修で green のまま |
-| 新規テストなし（意図的） | `apps/web/src/app/meal-plans/page.tsx` / `history/page.tsx` | 設計書「テスト方針 5」により Server Component への新規 RTL テストは必須にしない（ロジックは Application のテストで固定済み） |
+| 対象                     | ファイル                                                              | 内容                                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 新規（先行作成）         | `packages/application/tests/meal-plan/meal-plan-week-query.test.ts`   | `docs/tests/meal-plan-week-application.md` の MPWQ-01〜MPWQ-20（20 ケース）。`@cookpit/application` の vitest include（`tests/**/*.test.ts`）に一致するファイル名・配置 |
+| 変更なし（回帰確認のみ） | `packages/application/tests/meal-plan/meal-plan-use-cases.test.ts`    | `GetMealPlanByWeekUseCase` のシグネチャ・実装を変えないため無改修で green のまま                                                                                        |
+| 変更なし（回帰確認のみ） | `packages/domain/tests/shared/week-identifier.test.ts`                | Domain の土曜スナップ不変条件は変更しないため無改修で green のまま                                                                                                      |
+| 変更なし（回帰確認のみ） | `apps/web/tests/app/meal-plans/_components/meal-plan-client.test.tsx` | `MealPlanClient` の props 形が不変のため WC-M-14/15/16 を含め無改修で green のまま                                                                                      |
+| 新規テストなし（意図的） | `apps/web/src/app/meal-plans/page.tsx` / `history/page.tsx`           | 設計書「テスト方針 5」により Server Component への新規 RTL テストは必須にしない（ロジックは Application のテストで固定済み）                                            |
 
 ## リスク
 
-| # | リスク | 対策 |
-| --- | --- | --- |
-| R-1（設計書由来） | `asOf ?? new Date()` の二重評価で current/selected の基準時刻がずれる | Step 3 の実装で `resolveMealPlanWeekQuery` 内部で 1 度だけ評価し `parseSelectedWeek` に計算済みの `current` を渡す（設計書サンプルより優先）。ただし `vi.useFakeTimers()` は時刻を凍結するため「二重評価」自体を検出するテストは実質作れない。実装の構造（`const current = ...` を 1 回だけ書く）とコードレビューで担保する |
-| R-2（設計書由来） | `history/page.tsx` の変数名 `currentWeekIdentifier` と import する関数名が衝突する | Step 6 でローカル変数名を `currentWeek` にリネームして解消（本計画で確定。実装時の裁量にしない） |
-| R-3（設計書由来） | 将来 Presentation が再び `@cookpit/domain` を import する回帰 | 本タスクでは lint 設定変更は対象外（設計書の対象外）。Step 5・6 の完了条件（`rg "@cookpit/domain"` 不一致）をレビュー時に確認する運用でカバーする |
-| R-4（設計書由来） | 既存テスト（Domain 土曜スナップ、`meal-plan-client.test.tsx`）を誤って書き換える | Step 8 の品質ゲートで `git diff` を見て、これらのファイルに diff が無いことを確認する |
-| R-5（試験計画で検出済み・本計画で再確認） | 設計書のテスト方針が例示する Invalid Date fixture（`"2026-02-30"`）は、このリポジトリの Node ランタイムでは実際には Invalid Date にならず `2026-03-02` へロールオーバーする（実測済み。`docs/tests/meal-plan-week-application.md` MPWQ-14/15 で既に訂正済みで、本計画でも独立に実測して同じ結論を確認した） | Step 1 のテストでは Invalid Date fixture に `"2026-99-99"`（MPWQ-14）を使い、`"2026-02-30"` は overflow して有効になるケース（MPWQ-15）として別に検証する。設計のロジック分岐自体は変更なし。テスト fixture の選定のみ実際の Date 解析結果に合わせて補正する |
+| #                                         | リスク                                                                                                                                                                                                                                                                                                      | 対策                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R-1（設計書由来）                         | `asOf ?? new Date()` の二重評価で current/selected の基準時刻がずれる                                                                                                                                                                                                                                       | Step 3 の実装で `resolveMealPlanWeekQuery` 内部で 1 度だけ評価し `parseSelectedWeek` に計算済みの `current` を渡す（設計書サンプルより優先）。ただし `vi.useFakeTimers()` は時刻を凍結するため「二重評価」自体を検出するテストは実質作れない。実装の構造（`const current = ...` を 1 回だけ書く）とコードレビューで担保する |
+| R-2（設計書由来）                         | `history/page.tsx` の変数名 `currentWeekIdentifier` と import する関数名が衝突する                                                                                                                                                                                                                          | Step 6 でローカル変数名を `currentWeek` にリネームして解消（本計画で確定。実装時の裁量にしない）                                                                                                                                                                                                                            |
+| R-3（設計書由来）                         | 将来 Presentation が再び `@cookpit/domain` を import する回帰                                                                                                                                                                                                                                               | 本タスクでは lint 設定変更は対象外（設計書の対象外）。Step 5・6 の完了条件（`rg "@cookpit/domain"` 不一致）をレビュー時に確認する運用でカバーする                                                                                                                                                                           |
+| R-4（設計書由来）                         | 既存テスト（Domain 土曜スナップ、`meal-plan-client.test.tsx`）を誤って書き換える                                                                                                                                                                                                                            | Step 8 の品質ゲートで `git diff` を見て、これらのファイルに diff が無いことを確認する                                                                                                                                                                                                                                       |
+| R-5（試験計画で検出済み・本計画で再確認） | 設計書のテスト方針が例示する Invalid Date fixture（`"2026-02-30"`）は、このリポジトリの Node ランタイムでは実際には Invalid Date にならず `2026-03-02` へロールオーバーする（実測済み。`docs/tests/meal-plan-week-application.md` MPWQ-14/15 で既に訂正済みで、本計画でも独立に実測して同じ結論を確認した） | Step 1 のテストでは Invalid Date fixture に `"2026-99-99"`（MPWQ-14）を使い、`"2026-02-30"` は overflow して有効になるケース（MPWQ-15）として別に検証する。設計のロジック分岐自体は変更なし。テスト fixture の選定のみ実際の Date 解析結果に合わせて補正する                                                                |
 
 ## ロールバック方法
 

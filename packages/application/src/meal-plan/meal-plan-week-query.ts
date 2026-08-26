@@ -4,21 +4,19 @@ import type { MealPlanWeekSelection } from './meal-plan.dto';
 const WEEK_QUERY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Returns the week identifier for the week containing the given date.
- * Weeks start on Saturday; non-Saturday dates snap to the preceding Saturday
- * through the Domain `WeekIdentifier` invariant.
+ * asOf（省略時は現在時刻）が属する週の識別子を返す。
+ * 週は土曜開始。非土曜は Domain の WeekIdentifier 不変条件により直前の土曜へスナップする。
  */
 export function currentWeekIdentifier(asOf?: Date): string {
   return WeekIdentifier.fromDate(asOf ?? new Date()).toString();
 }
 
 /**
- * Resolves a `?week=` query into the current, selected, previous, and next
- * week identifiers.
+ * `?week=` クエリから今週・選択週・前後週の識別子を返す。
  *
- * Undefined, malformed, or Invalid Date query values fall back to the current
- * week. Valid dates snap to the preceding Saturday through the Domain
- * `WeekIdentifier` invariant.
+ * 未指定・形式不正・Invalid Date は現在週へフォールバックする（壊れた query で 500 にしないため）。
+ * 有効日付の土曜スナップは Domain の WeekIdentifier に委譲する。
+ * `asOf ?? new Date()` は本関数内で 1 度だけ評価する（current と fallback の基準時刻をずらさないため）。
  */
 export function resolveMealPlanWeekQuery(
   raw: string | undefined,
