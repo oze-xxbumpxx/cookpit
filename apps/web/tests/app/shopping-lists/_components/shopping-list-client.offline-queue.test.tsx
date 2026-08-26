@@ -128,11 +128,20 @@ describe('ShoppingListClient（オフライン書き込みキュー結合シナ�
     const checkbox = screen.getByRole('checkbox', { name: /醤油/ });
 
     await user.click(checkbox); // checked: true
-    await waitFor(() => expect(checkbox.getAttribute('aria-checked')).toBe('true'));
+    await waitFor(() => {
+      expect(checkbox.getAttribute('aria-checked')).toBe('true');
+      expect(postChecked).toHaveBeenCalledTimes(1);
+    });
     await user.click(checkbox); // checked: false
-    await waitFor(() => expect(checkbox.getAttribute('aria-checked')).toBe('false'));
+    await waitFor(() => {
+      expect(checkbox.getAttribute('aria-checked')).toBe('false');
+      expect(postChecked).toHaveBeenCalledTimes(2);
+    });
     await user.click(checkbox); // checked: true（最終的な意図）
-    await waitFor(() => expect(checkbox.getAttribute('aria-checked')).toBe('true'));
+    await waitFor(() => {
+      expect(checkbox.getAttribute('aria-checked')).toBe('true');
+      expect(postChecked).toHaveBeenCalledTimes(3);
+    });
 
     postChecked.mockResolvedValue({
       ok: true,
@@ -149,8 +158,8 @@ describe('ShoppingListClient（オフライン書き込みキュー結合シナ�
         param: { id: shoppingList.id, itemId: 'item-1' },
         json: { checked: true },
       });
+      expect(postChecked).toHaveBeenCalledTimes(4); // 3回のオフライン試行 + 再送1回
     });
-    expect(postChecked).toHaveBeenCalledTimes(4); // 3回のオフライン試行 + 再送1回
   });
 
   it('LCQ-04: online イベントで flush され、成功した品目のバナーが消える', async () => {
