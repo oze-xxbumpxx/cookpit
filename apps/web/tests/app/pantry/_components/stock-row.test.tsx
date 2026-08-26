@@ -1,21 +1,8 @@
-import type { StockDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StockRow } from '../../../../src/app/pantry/_components/stock-row';
-
-function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
-  return {
-    id: '10000000-0000-4000-8000-000000000001',
-    productId: null,
-    displayName: '牛乳',
-    amount: { value: 1000, unit: 'ml' },
-    purchasedAt: '2026-07-11T01:00:00.000Z',
-    expiresAt: null,
-    storedLocation: null,
-    ...overrides,
-  };
-}
+import { createStockDto } from './pantry-test-fixtures';
 
 function renderRow(props: Partial<Parameters<typeof StockRow>[0]> = {}) {
   const defaults = {

@@ -1,25 +1,13 @@
-import type { StockDto, StorageLocation } from '@cookpit/application';
+import type { StorageLocation } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocationGroup } from '../../../../src/app/pantry/_components/location-group';
-
-function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
-  return {
-    id: '20000000-0000-4000-8000-000000000001',
-    productId: null,
-    displayName: '牛乳',
-    amount: { value: 1000, unit: 'ml' },
-    purchasedAt: '2026-07-11T01:00:00.000Z',
-    expiresAt: null,
-    storedLocation: null,
-    ...overrides,
-  };
-}
+import { createStockDto } from './pantry-test-fixtures';
 
 function renderLocationGroup(props: Partial<Parameters<typeof LocationGroup>[0]> = {}) {
   const defaults = {
     location: null,
-    stocks: [createStockDto()],
+    stocks: [createStockDto({ id: '20000000-0000-4000-8000-000000000001' })],
     asOf: new Date('2026-08-08T09:00:00'),
     submittingStockId: null,
     highlightStockId: null,

@@ -290,9 +290,9 @@ agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定�
 Cursor Agent / Cloud Agent で **実装** を行うときの既定モデルは GPT-5.6 Luna Max とする。
 Claude Code の implementer（`claude-sonnet-5`）は変更しない。
 
-| 経路 | implementer の定義 | 既定 model |
-| ---- | ------------------ | ---------- |
-| Claude Code CLI | `.claude/agents/implementer.md` | `claude-sonnet-5` |
+| 経路                       | implementer の定義                                                    | 既定 model                 |
+| -------------------------- | --------------------------------------------------------------------- | -------------------------- |
+| Claude Code CLI            | `.claude/agents/implementer.md`                                       | `claude-sonnet-5`          |
 | Cursor Agent / Cloud Agent | `.cursor/agents/implementer.md`（同名のため Cursor ではこちらが優先） | `gpt-5.6-luna[effort=max]` |
 
 例外・Task slug のフォールバックは

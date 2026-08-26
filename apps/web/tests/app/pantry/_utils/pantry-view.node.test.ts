@@ -1,22 +1,9 @@
-import type { StockDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
 import {
   formatExpiresAt,
   groupStocksByLocation,
 } from '../../../../src/app/pantry/_utils/pantry-view';
-
-function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
-  return {
-    id: '3b8c1165-8fc3-4fd2-96b6-a31dd2d78cc5',
-    productId: null,
-    displayName: '牛乳',
-    amount: { value: 1000, unit: 'ml' },
-    purchasedAt: '2026-07-11T01:00:00.000Z',
-    expiresAt: null,
-    storedLocation: null,
-    ...overrides,
-  };
-}
+import { createStockDto } from '../_components/pantry-test-fixtures';
 
 describe('groupStocksByLocation', () => {
   it('PV-01: 4ロケーション混在でも固定順でグループを返す', () => {
