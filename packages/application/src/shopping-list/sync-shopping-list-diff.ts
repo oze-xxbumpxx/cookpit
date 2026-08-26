@@ -84,100 +84,108 @@ type QuantityUpdateResult =
       pantryDeductedAmount?: Quantity | null;
     };
 
-export function applyQuantityUpdate(
+/** 品目の直前の生必要量を、買う量と既に引いた量の合計として返す。 */
+export function previousGrossRequiredAmount(item: ShoppingItemType): number {
+  const buy = item.requiredAmount?.value ?? 0;
+  const deducted = item.pantryDeductedAmount?.value ?? 0;
+  return buy + deducted;
+}
+
+/**
+ * 既存 pending 品目を今回の生必要量と照合し、既に引いた量を再消費せずに残りを控除する。
+ * additionalNeeded は生必要量から sunk 分を引いて求め、sunk 分は戻り値に含めない。
+ * 値なしの pantryDeductedAmount は null とし、前提が崩れても例外を投げない。
+ */
+export function reconcileItemDeduction(
   item: ShoppingItemType,
   aggregatedByKey: Map<string, ResolvedIngredient>,
   pantry: Pantry,
 ): QuantityUpdateResult {
   const currentAmount = item.requiredAmount;
   const aggregatedIngredient = aggregatedByKey.get(itemMatchKey(item));
-  const newAmount = aggregatedIngredient?.requiredAmount ?? null;
-  if (currentAmount === null || newAmount === null) {
+  const newGross = aggregatedIngredient?.requiredAmount ?? null;
+  if (currentAmount === null || aggregatedIngredient === undefined || newGross === null) {
     return { action: 'none', consumed: false, covered: null };
   }
 
-  const delta = newAmount.value - currentAmount.value;
-  if (delta < 0) {
+  const unit = currentAmount.unit;
+  const prevDeducted = item.pantryDeductedAmount?.value ?? 0;
+  const additionalNeeded = newGross.value - prevDeducted;
+
+  if (
+    additionalNeeded <= 0 &&
+    item.productId !== null &&
+    aggregatedIngredient.productId !== null
+  ) {
     return {
-      action: 'update',
-      amount: Quantity.of(newAmount.value, currentAmount.unit),
+      action: 'remove',
       consumed: false,
-      covered: null,
+      covered: {
+        displayName: aggregatedIngredient.displayName,
+        productId: aggregatedIngredient.productId,
+        requiredAmount: newGross,
+        coveredAmount: newGross,
+      },
     };
   }
-  if (delta === 0) {
-    return { action: 'none', consumed: false, covered: null };
+  if (additionalNeeded <= 0) {
+    return { action: 'update', amount: Quantity.of(0, unit), consumed: false, covered: null };
   }
 
-  const deltaIngredient: ResolvedIngredient = {
-    productId: item.productId,
-    displayName: item.displayName,
-    requiredAmount: Quantity.of(delta, currentAmount.unit),
-    amountNote: null,
-  };
   const {
-    ingredients: afterDelta,
+    ingredients: afterAdditional,
     coveredIngredients,
     consumed,
-  } = applyPantryDeduction([deltaIngredient], pantry);
-  const buyDelta = afterDelta[0]?.requiredAmount?.value ?? 0;
-  const deltaDeducted = afterDelta[0]?.pantryDeductedAmount ?? null;
-  const updatedValue = currentAmount.value + buyDelta;
+  } = applyPantryDeduction(
+    [
+      {
+        productId: item.productId,
+        displayName: item.displayName,
+        requiredAmount: Quantity.of(additionalNeeded, unit),
+        amountNote: null,
+      },
+    ],
+    pantry,
+  );
 
-  const previousDeducted = item.pantryDeductedAmount;
-  let nextDeducted: Quantity | null | undefined = undefined;
-  if (deltaDeducted !== null) {
-    nextDeducted =
-      previousDeducted === null
-        ? deltaDeducted
-        : Quantity.of(previousDeducted.value + deltaDeducted.value, previousDeducted.unit);
-  } else if (coveredIngredients.length > 0) {
-    // 増分が全量まかない → 増分すべてが引き算された扱い。
-    const coveredDelta = coveredIngredients[0]?.coveredAmount ?? null;
-    if (coveredDelta !== null) {
-      nextDeducted =
-        previousDeducted === null
-          ? coveredDelta
-          : Quantity.of(previousDeducted.value + coveredDelta.value, previousDeducted.unit);
-    }
+  if (
+    afterAdditional.length === 0 &&
+    coveredIngredients.length > 0 &&
+    item.productId !== null &&
+    aggregatedIngredient.productId !== null
+  ) {
+    return {
+      action: 'remove',
+      consumed,
+      covered: {
+        displayName: aggregatedIngredient.displayName,
+        productId: aggregatedIngredient.productId,
+        requiredAmount: newGross,
+        coveredAmount: newGross,
+      },
+    };
   }
 
-  if (updatedValue <= 0) {
-    // 防御的: 買う量が 0 以下になる場合は品目削除。集計必要量は covered として記録する。
-    const covered: CoveredIngredient | null =
-      aggregatedIngredient !== undefined &&
-      aggregatedIngredient.productId !== null &&
-      aggregatedIngredient.requiredAmount !== null
-        ? {
-            displayName: aggregatedIngredient.displayName,
-            productId: aggregatedIngredient.productId,
-            requiredAmount: aggregatedIngredient.requiredAmount,
-            coveredAmount: aggregatedIngredient.requiredAmount,
-          }
-        : (coveredIngredients[0] ?? null);
-    return nextDeducted === undefined
-      ? { action: 'remove', consumed, covered }
-      : { action: 'remove', consumed, covered, pantryDeductedAmount: nextDeducted };
+  const newBuy = afterAdditional[0]?.requiredAmount?.value ?? additionalNeeded;
+  const newlyDeducted = afterAdditional[0]?.pantryDeductedAmount?.value ?? 0;
+  const nextDeductedValue = prevDeducted + newlyDeducted;
+  const nextDeducted = nextDeductedValue === 0 ? null : Quantity.of(nextDeductedValue, unit);
+  const currentDeductedValue = item.pantryDeductedAmount?.value ?? 0;
+  const deductedUnchanged =
+    (nextDeducted === null && item.pantryDeductedAmount === null) ||
+    (nextDeducted !== null && currentDeductedValue === nextDeducted.value);
+
+  if (newBuy === currentAmount.value && deductedUnchanged) {
+    return { action: 'none', consumed, covered: null };
   }
-  if (updatedValue === currentAmount.value) {
-    return nextDeducted === undefined
-      ? { action: 'none', consumed, covered: null }
-      : { action: 'none', consumed, covered: null, pantryDeductedAmount: nextDeducted };
-  }
-  return nextDeducted === undefined
-    ? {
-        action: 'update',
-        amount: Quantity.of(updatedValue, currentAmount.unit),
-        consumed,
-        covered: null,
-      }
-    : {
-        action: 'update',
-        amount: Quantity.of(updatedValue, currentAmount.unit),
-        consumed,
-        covered: null,
-        pantryDeductedAmount: nextDeducted,
-      };
+
+  return {
+    action: 'update',
+    amount: Quantity.of(newBuy, unit),
+    consumed,
+    covered: null,
+    pantryDeductedAmount: nextDeducted,
+  };
 }
 
 /**
