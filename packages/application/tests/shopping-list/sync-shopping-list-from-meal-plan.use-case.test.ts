@@ -4,6 +4,7 @@ import { InvalidMealPlanStateError } from '../../src/meal-plan/invalid-meal-plan
 import { MealPlanNotFoundError } from '../../src/meal-plan/meal-plan-not-found.error';
 import { InvalidShoppingListStateError } from '../../src/shopping-list/invalid-shopping-list-state.error';
 import { ShoppingListNotFoundError } from '../../src/shopping-list/shopping-list-not-found.error';
+import { GenerateShoppingListUseCase } from '../../src/shopping-list/generate-shopping-list.use-case';
 import { SyncShoppingListFromMealPlanUseCase } from '../../src/shopping-list/sync-shopping-list-from-meal-plan.use-case';
 import { passthroughUnitOfWork } from '../shared/passthrough-unit-of-work';
 import {
@@ -28,7 +29,9 @@ import type {
   InMemoryProductRepository,
   InMemoryRecipeRepository,
   InMemoryShoppingListRepository,
+  TestRepositories,
 } from './test-helpers';
+import type { ShoppingListDto } from '../../src/shopping-list/shopping-list.dto';
 
 let mealPlanRepository: InMemoryMealPlanRepository;
 let recipeRepository: InMemoryRecipeRepository;
@@ -55,6 +58,63 @@ function syncUseCase(): SyncShoppingListFromMealPlanUseCase {
     pantryRepository,
     passthroughUnitOfWork,
   );
+}
+
+function generateUseCase(repositories: TestRepositories): GenerateShoppingListUseCase {
+  return new GenerateShoppingListUseCase(
+    repositories.mealPlanRepository,
+    repositories.recipeRepository,
+    repositories.productRepository,
+    repositories.shoppingListRepository,
+    repositories.pantryRepository,
+    passthroughUnitOfWork,
+  );
+}
+
+function seedQuantityScenario(
+  repositories: TestRepositories,
+  status: 'draft' | 'shopping',
+  pantryAmount: number,
+  existingItem: boolean,
+  requiredAmount = 2,
+): void {
+  repositories.mealPlanRepository.seed(
+    seededMealPlan(status, [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+  );
+  repositories.recipeRepository.seed(
+    seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', requiredAmount, '個', PRODUCT_ID)]),
+  );
+  repositories.productRepository.seed(seededProduct(PRODUCT_ID));
+  if (existingItem) {
+    repositories.shoppingListRepository.seed(
+      seededShoppingList(
+        'active',
+        [seededItem({ requiredAmount: Quantity.of(requiredAmount, '個') })],
+        [],
+      ),
+    );
+  }
+  if (pantryAmount > 0) {
+    repositories.pantryRepository.seedStock(stockInput(PRODUCT_ID, pantryAmount, '個'));
+  }
+}
+
+function comparableShoppingList(dto: ShoppingListDto): {
+  items: Array<{
+    displayName: string;
+    requiredAmount: ShoppingListDto['items'][number]['requiredAmount'];
+    pantryDeductedAmount: ShoppingListDto['items'][number]['pantryDeductedAmount'];
+  }>;
+  coveredIngredients: ShoppingListDto['coveredIngredients'];
+} {
+  return {
+    items: dto.items.map((item) => ({
+      displayName: item.displayName,
+      requiredAmount: item.requiredAmount,
+      pantryDeductedAmount: item.pantryDeductedAmount,
+    })),
+    coveredIngredients: dto.coveredIngredients,
+  };
 }
 
 describe('SyncShoppingListFromMealPlanUseCase', () => {
@@ -626,7 +686,7 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     expect(pantryRepository.saveCount).toBe(1);
   });
 
-  it('Pantry 非空の再同期は例外なく完了する（R-4。厳密な冪等は保証しない）', async () => {
+  it('Pantry 非空の再同期は保存回数を増やさず完了する（R-4）', async () => {
     shoppingListRepository.seed(seededShoppingList('active', [seededItem()]));
     mealPlanRepository.seed(
       seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID, 2)]),
@@ -640,9 +700,13 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     await expect(
       syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID }),
     ).resolves.toBeDefined();
+    const shoppingListSaveCountAfterFirst = shoppingListRepository.saveCount;
+    const pantrySaveCountAfterFirst = pantryRepository.saveCount;
     await expect(
       syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID }),
     ).resolves.toBeDefined();
+    expect(shoppingListRepository.saveCount).toBe(shoppingListSaveCountAfterFirst);
+    expect(pantryRepository.saveCount).toBe(pantrySaveCountAfterFirst);
   });
 
   it('Sync は新規の全量まかないを coveredIngredients に書き換える', async () => {
@@ -676,4 +740,172 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
       },
     ]);
   });
+
+  it('I-7: 既存 pending 品目も増加後の生必要量を全量まかなえば covered に移す', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [seededItem({ requiredAmount: Quantity.of(2, '個') })]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID, 2)]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+    pantryRepository.seedStock(stockInput(PRODUCT_ID, 5, '個'));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toEqual([]);
+    expect(dto.coveredIngredients).toEqual([
+      {
+        displayName: '玉ねぎ',
+        productId: PRODUCT_ID,
+        requiredAmount: { value: 4, unit: '個' },
+        coveredAmount: { value: 4, unit: '個' },
+      },
+    ]);
+    expect(shoppingListRepository.saveCount).toBe(1);
+    expect(pantryRepository.saveCount).toBe(1);
+  });
+
+  it('I-8: 部分引き算済みの献立不変再同期は真の no-op になる', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          requiredAmount: Quantity.of(3, '個'),
+          pantryDeductedAmount: Quantity.of(2, '個'),
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 5, '個', PRODUCT_ID)]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(shoppingListRepository.saveCount).toBe(0);
+    expect(pantryRepository.saveCount).toBe(0);
+    expect(dto.items[0]?.requiredAmount).toEqual({ value: 3, unit: '個' });
+    expect(dto.items[0]?.pantryDeductedAmount).toEqual({ value: 2, unit: '個' });
+  });
+
+  it('I-9: 数量減少後の必要量が sunk 分以下なら covered に移す', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          requiredAmount: Quantity.of(3, '個'),
+          pantryDeductedAmount: Quantity.of(2, '個'),
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 2, '個', PRODUCT_ID)]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items).toEqual([]);
+    expect(dto.coveredIngredients).toEqual([
+      {
+        displayName: '玉ねぎ',
+        productId: PRODUCT_ID,
+        requiredAmount: { value: 2, unit: '個' },
+        coveredAmount: { value: 2, unit: '個' },
+      },
+    ]);
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it('I-10: 数量減少後も sunk 分だけでは足りなければ買う量を残す', async () => {
+    shoppingListRepository.seed(
+      seededShoppingList('active', [
+        seededItem({
+          requiredAmount: Quantity.of(3, '個'),
+          pantryDeductedAmount: Quantity.of(2, '個'),
+        }),
+      ]),
+    );
+    mealPlanRepository.seed(
+      seededMealPlan('shopping', [seededPlannedRecipe('planned-1', RECIPE_ID)]),
+    );
+    recipeRepository.seed(
+      seededRecipe(RECIPE_ID, [amountIngredient('玉ねぎ', 4, '個', PRODUCT_ID)]),
+    );
+    productRepository.seed(seededProduct(PRODUCT_ID));
+
+    const dto = await syncUseCase().execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(dto.items[0]?.requiredAmount).toEqual({ value: 2, unit: '個' });
+    expect(dto.items[0]?.pantryDeductedAmount).toEqual({ value: 2, unit: '個' });
+    expect(pantryRepository.saveCount).toBe(0);
+  });
+
+  it.each([
+    { label: '全量まかない', pantryAmount: 5 },
+    { label: '部分引き算', pantryAmount: 1 },
+    { label: '在庫なし', pantryAmount: 0 },
+  ])('I-11: $label で Generate と空リスト Sync の結果が一致する', async ({ pantryAmount }) => {
+    const generateRepositories = createRepositories();
+    const syncRepositories = createRepositories();
+    seedQuantityScenario(generateRepositories, 'draft', pantryAmount, false);
+    seedQuantityScenario(syncRepositories, 'shopping', pantryAmount, true);
+    syncRepositories.shoppingListRepository.seed(seededShoppingList('active', [], []));
+
+    const generated = await generateUseCase(generateRepositories).execute({
+      mealPlanId: MEAL_PLAN_ID,
+    });
+    const synced = await new SyncShoppingListFromMealPlanUseCase(
+      syncRepositories.shoppingListRepository,
+      syncRepositories.mealPlanRepository,
+      syncRepositories.recipeRepository,
+      syncRepositories.productRepository,
+      syncRepositories.pantryRepository,
+      passthroughUnitOfWork,
+    ).execute({ shoppingListId: SHOPPING_LIST_ID });
+
+    expect(comparableShoppingList(synced)).toEqual(comparableShoppingList(generated.shoppingList));
+  });
+
+  it.each([
+    { label: '全量まかない', pantryAmount: 5 },
+    { label: '部分引き算', pantryAmount: 1 },
+    { label: '在庫なし', pantryAmount: 0 },
+  ])(
+    'I-12〜I-14: $label で Generate と引き算なし pending Sync の結果が一致する',
+    async ({ pantryAmount }) => {
+      const generateRepositories = createRepositories();
+      const syncRepositories = createRepositories();
+      seedQuantityScenario(generateRepositories, 'draft', pantryAmount, false);
+      seedQuantityScenario(syncRepositories, 'shopping', pantryAmount, true);
+
+      const generated = await generateUseCase(generateRepositories).execute({
+        mealPlanId: MEAL_PLAN_ID,
+      });
+      const synced = await new SyncShoppingListFromMealPlanUseCase(
+        syncRepositories.shoppingListRepository,
+        syncRepositories.mealPlanRepository,
+        syncRepositories.recipeRepository,
+        syncRepositories.productRepository,
+        syncRepositories.pantryRepository,
+        passthroughUnitOfWork,
+      ).execute({ shoppingListId: SHOPPING_LIST_ID });
+
+      expect(comparableShoppingList(synced)).toEqual(
+        comparableShoppingList(generated.shoppingList),
+      );
+      if (pantryAmount === 0) {
+        expect(generateRepositories.pantryRepository.saveCount).toBe(0);
+        expect(syncRepositories.pantryRepository.saveCount).toBe(0);
+      }
+    },
+  );
 });
