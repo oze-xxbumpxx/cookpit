@@ -9,7 +9,12 @@ import {
   Store,
   StoreId,
 } from '@cookpit/domain';
-import { normalizeAliases, toProductDto, toStoreNameMap } from '../../src/product/product.mapper';
+import {
+  normalizeAliases,
+  toCheapestStoreResultDto,
+  toProductDto,
+  toStoreNameMap,
+} from '../../src/product/product.mapper';
 
 function buildStore(id: string, name: string): Store {
   return Store.reconstruct({
@@ -54,6 +59,38 @@ describe('toStoreNameMap', () => {
 
   it('空配列なら空の Map を返す', () => {
     expect(toStoreNameMap([]).size).toBe(0);
+  });
+});
+
+describe('toCheapestStoreResultDto', () => {
+  it('最安店舗の価格記録を5フィールドの DTO に変換する', () => {
+    const storeId = StoreId.fromString('store-1');
+    const dto = toCheapestStoreResultDto(
+      buildProduct([buildPriceRecord(storeId)]),
+      storeId,
+      '西友',
+    );
+
+    expect(dto).toEqual({
+      storeId: 'store-1',
+      storeName: '西友',
+      latestPrice: 300,
+      unitPrice: 100,
+      packageSizeUnit: '個',
+    });
+  });
+
+  it('該当する価格記録が無い場合は null を返す', () => {
+    const dto = toCheapestStoreResultDto(buildProduct(), StoreId.fromString('store-1'), '西友');
+
+    expect(dto).toBeNull();
+  });
+
+  it('空文字の storeName をそのまま DTO に渡す', () => {
+    const storeId = StoreId.fromString('store-1');
+    const dto = toCheapestStoreResultDto(buildProduct([buildPriceRecord(storeId)]), storeId, '');
+
+    expect(dto?.storeName).toBe('');
   });
 });
 

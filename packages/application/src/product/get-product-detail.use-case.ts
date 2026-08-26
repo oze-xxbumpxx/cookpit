@@ -1,8 +1,8 @@
 import { ProductId } from '@cookpit/domain';
-import type { Product, ProductRepository, StoreId, StoreRepository } from '@cookpit/domain';
-import type { CheapestStoreResultDto, ProductDetailResultDto } from './product.dto';
+import type { ProductRepository, StoreRepository } from '@cookpit/domain';
+import type { ProductDetailResultDto } from './product.dto';
 import { ProductNotFoundError } from './product-not-found.error';
-import { toProductDto, toStoreNameMap, type StoreNameMap } from './product.mapper';
+import { toCheapestStoreResultDto, toProductDto, toStoreNameMap } from './product.mapper';
 
 /**
  * 商品詳細画面（`/products/[id]`）が必要とするデータを 1 回の呼び出しで取得する。
@@ -14,10 +14,10 @@ import { toProductDto, toStoreNameMap, type StoreNameMap } from './product.mappe
  * 店舗マスタに該当店舗が無い場合は `null` ではなく `storeName` を空文字へ縮退させる
  * （読み取り操作を例外で止めない。`GetCheapestStoreUseCase` と同じ方針）。
  *
- * **`CheapestStoreResultDto` の組み立ては `GetCheapestStoreUseCase` にも存在する**
- * （`GET /api/products/:id/cheapest-store` が使用中のため両方残す設計判断。
- * 設計書 §変更後構成）。**片方だけ変えると等価性が崩れる。** 等価性は試験 `GPD-03` /
- * 縮退は `GPD-05` が担保している（レビュー S-1）。
+ * `GetCheapestStoreUseCase` と共に `toCheapestStoreResultDto` を呼び出すことで、
+ * 両方の結果の等価性を保つ。両方のユースケースは
+ * `GET /api/products/:id/cheapest-store` が引き続き使用中のため残し、
+ * 等価性は試験 `GPD-03` / 縮退は `GPD-05` が担保する。
  *
  * @throws {ProductNotFoundError} `id` に対応する商品が存在しない場合。
  */
@@ -42,26 +42,12 @@ export class GetProductDetailUseCase {
     const cheapestStore =
       cheapestStoreId === null
         ? null
-        : this.toCheapestStoreResult(product, cheapestStoreId, storeMap);
+        : toCheapestStoreResultDto(
+            product,
+            cheapestStoreId,
+            storeMap.get(cheapestStoreId.value) ?? '',
+          );
 
     return { product: productDto, cheapestStore };
-  }
-
-  private toCheapestStoreResult(
-    product: Product,
-    cheapestStoreId: StoreId,
-    storeMap: StoreNameMap,
-  ): CheapestStoreResultDto | null {
-    const latestPriceRecord = product.latestPriceRecordAt(cheapestStoreId);
-    if (latestPriceRecord === null) {
-      return null;
-    }
-    return {
-      storeId: cheapestStoreId.value,
-      storeName: storeMap.get(cheapestStoreId.value) ?? '',
-      latestPrice: latestPriceRecord.price.amount,
-      unitPrice: latestPriceRecord.unitPrice.amount,
-      packageSizeUnit: latestPriceRecord.packageSize.unit,
-    };
   }
 }
