@@ -16,9 +16,9 @@
   "subject": {
     "algorithm": "git-raw-v1",
     "baseSha": "4c0205a44811c78209f11b4448b5980ecbdcd9d4",
-    "digest": "sha256:132199f763863df9b4d73ef23a50013b116a433abf0b38849a6af3c84030c1a0",
+    "digest": "sha256:da66e0bb359c39fc09c0461f8cad73319071c4c21e9690f2cc0971095830867e",
     "source": "index",
-    "entryCount": 10
+    "entryCount": 13
   },
   "aiAssessment": {
     "blockingOpen": 0,
@@ -107,7 +107,7 @@
 
 > **人間レビュー待ちです。**
 > Claude の評価です。これは承認ではありません。以下の判断事項・残余リスク・振る舞い差分を確認してください。
-> 対象: `sha256:132199f76386…` / R2 / 10 changes
+> 対象: `sha256:da66e0bb359c…` / R2 / 13 changes
 
 ### あなたが判断・確認すること（1 件）
 
