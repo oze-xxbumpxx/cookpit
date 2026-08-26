@@ -139,7 +139,7 @@ export class SyncShoppingListFromMealPlanUseCase {
           }
           listChanged = true;
         } else if (result.pantryDeductedAmount !== undefined) {
-          // 増分が在庫でまかなえ買う量が変わらない場合でも、引き算スナップショットは更新する。
+          // 買う量が変わらない場合でも、引き算スナップショットは更新する。
           shoppingList.updateItemPantryDeductedAmount(item.id, result.pantryDeductedAmount);
           listChanged = true;
         }
@@ -183,7 +183,12 @@ export class SyncShoppingListFromMealPlanUseCase {
         }
       }
 
-      if (!listChanged && !pantryConsumed && newlyCovered.length === 0 && newIngredients.length === 0) {
+      if (
+        !listChanged &&
+        !pantryConsumed &&
+        newlyCovered.length === 0 &&
+        newIngredients.length === 0
+      ) {
         return toShoppingListDto(shoppingList);
       }
 
