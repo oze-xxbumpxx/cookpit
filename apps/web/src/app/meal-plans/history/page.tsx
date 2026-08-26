@@ -1,7 +1,10 @@
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { GetMealPlanHistoryUseCase, GetRecipesUseCase } from '@cookpit/application';
-import { WeekIdentifier } from '@cookpit/domain';
+import {
+  GetMealPlanHistoryUseCase,
+  GetRecipesUseCase,
+  currentWeekIdentifier,
+} from '@cookpit/application';
 import { mealPlanRepository, recipeRepository } from '@/server/repositories';
 import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
@@ -25,7 +28,7 @@ export default async function MealPlanHistoryPage({ searchParams }: Props) {
   ]);
 
   const recipeNameMap = buildRecipeNameMap(recipes);
-  const currentWeekIdentifier = WeekIdentifier.current().toString();
+  const currentWeek = currentWeekIdentifier();
 
   const showMoreLimit = Math.min(limit + 4, 12);
   const canShowMore = mealPlans.length === limit && limit < 12;
@@ -57,7 +60,7 @@ export default async function MealPlanHistoryPage({ searchParams }: Props) {
                 <HistoryWeekCard
                   mealPlan={mealPlan}
                   recipeNameMap={recipeNameMap}
-                  isCurrentWeek={mealPlan.weekIdentifier === currentWeekIdentifier}
+                  isCurrentWeek={mealPlan.weekIdentifier === currentWeek}
                 />
               </li>
             ))}

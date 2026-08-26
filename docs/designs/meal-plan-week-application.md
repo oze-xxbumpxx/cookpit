@@ -34,11 +34,11 @@ Domain の不変条件は一切変更しない。**
 
 ## 設計判断（案 A を確定として採用）
 
-| 案 | 内容 | 採用/不採用理由 |
-| --- | --- | --- |
+| 案                  | 内容                                                                                                                                                                                                                                                                                                                                                | 採用/不採用理由                                                                                                                                                                                                                                                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A（推奨・確定）** | Application に純関数 `currentWeekIdentifier(asOf?: Date): string` と `resolveMealPlanWeekQuery(raw: string \| undefined, asOf?: Date): MealPlanWeekSelection` を追加する。`MealPlanWeekSelection` は `{ currentWeekIdentifier, selectedWeekIdentifier, previousWeekIdentifier, nextWeekIdentifier }`（すべて `string`）。ページは文字列だけを扱う。 | 履歴ページは `GetMealPlanByWeekUseCase` を使わない（`isCurrentWeek` 比較のみ）ため、この案だけが両ページを一律にカバーできる。既存 UseCase の契約（シグネチャ・戻り値）を変えずに Presentation の Domain 依存を切れる。週解釈は「クエリパラメータの読み取り」であり永続化を伴わないため、UseCase 化よりも軽量な純関数が層の責務に合う |
-| B | `GetMealPlanByWeekUseCase.execute` の戻りを `{ mealPlan, weekNav }` のように拡張する | 履歴ページには効かない（`GetMealPlanByWeekUseCase` を呼んでいない）。既存の呼び出し・テスト（`meal-plan-use-cases.test.ts`）の契約変更を伴い、「戻り値を変えないこと」というユーザー確定制約に反する |
-| C | 週クエリ解釈を新しい UseCase クラス（`ResolveMealPlanWeekUseCase` 等）として `execute()` のみ持たせる | `.claude/rules/domain-layer.md` の「1 UseCase = 1 クラス」は永続化・業務操作（Repository を伴う操作）を想定した規約であり、DB アクセスを伴わない純粋なクエリ文字列解釈をクラス化するのは過剰。関数で十分に層の責務分離を満たせる |
+| B                   | `GetMealPlanByWeekUseCase.execute` の戻りを `{ mealPlan, weekNav }` のように拡張する                                                                                                                                                                                                                                                                | 履歴ページには効かない（`GetMealPlanByWeekUseCase` を呼んでいない）。既存の呼び出し・テスト（`meal-plan-use-cases.test.ts`）の契約変更を伴い、「戻り値を変えないこと」というユーザー確定制約に反する                                                                                                                                  |
+| C                   | 週クエリ解釈を新しい UseCase クラス（`ResolveMealPlanWeekUseCase` 等）として `execute()` のみ持たせる                                                                                                                                                                                                                                               | `.claude/rules/domain-layer.md` の「1 UseCase = 1 クラス」は永続化・業務操作（Repository を伴う操作）を想定した規約であり、DB アクセスを伴わない純粋なクエリ文字列解釈をクラス化するのは過剰。関数で十分に層の責務分離を満たせる                                                                                                      |
 
 **確定**: 案 A。トレードオフの検討は上記で完了しており、本タスクでは他案への変更提案を行わない
 （ユーザー要求が既にこの方針で確定しているため）。
@@ -300,8 +300,8 @@ export * from './meal-plan-week-query';
 （既存挙動の移動）のみ：
 
 - `raw` が `undefined`、または `YYYY-MM-DD` 正規表現に不一致 → 現在週にフォールバック。
-- 正規表現には一致するが `new Date(...)` が Invalid Date（例: `2026-02-30`）→ 現在週に
-  フォールバック。
+- 正規表現には一致するが `new Date(...)` が Invalid Date（例: `2026-99-99`）→ 現在週に
+  フォールバック。`2026-02-30` は V8 では overflow して有効日付になるため、この分岐には使わない。
 - 例外を投げない・呼び出し元（Server Component）でも try/catch を追加しない（現状も
   例外は発生しないため、この点も変更なし）。
 
@@ -328,7 +328,9 @@ export * from './meal-plan-week-query';
    コードを移す**前に**カバーする。
    - `raw === undefined` → 現在週（`currentWeekIdentifier` と一致）。
    - 形式不一致（例: `"2026/07/04"`、`"20260704"`）→ 現在週。
-   - 正規表現には一致するが Invalid Date（例: `"2026-02-30"`）→ 現在週。
+   - 正規表現には一致するが Invalid Date（例: `"2026-99-99"`。`getTime()` が NaN）→ 現在週。
+     `"2026-02-30"` は V8 では overflow して有効日付になるため、current フォールバックではなく
+     `WeekIdentifier.fromDate` と同じスナップ先になる（試験計画 MPWQ-14/15）。
    - 有効な土曜日付（例: `"2026-07-11"`）→ そのまま selected に採用。
    - 非土曜の有効日付（例: `"2026-07-13"` 月曜）→ 直前の土曜（`"2026-07-11"`）へスナップ
      （Domain の `fromDate` 経由。Application 側で再実装しないことの確認）。
@@ -360,12 +362,12 @@ export * from './meal-plan-week-query';
 
 ## リスク
 
-| # | リスク | 対策 |
-| --- | --- | --- |
-| R-1 | ページ側のロジックを移す際に `asOf` の受け渡しを誤り（例: `new Date()` を2回別々に呼んで `current` と `selected` の基準時刻がずれる）挙動が変わる | `resolveMealPlanWeekQuery` 内部で `asOf ?? new Date()` を1度だけ評価してから `current`/`selected`/`previous`/`next` を算出する（実装時の注意点として本書に明記）。テストを先に書いて固定する |
-| R-2 | `history/page.tsx` の変数名 `currentWeekIdentifier` と import する関数名 `currentWeekIdentifier` が衝突する | 実装時に変数名を `currentWeek` 等へリネーム、または import 側を `as` エイリアスにする（比較先の意味は変えない） |
-| R-3 | `meal-plan-week-query.ts` を Application に置いたことで、将来 Presentation が再び Domain を import する回帰が起きる | 既存の import 境界（ADR-0010・`docs/03-architecture.md` 表）に加え、望ましくは lint の import 制限（既存の仕組みがあれば）で検知。本タスクでは lint 設定変更は対象外だが、レビュー観点として記録 |
-| R-4 | 既存テスト（Domain の土曜スナップ、`meal-plan-client.test.tsx`）を誤って書き換えてしまう | 本書「テスト方針」で明示的に「変更しない」と固定。実装計画（implementation-planner）でも差分レビュー時にこれらのファイルに diff が無いことを確認項目にする |
+| #   | リスク                                                                                                                                            | 対策                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R-1 | ページ側のロジックを移す際に `asOf` の受け渡しを誤り（例: `new Date()` を2回別々に呼んで `current` と `selected` の基準時刻がずれる）挙動が変わる | `resolveMealPlanWeekQuery` 内部で `asOf ?? new Date()` を1度だけ評価してから `current`/`selected`/`previous`/`next` を算出する（実装時の注意点として本書に明記）。テストを先に書いて固定する     |
+| R-2 | `history/page.tsx` の変数名 `currentWeekIdentifier` と import する関数名 `currentWeekIdentifier` が衝突する                                       | 実装時に変数名を `currentWeek` 等へリネーム、または import 側を `as` エイリアスにする（比較先の意味は変えない）                                                                                  |
+| R-3 | `meal-plan-week-query.ts` を Application に置いたことで、将来 Presentation が再び Domain を import する回帰が起きる                               | 既存の import 境界（ADR-0010・`docs/03-architecture.md` 表）に加え、望ましくは lint の import 制限（既存の仕組みがあれば）で検知。本タスクでは lint 設定変更は対象外だが、レビュー観点として記録 |
+| R-4 | 既存テスト（Domain の土曜スナップ、`meal-plan-client.test.tsx`）を誤って書き換えてしまう                                                          | 本書「テスト方針」で明示的に「変更しない」と固定。実装計画（implementation-planner）でも差分レビュー時にこれらのファイルに diff が無いことを確認項目にする                                       |
 
 ## 未決事項
 

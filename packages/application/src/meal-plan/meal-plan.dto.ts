@@ -36,3 +36,10 @@ export interface RemoveRecipeFromMealPlanInputDto {
 export interface GetMealPlanHistoryInputDto {
   limit?: number;
 }
+
+export interface MealPlanWeekSelection {
+  currentWeekIdentifier: string;
+  selectedWeekIdentifier: string;
+  previousWeekIdentifier: string;
+  nextWeekIdentifier: string;
+}
