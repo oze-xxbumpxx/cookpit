@@ -22,8 +22,8 @@ import type { ShoppingListDto, SyncShoppingListInputDto } from './shopping-list.
 import { toShoppingListDto } from './shopping-list.mapper';
 import { ShoppingListNotFoundError } from './shopping-list-not-found.error';
 import {
-  applyQuantityUpdate,
   collectNoteUpdates,
+  reconcileItemDeduction,
   rewriteCoveredIngredients,
   splitDuplicateItems,
 } from './sync-shopping-list-diff';
@@ -33,7 +33,8 @@ import {
  * 対象 MealPlan の現在の材料を再集計し、(a) 新規キーを追加 (b) from_meal_plan かつ pending の
  * 数量を上書き (c) 同じく注記（「適量」等）を上書き (d) 集計に無い from_meal_plan かつ pending を
  * 削除 (e) 照合キーが重複する from_meal_plan かつ pending の行を 1 行へ寄せる。bought と手動追加は
- * 変更・削除しない。数量増加分にのみ在庫引き算を適用する。
+ * 変更・削除しない。from_meal_plan かつ pending の品目には、既に引いた量を除く残り必要量へ
+ * 在庫引き算を適用する。
  *
  * 差分があった場合は coveredIngredients スナップショットも書き換える（在庫カバレッジ表示用）。
  * 追加・更新・削除・重複解消が 0 件なら no-op で現状のリストを返す（スナップショットも触らない）。
@@ -95,7 +96,7 @@ export class SyncShoppingListFromMealPlanUseCase {
         if (aggregatedIngredient === undefined || aggregatedIngredient.requiredAmount === null) {
           return false;
         }
-        return aggregatedIngredient.requiredAmount.value !== item.requiredAmount.value;
+        return true;
       });
 
       const noteUpdates = collectNoteUpdates(uniqueItems, aggregatedByKey);
@@ -123,8 +124,8 @@ export class SyncShoppingListFromMealPlanUseCase {
       const newlyCovered: CoveredIngredient[] = [];
 
       for (const item of updateCandidates) {
-        const result = applyQuantityUpdate(item, aggregatedByKey, pantry);
-        pantryConsumed = pantryConsumed || result.consumed;
+        const result = reconcileItemDeduction(item, aggregatedByKey, pantry);
+        pantryConsumed ||= result.consumed;
         if (result.covered !== null) {
           newlyCovered.push(result.covered);
         }
@@ -138,7 +139,7 @@ export class SyncShoppingListFromMealPlanUseCase {
           }
           listChanged = true;
         } else if (result.pantryDeductedAmount !== undefined) {
-          // 増分が在庫でまかなえ買う量が変わらない場合でも、引き算スナップショットは更新する。
+          // 買う量が変わらない場合でも、引き算スナップショットは更新する。
           shoppingList.updateItemPantryDeductedAmount(item.id, result.pantryDeductedAmount);
           listChanged = true;
         }
@@ -180,6 +181,15 @@ export class SyncShoppingListFromMealPlanUseCase {
           );
           listChanged = true;
         }
+      }
+
+      if (
+        !listChanged &&
+        !pantryConsumed &&
+        newlyCovered.length === 0 &&
+        newIngredients.length === 0
+      ) {
+        return toShoppingListDto(shoppingList);
       }
 
       // 献立に残る既存 covered + 今回の全量まかないでスナップショットを書き換える。
