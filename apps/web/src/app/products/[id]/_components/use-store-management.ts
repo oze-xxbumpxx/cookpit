@@ -188,7 +188,7 @@ export function useStoreManagement(options: Options = {}): StoreManagementResult
       // 404 は「既に消えている」＝目的達成なので成功として扱う（削除操作を冪等にする）。
       if (!response.ok && status !== 404) {
         setStoresErrorMessage('店舗の削除に失敗しました。');
-        // エラー文はパネル側に出るため、ダイアログを開いたままだと裏に隠れて読めない。
+        // エラー文は呼び出し側のバナーに出るため、ダイアログを開いたままだと裏に隠れて読めない。
         setPendingDeleteStore(null);
         setPendingDeleteUsage(null);
         return;
