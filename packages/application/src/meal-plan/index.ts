@@ -9,3 +9,4 @@ export * from './meal-plan.mapper';
 export * from './meal-plan-not-found.error';
 export * from './planned-recipe-not-found.error';
 export * from './invalid-meal-plan-state.error';
+export * from './meal-plan-week-query';

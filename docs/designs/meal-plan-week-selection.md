@@ -24,15 +24,15 @@
 
 ## 設計判断（D-x：先例準拠で確定）
 
-| #   | 判断                                                                                                                                 | 理由                                                                                                                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-1 | 週モデル（`WeekIdentifier`・土曜開始）は変更しない。日付範囲モデル化はしない                                                         | ユーザー確定の「週を選べる」方針。スキーマ・ドメイン変更ゼロで実現可能                                                                                |
-| D-2 | 選択中の週は URL クエリ `?week=YYYY-MM-DD` で表現し、Server Component が読む                                                         | 初期表示は A: Server Component 直呼び（presentation-layer.md）。共有・リロードで状態が保たれ、`?limit=` 履歴ページと同じ searchParams パターン        |
-| D-3 | 指定週の取得は `GetMealPlanByWeekUseCase`（新設）。`findByWeek` を使う                                                               | `GetCurrentMealPlanUseCase(asOf)` の流用も可能だが名称が誤解を招くため専用 UseCase を新設（1 UseCase = 1 クラスの規約）                               |
-| D-4 | 不正・未指定の `?week=` は現在週にフォールバック。任意日付は `WeekIdentifier` が土曜へスナップ                                       | 既存の `fromString` スナップ不変条件を活かし、壊れた入力で 500 にしない                                                                               |
-| D-5 | 週ナビ UI は「前の週 ←／週ラベル／→ 次の週」。選択週が現在週なら「今週」表記                                                         | 最小の操作系。prev/next の週識別子は Server Component で `WeekIdentifier.previous()/next()` から算出し文字列で渡す（Client に Domain を持ち込まない） |
-| D-6 | 作成・空状態の文言は選択週で出し分け（現在週=「今週の献立(を作る)」／他週=「この週の献立(を作る)」「{範囲}の献立はまだありません」） | 選択週が今週以外でも自然な文言にする                                                                                                                  |
-| D-7 | `MealPlanClient` の新規 props（selected/previous/next WeekIdentifier）は任意。未指定時は現在週選択として従来どおり動く               | 既存テスト・呼び出しの後方互換。週ナビは prev/next が揃ったときのみ描画                                                                               |
+| #   | 判断                                                                                                                                 | 理由                                                                                                                                                                                                                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1 | 週モデル（`WeekIdentifier`・土曜開始）は変更しない。日付範囲モデル化はしない                                                         | ユーザー確定の「週を選べる」方針。スキーマ・ドメイン変更ゼロで実現可能                                                                                                                                                                                                                                    |
+| D-2 | 選択中の週は URL クエリ `?week=YYYY-MM-DD` で表現し、Server Component が読む                                                         | 初期表示は A: Server Component 直呼び（presentation-layer.md）。共有・リロードで状態が保たれ、`?limit=` 履歴ページと同じ searchParams パターン                                                                                                                                                            |
+| D-3 | 指定週の取得は `GetMealPlanByWeekUseCase`（新設）。`findByWeek` を使う                                                               | `GetCurrentMealPlanUseCase(asOf)` の流用も可能だが名称が誤解を招くため専用 UseCase を新設（1 UseCase = 1 クラスの規約）                                                                                                                                                                                   |
+| D-4 | 不正・未指定の `?week=` は現在週にフォールバック。任意日付は `WeekIdentifier` が土曜へスナップ                                       | 既存の `fromString` スナップ不変条件を活かし、壊れた入力で 500 にしない                                                                                                                                                                                                                                   |
+| D-5 | 週ナビ UI は「前の週 ←／週ラベル／→ 次の週」。選択週が現在週なら「今週」表記                                                         | 最小の操作系。prev/next の週識別子は文字列で渡す（Client に Domain を持ち込まない）。**計算の実施場所は 2026-08-26 に Application へ移動**（`docs/designs/meal-plan-week-application.md` 参照。挙動・D-4 の意味は不変。Server Component は Application のヘルパーが返す文字列をそのまま使うだけになった） |
+| D-6 | 作成・空状態の文言は選択週で出し分け（現在週=「今週の献立(を作る)」／他週=「この週の献立(を作る)」「{範囲}の献立はまだありません」） | 選択週が今週以外でも自然な文言にする                                                                                                                                                                                                                                                                      |
+| D-7 | `MealPlanClient` の新規 props（selected/previous/next WeekIdentifier）は任意。未指定時は現在週選択として従来どおり動く               | 既存テスト・呼び出しの後方互換。週ナビは prev/next が揃ったときのみ描画                                                                                                                                                                                                                                   |
 
 ## 対象範囲
 
@@ -58,9 +58,12 @@
 
 ### `meal-plans/page.tsx`
 
-- `searchParams: Promise<{ week?: string }>` を受け、`week` を検証して選択週 `WeekIdentifier` を決定
-  （形式不正・無効日付は `WeekIdentifier.current()`）。
+- `searchParams: Promise<{ week?: string }>` を受け、`week` を検証して選択週を決定
+  （形式不正・無効日付は現在週）。
 - `selected/previous/next/current` の識別子文字列を算出。`GetMealPlanByWeekUseCase(selected)` で取得。
+- 計算そのもの（検証・スナップ利用・±7日算出）は Application のヘルパーが行い、`page.tsx` は
+  文字列を受け渡すだけ（詳細は `docs/designs/meal-plan-week-application.md`）。挙動はここに
+  記載の内容と同一。
 - `MealPlanClient` に `mealPlan / recipes / currentWeekIdentifier / selectedWeekIdentifier /
 previousWeekIdentifier / nextWeekIdentifier` を渡す。
 
