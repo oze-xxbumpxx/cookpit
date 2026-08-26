@@ -9,6 +9,7 @@ import {
   formatStoreUnitPriceDiffLabel,
   formatYen,
 } from '../../../../src/app/shopping-lists/_utils/price-comparison';
+import { createShoppingItemDto as createSharedShoppingItemDto } from '../_components/shopping-list-test-fixtures';
 
 function createPriceRecordDto(overrides: Partial<PriceRecordDto> = {}): PriceRecordDto {
   return {
@@ -39,20 +40,11 @@ function createProductDto(overrides: Partial<ProductDto> = {}): ProductDto {
 }
 
 function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): ShoppingItemDto {
-  return {
-    id: 'item-1',
+  return createSharedShoppingItemDto({
     productId: 'product-a',
-    displayName: '醤油',
     requiredAmount: { value: 1, unit: 'g' },
-    amountNote: null,
-    targetStoreId: 'store-a',
-    status: 'pending',
-    actualPrice: null,
-    actualStoreId: null,
-    source: 'from_meal_plan',
-    pantryDeductedAmount: null,
     ...overrides,
-  };
+  });
 }
 
 describe('estimateItemPriceDiff: 単位換算の 4 方向テスト（必須。改変禁止）', () => {

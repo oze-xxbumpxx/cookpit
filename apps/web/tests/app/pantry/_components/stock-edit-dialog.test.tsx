@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { JSX } from 'react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createStockDto } from './pantry-test-fixtures';
 
 const { putStock } = vi.hoisted(() => ({
   putStock: vi.fn(),
@@ -24,16 +25,15 @@ vi.mock('@/lib/api-client', () => ({
 import { StockEditDialog } from '../../../../src/app/pantry/_components/stock-edit-dialog';
 
 function createStock(overrides: Partial<StockDto> = {}): StockDto {
-  return {
+  return createStockDto({
     id: '40000000-0000-4000-8000-000000000001',
-    productId: null,
     displayName: '卵',
     amount: { value: 2, unit: '個' },
     purchasedAt: '2026-08-01T00:00:00.000Z',
     expiresAt: '2026-08-20',
     storedLocation: 'fridge',
     ...overrides,
-  };
+  });
 }
 
 describe('StockEditDialog', () => {

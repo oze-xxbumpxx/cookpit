@@ -1,32 +1,16 @@
-import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
+import type { StoreDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PurchaseInputForm } from '../../../../src/app/shopping-lists/_components/purchase-input-form';
 import type { StoreUnitPriceBreakdown } from '../../../../src/app/shopping-lists/_utils/price-comparison';
+import { createShoppingItemDto } from './shopping-list-test-fixtures';
 
 function createStoreDto(overrides: Partial<StoreDto> = {}): StoreDto {
   return {
     id: 'store-a',
     name: '店舗A',
     createdAt: '2026-06-01T00:00:00.000Z',
-    ...overrides,
-  };
-}
-
-function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): ShoppingItemDto {
-  return {
-    id: 'item-1',
-    productId: null,
-    displayName: '醤油',
-    requiredAmount: { value: 1, unit: '本' },
-    amountNote: null,
-    targetStoreId: 'store-a',
-    status: 'pending',
-    actualPrice: null,
-    actualStoreId: null,
-    source: 'from_meal_plan',
-    pantryDeductedAmount: null,
     ...overrides,
   };
 }

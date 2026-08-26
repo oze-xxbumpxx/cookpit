@@ -1,5 +1,6 @@
 import type { ShoppingItemDto, StoreDto } from '@cookpit/application';
 import { describe, expect, it } from 'vitest';
+import { createShoppingItemDto as createSharedShoppingItemDto } from '../_components/shopping-list-test-fixtures';
 import {
   buildStoreNameMap,
   describeRemoveConfirmation,
@@ -19,20 +20,11 @@ function createStoreDto(overrides: Partial<StoreDto> = {}): StoreDto {
 }
 
 function createShoppingItemDto(overrides: Partial<ShoppingItemDto> = {}): ShoppingItemDto {
-  return {
+  return createSharedShoppingItemDto({
     id: 'bddc9ee7-b38f-4718-8dff-8df67145784f',
-    productId: null,
-    displayName: '醤油',
-    requiredAmount: { value: 1, unit: '本' },
-    amountNote: null,
     targetStoreId: null,
-    status: 'pending',
-    actualPrice: null,
-    actualStoreId: null,
-    source: 'from_meal_plan',
-    pantryDeductedAmount: null,
     ...overrides,
-  };
+  });
 }
 
 const STORE_X = createStoreDto({ id: 'store-x', name: '店舗X' });

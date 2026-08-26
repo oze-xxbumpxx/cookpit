@@ -2,6 +2,7 @@ import type { PantryDto, StockDto } from '@cookpit/application';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createStockDto as createSharedStockDto } from './pantry-test-fixtures';
 
 const { getPantry, postConsume, postDiscard, postAddStock, putStock, refresh } = vi.hoisted(() => ({
   getPantry: vi.fn(),
@@ -41,16 +42,10 @@ import { PantryClient } from '../../../../src/app/pantry/_components/pantry-clie
 const AS_OF = new Date('2026-08-08T09:00:00');
 
 function createStockDto(overrides: Partial<StockDto> = {}): StockDto {
-  return {
+  return createSharedStockDto({
     id: '30000000-0000-4000-8000-000000000001',
-    productId: null,
-    displayName: '牛乳',
-    amount: { value: 1000, unit: 'ml' },
-    purchasedAt: '2026-07-11T01:00:00.000Z',
-    expiresAt: null,
-    storedLocation: null,
     ...overrides,
-  };
+  });
 }
 
 function createPantryDto(stocks: StockDto[] = []): PantryDto {

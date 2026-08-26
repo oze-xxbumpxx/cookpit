@@ -2,6 +2,7 @@ import type { MealPlanDto, StockDto } from '@cookpit/application';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Dashboard } from '../../../src/app/_components/dashboard';
+import { createStockDto } from '../pantry/_components/pantry-test-fixtures';
 
 const ASOF = new Date('2026-07-21T09:00:00');
 
@@ -18,16 +19,15 @@ function createMealPlanDto(overrides: Partial<MealPlanDto> = {}): MealPlanDto {
 }
 
 function createStock(overrides: Partial<StockDto> = {}): StockDto {
-  return {
+  return createStockDto({
     id: 'stock-1',
-    productId: null,
     displayName: '牛乳',
     amount: { value: 1, unit: '本' },
     purchasedAt: '2026-07-18T00:00:00.000Z',
     expiresAt: '2026-07-22',
     storedLocation: 'fridge',
     ...overrides,
-  };
+  });
 }
 
 describe('Dashboard', () => {
