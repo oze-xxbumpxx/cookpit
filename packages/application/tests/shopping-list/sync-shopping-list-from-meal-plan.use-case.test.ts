@@ -857,7 +857,7 @@ describe('SyncShoppingListFromMealPlanUseCase', () => {
     const generateRepositories = createRepositories();
     const syncRepositories = createRepositories();
     seedQuantityScenario(generateRepositories, 'draft', pantryAmount, false);
-    seedQuantityScenario(syncRepositories, 'shopping', pantryAmount, true);
+    seedQuantityScenario(syncRepositories, 'shopping', pantryAmount, false);
     syncRepositories.shoppingListRepository.seed(seededShoppingList('active', [], []));
 
     const generated = await generateUseCase(generateRepositories).execute({

@@ -202,16 +202,11 @@ describe('sync-shopping-list-diff', () => {
     });
   });
 
-  it('前提が崩れた productId の組み合わせでも例外を投げず covered 化しない', () => {
-    const result = reconcileItemDeduction(
-      seededItem({ productId: null, displayName: PRODUCT_ID }),
-      aggregatedMap(PRODUCT_ID, 0, PRODUCT_ID),
-      pantryWithStock(0),
-    );
+  it('集計に一致する品目がなくても例外を投げず none を返す', () => {
+    const result = reconcileItemDeduction(seededItem(), new Map(), pantryWithStock(0));
 
     expect(result).toEqual({
-      action: 'update',
-      amount: Quantity.of(0, '個'),
+      action: 'none',
       consumed: false,
       covered: null,
     });
