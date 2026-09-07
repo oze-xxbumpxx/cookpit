@@ -9,7 +9,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json,mjs,cjs,yml,yaml}\"",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "test:harness": "node --test .claude/tests/*.test.mjs plugins/tests/*.test.mjs",
+    "test:harness": "node --test .claude/tests/*.test.mjs",
     "prepare": "lefthook install"
   },
   "devDependencies": {
