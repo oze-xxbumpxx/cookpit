@@ -1,0 +1,75 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: TASK-YYYY-NNN
+feature_name: example-feature
+change_level: 2 # 0 | 1 | 2 | 3
+date: YYYY-MM-DD
+
+agents:
+  calls: unknown # Agent 呼び出し回数
+  retries: unknown # 再依頼回数
+  unnecessary_calls: unknown
+
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+# IMP-2026-025 の効果実測をモデル条件込みで比較するための記録（2026-07-18 追加）。
+codex:
+  model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
+  reasoning_effort: unknown # 例: low | medium | high（Task/層で変えた場合は notes に内訳）
+  notes: ''
+
+quality:
+  tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
+  initial_test_failures: unknown
+  reviewer_block_open: 0
+  reviewer_high_impact_unverified: 0
+  reviewer_follow_up_open: 0
+  reviewer_pre_existing: 0
+  # 旧 severity の時系列比較用。新規 review では impact 別件数として記録し、不明なら unknown。
+  reviewer_critical: unknown
+  reviewer_major: unknown # high impact の互換欄
+  reviewer_minor: unknown # medium / low impact の互換欄
+  user_corrections: 0
+  escaped_defects: 0
+
+process:
+  requirement_rework: 0
+  design_rework: 0
+  implementation_rework: 0
+  missing_documents: 0
+  unresolved_items: 0
+  # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
+  # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
+  meta_work_ratio: unknown
+
+# 人間レビューの負荷を測る。秒単位の計時や長いアンケートは要求しない。
+# active_time_bucket / confidence / full_diff_opened だけ人間が任意で回答し、その他は
+# review packet / audit から取得できる場合に記録する。不明なら推測せず unknown。
+review:
+  active_time_bucket: unknown # lt5m | 5to15m | 15to30m | gt30m
+  confidence: unknown # 1〜5（変更を理解してマージ判断できる確信度）
+  full_diff_opened: unknown # true | false
+  handoff_items: unknown
+  rounds: unknown
+  stale_invalidations: unknown
+  verified_findings: unknown
+  false_positive_findings: unknown
+
+machine:
+  # collect-task-metrics.mjs が transcript / quality-gates-log から自動で埋める（手で編集しない）。
+  # 内容: セッション別の所要時間（活動時間）・トークン・ツール/Agent 呼び出し・ゲート実行記録と
+  # 合計値（agent_restarts / gate_rework_rate は手戻りプロキシ）。複数セッションのタスクは
+  # 各セッション末に再実行すると session_id / ts 単位で累積される。
+  # 実行: node .claude/scripts/collect-task-metrics.mjs --feature <feature> --task-id <task-id> --write
+  # フェーズ比較: machine.totals.agent_calls_by_type をフェーズの機械プロキシとする
+  # （requirements-analyst / architecture-designer / implementer / reviewer 等）。
+  # before/after を設計フェーズ限定で比較するときは、下の phases を手で埋めるか
+  # agent_calls_by_type から対象 Agent だけを抜き出す（セッション全体との混同を避ける）。
+
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+# 機械自動では埋めない。不明な欄は unknown のまま。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }

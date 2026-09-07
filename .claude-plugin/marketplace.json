@@ -1,0 +1,35 @@
+{
+  "name": "cookpit-harness",
+  "interface": {
+    "displayName": "Cookpit Harness"
+  },
+  "plugins": [
+    {
+      "name": "harness-core",
+      "source": "./plugins/harness-core",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "harness-workflow",
+      "source": "./plugins/harness-workflow",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "harness-improvement",
+      "source": "./plugins/harness-improvement",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
