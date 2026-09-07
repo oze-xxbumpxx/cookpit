@@ -1,0 +1,30 @@
+{
+  "name": "cookpit-harness",
+  "owner": {
+    "name": "Cookpit maintainers"
+  },
+  "metadata": {
+    "description": "Reusable three-layer development harness extracted from Cookpit",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "harness-core",
+      "source": "./plugins/harness-core",
+      "description": "Portable core layer of the Cookpit development harness",
+      "version": "0.1.0"
+    },
+    {
+      "name": "harness-workflow",
+      "source": "./plugins/harness-workflow",
+      "description": "Portable workflow layer of the Cookpit development harness",
+      "version": "0.1.0"
+    },
+    {
+      "name": "harness-improvement",
+      "source": "./plugins/harness-improvement",
+      "description": "Portable improvement layer of the Cookpit development harness",
+      "version": "0.1.0"
+    }
+  ]
+}

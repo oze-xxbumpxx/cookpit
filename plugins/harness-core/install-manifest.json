@@ -1,0 +1,70 @@
+{
+  "name": "harness-core",
+  "version": "0.1.0",
+  "files": [
+    ".claude/lib/harness-paths.mjs",
+    ".claude/lib/harness-state.mjs",
+    ".claude/hooks/guard-dangerous.mjs",
+    ".claude/hooks/session-start-info.sh",
+    ".claude/hooks/record-activity.mjs",
+    ".claude/scripts/detect-project-commands.sh",
+    ".claude/scripts/run-quality-gates.sh",
+    ".claude/scripts/harness-run.mjs",
+    ".claude/scripts/estimate-session-time.mjs",
+    ".claude/scripts/migrate-state.mjs",
+    ".claude/skills/quality-gates/SKILL.md",
+    ".claude/skills/write-work-log/SKILL.md",
+    ".claude/rules/coding-standards.md",
+    ".claude/templates/claude-md-coding-standards.md",
+    ".claude/tests/guard-dangerous.test.mjs",
+    ".claude/tests/harness-paths.test.mjs",
+    ".claude/tests/harness-state.test.mjs"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-info.sh\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-dangerous.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

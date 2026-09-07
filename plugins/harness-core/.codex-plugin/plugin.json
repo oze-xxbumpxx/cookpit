@@ -1,0 +1,6 @@
+{
+  "name": "harness-core",
+  "version": "0.1.0",
+  "description": "Portable core layer of the Cookpit development harness.",
+  "skills": "./skills/"
+}

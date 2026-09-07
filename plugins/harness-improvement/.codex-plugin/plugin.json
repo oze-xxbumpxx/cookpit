@@ -1,0 +1,6 @@
+{
+  "name": "harness-improvement",
+  "version": "0.1.0",
+  "description": "Portable improvement layer of the Cookpit development harness.",
+  "skills": "./skills/"
+}

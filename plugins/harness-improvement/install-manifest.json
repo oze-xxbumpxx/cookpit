@@ -1,0 +1,50 @@
+{
+  "name": "harness-improvement",
+  "version": "0.1.0",
+  "files": [
+    ".claude/agents/reflection-agent.md",
+    ".claude/agents/agent-improvement-manager.md",
+    ".claude/agents/agent-evaluator.md",
+    ".claude/skills/reflect-task/SKILL.md",
+    ".claude/skills/audit-skills/SKILL.md",
+    ".claude/skills/sprint-review/SKILL.md",
+    ".claude/skills/record-metrics-and-reflect/SKILL.md",
+    ".claude/hooks/check-improvement-cycle.mjs",
+    ".claude/scripts/collect-task-metrics.mjs",
+    ".claude/scripts/record-task-metrics.sh",
+    ".claude/scripts/sprint-summary.sh",
+    ".claude/evals/README.md",
+    ".claude/evals/rubrics/scoring-rubric.md",
+    ".claude/evals/cases/refactoring.md",
+    ".claude/evals/cases/permission-change.md",
+    ".claude/evals/cases/api-field-addition.md",
+    ".claude/evals/cases/external-service-failure.md",
+    "docs/claude-code/memory-policy.md",
+    "docs/claude-code/improvement-cycle.md",
+    "docs/claude-code/improvements/README.md",
+    "docs/claude-code/improvements/accepted/.gitkeep",
+    "docs/claude-code/improvements/candidates/.gitkeep",
+    "docs/claude-code/improvements/candidates/_TEMPLATE.md",
+    "docs/claude-code/improvements/evaluations/.gitkeep",
+    "docs/claude-code/improvements/evaluations/_TEMPLATE.md",
+    "docs/claude-code/improvements/incidents/.gitkeep",
+    "docs/claude-code/improvements/incidents/_TEMPLATE.md",
+    "docs/claude-code/improvements/metrics/.gitkeep",
+    "docs/claude-code/improvements/metrics/_TEMPLATE.yml",
+    "docs/claude-code/improvements/proposals/.gitkeep",
+    "docs/claude-code/improvements/proposals/_TEMPLATE.md",
+    "docs/claude-code/improvements/rejected/.gitkeep"
+  ],
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-improvement-cycle.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

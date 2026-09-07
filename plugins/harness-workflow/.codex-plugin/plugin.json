@@ -1,0 +1,6 @@
+{
+  "name": "harness-workflow",
+  "version": "0.1.0",
+  "description": "Portable workflow layer of the Cookpit development harness.",
+  "skills": "./skills/"
+}
