@@ -1,48 +1,35 @@
 {
   "name": "cookpit-harness",
-  "metadata": {
-    "description": "Reusable three-layer development harness extracted from Cookpit",
-    "version": "0.1.0"
+  "interface": {
+    "displayName": "Cookpit Harness"
   },
   "plugins": [
     {
       "name": "harness-core",
-      "description": "Portable core layer of the Cookpit development harness",
-      "source": {
-        "source": "local",
-        "path": "./plugins/harness-core"
-      },
-      "category": "developer-tools",
+      "source": "./plugins/harness-core",
       "policy": {
-        "installation": "Install first. Run the setup skill in the target repository.",
-        "authentication": "none"
-      }
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     },
     {
       "name": "harness-workflow",
-      "description": "Portable workflow layer of the Cookpit development harness",
-      "source": {
-        "source": "local",
-        "path": "./plugins/harness-workflow"
-      },
-      "category": "developer-tools",
+      "source": "./plugins/harness-workflow",
       "policy": {
-        "installation": "Install prerequisites first, then run the setup skill in the target repository.",
-        "authentication": "none"
-      }
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     },
     {
       "name": "harness-improvement",
-      "description": "Portable improvement layer of the Cookpit development harness",
-      "source": {
-        "source": "local",
-        "path": "./plugins/harness-improvement"
-      },
-      "category": "developer-tools",
+      "source": "./plugins/harness-improvement",
       "policy": {
-        "installation": "Install prerequisites first, then run the setup skill in the target repository.",
-        "authentication": "none"
-      }
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     }
   ]
 }
