@@ -22,8 +22,10 @@ quality:
   initial_test_failures: unknown
   reviewer_block_open: 0
   reviewer_high_impact_unverified: 0
+  # Task1 3 件 / Task2 3 件（N-01〜N-03。Task3 で解消）/ Task3 3 件（N-04〜N-06。本コミットで解消）
   reviewer_follow_up_open: 0
-  reviewer_pre_existing: 0
+  reviewer_follow_up_total: 9
+  reviewer_pre_existing: 1 # I-02 ADR-0017 の採番衝突（スコープ外・未対応）
   # 旧 severity の時系列比較用。新規 review では impact 別件数として記録し、不明なら unknown。
   reviewer_critical: unknown
   reviewer_major: unknown # high impact の互換欄
@@ -36,7 +38,7 @@ process:
   design_rework: 0
   implementation_rework: 0
   missing_documents: 0
-  unresolved_items: 0
+  unresolved_items: 1 # I-02（ADR-0017 採番衝突）。H-01〜H-03 は人間判断待ちで別枠
   # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
   # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
   meta_work_ratio: unknown

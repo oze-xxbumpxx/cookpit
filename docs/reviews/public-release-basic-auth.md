@@ -12,9 +12,9 @@
   "subject": {
     "algorithm": "git-raw-v1",
     "baseSha": "c0c50d14b75893e257bb590bae03fb5b534dcfc0",
-    "digest": "sha256:2d672ec273956581e32904d1cb07029ee48332abfbf45f544582543f3ad8fbde",
+    "digest": "sha256:09052e26cc7182c45c878ddf2c1e0c7cb02d1f315135b826edc44897d207cfca",
     "source": "commit",
-    "entryCount": 18
+    "entryCount": 21
   },
   "aiAssessment": {
     "blockingOpen": 0,
@@ -56,7 +56,7 @@
     "Vercel 本番の proxy が matcher 正規表現を next start とは別エンジンで評価する可能性がある。ローカル black-box の結果は本番の保証にならず、ADR-0021 の移行手順で公開前に 6 本を再確認する前提で受容する。",
     "通知クリックからの PWA 起動時の再認証挙動は実機未確認。2 名への周知で対応する方針のまま受容する。",
     "本番の資格情報は未登録のため、middleware を含むコードを先にデプロイすると本番は一時的に 503 になる。移行手順の順序で回避する前提で受容する。",
-    "Basic 認証の導入で CSRF が意味を持つようになった。現行の JSON ボディ POST は全て必須項目を持つため実質通らないが、将来「全項目が任意」のボディを足すとクロスサイト書き込みが通る。hono/csrf 未導入のまま受容する。",
+    "Basic 認証の導入で CSRF が意味を持つようになった。現行の JSON ボディ POST は全て必須項目を持つため実質通らないが、将来「全項目が任意」のボディを足すとクロスサイト書き込みが通る。条件は ADR-0021 に明記したうえで hono/csrf 未導入のまま受容する。",
     "画像最適化のパスだけは認証除外のため、公開後も無認証で到達する。現構成では外部ドメイン許可も AVIF 画像も無く悪用経路が無いと判断し、next の更新までこのまま受容する。"
   ],
   "behaviorChanges": [
@@ -69,65 +69,65 @@
   "evidence": [
     {
       "id": "EV-01",
-      "claim": "middleware の単体テスト 49 件（MW-19b 非対称 503 / MW-19c no-store / MW-M12 の 8 パターン回帰防止を含む）がすべて通る",
+      "claim": "middleware の単体テスト 49 件が通る。8f29e34 / 3dac8bd はドキュメントのみの変更で、apps と packages に差分は無い",
       "kind": "test",
       "result": "pass",
-      "ref": "pnpm exec vitest run --project node tests/middleware.node.test.ts: 49 passed（2026-09-16 実行）"
+      "ref": "pnpm exec vitest run --project node tests/middleware.node.test.ts: 49 passed（2026-09-16 再実行）/ git diff --name-only 38b683e HEAD はすべて docs と README"
     },
     {
       "id": "EV-02",
       "claim": "本番相当サーバで、除外名に前方一致するだけの 6 パターンが 401 へ変わり、除外対象（manifest / favicon / _next/static / sw.js / icons / _next/image）と cron は従来どおり素通りする",
       "kind": "black_box",
       "result": "pass",
-      "ref": "Orchestrator 提供の検証済み事実: next start + curl 13 ケース全一致（2026-09-16）"
+      "ref": "Orchestrator 提供の検証済み事実: next start + curl 13 ケース全一致（2026-09-16。以後コード変更なし）"
     },
     {
       "id": "EV-03",
-      "claim": "訂正後の無認証ルート件数 GET 12 / POST 19 / PUT 5 / DELETE 6 が実測と一致する（前回レビューが報告した POST 18 は誤り）",
+      "claim": "N-01 は解消。修正前の matcher 文字列は docs から消え、設計書 113 行・229 行と実装計画 68 行の 3 箇所が middleware.ts:94 と完全一致する",
       "kind": "static",
       "result": "pass",
-      "ref": "apps/web/src/server/routes/*.ts のメソッド定義をファイル別に集計（cron.ts / health.ts の GET 各 1 を除外）"
+      "ref": "grep -rn 'workbox-\\.\\*' docs/ は docs/reviews（引用）以外にヒットなし。新パターンの 3 箇所を実装と文字列比較"
     },
     {
       "id": "EV-04",
-      "claim": "ADR-0021 の CSRF 緩和 1 は Hono の実挙動と異なる。application/json 以外は 400 で弾かれるのではなく空オブジェクトとして検証へ進み、400 は zod の必須項目不足に由来する",
+      "claim": "N-02 は解消。ADR-0021 の訂正後の CSRF 記述（content-type 不一致は空オブジェクト扱いで必須項目不足の 400。全項目任意なら成立しない）が Hono の実挙動と一致する",
       "kind": "counterfactual",
       "result": "pass",
-      "ref": "hono 4.13.1 + @hono/zod-validator 0.9.0 の再現スクリプト: 必須項目ありは text/plain で 400、全項目 optional は text/plain で 200"
+      "ref": "hono 4.13.1 + @hono/zod-validator 0.9.0 の再現: 必須項目ありは text/plain で 400、全項目 optional は text/plain で 200。ADR-0021:117-128 と突き合わせ"
     },
     {
       "id": "EV-05",
       "claim": "next@16.2.12 の critical 助言 2 件は Windows ホスト限定の RCE と画像最適化の AVIF 経路であり、Vercel(Linux) かつ remotePatterns 未設定・AVIF 配置なしの現構成では到達経路が無い",
       "kind": "static",
       "result": "pass",
-      "ref": "pnpm audit --json（2026-09-16 実行。vulnerable >=16.0.0 <16.3.3）と apps/web/next.config.ts / public の突き合わせ"
+      "ref": "pnpm audit --json（2026-09-16。vulnerable >=16.0.0 <16.3.3）と apps/web/next.config.ts / public の突き合わせ。apps/web/package.json は next 16.2.12 のまま"
     },
     {
       "id": "EV-06",
-      "claim": "設計書と実装計画は、今回セキュリティ修正した「修正前の matcher 文字列」を 3 箇所に提示したまま残っている",
+      "claim": "今回の訂正から漏れた記述が 2 箇所ある。試験計画の完了条件が MW-M01〜MW-M11 のままで同書 67 / 172 / 190 行の MW-M12 と食い違い、振り返りメトリクスの follow-up 件数と PRE_EXISTING 件数が 0 のまま",
       "kind": "static",
       "result": "pass",
-      "ref": "docs/designs/public-release-basic-auth.md:113,229 / docs/implementation-plans/public-release-basic-auth.md:68 と apps/web/src/middleware.ts:94"
+      "ref": "docs/tests/public-release-basic-auth.md:229-230 と docs/claude-code/improvements/metrics/public-release-basic-auth.yml:25-26,38"
     },
     {
       "id": "EV-07",
       "claim": "修正後の matcher が Next.js 16.2.12 のビルド時静的検証を通り、middleware が成果物に載る",
       "kind": "production_like",
       "result": "pass",
-      "ref": "Orchestrator 提供の検証済み事実: pnpm --filter @cookpit/web build 成功（matcher 変更後に再実行）"
+      "ref": "Orchestrator 提供の検証済み事実: pnpm --filter @cookpit/web build 成功（matcher 変更後に再実行。以後コード変更なし）"
     },
     {
       "id": "EV-08",
-      "claim": "GitHub リポジトリは 2026-09-16 時点でまだ private であり、README と 01-overview の「ソースコードは公開している」は未実施の状態を完了形で書いている",
+      "claim": "N-03 は解消。README:10 と 01-overview:13 は未来形へ訂正され、GitHub リポジトリは 2026-09-16 時点でまだ private である",
       "kind": "black_box",
       "result": "pass",
-      "ref": "GitHub API GET /repos/oze-xxbumpxx/cookpit が private: true を返す（2026-09-16 実行）"
+      "ref": "GitHub API GET /repos/oze-xxbumpxx/cookpit が private: true を返す（2026-09-16 再実行）。README.md:10 / docs/01-overview.md:13 の現物確認"
     }
   ],
   "reviewer": {
     "agent": "reviewer",
     "model": "claude-opus-5",
-    "reviewedAt": "2026-09-16T08:15:00.000Z"
+    "reviewedAt": "2026-09-16T10:50:00.000Z"
   }
 }
 -->
@@ -135,7 +135,7 @@
 
 > **人間レビュー待ちです。**
 > Claude の評価です。これは承認ではありません。以下の判断事項・残余リスク・振る舞い差分を確認してください。
-> 対象: `sha256:2d672ec27395…` / R3 / 18 changes
+> 対象: `sha256:09052e26cc71…` / R3 / 21 changes
 
 ### あなたが判断・確認すること（3 件）
 
@@ -148,7 +148,7 @@
 - Vercel 本番の proxy が matcher 正規表現を next start とは別エンジンで評価する可能性がある。ローカル black-box の結果は本番の保証にならず、ADR-0021 の移行手順で公開前に 6 本を再確認する前提で受容する。
 - 通知クリックからの PWA 起動時の再認証挙動は実機未確認。2 名への周知で対応する方針のまま受容する。
 - 本番の資格情報は未登録のため、middleware を含むコードを先にデプロイすると本番は一時的に 503 になる。移行手順の順序で回避する前提で受容する。
-- Basic 認証の導入で CSRF が意味を持つようになった。現行の JSON ボディ POST は全て必須項目を持つため実質通らないが、将来「全項目が任意」のボディを足すとクロスサイト書き込みが通る。hono/csrf 未導入のまま受容する。
+- Basic 認証の導入で CSRF が意味を持つようになった。現行の JSON ボディ POST は全て必須項目を持つため実質通らないが、将来「全項目が任意」のボディを足すとクロスサイト書き込みが通る。条件は ADR-0021 に明記したうえで hono/csrf 未導入のまま受容する。
 - 画像最適化のパスだけは認証除外のため、公開後も無認証で到達する。現構成では外部ドメイン許可も AVIF 画像も無く悪用経路が無いと判断し、next の更新までこのまま受容する。
 
 ### 振る舞い差分
@@ -163,14 +163,14 @@
 
 | ID | 主張 | 種別 | 結果 | 参照 |
 | --- | --- | --- | --- | --- |
-| EV-01 | middleware の単体テスト 49 件（MW-19b 非対称 503 / MW-19c no-store / MW-M12 の 8 パターン回帰防止を含む）がすべて通る | test | pass | pnpm exec vitest run --project node tests/middleware.node.test.ts: 49 passed（2026-09-16 実行） |
-| EV-02 | 本番相当サーバで、除外名に前方一致するだけの 6 パターンが 401 へ変わり、除外対象（manifest / favicon / \_next/static / sw.js / icons / \_next/image）と cron は従来どおり素通りする | black\_box | pass | Orchestrator 提供の検証済み事実: next start + curl 13 ケース全一致（2026-09-16） |
-| EV-03 | 訂正後の無認証ルート件数 GET 12 / POST 19 / PUT 5 / DELETE 6 が実測と一致する（前回レビューが報告した POST 18 は誤り） | static | pass | apps/web/src/server/routes/\*.ts のメソッド定義をファイル別に集計（cron.ts / health.ts の GET 各 1 を除外） |
-| EV-04 | ADR-0021 の CSRF 緩和 1 は Hono の実挙動と異なる。application/json 以外は 400 で弾かれるのではなく空オブジェクトとして検証へ進み、400 は zod の必須項目不足に由来する | counterfactual | pass | hono 4.13.1 + @hono/zod-validator 0.9.0 の再現スクリプト: 必須項目ありは text/plain で 400、全項目 optional は text/plain で 200 |
-| EV-05 | next@16.2.12 の critical 助言 2 件は Windows ホスト限定の RCE と画像最適化の AVIF 経路であり、Vercel\(Linux\) かつ remotePatterns 未設定・AVIF 配置なしの現構成では到達経路が無い | static | pass | pnpm audit --json（2026-09-16 実行。vulnerable &gt;=16.0.0 &lt;16.3.3）と apps/web/next.config.ts / public の突き合わせ |
-| EV-06 | 設計書と実装計画は、今回セキュリティ修正した「修正前の matcher 文字列」を 3 箇所に提示したまま残っている | static | pass | docs/designs/public-release-basic-auth.md:113,229 / docs/implementation-plans/public-release-basic-auth.md:68 と apps/web/src/middleware.ts:94 |
-| EV-07 | 修正後の matcher が Next.js 16.2.12 のビルド時静的検証を通り、middleware が成果物に載る | production\_like | pass | Orchestrator 提供の検証済み事実: pnpm --filter @cookpit/web build 成功（matcher 変更後に再実行） |
-| EV-08 | GitHub リポジトリは 2026-09-16 時点でまだ private であり、README と 01-overview の「ソースコードは公開している」は未実施の状態を完了形で書いている | black\_box | pass | GitHub API GET /repos/oze-xxbumpxx/cookpit が private: true を返す（2026-09-16 実行） |
+| EV-01 | middleware の単体テスト 49 件が通る。8f29e34 / 3dac8bd はドキュメントのみの変更で、apps と packages に差分は無い | test | pass | pnpm exec vitest run --project node tests/middleware.node.test.ts: 49 passed（2026-09-16 再実行）/ git diff --name-only 38b683e HEAD はすべて docs と README |
+| EV-02 | 本番相当サーバで、除外名に前方一致するだけの 6 パターンが 401 へ変わり、除外対象（manifest / favicon / \_next/static / sw.js / icons / \_next/image）と cron は従来どおり素通りする | black\_box | pass | Orchestrator 提供の検証済み事実: next start + curl 13 ケース全一致（2026-09-16。以後コード変更なし） |
+| EV-03 | N-01 は解消。修正前の matcher 文字列は docs から消え、設計書 113 行・229 行と実装計画 68 行の 3 箇所が middleware.ts:94 と完全一致する | static | pass | grep -rn 'workbox-\\.\\\*' docs/ は docs/reviews（引用）以外にヒットなし。新パターンの 3 箇所を実装と文字列比較 |
+| EV-04 | N-02 は解消。ADR-0021 の訂正後の CSRF 記述（content-type 不一致は空オブジェクト扱いで必須項目不足の 400。全項目任意なら成立しない）が Hono の実挙動と一致する | counterfactual | pass | hono 4.13.1 + @hono/zod-validator 0.9.0 の再現: 必須項目ありは text/plain で 400、全項目 optional は text/plain で 200。ADR-0021:117-128 と突き合わせ |
+| EV-05 | next@16.2.12 の critical 助言 2 件は Windows ホスト限定の RCE と画像最適化の AVIF 経路であり、Vercel\(Linux\) かつ remotePatterns 未設定・AVIF 配置なしの現構成では到達経路が無い | static | pass | pnpm audit --json（2026-09-16。vulnerable &gt;=16.0.0 &lt;16.3.3）と apps/web/next.config.ts / public の突き合わせ。apps/web/package.json は next 16.2.12 のまま |
+| EV-06 | 今回の訂正から漏れた記述が 2 箇所ある。試験計画の完了条件が MW-M01〜MW-M11 のままで同書 67 / 172 / 190 行の MW-M12 と食い違い、振り返りメトリクスの follow-up 件数と PRE\_EXISTING 件数が 0 のまま | static | pass | docs/tests/public-release-basic-auth.md:229-230 と docs/claude-code/improvements/metrics/public-release-basic-auth.yml:25-26,38 |
+| EV-07 | 修正後の matcher が Next.js 16.2.12 のビルド時静的検証を通り、middleware が成果物に載る | production\_like | pass | Orchestrator 提供の検証済み事実: pnpm --filter @cookpit/web build 成功（matcher 変更後に再実行。以後コード変更なし） |
+| EV-08 | N-03 は解消。README:10 と 01-overview:13 は未来形へ訂正され、GitHub リポジトリは 2026-09-16 時点でまだ private である | black\_box | pass | GitHub API GET /repos/oze-xxbumpxx/cookpit が private: true を返す（2026-09-16 再実行）。README.md:10 / docs/01-overview.md:13 の現物確認 |
 
 <details>
 <summary>AI assessment</summary>
@@ -179,7 +179,7 @@
 - high-impact unverified: 0
 - follow-up open: 3
 - reviewer: reviewer / claude-opus-5
-- reviewed at: 2026-09-16T08:15:00.000Z
+- reviewed at: 2026-09-16T10:50:00.000Z
 
 </details>
 
@@ -279,12 +279,12 @@ review tier は **R3** を据え置く（trigger: 認証の新設・`apps/web` �
 
 未解消の BLOCK は 0 件。以下はいずれも今回の受け入れを止めない。
 
-| ID   | action       | impact | evidence | status | path:line                                                             | 根拠・再現                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 修正案                                                                                                                                     |
-| ---- | ------------ | ------ | -------- | ------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| N-01 | FOLLOW_UP    | medium | E1/E2    | open   | `docs/designs/public-release-basic-auth.md:113,229` ほか（下表）      | 実装・試験で確定した内容が上流成果物へ戻っていない。特に設計書と実装計画は**今回セキュリティ修正した「修正前の matcher 文字列」をそのまま提示**しており、設計どおりに再実装すると SEC-5 の穴が戻る。MW-M12 が CI で落とすため実害は抑えられているが、恒久記録としては誤り。詳細 4 件は下の「N-01 の内訳」参照                                                                                                                                                                                                                                                                               | 設計書・実装計画の matcher を実装の文字列へ差し替え、検証手段の記述と試験計画のケース表を実装の 49 ケースへ合わせる                        |
-| N-02 | FOLLOW_UP    | medium | E3       | open   | `docs/decisions/ADR-0021-basic-auth-for-public-repository.md:120-121` | CSRF 緩和 ①「`zValidator('json', ...)` を通り `application/json` 以外が 400 で弾かれる」が Hono の実挙動と異なる。Hono の json validator は content-type が合わない場合**空オブジェクトのまま検証へ進む**（`hono/dist/validator/validator.js` の `case 'json'` で `break`）。400 は zod の必須項目不足に由来する。再現: 必須項目ありのスキーマは `text/plain` で 400、全項目 optional のスキーマは `text/plain` で 200（EV-04）。現行の JSON ボディ POST 16 本は全て必須項目を持つため ADR の**結論は成立**するが、防御の根拠がフレームワークではなく個々のスキーマにあることが読み取れない | ADR の ① を「各スキーマが必須項目を持つため空ボディが 400 になる」へ書き換え、「全項目が任意のボディを足すと成立しなくなる」条件を明記する |
-| N-03 | FOLLOW_UP    | low    | E4       | open   | `README.md:10` / `docs/01-overview.md:13`                             | 「ソースコードは公開しています」「ソースコードは GitHub で公開している」と完了形で書いているが、GitHub API は 2026-09-16 時点で `private: true` を返す（EV-08）。同じ `38b683e` で `docs/02-tech-stack.md:79` は完了形→未来形へ訂正済みで、訂正が一部にしか及んでいない。H-01 で「まだ公開しない」と判断した場合、誤りが残り続ける                                                                                                                                                                                                                                                          | 公開切り替えと同時に文面を確定させるか、02-tech-stack と同じ「公開する前提で」という書き方へ揃える                                         |
-| I-02 | PRE_EXISTING | low    | E1       | open   | `docs/decisions/ADR-0017-*.md`                                        | ADR-0017 の採番衝突（Task 1 から継続）。本タスクのスコープ外で、ADR-0021 の採番自体は空き番                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 別タスクで採番を整理する                                                                                                                   |
+| ID   | action       | impact | evidence | status   | path:line                                                             | 根拠・再現                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 修正案                                                                                                                                     |
+| ---- | ------------ | ------ | -------- | -------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| N-01 | FOLLOW_UP    | medium | E1/E2    | resolved | `docs/designs/public-release-basic-auth.md:113,229` ほか（下表）      | 実装・試験で確定した内容が上流成果物へ戻っていない。特に設計書と実装計画は**今回セキュリティ修正した「修正前の matcher 文字列」をそのまま提示**しており、設計どおりに再実装すると SEC-5 の穴が戻る。MW-M12 が CI で落とすため実害は抑えられているが、恒久記録としては誤り。詳細 4 件は下の「N-01 の内訳」参照                                                                                                                                                                                                                                                                               | 設計書・実装計画の matcher を実装の文字列へ差し替え、検証手段の記述と試験計画のケース表を実装の 49 ケースへ合わせる                        |
+| N-02 | FOLLOW_UP    | medium | E3       | resolved | `docs/decisions/ADR-0021-basic-auth-for-public-repository.md:120-121` | CSRF 緩和 ①「`zValidator('json', ...)` を通り `application/json` 以外が 400 で弾かれる」が Hono の実挙動と異なる。Hono の json validator は content-type が合わない場合**空オブジェクトのまま検証へ進む**（`hono/dist/validator/validator.js` の `case 'json'` で `break`）。400 は zod の必須項目不足に由来する。再現: 必須項目ありのスキーマは `text/plain` で 400、全項目 optional のスキーマは `text/plain` で 200（EV-04）。現行の JSON ボディ POST 16 本は全て必須項目を持つため ADR の**結論は成立**するが、防御の根拠がフレームワークではなく個々のスキーマにあることが読み取れない | ADR の ① を「各スキーマが必須項目を持つため空ボディが 400 になる」へ書き換え、「全項目が任意のボディを足すと成立しなくなる」条件を明記する |
+| N-03 | FOLLOW_UP    | low    | E4       | resolved | `README.md:10` / `docs/01-overview.md:13`                             | 「ソースコードは公開しています」「ソースコードは GitHub で公開している」と完了形で書いているが、GitHub API は 2026-09-16 時点で `private: true` を返す（EV-08）。同じ `38b683e` で `docs/02-tech-stack.md:79` は完了形→未来形へ訂正済みで、訂正が一部にしか及んでいない。H-01 で「まだ公開しない」と判断した場合、誤りが残り続ける                                                                                                                                                                                                                                                          | 公開切り替えと同時に文面を確定させるか、02-tech-stack と同じ「公開する前提で」という書き方へ揃える                                         |
+| I-02 | PRE_EXISTING | low    | E1       | open     | `docs/decisions/ADR-0017-*.md`                                        | ADR-0017 の採番衝突（Task 1 から継続）。本タスクのスコープ外で、ADR-0021 の採番自体は空き番                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 別タスクで採番を整理する                                                                                                                   |
 
 #### N-01 の内訳（実装の確定内容が上流成果物へ戻っていない）
 
@@ -330,3 +330,51 @@ review tier は **R3** を据え置く（trigger: 認証の新設・`apps/web` �
 - Orchestrator 提供の検証済み事実を前提として利用: `pnpm --filter @cookpit/web build` 成功、
   `turbo test --force` の全 PASS、本番相当サーバでの 13 ケース black-box（EV-02 / EV-07）。
   再実行不要の指示に従い、同じ実行は再現していない。
+
+### Task 3: N-01 / N-02 / N-03 の解消検証（`8f29e34`・`3dac8bd` 反映後・2026-09-16）
+
+対象: `c0c50d1`（`origin/main`）〜`3dac8bd`（21 entry / digest `sha256:09052e26cc71…`）。
+review tier は **R3** を据え置く。`8f29e34` / `3dac8bd` は**ドキュメントのみの変更**で
+`apps/` `packages/` に差分が無いため（EV-01）、Task 2 のコード系証拠（EV-02 / EV-07）は
+そのまま有効として引き継いだ。未解消の BLOCK は 0 件。
+
+#### 前回指摘の解消検証（自己申告ではなく現物で確認）
+
+| ID   | 判定         | 現物での確認内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N-01 | **resolved** | (a) `grep -rn 'workbox-\.\*' docs/` が `docs/reviews`（引用）以外にヒットせず、設計書 113 / 229 行と実装計画 68 行の 3 箇所が `middleware.ts:94` と**文字単位で一致**（EV-03）。(b) 設計書「未決事項」391-397 行が「実挙動は単体テストでは担保しない／正解判定は本番相当サーバの black-box」へ書き換わった。(c) 試験計画に MW-19b / MW-19c / MW-M12 の行が追加され、要件に F-05b（503 の no-store）が新設。(d) 実装計画の「12 ケース」3 箇所が 49 ケースへ更新され、R-3 の検証手段も構造テスト + black-box へ修正 |
+| N-02 | **resolved** | ADR-0021:117-128 が「フレームワークが content-type を拒否している」から「各スキーマが必須項目を持つため空オブジェクト扱いで必須項目不足になり 400」へ改まり、**全項目が任意のボディを取る POST を追加すると成立しなくなる**条件も明記された。私の再現（必須項目あり + `text/plain` → 400 / 全項目 optional + `text/plain` → 200）と記述が一致する（EV-04）                                                                                                                                                        |
+| N-03 | **resolved** | `README.md:10` が「公開する前提ですが」、`docs/01-overview.md:13` が「公開する」へ変更。GitHub API は依然 `private: true` を返すため、記述と実態の矛盾は解消（EV-08）                                                                                                                                                                                                                                                                                                                                             |
+
+#### 今回新たに検出した指摘
+
+| ID   | action       | impact | evidence | status | path:line                                                                      | 根拠・再現                                                                                                                                                                                                                                                                                                          | 修正案                                                                                                                                      |
+| ---- | ------------ | ------ | -------- | ------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| N-04 | FOLLOW_UP    | low    | E1       | open   | `README.md:11`                                                                 | N-03 の修正で文体が混ざった。「アプリ自体は不特定多数へ提供しません。」（です・ます）の直後が「本番デプロイは Basic 認証で保護する。」（だ・である）。README は 3 / 6 / 12 / 15 行がすべてです・ます調で、公開の主目的が「実例として残すこと」である front page の第 1 段落に残る                                   | 「保護しています」ではなく「保護します」へ揃える（公開前の未来形を保ったままです・ます調にできる）                                          |
+| N-05 | FOLLOW_UP    | low    | E1       | open   | `docs/tests/public-release-basic-auth.md:229-230`                              | 完了条件だけが `MW-01〜MW-23` / `MW-M01〜MW-M11` のままで、同書 67 / 172 / 190 行の `MW-M12` および追加した MW-19b / MW-19c と食い違う。完了条件はこの文書のゲートなので、更新漏れが残ると「M12 は完了条件に含まれない」と読めてしまう                                                                              | 完了条件の 2 行を `MW-01〜MW-23 / MW-19b / MW-19c` と `MW-M01〜MW-M12` へ揃える                                                             |
+| N-06 | FOLLOW_UP    | low    | E1       | open   | `docs/claude-code/improvements/metrics/public-release-basic-auth.yml:25-26,38` | `reviewer_follow_up_open: 0` / `reviewer_pre_existing: 0` / `unresolved_items: 0` だが、記録時点の Task 2 は follow-up 3 件・PRE_EXISTING 1 件（I-02）が open だった。同ファイル冒頭の「自動取得できない数値は推測せず unknown とする」にも反する。改善サイクルの時系列比較に使う値のため、0 が入ると効果測定が歪む | Task 3 時点の値（follow-up 3 / pre_existing 1 / unresolved_items 1）へ訂正するか `unknown` にする。`review.handoff_items` は 3 を記入できる |
+| I-02 | PRE_EXISTING | low    | E1       | open   | `docs/decisions/ADR-0017-*.md`                                                 | ADR-0017 の採番衝突（Task 1 から継続）。スコープ外                                                                                                                                                                                                                                                                  | 別タスクで採番を整理する                                                                                                                    |
+
+#### 情報（指摘に昇格させないもの）
+
+- 設計書「テスト方針」331-333 行の箇条書きは「除外パス → 401 にならないことを確認」のまま残る。
+  ただし同書「未決事項」が**単体テストでは担保しない**ことを明示したため、Task 2 で問題にした
+  文書内の矛盾は解消している。観点リストとしては正しいので指摘に昇格させない。
+- 試験計画の MW 行は 41 行だが実装は 49 ケース。`it.each` で 1 行が複数ケースになるためで
+  （MW-M12 は 8 ケース、MW-M01 は 3 ケース、MW-19b は 2 ケース）、齟齬ではない。
+- `docs/claude-code/improvements/candidates/public-release-basic-auth.md` と
+  `improvement-backlog.md` は振り返り工程の成果物として情報扱いで確認した。承認表現
+  （受け入れ可 / APPROVED / マージ OK）の混入は無い。
+
+#### 実行した証拠
+
+- `pnpm exec vitest run --project node tests/middleware.node.test.ts`（`apps/web`）: 49 passed（EV-01）
+- `git diff --name-only 38b683e HEAD` がすべて `docs/` と `README.md` であることの確認（EV-01）
+- `grep -rn 'workbox-\.\*' docs/` と新パターン 3 箇所の文字列比較（EV-03）
+- `hono@4.13.1` + `@hono/zod-validator@0.9.0` の再現と ADR-0021 訂正文の突き合わせ（EV-04）
+- `pnpm audit --json` / `apps/web/package.json` の `next` バージョン確認（EV-05）
+- GitHub API `GET /repos/oze-xxbumpxx/cookpit` の `private` フラグ再確認（EV-08）
+- `npx prettier --check docs/ README.md`: 本範囲のファイルに指摘なし
+  （`docs/designs/wireframes/recipe-wireframes.html` のみ warn。範囲外の既存事象）
+- Orchestrator 提供の検証済み事実を引き継ぎ: build 成功、本番相当サーバの 13 ケース
+  black-box（EV-02 / EV-07）。`8f29e34` 以降コード変更が無いため有効性は維持される。
