@@ -51,7 +51,10 @@ GitHub リポジトリを public 化しても、本番アプリのユーザー�
   `manifest.webmanifest`・`sw.js`・`workbox-*.js`・`api/cron/*`。
 - F-05 認証失敗時は `401` を返し、`WWW-Authenticate: Basic realm="Cookpit", charset="UTF-8"`
   と `Cache-Control: no-store` を付与してブラウザに認証ダイアログを出させる。
+- F-05b fail-closed の `503` にも `Cache-Control: no-store` を付与する。設定不備による 503 が
+  共有キャッシュに載ると、環境変数を直した後も障害が続きうるため（セキュリティレビュー SEC-9）。
 - F-06 `apps/web/.env.example` に `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` を追記する。
+  パスワードの生成方法と、ユーザー名に `:` を含めない制約（RFC 7617）も併記する。
 
 ## 非機能要件（性能・セキュリティ・可用性など。無ければ「対象外」）
 

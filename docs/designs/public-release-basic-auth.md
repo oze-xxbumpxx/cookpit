@@ -110,7 +110,7 @@ Zod スキーマにも影響しない。
 ```ts
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|icons/|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|api/cron/).*)',
+    '/((?!(?:_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-[^/]*\\.js)$|_next/static/|icons/|api/cron/).*)',
   ],
 };
 ```
@@ -226,7 +226,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|icons/|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|api/cron/).*)',
+    '/((?!(?:_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-[^/]*\\.js)$|_next/static/|icons/|api/cron/).*)',
   ],
 };
 ```
@@ -391,7 +391,8 @@ CI への影響: `apps/web/playwright.config.ts` の `webServer.command` は `pn
 - 通知クリックからの再認証（残るリスク）について、周知以上の追加対応
   （例: Push 通知の deep link を認証除外にする等）が必要かどうかは、実機確認後に
   Orchestrator が判断する。
-- matcher の正規表現が Next.js 16.2.12 で意図通り動くかは実装時に確認する。Next.js は
-  matcher を**ビルド時に静的検証**するため、`pnpm build` の成功をもって記法の妥当性の
-  確認とし、対象パス・除外パスの実挙動は middleware の単体テストで担保する
-  （API 設計節・テスト方針節参照）。
+- matcher の正規表現の妥当性は `pnpm build` の成功（Next.js がビルド時に静的検証する）で
+  確認する。**実挙動は単体テストでは担保しない** — 単体テストが評価するのは matcher 文字列を
+  素の `RegExp` にしたもので、Next.js が実際に生成する正規表現とは別物だからである。
+  実挙動の正解判定は本番相当サーバ（`next start`）への black-box 確認で行う
+  （試験計画「Orchestrator 判断」節）。構造テストはパターン文字列のタイプミス検出として残す。
