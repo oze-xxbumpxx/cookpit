@@ -1,0 +1,118 @@
+# タスク品質メトリクス（§19）
+# 機密情報・会話全文は保存しない。自動取得できない数値は推測せず unknown とする。
+task_id: public-release-basic-auth
+feature_name: public-release-basic-auth
+change_level: 3
+date: 2026-09-16
+
+agents:
+  calls: 16 # subagent-log から自動集計 # Agent 呼び出し回数
+  retries: unknown # 再依頼回数
+  unnecessary_calls: unknown
+
+# Codex 委譲ルートのタスクのみ記入（Orchestrator ルートは unknown のまま）。
+# IMP-2026-025 の効果実測をモデル条件込みで比較するための記録（2026-07-18 追加）。
+codex:
+  model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
+  reasoning_effort: unknown # 例: low | medium | high（Task/層で変えた場合は notes に内訳）
+  notes: ''
+
+quality:
+  tests_added: unknown # 追加テスト件数。取得できなければ unknown（Vitest 全層導入済み）
+  initial_test_failures: unknown
+  reviewer_block_open: 0
+  reviewer_high_impact_unverified: 0
+  reviewer_follow_up_open: 0
+  reviewer_pre_existing: 0
+  # 旧 severity の時系列比較用。新規 review では impact 別件数として記録し、不明なら unknown。
+  reviewer_critical: unknown
+  reviewer_major: unknown # high impact の互換欄
+  reviewer_minor: unknown # medium / low impact の互換欄
+  user_corrections: 0
+  escaped_defects: 0
+
+process:
+  requirement_rework: 0
+  design_rework: 0
+  implementation_rework: 0
+  missing_documents: 0
+  unresolved_items: 0
+  # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。
+  # 0.0〜1.0 または unknown。個人開発ライトモードの肥大監視用（IMP-2026-030）。
+  meta_work_ratio: unknown
+
+# 人間レビューの負荷を測る。秒単位の計時や長いアンケートは要求しない。
+# active_time_bucket / confidence / full_diff_opened だけ人間が任意で回答し、その他は
+# review packet / audit から取得できる場合に記録する。不明なら推測せず unknown。
+review:
+  active_time_bucket: unknown # lt5m | 5to15m | 15to30m | gt30m
+  confidence: unknown # 1〜5（変更を理解してマージ判断できる確信度）
+  full_diff_opened: unknown # true | false
+  handoff_items: unknown
+  rounds: unknown
+  stale_invalidations: unknown
+  verified_findings: unknown
+  false_positive_findings: unknown
+
+machine:
+  # collect-task-metrics.mjs による自動集計。手で編集しない（--write の再実行で更新）
+  collected_at: 2026-09-16
+  branch_filters: ['public-release-basic-auth']
+  sessions: # session_id 単位でマージ・累積（1 行 = 1 セッション）
+    - {
+        'id': '07633cfd-adba-58cb-97c4-491aee8b8960',
+        'date': '2026-09-16',
+        'branches': ['claude/cookpit-private-public-ga4i1o'],
+        'matched_by': 'subagent-log',
+        'active_minutes': 208,
+        'tokens':
+          { 'input': 1032, 'output': 177011, 'cache_creation': 2346996, 'cache_read': 64043919 },
+        'tool_uses': 586,
+        'user_prompts': 22,
+        'agent_calls':
+          {
+            'architecture-designer': 2,
+            'security-reviewer': 1,
+            'reflection-agent': 1,
+            'test-designer': 1,
+            'reviewer': 2,
+            'implementer': 1,
+            'implementation-planner': 1,
+          },
+        'models': ['<synthetic>', 'claude-fable-5-1', 'claude-opus-5', 'claude-sonnet-5'],
+      }
+  gate_history: # run-quality-gates.sh の実行記録（ts 単位でマージ・累積）
+    []
+  totals:
+    sessions: 1
+    active_minutes: 208 # 約3時間28分（活動時間ベース・空白30分超は除外）
+    tokens_input: 1032
+    tokens_output: 177011
+    tokens_cache_creation: 2346996
+    tokens_cache_read: 64043919
+    tokens_total: 66568958
+    tool_uses: 586
+    user_prompts: 22
+    agent_calls: 9
+    agent_calls_by_type:
+      {
+        'architecture-designer': 2,
+        'security-reviewer': 1,
+        'reflection-agent': 1,
+        'test-designer': 1,
+        'reviewer': 2,
+        'implementer': 1,
+        'implementation-planner': 1,
+      }
+    agent_restarts: 2 # 同一 Subagent 種の再起動数（手戻りプロキシ）
+    gate_runs: 0
+    gate_fail_runs: 0
+    gate_rework_rate: unknown # ゲート実行記録なし
+# 任意: before/after や IMP 定量比較でフェーズを分けたいときだけ埋める。
+# 機械自動では埋めない。不明な欄は unknown のまま。
+phases:
+  requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
+  review: { tool_uses: unknown, tokens_total: unknown, notes: '' }
