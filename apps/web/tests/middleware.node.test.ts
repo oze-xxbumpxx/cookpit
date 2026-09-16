@@ -203,6 +203,38 @@ describe('middleware', () => {
     expect(await res.text()).toBe('');
   });
 
+  // 要件 E-02 の非対称ケース。MW-19 は両方未設定、MW-13 は両方空文字で、
+  // 「片方だけ設定」を通す経路が無かった（レビュー指摘 F-02）。
+  it.each([
+    ['USER のみ設定', 'configured-user', undefined],
+    ['PASSWORD のみ設定', undefined, 'configured-password'],
+  ])('MW-19b: 本番相当で %s のときも 503', async (_label, user, password) => {
+    delete process.env.BASIC_AUTH_USER;
+    delete process.env.BASIC_AUTH_PASSWORD;
+    if (user !== undefined) {
+      process.env.BASIC_AUTH_USER = user;
+    }
+    if (password !== undefined) {
+      process.env.BASIC_AUTH_PASSWORD = password;
+    }
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const res = await middleware(makeRequest('/'));
+
+    expect(res.status).toBe(503);
+    expect(await res.text()).toBe('');
+  });
+
+  it('MW-19c: 503 応答には Cache-Control: no-store を付ける', async () => {
+    delete process.env.BASIC_AUTH_USER;
+    delete process.env.BASIC_AUTH_PASSWORD;
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const res = await middleware(makeRequest('/'));
+
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
   it('MW-20: Preview 相当でも NODE_ENV 基準で fail-closed', async () => {
     delete process.env.BASIC_AUTH_USER;
     delete process.env.BASIC_AUTH_PASSWORD;
@@ -281,8 +313,10 @@ describe('config.matcher（構造テスト・近似）', () => {
     expect(matcherRegExp.test('/_next/static/chunk.js')).toBe(false);
   });
 
+  // matcher に渡るのは pathname のみでクエリは含まれない。以前は '/_next/image?url=x' を
+  // 渡していたが、実際には起こらない入力での検証になっていた。
   it('MW-M03: _next/image が除外される', () => {
-    expect(matcherRegExp.test('/_next/image?url=x')).toBe(false);
+    expect(matcherRegExp.test('/_next/image')).toBe(false);
   });
 
   it('MW-M04: favicon.ico が除外される', () => {
@@ -311,6 +345,22 @@ describe('config.matcher（構造テスト・近似）', () => {
 
   it('MW-M10: api/cron/ 配下が除外される', () => {
     expect(matcherRegExp.test('/api/cron/expiry-alerts')).toBe(false);
+  });
+
+  // 除外パターンがセグメント境界に固定されていないと、下記が除外側へ落ちて保護を素通りする。
+  // 現状はいずれも 404 になるルートだが、ルート直下の catch-all を足した時点で実害化する。
+  // セキュリティレビュー SEC-5 の回帰防止。
+  it.each([
+    '/workbox-x/api/pantry.js',
+    '/workbox-/api/pantry.js',
+    '/sw.js/api/pantry',
+    '/sw.jsx',
+    '/favicon.icofoo',
+    '/manifest.webmanifest/api/pantry',
+    '/_next/imageX',
+    '/_next/static',
+  ])('MW-M12【回帰防止】: 除外名に前方一致するだけの %s は保護対象', (pathname) => {
+    expect(matcherRegExp.test(pathname)).toBe(true);
   });
 
   it('MW-M11: 除外プレフィックスに似ているだけの保護対象パスは誤除外しない', () => {

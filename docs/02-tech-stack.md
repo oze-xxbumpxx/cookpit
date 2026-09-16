@@ -76,8 +76,8 @@ MVP1 のサーバー状態は次の組み合わせで管理する（TanStack Que
 ### 認証は Basic 認証（Edge middleware）
 
 当初は認証を置かず、Vercel の URL を 2 名で共有する運用だった（[ADR-003](./decisions/ADR-0003-no-auth-in-mvp1.md)）。
-リポジトリを public にしたことで「URL の推測難度」という前提が成立しなくなったため、
-`apps/web/src/middleware.ts` による Basic 認証へ移行した。詳細は
+リポジトリを public にすると「URL の推測難度」という前提が成立しなくなるため、
+公開に先立って `apps/web/src/middleware.ts` による Basic 認証へ移行した。詳細は
 [ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md) を参照。
 
 個人を識別する認証はまだ必要としないため、Phase 2 以降で Better Auth の導入を引き続き検討する。

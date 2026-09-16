@@ -20,7 +20,7 @@ URL の秘匿（security by obscurity）。リポジトリを public にする�
 2. 仮に該当箇所を消しても無意味。リポジトリ名 `cookpit` / Vercel プロジェクト名
    `cookpit-web` から URL はほぼ自明に導ける。git 履歴の書き換えも防御にならない。
 
-`apps/web/src/server/routes/` は無認証のフル CRUD（GET 12 / POST 9 / DELETE 4、
+`apps/web/src/server/routes/` は無認証のフル CRUD（GET 12 / POST 19 / PUT 5 / DELETE 6、
 `health.ts` / `meal-plans.ts` / `pantry.ts` / `products.ts` / `push.ts` / `recipes.ts` /
 `shopping-lists.ts` / `stores.ts` の 8 ルートファイル。`cron.ts` は既に Bearer 認証で保護済み）
 であり、`apps/web/src/middleware.ts` は存在しない。公開時点で第三者が在庫・献立・

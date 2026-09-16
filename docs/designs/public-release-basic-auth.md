@@ -1,17 +1,17 @@
 # 設計書: public-release-basic-auth
 
-- ステータス: draft
+- ステータス: 確定（実装・レビュー完了）
 - レベル: L3
 - 関連: `docs/requirements/public-release-basic-auth.md` /
-  `docs/decisions/ADR-0003-no-auth-in-mvp1.md`（既存。本タスクで追記方針のみ確定、
-  追記自体は別工程）/ ADR-0021（新規、本タスクでは方針のみ記載。ADR 本体は別工程）
+  `docs/decisions/ADR-0003-no-auth-in-mvp1.md`（置換済みへ更新済み）/
+  `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`（作成済み）
 
 ## 背景
 
 GitHub リポジトリ `oze-xxbumpxx/cookpit` を public 化する前提として、本番アプリの唯一の
 防御が URL 秘匿（security by obscurity）であることが判明した（`docs/decisions/ADR-0003`
 決定理由 5）。リポジトリ公開により本番 URL `https://cookpit-web.vercel.app` は自明になり、
-`apps/web/src/server/routes/` の無認証フル CRUD（GET 12 / POST 9 / DELETE 4。`cron.ts` のみ
+`apps/web/src/server/routes/` の無認証フル CRUD（GET 12 / POST 19 / PUT 5 / DELETE 6。`cron.ts` のみ
 既に `Bearer $CRON_SECRET` で保護済み）が第三者に開放される。詳細は要件定義書「背景」参照。
 
 ## 目的
@@ -312,8 +312,8 @@ JSDoc 付与）に沿って実装すること。
 L3 だが、性能セクションを厚く書くトリガー条件（外部 I/O 新設・大量データ集計クエリ・
 明示された性能要件）のいずれにも該当しないため、簡潔に記載する。
 
-- 新設する処理は Edge Runtime 上でのヘッダ読み取り・base64 デコード・固定長 256 回の
-  文字コード比較のみであり、DB・外部 API 呼び出しは無い。追加レイテンシは 1 リクエストあたり
+- 新設する処理は Edge Runtime 上でのヘッダ読み取り・base64 デコード・SHA-256 ダイジェスト
+  2 本の算出と 32 バイト比較のみであり、DB・外部 API 呼び出しは無い。追加レイテンシは 1 リクエストあたり
   ミリ秒未満と推定される（計測はしていないため確定値ではない。実装後に Vercel の
   Function 実行時間で確認推奨）。
 - `_next/static` 等を matcher で除外していること自体が、静的アセット配信への

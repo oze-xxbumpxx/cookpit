@@ -24,7 +24,7 @@ GitHub リポジトリ `oze-xxbumpxx/cookpit` を private から public にし�
 2. **仮にそれらを消しても無意味である。** リポジトリ名 `cookpit` と Vercel プロジェクト名
    `cookpit-web` から URL はほぼ自明に導ける。git 履歴の書き換えも防御にならない。
 
-そして `apps/web/src/server/routes/` は無認証のフル CRUD（GET 12 / POST 9 / DELETE 4）で、
+そして `apps/web/src/server/routes/` は無認証のフル CRUD（GET 12 / POST 19 / PUT 5 / DELETE 6）で、
 `middleware.ts` も認証処理も存在しなかった。公開した時点で第三者が在庫・献立・買い物リスト・
 レシピを閲覧も編集も削除もできる状態になる。
 
@@ -114,6 +114,22 @@ ADR-0003 が「Phase 2 以降の本命」として挙げていた解。
   Vercel は既定で HTTPS を強制しているため前提は満たされている。
 - Preview 環境に環境変数を登録しない場合、Preview URL は 503 になり画面確認に使えなくなる。
   安全側の挙動だが、Preview を使う運用なら登録が必要。
+- **CSRF が新たに意味を持つようになった。** 認証なしの頃は API 全体が誰でも叩けたため
+  CSRF という概念自体が無意味だったが、Basic 認証はブラウザが資格情報を自動付与する
+  ambient authority であり、クロスサイトからの書き込みが理屈の上では成立する
+  （セキュリティレビュー SEC-6）。現状の緩和は ① JSON ボディを取るルートは
+  `zValidator('json', ...)` を通り `application/json` 以外が 400 で弾かれる
+  ② ボディ不要の POST 3 本はいずれも推測不可能な UUID を要する
+  ③ PUT / DELETE は preflight が必要で CORS ヘッダ未設定のため遮断される、の 3 点。
+  2 名利用では実際には起きないと判断して受容するが、`hono/csrf` の導入は将来の選択肢として残す。
+- 総当たりに対する試行回数制限・ロックアウトが無く、401 を意図的にログしないため検知手段も
+  無い。公開後の防御は `BASIC_AUTH_PASSWORD` のエントロピーに全面的に依存する
+  （セキュリティレビュー SEC-3 / SEC-4）。`.env.example` に生成方法を明記した。
+- `next@16.2.12` に critical 2 件、`hono@4.13.1` に moderate 3 件の既知脆弱性がある
+  （`pnpm audit` で確認）。本変更は `/_next/image` を意図的に認証除外するため、公開後は
+  `next` の Image Optimization API が無認証で到達可能になる。現構成では
+  `images.remotePatterns` が未設定でアップロード機能も無く悪用可能とは判断していないが、
+  バージョン更新は公開前に検討する（セキュリティレビュー SEC-1 / SEC-11。別タスク）。
 
 ## Migration（移行手順）
 
@@ -125,6 +141,22 @@ ADR-0003 が「Phase 2 以降の本命」として挙げていた解。
 3. 本番 URL に対して実機確認する。認証ダイアログが出ること、正しい資格情報で通ること、
    `manifest.webmanifest` が 401 にならず PWA のインストールが壊れていないこと、
    既存 PWA インストール済み端末（2 名分）で再認証できること。
+
+   **matcher は Vercel 本番で必ず再確認する。** ローカルの `next start` は
+   `middleware-route-matcher` が `new RegExp()` で matcher を評価するが、Vercel 本番では
+   同じ正規表現文字列を Vercel の proxy 層が別のエンジンで評価する。文字列は同じでも
+   エンジンが同じとは限らないため、ローカルでの確認は本番の保証にならない
+   （セキュリティレビュー SEC-2）。本番 URL に対して次の 6 本を確認する。
+
+   | パス                                | 期待                                                      |
+   | ----------------------------------- | --------------------------------------------------------- |
+   | `/`                                 | 401                                                       |
+   | `/api/pantry`                       | 401                                                       |
+   | `/manifest.webmanifest`             | 200                                                       |
+   | `/_next/static/...`（実在アセット） | 200                                                       |
+   | `/api/cron/expiry-alerts`           | 401 だが `WWW-Authenticate` が付かない（cron 自身の判定） |
+   | `/api/cron/..%2fpantry`             | 401 か 404。200 が返るならパス正規化の穴                  |
+
 4. **実機確認が完了して初めて** GitHub リポジトリを private → public に切り替える。
 5. 公開後、GitHub 側の設定を有効化する（Secret scanning + Push protection、Actions の
    「Require approval for all external contributors」、`main` の branch protection）。

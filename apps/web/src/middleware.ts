@@ -60,7 +60,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (!isConfigured) {
     if (process.env.NODE_ENV === 'production') {
       console.error('BASIC_AUTH_USER/BASIC_AUTH_PASSWORD is not configured');
-      return new NextResponse(null, { status: 503 });
+      return new NextResponse(null, {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      });
     }
     return NextResponse.next();
   }
@@ -82,8 +85,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   return NextResponse.next();
 }
 
+// 除外はセグメント境界に固定する。ファイル型（`sw.js` 等）を `$` で終端しないと
+// `/sw.js/api/pantry` が、`workbox-.*\.js` の `.*` を `[^/]*` にしないと
+// `/workbox-x/api/pantry.js` が除外側へ落ち、保護対象のパスが素通りしうる。
+// 現状はいずれも 404 になるルートだが、ルート直下の catch-all を将来足した時点で穴になる。
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|icons/|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|api/cron/).*)',
+    '/((?!(?:_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-[^/]*\\.js)$|_next/static/|icons/|api/cron/).*)',
   ],
 };
