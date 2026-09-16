@@ -1,4 +1,4 @@
-import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
+import type { PrecacheEntry, RouteHandler, SerwistGlobalConfig } from 'serwist';
 import { CacheFirst, ExpirationPlugin, NetworkFirst, Serwist, StaleWhileRevalidate } from 'serwist';
 
 // `apps/web/tsconfig.json` の `lib` は `["dom", "dom.iterable", "esnext"]` で `webworker` を
@@ -38,6 +38,35 @@ declare global {
 
 const sw = self as unknown as WorkerGlobalScope & typeof globalThis;
 
+// 認証切れ（401）をキャッシュしない。NetworkFirst / StaleWhileRevalidate が 401 を保存すると、
+// 再認証後もキャッシュから 401 が返り続ける。
+const cacheOnlyOk = {
+  cacheWillUpdate: async ({ response }: { response: Response }) =>
+    response.status === 200 ? response : null,
+};
+
+/**
+ * 画面遷移で 401 を受けたとき、SW 非経由の `/` へ 302 で逃がす。
+ *
+ * Service Worker が `respondWith` した 401 に対してブラウザは Basic 認証ダイアログを出さない
+ * （Chromium issue 623464）。`proxy.ts` の 401 は本文も Content-Type も持たないため、
+ * ブラウザはそれを不明なファイルとみなしダウンロードを提案し、実体が無いので完了しない
+ * （2026-09-16 に iOS Safari で顕在化。ADR-0021 の残存リスクが現実化したもの）。
+ * SW が横取りしない `/` へ送れば、ブラウザが認証を引き受けられる。
+ *
+ * ネットワーク障害（オフライン）では 401 ではなくキャッシュへフォールバックするため、
+ * オフライン再訪問（O-01）の挙動は変わらない。
+ */
+const redirectToRootOn401 = (strategy: NetworkFirst): RouteHandler => {
+  return async (options) => {
+    const response = await strategy.handle(options);
+    if (response.status !== 401) {
+      return response;
+    }
+    return Response.redirect(new URL('/', options.url).toString(), 302);
+  };
+};
+
 const serwist = new Serwist({
   // Serwist の InjectManifest プラグインは本番ビルド後の JS 文字列中に文字どおり
   // `self.__SW_MANIFEST` が 1 箇所だけ現れることを前提に置換する（デフォルトの
@@ -69,7 +98,10 @@ const serwist = new Serwist({
       handler: new NetworkFirst({
         cacheName: 'shopping-list-detail-cache',
         networkTimeoutSeconds: 3,
-        plugins: [new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 })],
+        plugins: [
+          cacheOnlyOk,
+          new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 }),
+        ],
       }),
     },
     // 店舗マスタは更新頻度が低いため StaleWhileRevalidate。
@@ -77,7 +109,10 @@ const serwist = new Serwist({
       matcher: ({ url, request }) => request.method === 'GET' && url.pathname === '/api/stores',
       handler: new StaleWhileRevalidate({
         cacheName: 'stores-cache',
-        plugins: [new ExpirationPlugin({ maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 * 7 })],
+        plugins: [
+          cacheOnlyOk,
+          new ExpirationPlugin({ maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 * 7 }),
+        ],
       }),
     },
     // /shopping-lists/[id] は動的セグメントのため build 時 precache 不可。オフライン再訪問
@@ -85,11 +120,16 @@ const serwist = new Serwist({
     {
       matcher: ({ url, request }) =>
         request.method === 'GET' && url.pathname.startsWith('/shopping-lists'),
-      handler: new NetworkFirst({
-        cacheName: 'shopping-lists-pages-cache',
-        networkTimeoutSeconds: 3,
-        plugins: [new ExpirationPlugin({ maxEntries: 15, maxAgeSeconds: 60 * 60 * 24 })],
-      }),
+      handler: redirectToRootOn401(
+        new NetworkFirst({
+          cacheName: 'shopping-lists-pages-cache',
+          networkTimeoutSeconds: 3,
+          plugins: [
+            cacheOnlyOk,
+            new ExpirationPlugin({ maxEntries: 15, maxAgeSeconds: 60 * 60 * 24 }),
+          ],
+        }),
+      ),
     },
   ],
 });

@@ -125,7 +125,18 @@ ADR-0003 が「Phase 2 以降の本命」として挙げていた解。
 
 - 通知クリックから standalone PWA を起動した際、セッションによっては再認証ダイアログが
   出る可能性がある。実機確認で挙動を確かめる。
-- **Service Worker 経由の 401 では認証ダイアログが出ない可能性がある。** `sw.ts` の
+- ~~**Service Worker 経由の 401 では認証ダイアログが出ない可能性がある。**~~
+  → **2026-09-16 に本番実機（iOS Safari）で顕在化し、対処済み。** 予想した「401 が表示されて
+  固まる」よりも悪く、本文も `Content-Type` も無い 401 をブラウザが不明なファイルとみなし、
+  「ダウンロードしますか？」を出して永久に完了しない状態になった。PWA では画面が真っ白になる。
+  対処は 2 点。① `sw.ts` の画面遷移ルートが 401 を受けたら SW 非経由の `/` へ 302 で誘導し、
+  ブラウザに認証を引き受けさせる（401 はキャッシュしない）。② `proxy.ts` の 401 / 503 に
+  `Content-Type: text/html; charset=utf-8` と描画可能な本文を付与する。
+  Playwright の永続プロファイルで再現・修正を実測（修正前 `Download is starting` →
+  修正後は SW 非経由と同じ挙動）。回帰は MW-24 / SW-01〜03 で固定。
+  以下は当時の記録として残す。
+
+- （当時の記録）**Service Worker 経由の 401 では認証ダイアログが出ない可能性がある。** `sw.ts` の
   `runtimeCaching` は `/shopping-lists*` の navigation と `/api/shopping-lists/:id` /
   `/api/stores` を `respondWith` で返す。Chromium には「Service Worker が返した 401 には
   Basic 認証ダイアログを表示しない」既知の挙動（Chromium issue 623464）があり、資格情報が
