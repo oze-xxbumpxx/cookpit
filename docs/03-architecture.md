@@ -51,7 +51,7 @@ cookpit/
 ├── apps/
 │   └── web/                             # Next.js + Hono 一体（@cookpit/web）
 │       ├── src/
-│       │   ├── middleware.ts            # Basic 認証（Edge。ADR-0021）
+│       │   ├── proxy.ts                 # Basic 認証（Next.js 16 Proxy。ADR-0021）
 │       │   ├── app/
 │       │   │   ├── api/[[...route]]/
 │       │   │   │   └── route.ts         # Hono をマウント
@@ -211,7 +211,7 @@ export function RecipeListClient({ initialRecipes }) {
 
 - **読み取り**は初期表示を Server Component で、その後の操作は Hono RPC に切り替え
 - **書き込み**は基本 Hono RPC（楽観的更新やエラーバナーを効かせやすい）
-- 認証は `src/middleware.ts` の Basic 認証で全経路の手前に掛かる（[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md)）。
+- 認証は `src/proxy.ts` の Basic 認証で全経路の手前に掛かる（[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md)）。
   「ログインユーザー」という概念はドメインに持ち込んでいないため（[ADR-0004](./decisions/ADR-0004-no-user-in-domain.md)）、A も B もシンプルなまま
 
 ## パッケージ公開境界（ADR-0010）

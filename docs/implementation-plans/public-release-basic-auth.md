@@ -12,9 +12,17 @@
 
 ## 前提の確認（実装計画作成時点）
 
-- `apps/web/src/middleware.ts` は現時点で**存在しない**（新規作成）。
+> **レビュー反映（2026-09-16、PR #202）**: 本計画は当初 `middleware.ts` / Edge Runtime 前提で
+> 書かれていたが、Next.js 16 では `middleware` 規約が deprecated で `proxy.ts`（Node.js
+> ランタイム既定）へ改名されているため、実装は `proxy.ts` / `export function proxy` とした。
+> あわせて matcher から `_next/image` / `workbox-*.js` の除外を削除し、user / password を
+> 個別比較に変更、`playwright.config.ts` に `httpCredentials` を追加した。以下の本文中の
+> ファイル名・関数名・matcher はこの確定版に置き換えてある。設計判断の理由は設計書 D-1 /
+> D-2 / D-4 と ADR-0021 を正とする。
+
+- `apps/web/src/proxy.ts` は現時点で**存在しない**（新規作成）。
 - 設計書「バックエンド設計」節の疑似実装が**確定版**（SHA-256 ダイジェスト比較、
-  `middleware` は `async function`）。設計書に付随する旧案（256 文字固定長ループでの
+  `proxy` は `async function`）。設計書に付随する旧案（256 文字固定長ループでの
   定数時間比較）は Orchestrator レビューで指摘・差し替え済みであり、**実装しない**。
 - ADR-0021 新規作成・ADR-0003 への追記は本実装計画のスコープ外（別工程）。
   移行手順（環境変数登録 → 実機確認 → public 化）も本実装計画のスコープ外（運用タスク）。
@@ -30,26 +38,26 @@
 
 ## 新規作成ファイル
 
-- `apps/web/src/middleware.ts` — HTTP Basic 認証 middleware（Edge Runtime）。
-- `apps/web/tests/middleware.node.test.ts` — middleware の単体テスト
-  （`src/middleware.ts` の直下配置をミラーする。`tests/**/*.node.test.ts` に一致し
+- `apps/web/src/proxy.ts` — HTTP Basic 認証 Proxy（Next.js 16 の proxy 規約。Node.js ランタイム）。
+- `apps/web/tests/proxy.node.test.ts` — proxy の単体テスト
+  （`src/proxy.ts` の直下配置をミラーする。`tests/**/*.node.test.ts` に一致し
   `vitest.node.config.mts` の include に載る。DOM 依存が無いため `environment: 'node'` で足りる）。
 
 ## ファイルごとの変更内容
 
-### apps/web/src/middleware.ts（新規）
+### apps/web/src/proxy.ts（新規）
 
 - 変更内容: 設計書「バックエンド設計」節の確定版疑似実装を実装する。要点:
   - `decodeBasicCredentials(header: string | null)`: `Basic ` プレフィックス確認 →
     `atob` → `Uint8Array.from(binary, c => c.charCodeAt(0))` → `TextDecoder().decode()` →
     `:` で分割。失敗時は `null`（`try/catch` で吸収。例外を外に投げない）。
   - `sha256(value: string): Promise<Uint8Array>`: `crypto.subtle.digest('SHA-256', ...)`。
-    `node:crypto` は使わない（Web Crypto の `crypto.subtle` は Edge Runtime で利用可）。
+    `node:crypto` は使わない（Web Crypto の `crypto.subtle` は Node.js / Edge の両ランタイムで利用可）。
   - `timingSafeStringEqual(a: string, b: string): Promise<boolean>`: 両者を SHA-256
     ダイジェスト（32 バイト固定長）に正規化してから XOR 累積で比較する。
     **固定長 256 文字ループの実装は禁止**（旧案は資格情報が 256 文字を超えると末尾を
     比較しない切り詰めバグを持つため、Orchestrator レビューで差し替え済み）。
-  - `export async function middleware(request: NextRequest): Promise<NextResponse>`:
+  - `export async function proxy(request: NextRequest): Promise<NextResponse>`:
     1. `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` の両方が非 `undefined` かつ非空文字列か
        判定（B-01: 空文字列は未設定と同義）。
     2. 未設定 かつ `process.env.NODE_ENV === 'production'` → `console.error` でログし
@@ -65,16 +73,16 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
   - `export const config = { matcher: [...] }`: 設計書の否定 lookahead 1 パターンを
     そのまま使う。
     ```
-    '/((?!_next/static|_next/image|favicon\\.ico|icons/|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|api/cron/).*)'
+    '/((?!(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js)$|_next/static/|icons/|api/cron/).*)'
     ```
   - コーディング規約対応（設計書が明示する差分のみ。設計に無い判断は追加しない）:
     - `import type { NextRequest }` で型のみ分離。`NextResponse` は値なので通常 import。
     - `any` 不使用（`Uint8Array` / `string` / `null` で完結する）。
     - `===` / `!==` のみ使用。
     - 「値なし」は `null` に統一（`decodeBasicCredentials` の戻り値・失敗時）。
-    - `export function middleware` は Next.js 規約上の名前付きエクスポートであり
+    - `export function proxy` は Next.js 規約上の名前付きエクスポートであり
       default export 禁止ルールに抵触しない（設計書「バックエンド設計」節の注記どおり）。
-    - 公開 API の JSDoc: `middleware` 関数に、型に表せない契約（fail-closed 条件・
+    - 公開 API の JSDoc: `proxy` 関数に、型に表せない契約（fail-closed 条件・
       401/503 の使い分け・matcher が cron を除外する理由）を簡潔に付与する。
       `decodeBasicCredentials` / `sha256` / `timingSafeStringEqual` は非公開のヘルパーで
       あり JSDoc は必須ではないが、`timingSafeStringEqual` には「なぜ SHA-256 正規化が
@@ -84,11 +92,11 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
   - `pnpm --filter @cookpit/web type-check` が通る。
   - `pnpm --filter @cookpit/web lint` が通る（`any` なし・default export なし・
     `import type` 分離・`===`/`!==` のみ）。
-  - `apps/web/tests/middleware.node.test.ts` の全ケースが green。
+  - `apps/web/tests/proxy.node.test.ts` の全ケースが green。
   - `pnpm --filter @cookpit/web build` が成功する（`config.matcher` の静的検証を含む。
     下記「matcher の検証手順」参照）。
 
-### apps/web/tests/middleware.node.test.ts（新規）
+### apps/web/tests/proxy.node.test.ts（新規）
 
 - 変更内容: 設計書「テスト方針」節の観点をそのままケース化する。`middleware` を直接呼び出し、
   `NextRequest` を都度生成して検証する（Hono ルートテストのような `app.request` 経由の
@@ -149,14 +157,14 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
 
 ## 実装手順
 
-1. **middleware 実装** … `apps/web/src/middleware.ts` を新規作成し、設計書の確定版疑似実装を
+1. **middleware 実装** … `apps/web/src/proxy.ts` を新規作成し、設計書の確定版疑似実装を
    コーディング規約に沿って実装する。完了: `pnpm --filter @cookpit/web type-check` /
    `pnpm --filter @cookpit/web lint` が通る。
 2. **matcher のビルド時検証** … `pnpm --filter @cookpit/web build` を実行する。完了:
    ビルドが成功する（Next.js が `config.matcher` を静的検証してエラーにしないことを
    確認する。下記「matcher の検証手順」参照）。ビルド失敗時は記法を修正し本ステップを
    再実行する（対応方針は「リスク」節 R-2 参照）。
-3. **単体テスト追加** … `apps/web/tests/middleware.node.test.ts` を新規作成し、上記 12 ケースを
+3. **単体テスト追加** … `apps/web/tests/proxy.node.test.ts` を新規作成し、上記 12 ケースを
    実装する。完了: 新規テストのみ実行して green（`pnpm --filter @cookpit/web test -- middleware`
    等で対象を絞って先に確認してよい）。
 4. **環境変数プレースホルダ追記** … `apps/web/.env.example` に 2 行追記する。完了:
@@ -184,7 +192,7 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
 
 ## テスト計画
 
-- 新規: `apps/web/tests/middleware.node.test.ts`（`tests/**/*.node.test.ts` として
+- 新規: `apps/web/tests/proxy.node.test.ts`（`tests/**/*.node.test.ts` として
   `vitest.node.config.mts` の include に一致。`environment: 'node'` で十分 — `NextRequest` /
   `crypto.subtle` はいずれも Node 20+ のグローバルで動作し、DOM は不要）。
   ケースは本計画「ファイルごとの変更内容」節の 12 件（設計書「テスト方針」節の全観点を
@@ -220,11 +228,11 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
 同ファイルを単独実行すると 17/17 成功することを確認済み（`docs/implementation-plans/uow.md`
 参照）。品質ゲート（ステップ 6）でこの 1 件のみが失敗し、他の失敗が無い場合は、本変更の
 完了条件を満たしていると判断してよい。他のテスト（特に `apps/web` の新規
-`middleware.node.test.ts` を含む）が 1 件でも失敗した場合は本変更の不具合として扱う。
+`proxy.node.test.ts` を含む）が 1 件でも失敗した場合は本変更の不具合として扱う。
 
 ## ロールバック方法
 
-- **コードのロールバック**: `apps/web/src/middleware.ts` を削除すれば、Next.js は
+- **コードのロールバック**: `apps/web/src/proxy.ts` を削除すれば、Next.js は
   middleware を一切実行しなくなり、直前の無認証状態（実装前の状態）に戻る。
   `apps/web/.env.example` の追記 2 行を削除するかどうかはロールバックの必須要件ではない
   （プレースホルダは値を含まないため残しても実害はない）。
@@ -233,10 +241,10 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
     本番（`NODE_ENV=production`。Preview も同様）ではアプリ全体が `503` になる
     （fail-closed。D-3 の意図した挙動であり、これは「保護なしで公開される」事故を防ぐ
     設計。緊急時に「保護を外して復旧を優先したい」場合は環境変数を外すのではなく
-    `middleware.ts` 自体を削除してデプロイし直す必要がある）。
+    `proxy.ts` 自体を削除してデプロイし直す必要がある）。
   - 開発環境（`NODE_ENV=development`）では環境変数の有無に関わらず影響なし。
 - 本番での事故時の復旧優先順位: (1) 正しい資格情報を再登録する（最速・保護を維持できる）、
-  (2) それでも直らない緊急時のみ `middleware.ts` を削除してデプロイし直す（保護が外れる。
+  (2) それでも直らない緊急時のみ `proxy.ts` を削除してデプロイし直す（保護が外れる。
   設計書「移行とリリース」の逆順禁止の趣旨に反するため、GitHub リポジトリが public 化済み
   の状態でこの手段を取る場合は特に注意し、Orchestrator 経由でユーザーに確認する）。
 
@@ -251,7 +259,7 @@ charset="UTF-8"'` と `Cache-Control: 'no-store'` を付与（D-6、欠落と不
 - `docs/04-domain-model.md` — Entity 変更なし。整合確認のみ（更新不要。Domain/Application
   層への影響が無いため）。
 - `docs/03-architecture.md` / `docs/05-roadmap.md` — 設計書・要件書に更新要否の記載が無く、
-  本タスクは Presentation 層限定の横断的関心事（Edge middleware）であり既存のアーキテクチャ
+  本タスクは Presentation 層限定の横断的関心事（Proxy）であり既存のアーキテクチャ
   記述と矛盾しないため、更新不要と判断する。疑義があれば実装時に Orchestrator へ確認する。
 - リポジトリの private → public 切り替え、Vercel への環境変数登録、実機確認、切り替え後の
   周知 — 本実装計画のスコープ外（設計書「移行とリリース」手順 1・5、運用タスク）。
