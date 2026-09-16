@@ -556,18 +556,18 @@ packages/infrastructure/src/repositories/drizzle-meal-plan.repository.ts
 
 既存実装パターンの参照先:
 
-- `/Users/siro/Desktop/Cookpit/docs/04-domain-model.md` — MealPlan 集約の正典仕様（ユーザー確定判断を優先）
-- `/Users/siro/Desktop/Cookpit/docs/03-architecture.md` — 層構成・依存方向・DI 方針
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/product/product-id.ts` — ID 値オブジェクトのパターン
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/product/product.ts` — Entity の create/reconstruct パターン
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/product/product.repository.ts` — Repository インターフェースパターン
-- `/Users/siro/Desktop/Cookpit/packages/application/src/product/product.dto.ts` — DTO パターン（平坦構造・ISO 8601 文字列）
-- `/Users/siro/Desktop/Cookpit/packages/application/src/product/product.mapper.ts` — Mapper パターン
-- `/Users/siro/Desktop/Cookpit/packages/application/src/product/create-product.use-case.ts` — UseCase パターン
-- `/Users/siro/Desktop/Cookpit/packages/application/src/product/product-not-found.error.ts` — NotFoundError パターン
-- `/Users/siro/Desktop/Cookpit/packages/infrastructure/src/db/schema.ts` — Drizzle スキーマ（追記対象）
-- `/Users/siro/Desktop/Cookpit/packages/infrastructure/src/repositories/drizzle-product.repository.ts` — Repository 実装パターン（JOIN・reconstruct）
-- `/Users/siro/Desktop/Cookpit/packages/api-contract/src/product.schema.ts` — Zod スキーマパターン
-- `/Users/siro/Desktop/Cookpit/apps/web/src/server/routes/products.ts` — Hono ルートパターン
-- `/Users/siro/Desktop/Cookpit/apps/web/src/server/app.ts` — onError ハンドリング（追記対象）
-- `/Users/siro/Desktop/Cookpit/docs/requirements/store-master.md` — L3 要件書の先例（章立て踏襲）
+- `docs/04-domain-model.md` — MealPlan 集約の正典仕様（ユーザー確定判断を優先）
+- `docs/03-architecture.md` — 層構成・依存方向・DI 方針
+- `packages/domain/src/product/product-id.ts` — ID 値オブジェクトのパターン
+- `packages/domain/src/product/product.ts` — Entity の create/reconstruct パターン
+- `packages/domain/src/product/product.repository.ts` — Repository インターフェースパターン
+- `packages/application/src/product/product.dto.ts` — DTO パターン（平坦構造・ISO 8601 文字列）
+- `packages/application/src/product/product.mapper.ts` — Mapper パターン
+- `packages/application/src/product/create-product.use-case.ts` — UseCase パターン
+- `packages/application/src/product/product-not-found.error.ts` — NotFoundError パターン
+- `packages/infrastructure/src/db/schema.ts` — Drizzle スキーマ（追記対象）
+- `packages/infrastructure/src/repositories/drizzle-product.repository.ts` — Repository 実装パターン（JOIN・reconstruct）
+- `packages/api-contract/src/product.schema.ts` — Zod スキーマパターン
+- `apps/web/src/server/routes/products.ts` — Hono ルートパターン
+- `apps/web/src/server/app.ts` — onError ハンドリング（追記対象）
+- `docs/requirements/store-master.md` — L3 要件書の先例（章立て踏襲）

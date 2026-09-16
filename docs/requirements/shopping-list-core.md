@@ -526,29 +526,29 @@ UseCase 4 本ごとに正常系・異常系・境界条件を整理する。具�
 
 ## 9. 参照ファイル（主要なもの）
 
-- `/Users/siro/Desktop/Cookpit/docs/04-domain-model.md`（413-497行 ShoppingList集約、606-712行 UseCase擬似コード、714-735行 設計上の論点）
-- `/Users/siro/Desktop/Cookpit/docs/05-roadmap.md`（281-317行 Sprint 4）
-- `/Users/siro/Desktop/Cookpit/docs/01-overview.md`（実運用フロー）
-- `/Users/siro/Desktop/Cookpit/docs/03-architecture.md`（ディレクトリ構成・依存方向・手動DI）
-- `/Users/siro/Desktop/Cookpit/docs/requirements/meal-plan-core.md`（要件書の章立て先例、C-3冪等性の議論が8-5と同型）
-- `/Users/siro/Desktop/Cookpit/docs/designs/meal-plan-core.md`（設計書の粒度先例）
-- `/Users/siro/Desktop/Cookpit/docs/decisions/ADR-0005-week-definition-saturday-start.md`
-- `/Users/siro/Desktop/Cookpit/docs/decisions/ADR-0003-no-auth-in-mvp1.md`
-- `/Users/siro/Desktop/Cookpit/docs/decisions/ADR-0004-no-user-in-domain.md`
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/meal-plan/meal-plan.ts`（transitionTo実装済み）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/meal-plan/meal-plan.repository.ts`
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/recipe/recipe.ts`（scaleIngredients）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/recipe/recipe-ingredient.ts`（amount:Quantity|null と amountNote の排他制約）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/recipe/recipe.repository.ts`（findByIds 不在を確認）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/product/product.ts`（cheapestStoreAt 実装）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/product/product.repository.ts`（findByIds 不在を確認）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/shared/quantity.ts`（add() 不在を確認）
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/shared/money.ts`
-- `/Users/siro/Desktop/Cookpit/packages/domain/src/shared/store.ts` / `store.repository.ts`
-- `/Users/siro/Desktop/Cookpit/packages/application/src/product/get-cheapest-store.use-case.ts`（価格データなし時のnull安全な扱いの先例）
-- `/Users/siro/Desktop/Cookpit/packages/infrastructure/src/repositories/drizzle-meal-plan.repository.ts`（JOIN+グルーピングパターン）
-- `/Users/siro/Desktop/Cookpit/packages/infrastructure/src/repositories/drizzle-recipe.repository.ts`（JSONB ingredients 変換パターン）
-- `/Users/siro/Desktop/Cookpit/packages/infrastructure/src/db/schema.ts`（既存テーブル定義。追記対象）
-- `/Users/siro/Desktop/Cookpit/packages/api-contract/src/meal-plan.schema.ts`
-- `/Users/siro/Desktop/Cookpit/apps/web/src/server/routes/meal-plans.ts`
-- `/Users/siro/Desktop/Cookpit/apps/web/src/server/app.ts`（onError パターン。追記対象）
+- `docs/04-domain-model.md`（413-497行 ShoppingList集約、606-712行 UseCase擬似コード、714-735行 設計上の論点）
+- `docs/05-roadmap.md`（281-317行 Sprint 4）
+- `docs/01-overview.md`（実運用フロー）
+- `docs/03-architecture.md`（ディレクトリ構成・依存方向・手動DI）
+- `docs/requirements/meal-plan-core.md`（要件書の章立て先例、C-3冪等性の議論が8-5と同型）
+- `docs/designs/meal-plan-core.md`（設計書の粒度先例）
+- `docs/decisions/ADR-0005-week-definition-saturday-start.md`
+- `docs/decisions/ADR-0003-no-auth-in-mvp1.md`
+- `docs/decisions/ADR-0004-no-user-in-domain.md`
+- `packages/domain/src/meal-plan/meal-plan.ts`（transitionTo実装済み）
+- `packages/domain/src/meal-plan/meal-plan.repository.ts`
+- `packages/domain/src/recipe/recipe.ts`（scaleIngredients）
+- `packages/domain/src/recipe/recipe-ingredient.ts`（amount:Quantity|null と amountNote の排他制約）
+- `packages/domain/src/recipe/recipe.repository.ts`（findByIds 不在を確認）
+- `packages/domain/src/product/product.ts`（cheapestStoreAt 実装）
+- `packages/domain/src/product/product.repository.ts`（findByIds 不在を確認）
+- `packages/domain/src/shared/quantity.ts`（add() 不在を確認）
+- `packages/domain/src/shared/money.ts`
+- `packages/domain/src/shared/store.ts` / `store.repository.ts`
+- `packages/application/src/product/get-cheapest-store.use-case.ts`（価格データなし時のnull安全な扱いの先例）
+- `packages/infrastructure/src/repositories/drizzle-meal-plan.repository.ts`（JOIN+グルーピングパターン）
+- `packages/infrastructure/src/repositories/drizzle-recipe.repository.ts`（JSONB ingredients 変換パターン）
+- `packages/infrastructure/src/db/schema.ts`（既存テーブル定義。追記対象）
+- `packages/api-contract/src/meal-plan.schema.ts`
+- `apps/web/src/server/routes/meal-plans.ts`
+- `apps/web/src/server/app.ts`（onError パターン。追記対象）
