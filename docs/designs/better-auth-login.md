@@ -31,29 +31,30 @@ U-1〜U-7 は設計で覆さない。
 
 ## 対象範囲
 
-| 区分 | パス                                                                                 | 内容                                                       |
-| ---- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| 変更 | `apps/web/src/proxy.ts`                                                              | Basic 認証 → セッション検証（D-3）                         |
-| 置換 | `apps/web/tests/proxy.node.test.ts`                                                  | Proxy テスト（§テスト方針）                                |
-| 新規 | `apps/web/src/server/auth/create-auth.ts`                                            | `createAuth()` ファクトリ（env を読まない純粋関数。D-1）   |
-| 新規 | `apps/web/src/server/auth/index.ts`                                                  | `getAuth()` 遅延シングルトン + `isAuthConfigured()`（D-1） |
-| 新規 | `apps/web/src/server/auth/cli.config.ts`                                             | `@better-auth/cli generate` 用の設定エントリ（D-6）        |
-| 変更 | `apps/web/src/server/app.ts`                                                         | `/auth/*` マウント（D-2）                                  |
-| 新規 | `packages/infrastructure/src/db/auth-schema.ts`                                      | CLI 生成の Drizzle スキーマ（D-6）                         |
-| 変更 | `packages/infrastructure/src/index.ts`                                               | `export * as authSchema`（D-6）                            |
-| 変更 | `apps/web/drizzle.config.ts`                                                         | `schema` を配列に（D-6）                                   |
-| 新規 | `apps/web/src/db/migrations/0010_*.sql`                                              | Better Auth テーブル追加（D-6）                            |
-| 新規 | `apps/web/src/lib/auth-client.ts`                                                    | `createAuthClient`（D-7）                                  |
-| 変更 | `apps/web/src/lib/use-api-action.ts`                                                 | 401 → `/login?next=`（D-8）                                |
-| 新規 | `apps/web/src/app/login/page.tsx` + `_components/login-form.tsx`                     | ログイン画面（D-7）                                        |
-| 変更 | `apps/web/src/app/more/page.tsx` + `_components/more-menu.tsx`                       | 表示名・アカウント・ログアウト（D-7）                      |
-| 新規 | `apps/web/src/app/more/account/page.tsx` + `_components/*`                           | アカウント設定（D-7）                                      |
-| 変更 | `apps/web/src/app/_components/nav-bar.tsx`                                           | `/login` で非表示（D-7）                                   |
-| 変更 | `apps/web/src/app/sw.ts`                                                             | リダイレクト応答を cache しない（D-9）                     |
-| 新規 | `apps/web/scripts/auth-create-user.ts` / `auth-set-password.ts`                      | アカウント発行・再設定（D-10）                             |
-| 変更 | `apps/web/package.json`                                                              | `better-auth` 追加、`tsx`（dev）追加、`auth:*` scripts     |
-| 変更 | `apps/web/.env.example` / `apps/web/playwright.config.ts` / `apps/web/e2e/README.md` | env・E2E（D-15）                                           |
-| 変更 | `docs/01-overview.md` / `02-tech-stack.md` / `03-architecture.md` / ADR-0021         | 記述更新（§ドキュメント更新）                              |
+| 区分 | パス                                                                                 | 内容                                                                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 変更 | `apps/web/src/proxy.ts`                                                              | Basic 認証 → セッション検証（D-3）                                                                                                                                                      |
+| 置換 | `apps/web/tests/proxy.node.test.ts`                                                  | Proxy テスト（§テスト方針）                                                                                                                                                             |
+| 新規 | `apps/web/src/server/auth/create-auth.ts`                                            | `createAuth()` ファクトリ（env を読まない純粋関数。D-1）                                                                                                                                |
+| 新規 | `apps/web/src/server/auth/index.ts`                                                  | `getAuth()` 遅延シングルトン + `isAuthConfigured()`（D-1）                                                                                                                              |
+| 新規 | `apps/web/src/server/auth/cli.config.ts`                                             | `@better-auth/cli generate` 用の設定エントリ（D-6）                                                                                                                                     |
+| 変更 | `apps/web/src/server/app.ts`                                                         | `/auth/*` マウント（D-2）                                                                                                                                                               |
+| 新規 | `packages/infrastructure/src/db/auth-schema.ts`                                      | CLI 生成の Drizzle スキーマ（D-6）                                                                                                                                                      |
+| 変更 | `packages/infrastructure/src/index.ts`                                               | `export * as authSchema`（D-6）                                                                                                                                                         |
+| 変更 | `apps/web/drizzle.config.ts`                                                         | `schema` を配列に（D-6）                                                                                                                                                                |
+| 新規 | `apps/web/src/db/migrations/0010_*.sql`                                              | Better Auth テーブル追加（D-6）                                                                                                                                                         |
+| 新規 | `apps/web/src/lib/auth-client.ts`                                                    | `createAuthClient`（D-7）                                                                                                                                                               |
+| 変更 | `apps/web/src/lib/use-api-action.ts`                                                 | 401 → `/login?next=`（D-8）                                                                                                                                                             |
+| 新規 | `apps/web/src/app/login/page.tsx` + `_components/login-form.tsx`                     | ログイン画面（D-7）                                                                                                                                                                     |
+| 変更 | `apps/web/src/app/more/page.tsx` + `_components/more-menu.tsx`                       | 表示名・アカウント・ログアウト（D-7）                                                                                                                                                   |
+| 新規 | `apps/web/src/app/more/account/page.tsx` + `_components/*`                           | アカウント設定（D-7）                                                                                                                                                                   |
+| 変更 | `apps/web/src/app/_components/nav-bar.tsx`                                           | `/login` で非表示（D-7）                                                                                                                                                                |
+| 変更 | `apps/web/src/app/sw.ts`                                                             | リダイレクト応答を cache しない（D-9）                                                                                                                                                  |
+| 新規 | `apps/web/src/app/_utils/sw-cache-plugins.ts`                                        | `cacheWillUpdate` の純関数（D-9。`sw.ts` は `__SW_MANIFEST` 依存で単体テストから import できないため切り出す。既存の `_utils/` ヘルパーと同じ置き場。Orchestrator 統合判断 2026-09-17） |
+| 新規 | `apps/web/scripts/auth-create-user.ts` / `auth-set-password.ts`                      | アカウント発行・再設定（D-10）                                                                                                                                                          |
+| 変更 | `apps/web/package.json`                                                              | `better-auth` 追加、`tsx`（dev）追加、`auth:*` scripts                                                                                                                                  |
+| 変更 | `apps/web/.env.example` / `apps/web/playwright.config.ts` / `apps/web/e2e/README.md` | env・E2E（D-15）                                                                                                                                                                        |
+| 変更 | `docs/01-overview.md` / `02-tech-stack.md` / `03-architecture.md` / ADR-0021         | 記述更新（§ドキュメント更新）                                                                                                                                                           |
 
 `packages/domain` / `packages/application` / `packages/api-contract` は変更しない。
 
@@ -118,27 +119,27 @@ packages/infrastructure/src/db/
 
 ## 設計判断一覧（12 論点との対応）
 
-| D    | 論点             | 決定（推奨）                                                                                                                                                           |
-| ---- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-1  | 1 層配置         | auth インスタンスは `apps/web/src/server/auth/`（composition root）。Drizzle スキーマは `packages/infrastructure/src/db/auth-schema.ts`。Gate A 質問 1                 |
-| D-2  | Hono マウント    | Hono に `/auth/*` をマウント（`toNextJsHandler` は不採用）                                                                                                             |
-| D-3  | 2 Proxy          | Proxy で `auth.api.getSession` により完全検証。未認証: 画面 302 `/login?next=`、`/api/*` 401 JSON。fail-closed 503。Gate A 質問 2                                      |
-| D-4  | 7 セッション     | `expiresIn` 30 日 / `updateAge` 1 日 / `cookieCache` 有効・`maxAge` 5 分 / `SameSite=Lax`                                                                              |
-| D-5  | 7 総当たり       | Better Auth 組み込み `rateLimit`、`storage: 'database'`（要検証。不可なら memory を受容）                                                                              |
-| D-6  | 9 DB             | 別ファイル `auth-schema.ts`、テーブル名複数形（`usePlural: true`）、CLI 生成 → `drizzle-kit generate` → `migrate`。既存テーブル変更なし                                |
-| D-7  | 5 画面           | `/login`（Client フォーム）、`/more` にログアウト、`/more/account` にパスワード変更・他端末失効。NavBar は `/login` で非表示                                           |
-| D-8  | 5 401 回復       | `useApiAction` が 401 を検知したら `/login?next=<現在>` へフルナビゲーション                                                                                           |
-| D-9  | 4 SW             | `NetworkFirst` 2 件に `cacheWillUpdate`（`redirected` / 非 200 は cache しない）。`/login` `/api/auth/*` は runtimeCaching 対象外。ログアウトで runtime cache 破棄     |
-| D-10 | 6 スクリプト     | `tsx` で TS スクリプトを実行。発行は別設定 `createAuth({ allowSignUp: true })` + `auth.api.signUpEmail`。再設定は `auth.$context` の内部アダプタ（フォールバック併記） |
-| D-11 | 3 移行           | 一括切替。同一 PR で Basic 認証コード削除。`BASIC_AUTH_*` 環境変数は実機確認完了まで残す（ロールバック用）。Gate A 質問 3                                              |
-| D-12 | 8 Preview        | `BETTER_AUTH_URL` は本番のみ明示。Preview は推定に委ね、`trustedOrigins` を `VERCEL_URL` / `VERCEL_BRANCH_URL` から組む。Preview 用の別 secret                         |
-| D-13 | 11 第二段        | §第二段（パスキー）設計。`passkeys` テーブルの migration は第二段で作る（第一段では作らない）                                                                          |
-| D-14 | ログ             | 503 のみ `console.error`。資格情報・メールはログしない                                                                                                                 |
-| D-15 | 12 E2E / CI      | `NODE_ENV!=production` × secret 未設定はスキップ（現行規約を踏襲）。ログイン E2E は資格情報 env があるときだけ実行                                                     |
-| D-16 | 5 表示名         | Better Auth `users.name` を使う。`/more` と `/more/account` に Server Component で表示                                                                                 |
-| D-17 | 1 依存の閉じ込め | `packages/domain` / `packages/application` / `api-contract` に差分ゼロ。`packages/infrastructure` は `better-auth` に依存しない                                        |
-| D-18 | 10 DB 接続       | 認証は `getDb()`（neon-http）上で動かす。アダプタがトランザクションを要求するなら `transaction` 無効化 → 不可なら WebSocket 接続に切替（要検証）                       |
-| D-19 | ドキュメント     | ADR-0021 Status 更新、01/02/03 の記述更新は実装 PR に含める                                                                                                            |
+| D    | 論点             | 決定（推奨）                                                                                                                                                                                                                                |
+| ---- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1  | 1 層配置         | auth インスタンスは `apps/web/src/server/auth/`（composition root）。Drizzle スキーマは `packages/infrastructure/src/db/auth-schema.ts`。Gate A 質問 1                                                                                      |
+| D-2  | Hono マウント    | Hono に `/auth/*` をマウント（`toNextJsHandler` は不採用）                                                                                                                                                                                  |
+| D-3  | 2 Proxy          | Proxy で `auth.api.getSession` により完全検証。未認証: 画面 302 `/login?next=`、`/api/*` 401 JSON。fail-closed 503。Gate A 質問 2                                                                                                           |
+| D-4  | 7 セッション     | `expiresIn` 30 日 / `updateAge` 1 日 / `cookieCache` 有効・`maxAge` 5 分 / `SameSite=Lax`                                                                                                                                                   |
+| D-5  | 7 総当たり       | Better Auth 組み込み `rateLimit`、`storage: 'database'`（要検証。不可なら memory を受容）。閾値は Better Auth 既定（全体 100 req/60 s、`/sign-in/email` 3 req/10 s）を採用し `customRules` は設定しない（Orchestrator 統合判断 2026-09-17） |
+| D-6  | 9 DB             | 別ファイル `auth-schema.ts`、テーブル名複数形（`usePlural: true`）、CLI 生成 → `drizzle-kit generate` → `migrate`。既存テーブル変更なし                                                                                                     |
+| D-7  | 5 画面           | `/login`（Client フォーム）、`/more` にログアウト、`/more/account` にパスワード変更・他端末失効。NavBar は `/login` で非表示                                                                                                                |
+| D-8  | 5 401 回復       | `useApiAction` が 401 を検知したら `/login?next=<現在>` へフルナビゲーション                                                                                                                                                                |
+| D-9  | 4 SW             | `NetworkFirst` 2 件に `cacheWillUpdate`（`redirected` / 非 200 は cache しない）。`/login` `/api/auth/*` は runtimeCaching 対象外。ログアウトで runtime cache 破棄                                                                          |
+| D-10 | 6 スクリプト     | `tsx` で TS スクリプトを実行。発行は別設定 `createAuth({ allowSignUp: true })` + `auth.api.signUpEmail`。再設定は `auth.$context` の内部アダプタ（フォールバック併記）                                                                      |
+| D-11 | 3 移行           | 一括切替。同一 PR で Basic 認証コード削除。`BASIC_AUTH_*` 環境変数は実機確認完了まで残す（ロールバック用）。Gate A 質問 3                                                                                                                   |
+| D-12 | 8 Preview        | `BETTER_AUTH_URL` は本番のみ明示。Preview は推定に委ね、`trustedOrigins` を `VERCEL_URL` / `VERCEL_BRANCH_URL` から組む。Preview 用の別 secret                                                                                              |
+| D-13 | 11 第二段        | §第二段（パスキー）設計。`passkeys` テーブルの migration は第二段で作る（第一段では作らない）                                                                                                                                               |
+| D-14 | ログ             | 503 のみ `console.error`。資格情報・メールはログしない                                                                                                                                                                                      |
+| D-15 | 12 E2E / CI      | `NODE_ENV!=production` × secret 未設定はスキップ（現行規約を踏襲）。ログイン E2E は資格情報 env があるときだけ実行                                                                                                                          |
+| D-16 | 5 表示名         | Better Auth `users.name` を使う。`/more` と `/more/account` に Server Component で表示                                                                                                                                                      |
+| D-17 | 1 依存の閉じ込め | `packages/domain` / `packages/application` / `api-contract` に差分ゼロ。`packages/infrastructure` は `better-auth` に依存しない                                                                                                             |
+| D-18 | 10 DB 接続       | 認証は `getDb()`（neon-http）上で動かす。アダプタがトランザクションを要求するなら `transaction` 無効化 → 不可なら WebSocket 接続に切替（要検証）                                                                                            |
+| D-19 | ドキュメント     | ADR-0021 Status 更新、01/02/03 の記述更新は実装 PR に含める                                                                                                                                                                                 |
 
 ## データフロー
 
