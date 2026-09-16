@@ -1,6 +1,6 @@
 # ADR-0022: Basic 認証を Better Auth のログイン画面と Cookie セッション認証へ置き換える
 
-- Status: Proposed（Gate A 承認待ち）
+- Status: Accepted（2026-09-17 Gate A でユーザー承認。実装 PR のマージで ADR-0021 を Superseded にする）
 - Date: 2026-09-17
 - 関連 feature: better-auth-login
 - 置換対象: [ADR-0021](./ADR-0021-basic-auth-for-public-repository.md)（本 ADR の Accepted 時に

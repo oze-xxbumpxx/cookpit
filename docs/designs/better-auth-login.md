@@ -236,7 +236,7 @@ export const routes = app.route('/health', healthRoute); /* ...既存... */
 | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `BETTER_AUTH_SECRET` 未設定 × `NODE_ENV=production` | `503`、本文なし、`Cache-Control: no-store`、`console.error`（資格情報は出さない）     |
 | 同 × production 以外                                | `next()`（認証スキップ。CI E2E / `pnpm dev`）                                         |
-| `/login` × セッション有効                           | `302 Location: /`                                                                     |
+| `/login` × セッション有効                           | `302 Location: /`、`Cache-Control: no-store`（契約書 §11-4）                          |
 | `/login` × セッション無し                           | `next()`                                                                              |
 | 保護パス × セッション有効                           | `next()`。`getSession` が返した `Set-Cookie` を応答へ転送                             |
 | 保護パス（非 `/api/`）× セッション無し              | `302 Location: /login?next=<pathname+search（_rsc 除去）>`、`Cache-Control: no-store` |
@@ -326,7 +326,7 @@ export const config = {
 
 ## 契約骨子（contract-designer が確定）
 
-詳細は contract-designer が本節を埋める。architecture-designer が固定するのは次の骨子のみ。
+詳細は [better-auth-login.contract.md](./better-auth-login.contract.md)（contract-designer 確定・2026-09-17）を正典とする。architecture-designer が固定した骨子は次のとおり。
 
 - **環境変数**: `BETTER_AUTH_SECRET`（必須。32 バイト以上。Preview と Production で別値）、
   `BETTER_AUTH_URL`（Production のみ `https://cookpit-web.vercel.app`。Preview / local は未設定）。
@@ -565,7 +565,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   if (isLoginPage) {
     return session !== null
-      ? NextResponse.redirect(new URL('/', request.url), 302)
+      ? NextResponse.redirect(new URL('/', request.url), {
+          status: 302,
+          headers: { 'Cache-Control': 'no-store' }, // Proxy 生成応答は全て no-store（契約書 §11-4）
+        })
       : NextResponse.next();
   }
   if (session === null) {
@@ -945,6 +948,11 @@ AU-P Proxy / AU-H Hono / AU-UI 画面 / AU-S スクリプト / AU-SW / AU-M 実�
 ## 未決事項
 
 ### Gate A でユーザーに確認する（最大 3 件）
+
+> **確定（2026-09-17 Gate A）**: 3 件ともユーザーが推奨案を採用した。1: インスタンスは
+> `apps/web/src/server/auth/`、Drizzle スキーマは `packages/infrastructure/src/db/auth-schema.ts`
+> （別ファイル・複数形）。2: Proxy で `auth.api.getSession` による完全検証。3: 一括切替・同一 PR で
+> Basic 認証コードを削除（Vercel の `BASIC_AUTH_*` は実機確認完了まで温存）。
 
 1. **Better Auth の置き場所（D-1 / D-6）** — 推奨: インスタンスは `apps/web/src/server/auth/`
    （`repositories.ts` と同じ composition root）、Drizzle スキーマは
