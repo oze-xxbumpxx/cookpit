@@ -155,12 +155,21 @@ export const config = {
   資格情報保存機能に保存され、以降は自動送信される想定（N-02）。
 - `manifest.webmanifest` / アイコン / `sw.js` は matcher 除外により認証なしで取得できるため、
   PWA のインストール・Service Worker 登録フローに変更は無い（N-03）。
-- **Service Worker 経由の 401 に注意**: `sw.ts` の `runtimeCaching` が `respondWith` で返す
-  経路（`/shopping-lists*` の navigation、`/api/shopping-lists/:id`、`/api/stores`）では、
-  Chromium が Service Worker 由来の 401 に認証ダイアログを出さない既知の挙動
-  （Chromium issue 623464）があり、資格情報が失効した状態でその URL から PWA を起動すると
-  再認証できずに固まりうる。実機確認項目とし（ADR-0021 Migration 手順 3）、詰まる場合は
-  `sw.ts` 側で 401 を `respondWith` せず素通しする対処を別タスクで行う。
+- **Service Worker 経由の 401**（2026-09-16 に本番実機で顕在化し対処済み）:
+  `sw.ts` の `runtimeCaching` が `respondWith` で返す経路（`/shopping-lists*` の navigation、
+  `/api/shopping-lists/:id`、`/api/stores`）では、Chromium が Service Worker 由来の 401 に
+  認証ダイアログを出さない（Chromium issue 623464）。当初は「401 が表示されて固まる」と
+  想定していたが、実際には**本文も `Content-Type` も持たない 401 をブラウザが不明なファイルと
+  みなし、ダウンロードを提案して永久に完了しない**（PWA では真っ白）。対処は 2 点。
+
+  | #   | 対処                                                                                            | 対象       |
+  | --- | ----------------------------------------------------------------------------------------------- | ---------- |
+  | ①   | 画面遷移ルートが 401 を受けたら SW 非経由の `/` へ 302 で誘導し、ブラウザに認証を引き受けさせる | `sw.ts`    |
+  | ②   | 全 `runtimeCaching` で 401 をキャッシュしない（再認証後も 401 が返り続けるため）                | `sw.ts`    |
+  | ③   | 401 / 503 に `Content-Type: text/html; charset=utf-8` と描画可能な本文を付与                    | `proxy.ts` |
+
+  ネットワーク障害（オフライン）では 401 ではなくキャッシュへフォールバックするため、
+  オフライン再訪問（O-01）の挙動は変わらない。要件 F-05c / F-07、回帰は MW-24 / SW-01〜03。
 
 ## バックエンド設計
 
@@ -170,6 +179,11 @@ export const config = {
 import { NextResponse, type NextRequest } from 'next/server';
 
 const REALM_HEADER = 'Basic realm="Cookpit", charset="UTF-8"';
+// 本文と Content-Type が無い応答はブラウザがダウンロード扱いにするため必ず付ける（F-05c）。
+// 実際の HTML 文字列は実装（apps/web/src/proxy.ts）を参照。
+const HTML_HEADERS = { 'Content-Type': 'text/html; charset=utf-8' } as const;
+const UNAUTHORIZED_HTML = '…認証が必要です…';
+const UNAVAILABLE_HTML = '…一時的に利用できません…';
 
 function decodeBasicCredentials(header: string | null): { user: string; password: string } | null {
   if (header === null || !header.startsWith('Basic ')) {
@@ -222,7 +236,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!isConfigured) {
     if (process.env.NODE_ENV === 'production') {
       // fail-closed: Preview も NODE_ENV=production で動くため、ここで一緒に守られる。
-      return new NextResponse(null, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+      return new NextResponse(UNAVAILABLE_HTML, {
+        status: 503,
+        headers: { ...HTML_HEADERS, 'Cache-Control': 'no-store' },
+      });
     }
     return NextResponse.next();
   }
@@ -235,9 +252,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   ]);
 
   if (credentials === null || !(userMatches && passwordMatches)) {
-    return new NextResponse(null, {
+    return new NextResponse(UNAUTHORIZED_HTML, {
       status: 401,
       headers: {
+        ...HTML_HEADERS,
         'WWW-Authenticate': REALM_HEADER,
         'Cache-Control': 'no-store',
       },
