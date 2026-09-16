@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { config, middleware } from '@/middleware';
+import { config, proxy } from '@/proxy';
 
 const BASE_URL = 'http://localhost';
 
@@ -13,7 +13,7 @@ function basicHeader(user: string, password: string): string {
   return `Basic ${base64}`;
 }
 
-describe('middleware', () => {
+describe('proxy', () => {
   const originalUser = process.env.BASIC_AUTH_USER;
   const originalPassword = process.env.BASIC_AUTH_PASSWORD;
 
@@ -40,7 +40,7 @@ describe('middleware', () => {
   });
 
   it('MW-01: 正しい資格情報でページ相当パスを通過', async () => {
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader('testuser', 'testpass') }),
     );
 
@@ -48,7 +48,7 @@ describe('middleware', () => {
   });
 
   it('MW-02: 正しい資格情報で API 相当パスを通過', async () => {
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/api/pantry', { authorization: basicHeader('testuser', 'testpass') }),
     );
 
@@ -56,7 +56,7 @@ describe('middleware', () => {
   });
 
   it('MW-03: Authorization ヘッダなしで 401', async () => {
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(401);
     expect(res.headers.get('WWW-Authenticate')).toBe('Basic realm="Cookpit", charset="UTF-8"');
@@ -64,7 +64,7 @@ describe('middleware', () => {
   });
 
   it('MW-04: ユーザー名のみ誤りで 401', async () => {
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader('wronguser', 'testpass') }),
     );
 
@@ -73,7 +73,7 @@ describe('middleware', () => {
   });
 
   it('MW-05: パスワードのみ誤りで 401', async () => {
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader('testuser', 'wrongpass') }),
     );
 
@@ -81,7 +81,7 @@ describe('middleware', () => {
   });
 
   it('MW-06: 両方誤りで 401', async () => {
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader('wronguser', 'wrongpass') }),
     );
 
@@ -89,33 +89,33 @@ describe('middleware', () => {
   });
 
   it('MW-07: スキームが Basic でない場合 401', async () => {
-    const res = await middleware(makeRequest('/', { authorization: 'Bearer xxx' }));
+    const res = await proxy(makeRequest('/', { authorization: 'Bearer xxx' }));
 
     expect(res.status).toBe(401);
   });
 
   it('MW-08: スキーム名の大小文字違いは 401', async () => {
     const correctBase64 = basicHeader('testuser', 'testpass').slice('Basic '.length);
-    const res = await middleware(makeRequest('/', { authorization: `basic ${correctBase64}` }));
+    const res = await proxy(makeRequest('/', { authorization: `basic ${correctBase64}` }));
 
     expect(res.status).toBe(401);
   });
 
   it('MW-09: base64 デコード失敗時は例外を投げず 401', async () => {
-    const res = await middleware(makeRequest('/', { authorization: 'Basic %%%invalid-base64%%%' }));
+    const res = await proxy(makeRequest('/', { authorization: 'Basic %%%invalid-base64%%%' }));
 
     expect(res.status).toBe(401);
   });
 
   it('MW-10: デコード後に : を含まない場合 401', async () => {
     const base64 = Buffer.from('nodelimiter', 'utf-8').toString('base64');
-    const res = await middleware(makeRequest('/', { authorization: `Basic ${base64}` }));
+    const res = await proxy(makeRequest('/', { authorization: `Basic ${base64}` }));
 
     expect(res.status).toBe(401);
   });
 
   it('MW-11: 資格情報部分が空の場合 401', async () => {
-    const res = await middleware(makeRequest('/', { authorization: 'Basic ' }));
+    const res = await proxy(makeRequest('/', { authorization: 'Basic ' }));
 
     expect(res.status).toBe(401);
   });
@@ -125,7 +125,7 @@ describe('middleware', () => {
     process.env.BASIC_AUTH_PASSWORD = 'testpass';
     vi.stubEnv('NODE_ENV', 'development');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(200);
   });
@@ -135,7 +135,7 @@ describe('middleware', () => {
     process.env.BASIC_AUTH_PASSWORD = '';
     vi.stubEnv('NODE_ENV', 'production');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
   });
@@ -143,7 +143,7 @@ describe('middleware', () => {
   it('MW-14: UTF-8（日本語）パスワードの正しい復号で通過', async () => {
     process.env.BASIC_AUTH_PASSWORD = 'パスワード123';
 
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader('testuser', 'パスワード123') }),
     );
 
@@ -156,7 +156,7 @@ describe('middleware', () => {
     process.env.BASIC_AUTH_PASSWORD = `${longValue}x`;
 
     const wrongPassword = `${longValue}y`;
-    const res = await middleware(
+    const res = await proxy(
       makeRequest('/', { authorization: basicHeader(longValue, wrongPassword) }),
     );
 
@@ -168,7 +168,7 @@ describe('middleware', () => {
     process.env.BASIC_AUTH_USER = value;
     process.env.BASIC_AUTH_PASSWORD = value;
 
-    const res = await middleware(makeRequest('/', { authorization: basicHeader(value, value) }));
+    const res = await proxy(makeRequest('/', { authorization: basicHeader(value, value) }));
 
     expect(res.status).toBe(200);
   });
@@ -177,7 +177,7 @@ describe('middleware', () => {
     process.env.BASIC_AUTH_USER = 'a';
     process.env.BASIC_AUTH_PASSWORD = 'b';
 
-    const res = await middleware(makeRequest('/', { authorization: basicHeader('a', 'b') }));
+    const res = await proxy(makeRequest('/', { authorization: basicHeader('a', 'b') }));
 
     expect(res.status).toBe(200);
   });
@@ -185,11 +185,20 @@ describe('middleware', () => {
   it('MW-18: パスワードに : を含む場合も最初の : 以降全体をパスワードとして復元して通過', async () => {
     process.env.BASIC_AUTH_PASSWORD = 'pa:ss';
 
-    const res = await middleware(
-      makeRequest('/', { authorization: basicHeader('testuser', 'pa:ss') }),
-    );
+    const res = await proxy(makeRequest('/', { authorization: basicHeader('testuser', 'pa:ss') }));
 
     expect(res.status).toBe(200);
+  });
+
+  // user と password を `user:password` に再結合して 1 本で比較すると、区切り位置の異なる
+  // 組（設定 `a:b` / `c` と送信 `a` / `b:c`）が同じ文字列になり通ってしまう。個別比較なら弾く。
+  it('MW-18b: user と password は個別に比較し、区切り位置が異なる組は 401', async () => {
+    process.env.BASIC_AUTH_USER = 'a:b';
+    process.env.BASIC_AUTH_PASSWORD = 'c';
+
+    const res = await proxy(makeRequest('/', { authorization: basicHeader('a', 'b:c') }));
+
+    expect(res.status).toBe(401);
   });
 
   it('MW-19: 本番相当・環境変数未設定で 503、本文は空', async () => {
@@ -197,7 +206,7 @@ describe('middleware', () => {
     delete process.env.BASIC_AUTH_PASSWORD;
     vi.stubEnv('NODE_ENV', 'production');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
     expect(await res.text()).toBe('');
@@ -219,7 +228,7 @@ describe('middleware', () => {
     }
     vi.stubEnv('NODE_ENV', 'production');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
     expect(await res.text()).toBe('');
@@ -230,7 +239,7 @@ describe('middleware', () => {
     delete process.env.BASIC_AUTH_PASSWORD;
     vi.stubEnv('NODE_ENV', 'production');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
@@ -241,7 +250,7 @@ describe('middleware', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('VERCEL_ENV', 'preview');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
   });
@@ -251,7 +260,7 @@ describe('middleware', () => {
     delete process.env.BASIC_AUTH_PASSWORD;
     vi.stubEnv('NODE_ENV', 'development');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(200);
   });
@@ -260,7 +269,7 @@ describe('middleware', () => {
     delete process.env.BASIC_AUTH_USER;
     delete process.env.BASIC_AUTH_PASSWORD;
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(200);
   });
@@ -270,7 +279,7 @@ describe('middleware', () => {
     delete process.env.BASIC_AUTH_PASSWORD;
     vi.stubEnv('NODE_ENV', 'production');
 
-    const res = await middleware(makeRequest('/'));
+    const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
     expect(res.headers.get('WWW-Authenticate')).toBeNull();
@@ -282,7 +291,7 @@ describe('middleware', () => {
     vi.stubEnv('NODE_ENV', 'production');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    await middleware(makeRequest('/'));
+    await proxy(makeRequest('/'));
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const loggedArgs = errorSpy.mock.calls.flat().join(' ');
@@ -294,7 +303,7 @@ describe('middleware', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    await middleware(makeRequest('/'));
+    await proxy(makeRequest('/'));
 
     expect(errorSpy).not.toHaveBeenCalled();
     expect(logSpy).not.toHaveBeenCalled();
@@ -313,10 +322,10 @@ describe('config.matcher（構造テスト・近似）', () => {
     expect(matcherRegExp.test('/_next/static/chunk.js')).toBe(false);
   });
 
-  // matcher に渡るのは pathname のみでクエリは含まれない。以前は '/_next/image?url=x' を
-  // 渡していたが、実際には起こらない入力での検証になっていた。
-  it('MW-M03: _next/image が除外される', () => {
-    expect(matcherRegExp.test('/_next/image')).toBe(false);
+  // `next/image` は未使用で、使っていても認証済みブラウザは `<img>` の same-origin リクエストに
+  // 資格情報を自動付与する。除外すると Image Optimization API を無認証で晒すだけなので保護する。
+  it('MW-M03: _next/image は除外せず保護対象', () => {
+    expect(matcherRegExp.test('/_next/image')).toBe(true);
   });
 
   it('MW-M04: favicon.ico が除外される', () => {
@@ -339,8 +348,10 @@ describe('config.matcher（構造テスト・近似）', () => {
     expect(matcherRegExp.test('/sw.js')).toBe(false);
   });
 
-  it('MW-M09: workbox-*.js が除外される', () => {
-    expect(matcherRegExp.test('/workbox-abc123.js')).toBe(false);
+  // Serwist は単一の `sw.js` にバンドルし `workbox-*.js` を出力しない（next-pwa 時代の慣習）。
+  // 存在しないファイル名の除外は不要な穴になるだけなので設けない。
+  it('MW-M09: workbox-*.js は除外せず保護対象', () => {
+    expect(matcherRegExp.test('/workbox-abc123.js')).toBe(true);
   });
 
   it('MW-M10: api/cron/ 配下が除外される', () => {
@@ -351,13 +362,10 @@ describe('config.matcher（構造テスト・近似）', () => {
   // 現状はいずれも 404 になるルートだが、ルート直下の catch-all を足した時点で実害化する。
   // セキュリティレビュー SEC-5 の回帰防止。
   it.each([
-    '/workbox-x/api/pantry.js',
-    '/workbox-/api/pantry.js',
     '/sw.js/api/pantry',
     '/sw.jsx',
     '/favicon.icofoo',
     '/manifest.webmanifest/api/pantry',
-    '/_next/imageX',
     '/_next/static',
   ])('MW-M12【回帰防止】: 除外名に前方一致するだけの %s は保護対象', (pathname) => {
     expect(matcherRegExp.test(pathname)).toBe(true);

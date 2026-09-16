@@ -66,8 +66,9 @@ pnpm dev
 ```
 
 `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` は未設定でも開発時は認証がスキップされるため、
-ローカル開発で設定する必要はありません。本番相当（`NODE_ENV=production`）で未設定の場合は
-fail-closed で 503 を返します。
+ローカル開発で設定する必要はありません。設定した場合は `pnpm dev` でも Basic 認証が掛かります
+（Playwright E2E は同じ変数から資格情報を自動で渡します）。本番相当（`NODE_ENV=production`）で
+未設定の場合は fail-closed で 503 を返します。
 
 ### 品質ゲート
 

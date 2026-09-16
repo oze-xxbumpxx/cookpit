@@ -1,7 +1,11 @@
 # 設計書: public-release-basic-auth
 
-- ステータス: 確定（実装・レビュー完了）
+- ステータス: 確定（実装・レビュー完了。2026-09-16 の PR レビュー指摘を反映済み）
 - レベル: L3
+- 変更履歴:
+  - 2026-09-16 PR #202 レビュー反映: `middleware.ts` → `proxy.ts`（Next.js 16 の規約・
+    Node.js ランタイム）、`_next/image` / `workbox-*.js` の除外を削除、user / password の
+    個別比較、Playwright `httpCredentials`、Service Worker 経由 401 のリスク追記。
 - 関連: `docs/requirements/public-release-basic-auth.md` /
   `docs/decisions/ADR-0003-no-auth-in-mvp1.md`（置換済みへ更新済み）/
   `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`（作成済み）
@@ -16,7 +20,7 @@ GitHub リポジトリ `oze-xxbumpxx/cookpit` を public 化する前提とし�
 
 ## 目的
 
-`apps/web/src/middleware.ts` を新規作成し、HTTP Basic 認証でアプリ全体（cron を除く）を
+`apps/web/src/proxy.ts` を新規作成し、HTTP Basic 認証でアプリ全体（cron を除く）を
 保護する。GitHub リポジトリを public にしても、本番アプリのユーザーデータへの第三者アクセス
 を防ぐ。
 
@@ -25,13 +29,23 @@ GitHub リポジトリ `oze-xxbumpxx/cookpit` を public 化する前提とし�
 `docs/requirements/public-release-basic-auth.md` の F-01〜F-06 / N-01〜N-05 / E-01〜E-03 /
 B-01〜B-05 を満たす。特に次の確定済み判断（Orchestrator 確定・変更不可）を前提とする。
 
-- D-1: Edge Runtime で動く middleware。`node:crypto` 不使用。デコードは
-  `atob → Uint8Array.from → TextDecoder`。
-- D-2: 除外パスは `_next/static` / `_next/image` / `favicon.ico` / `icons/` /
-  `manifest.webmanifest` / `sw.js` / `workbox-*.js` / `api/cron/*`。
+- D-1: Next.js 16 の `proxy` 規約（`apps/web/src/proxy.ts`、`export function proxy`）で
+  実装する。`middleware` 規約は Next.js 16 で deprecated（`next build` が警告）で、Proxy の
+  既定ランタイムは Node.js。`node:crypto` は使わず、ランタイムに依存しない Web 標準 API
+  （`atob → Uint8Array.from → TextDecoder`、`crypto.subtle`）のみで書く。
+  （当初は「Edge Runtime で動く middleware」としていたが、レビュー指摘で改めた。）
+- D-2: 除外パスは `_next/static/` / `favicon.ico` / `icons/` / `manifest.webmanifest` /
+  `sw.js` / `api/cron/*`。除外は「ブラウザが credentials 無しで取得するもの」と「認証済み
+  ブラウザが資格情報を自動付与するので保護不要かつ、毎回 Proxy を起動する価値が無い
+  静的アセット」に限る。`_next/image`（`next/image` 未使用。除外すると Image Optimization
+  API を無認証で晒す）と `workbox-*.js`（Serwist は出力しない）は**除外しない**
+  （当初案に含まれていたがレビュー指摘で削除）。
 - D-3: `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` のいずれか未設定時、`NODE_ENV=production`
   なら fail-closed（503）、それ以外はスキップ。
-- D-4: CI（`playwright.config.ts` / `ci.yml`）は変更不要。
+- D-4: `ci.yml` は変更不要。`playwright.config.ts` は `BASIC_AUTH_*` が設定されている場合に
+  同じ値を `use.httpCredentials` へ渡す（当初「変更不要」としていたが、認証がスキップされる
+  のは**未設定時のみ**で、`.env` に値を入れたローカル実行や Preview URL への実行で全テストが
+  401 になるため、レビュー指摘で改めた）。
 - D-5: 定数時間比較を自前実装し、長さの差からも情報が漏れないようにする。
 - D-6: 401 応答に `WWW-Authenticate: Basic realm="Cookpit", charset="UTF-8"` と
   `Cache-Control: no-store`。
@@ -40,7 +54,7 @@ B-01〜B-05 を満たす。特に次の確定済み判断（Orchestrator 確定�
 
 ## 対象範囲
 
-- `apps/web/src/middleware.ts` の新規設計。
+- `apps/web/src/proxy.ts` の新規設計。
 - `apps/web/.env.example` への `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` 追記の設計。
 - ADR-0021 新規作成方針、ADR-0003 への追記方針。
 - CI への影響評価（結論: 変更不要）。
@@ -67,14 +81,14 @@ apps/web/src/
     shopping-lists.ts / stores.ts   # 無認証のフル CRUD
 ```
 
-`middleware.ts` は存在しない。Presentation 層（`apps/web/`）に認証処理は無い
+`proxy.ts`（旧 `middleware.ts`）は存在しない。Presentation 層（`apps/web/`）に認証処理は無い
 （`.claude/rules/presentation-layer.md` の対象外領域）。
 
 ## 変更後構成
 
 ```
 apps/web/src/
-  middleware.ts   # 新規。HTTP Basic 認証 + matcher による除外
+  proxy.ts        # 新規。HTTP Basic 認証 + matcher による除外（Next.js 16 の proxy 規約）
 ```
 
 他の既存ファイルへの変更は無い（`.env.example` への追記のみ、コードではない）。
@@ -83,9 +97,9 @@ apps/web/src/
 
 ```
 リクエスト
-  → middleware.ts（Edge Runtime）
+  → proxy.ts（Node.js ランタイム。Next.js 16 の proxy 規約）
       1. パスが matcher 除外対象か判定（_next/static 等・api/cron/*）
-         → 除外対象なら middleware をスキップし、そのままルーティング続行
+         → 除外対象なら proxy をスキップし、そのままルーティング続行
       2. BASIC_AUTH_USER / BASIC_AUTH_PASSWORD が両方設定済みか確認
          → 未設定 かつ NODE_ENV=production → 503 を返却（fail-closed、処理終了）
          → 未設定 かつ NODE_ENV!=production（dev/test） → 認証スキップ、続行
@@ -95,22 +109,22 @@ apps/web/src/
   → （継続する場合）App Router のページ / Hono マウントルート（既存の処理）
 ```
 
-cron のみ独立した経路: `GET /api/cron/*` は D-2 により middleware の対象外のまま
+cron のみ独立した経路: `GET /api/cron/*` は D-2 により proxy の対象外のまま
 `apps/web/src/server/routes/cron.ts` の既存 Bearer 認証（`CRON_SECRET`）で保護される。
 Vercel Cron は Basic 認証ヘッダを送れないため、この二段構成が必須である。
 
 ## API 設計
 
 新規 API エンドポイントは無い。既存 Hono ルート（`/api/*`）の契約・スキーマは変更しない。
-`middleware.ts` はエンドポイントの手前で動く横断的関心事であり、`packages/api-contract` の
+`proxy.ts` はエンドポイントの手前で動く横断的関心事であり、`packages/api-contract` の
 Zod スキーマにも影響しない。
 
-`config.matcher` の提案（Next.js 16.2.12 の middleware matcher 記法）:
+`config.matcher`（Next.js 16.2.12 の proxy matcher 記法。レビュー後の確定版）:
 
 ```ts
 export const config = {
   matcher: [
-    '/((?!(?:_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-[^/]*\\.js)$|_next/static/|icons/|api/cron/).*)',
+    '/((?!(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js)$|_next/static/|icons/|api/cron/).*)',
   ],
 };
 ```
@@ -123,9 +137,9 @@ export const config = {
   実装時に Next.js 16.2.12 で実際にこの matcher が意図通り動くか、対象パス・除外パスの
   双方で実機確認すること。
 - 代替案（トレードオフ併記）: matcher を `'/:path*'` のみにして、除外判定を
-  middleware 関数内で `request.nextUrl.pathname.startsWith(...)` により行う方法もある。
+  proxy 関数内で `request.nextUrl.pathname.startsWith(...)` により行う方法もある。
   この方法は正規表現の記法リスクを避けられるが、`_next/static` 等の静的アセットへの
-  リクエストでも Edge Function が毎回起動するため、D-2 が明記する「middleware 実行コスト
+  リクエストでも Proxy が毎回起動するため、D-2 が明記する「proxy 実行コスト
   削減」という除外理由を満たせない。**推奨は matcher 側の正規表現案**とし、上記の
   実機確認を実装時に必須とする。
 
@@ -141,10 +155,16 @@ export const config = {
   資格情報保存機能に保存され、以降は自動送信される想定（N-02）。
 - `manifest.webmanifest` / アイコン / `sw.js` は matcher 除外により認証なしで取得できるため、
   PWA のインストール・Service Worker 登録フローに変更は無い（N-03）。
+- **Service Worker 経由の 401 に注意**: `sw.ts` の `runtimeCaching` が `respondWith` で返す
+  経路（`/shopping-lists*` の navigation、`/api/shopping-lists/:id`、`/api/stores`）では、
+  Chromium が Service Worker 由来の 401 に認証ダイアログを出さない既知の挙動
+  （Chromium issue 623464）があり、資格情報が失効した状態でその URL から PWA を起動すると
+  再認証できずに固まりうる。実機確認項目とし（ADR-0021 Migration 手順 3）、詰まる場合は
+  `sw.ts` 側で 401 を `respondWith` せず素通しする対処を別タスクで行う。
 
 ## バックエンド設計
 
-`apps/web/src/middleware.ts`（新規、設計のみ・コードは実装フェーズで作成）の構成案:
+`apps/web/src/proxy.ts`（レビュー後の確定版。実装と同一）:
 
 ```ts
 import { NextResponse, type NextRequest } from 'next/server';
@@ -172,8 +192,8 @@ function decodeBasicCredentials(header: string | null): { user: string; password
   }
 }
 
-// タイミング攻撃対策の定数時間比較。crypto.timingSafeEqual は Edge Runtime に無いため
-// Web Crypto の SHA-256 ダイジェスト（常に 32 バイト）へ正規化してから比較する。
+// タイミング攻撃対策の定数時間比較。Web Crypto の SHA-256 ダイジェスト（常に 32 バイト）へ
+// 正規化してから比較する。Node.js / Edge どちらのランタイムでも同じコードで動く。
 // 可変長のまま比較すると「固定長ループで打ち切って末尾を見落とす」「ループ長が
 // 秘密の長さに依存する」のどちらかに必ず倒れるため、長さを潰してから比べる。
 async function sha256(value: string): Promise<Uint8Array> {
@@ -190,7 +210,7 @@ async function timingSafeStringEqual(a: string, b: string): Promise<boolean> {
   return mismatch === 0;
 }
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const expectedUser = process.env.BASIC_AUTH_USER;
   const expectedPassword = process.env.BASIC_AUTH_PASSWORD;
   const isConfigured =
@@ -202,16 +222,19 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (!isConfigured) {
     if (process.env.NODE_ENV === 'production') {
       // fail-closed: Preview も NODE_ENV=production で動くため、ここで一緒に守られる。
-      return new NextResponse(null, { status: 503 });
+      return new NextResponse(null, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     return NextResponse.next();
   }
 
   const credentials = decodeBasicCredentials(request.headers.get('authorization'));
-  const provided = credentials === null ? '' : `${credentials.user}:${credentials.password}`;
-  const expected = `${expectedUser}:${expectedPassword}`;
+  // user と password を別々に比較し、両方の結果を短絡させずに合成する。
+  const [userMatches, passwordMatches] = await Promise.all([
+    timingSafeStringEqual(credentials?.user ?? '', expectedUser),
+    timingSafeStringEqual(credentials?.password ?? '', expectedPassword),
+  ]);
 
-  if (credentials === null || !(await timingSafeStringEqual(provided, expected))) {
+  if (credentials === null || !(userMatches && passwordMatches)) {
     return new NextResponse(null, {
       status: 401,
       headers: {
@@ -226,19 +249,19 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!(?:_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-[^/]*\\.js)$|_next/static/|icons/|api/cron/).*)',
+    '/((?!(?:favicon\\.ico|manifest\\.webmanifest|sw\\.js)$|_next/static/|icons/|api/cron/).*)',
   ],
 };
 ```
 
-上記はコード変更を行わないための**設計上の疑似実装**であり、実装フェーズで
+上記は実装と同一の確定版である。実装は
 `.claude/rules/coding-standards.md`（`any` 禁止・default export 禁止 — ただし
-`middleware.ts` の `export function middleware` は Next.js の規約上デフォルトエクスポート
-ではなく名前付き `middleware` 関数なので抵触しない・`import type` の分離・`===`/`!==`・
-JSDoc 付与）に沿って実装すること。
+`proxy.ts` の `export function proxy` は Next.js の規約上デフォルトエクスポート
+ではなく名前付き `proxy` 関数なので抵触しない・`import type` の分離・`===`/`!==`・
+JSDoc 付与）に沿っている。
 
 `process.env.BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` へのアクセスは Presentation 層
-（Edge middleware）に閉じており、Application / Domain 層への影響は無い
+（Proxy）に閉じており、Application / Domain 層への影響は無い
 （依存方向 `Presentation → Application → Domain ← Infrastructure` を変えない）。
 
 ## エラー処理
@@ -256,7 +279,7 @@ JSDoc 付与）に沿って実装すること。
 - 想定外の例外（デコード処理の `try/catch` を抜けた場合）は無い設計（`decodeBasicCredentials`
   内で捕捉し `null` を返す）。万一の未捕捉例外は Next.js の既定のエラーハンドリングに委ね、
   UseCase 層のエラーハンドリング規約（`.claude/rules/domain-layer.md`）はこの層には適用されない
-  （middleware は UseCase を呼ばないため）。
+  （proxy は UseCase を呼ばないため）。
 
 ## ログと監視
 
@@ -274,13 +297,13 @@ JSDoc 付与）に沿って実装すること。
 - **防御方式の切り替え**: URL 秘匿（ADR-0003 決定理由 5）から HTTP Basic 認証へ切り替える。
   Basic 認証は資格情報を base64 で毎リクエスト送信する方式であり、暗号化ではないため
   HTTPS 前提（Vercel は既定で HTTPS を強制しており、この前提は既に満たされている）。
-- **定数時間比較（D-5）**: `crypto.timingSafeEqual` は Edge Runtime で利用できないため
-  自前実装する。**SHA-256 ダイジェスト（常に 32 バイト）へ正規化してから比較する。**
+- **定数時間比較（D-5）**: ランタイムに依存しない Web Crypto のみで自前実装する。**SHA-256 ダイジェスト（常に 32 バイト）へ正規化してから比較する。**
   当初案は上限 256 文字の固定長ループだったが、これは資格情報が 256 文字を超えたとき
   末尾を比較せず、先頭 256 文字と長さが一致するだけで通してしまう切り詰めバグを持つ
   （Orchestrator レビューで検出・差し替え）。ダイジェスト比較なら入力長によらず
   比較対象が 32 バイト固定になり、切り詰めと長さ依存の両方が同時に消える。
-  `crypto.subtle` は Edge Runtime で利用できる。
+  `crypto.subtle` は Node.js / Edge の両ランタイムで利用できる。user と password は
+  `user:password` に再結合せず個別に比較し、区切り位置の異なる組を吸収しない（レビュー指摘）。
 - **fail-closed の判定基準（D-3）**: `NODE_ENV` で判定し、`VERCEL_ENV` では判定しない。
   理由: Vercel の Preview デプロイも `NODE_ENV=production` で動作する。もし
   `VERCEL_ENV === 'production'` で判定していたら、Preview デプロイでは環境変数が
@@ -312,12 +335,12 @@ JSDoc 付与）に沿って実装すること。
 L3 だが、性能セクションを厚く書くトリガー条件（外部 I/O 新設・大量データ集計クエリ・
 明示された性能要件）のいずれにも該当しないため、簡潔に記載する。
 
-- 新設する処理は Edge Runtime 上でのヘッダ読み取り・base64 デコード・SHA-256 ダイジェスト
+- 新設する処理は Proxy（Node.js ランタイム）上でのヘッダ読み取り・base64 デコード・SHA-256 ダイジェスト
   2 本の算出と 32 バイト比較のみであり、DB・外部 API 呼び出しは無い。追加レイテンシは 1 リクエストあたり
   ミリ秒未満と推定される（計測はしていないため確定値ではない。実装後に Vercel の
   Function 実行時間で確認推奨）。
 - `_next/static` 等を matcher で除外していること自体が、静的アセット配信への
-  Edge Function 起動コストを避ける主な性能上の狙いである（D-2）。
+  Proxy 起動コストを避ける主な性能上の狙いである（D-2）。
 
 ## テスト方針
 
@@ -339,7 +362,7 @@ L3 だが、性能セクションを厚く書くトリガー条件（外部 I/O 
 - 定数時間比較の実装が長さの異なる入力でも一定のループ回数になっていること
   （コードレビューでの確認。タイミング計測による自動テストは実施しない）。
 - 既存の Vitest（Hono ルートテスト等）・Playwright E2E は D-4 の結論どおり変更不要だが、
-  上記の新規観点は `apps/web/tests/` 配下に middleware 用のテストを追加する
+  上記の新規観点は `apps/web/tests/` 配下に proxy 用のテストを追加する
   （配置は既存の `tests/` ミラー構成に従う）。
 
 ## 移行とリリース
@@ -350,7 +373,7 @@ L3 だが、性能セクションを厚く書くトリガー条件（外部 I/O 
    Preview 環境にも登録が必要）。
 2. `apps/web/.env.example` に両変数のプレースホルダを追記する（値は書かない。
    `CRON_SECRET` の既存記載形式に揃える）。
-3. `apps/web/src/middleware.ts` を実装し、デプロイする。
+3. `apps/web/src/proxy.ts` を実装し、デプロイする。
 4. 本番 URL に対して実機確認する: ブラウザで認証ダイアログが出る／正しい資格情報で
    通る／`manifest.webmanifest` が 401 にならず PWA のインストールが壊れていない／
    既存 PWA インストール済み端末（2 名分）で再認証できる。
@@ -363,11 +386,13 @@ L3 だが、性能セクションを厚く書くトリガー条件（外部 I/O 
    手順 6・7 の ADR 本体作成は本タスクのスコープ外（別工程）。
 
 CI への影響: `apps/web/playwright.config.ts` の `webServer.command` は `pnpm dev`
-（`NODE_ENV=development`）であり、D-3 によりこの環境では環境変数未設定でも認証が
-スキップされる。よって Playwright の `webServer.url` への疎通確認（`baseURL` への
-成功応答待ち）は 401/503 の影響を受けず、既存の待機ロジックのまま動く。
-`.github/workflows/ci.yml` の E2E ジョブも同じ `pnpm dev` 経路（`playwright.config.ts` 経由）
-のため変更不要である（D-4、変更なし）。
+（`NODE_ENV=development`）であり、D-3 により環境変数**未設定**ならこの環境では認証が
+スキップされる。CI は `BASIC_AUTH_*` を渡さないので、`.github/workflows/ci.yml` の E2E
+ジョブは変更不要である。一方、環境変数が設定されていれば `pnpm dev` でも認証は掛かる
+（`isConfigured` が真なら `NODE_ENV` は見ない）ため、`.env` に値を入れた開発者や Preview URL
+を `E2E_BASE_URL` に向けた実行では全テストが 401 になる。`playwright.config.ts` は
+`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` が両方設定されているときだけ同じ値を
+`use.httpCredentials` に渡す（D-4）。
 
 ## リスク
 

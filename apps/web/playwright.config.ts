@@ -10,6 +10,18 @@ import { defineConfig, devices } from '@playwright/test';
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 const usesPGlite = process.env.DATABASE_URL?.startsWith('pglite://') ?? false;
+// `src/proxy.ts` の Basic 認証は環境変数が設定されていれば `pnpm dev` でも掛かる
+// （NODE_ENV でスキップされるのは未設定時のみ）。`.env` に値を入れた開発者や、Preview URL を
+// `E2E_BASE_URL` に向けた実行で全テストが 401 にならないよう、同じ変数から資格情報を渡す。
+const basicAuthUser = process.env.BASIC_AUTH_USER;
+const basicAuthPassword = process.env.BASIC_AUTH_PASSWORD;
+const httpCredentials =
+  basicAuthUser !== undefined &&
+  basicAuthUser !== '' &&
+  basicAuthPassword !== undefined &&
+  basicAuthPassword !== ''
+    ? { username: basicAuthUser, password: basicAuthPassword }
+    : undefined;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -22,6 +34,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    ...(httpCredentials !== undefined ? { httpCredentials } : {}),
   },
   projects: [
     {

@@ -23,7 +23,7 @@ URL の秘匿（security by obscurity）。リポジトリを public にする�
 `apps/web/src/server/routes/` は無認証のフル CRUD（GET 12 / POST 19 / PUT 5 / DELETE 6、
 `health.ts` / `meal-plans.ts` / `pantry.ts` / `products.ts` / `push.ts` / `recipes.ts` /
 `shopping-lists.ts` / `stores.ts` の 8 ルートファイル。`cron.ts` は既に Bearer 認証で保護済み）
-であり、`apps/web/src/middleware.ts` は存在しない。公開時点で第三者が在庫・献立・
+であり、`apps/web/src/proxy.ts`（旧称 `middleware.ts`）は存在しない。公開時点で第三者が在庫・献立・
 買い物リスト・レシピを閲覧も編集も削除もできる状態になる。
 
 ## 目的
@@ -41,14 +41,16 @@ GitHub リポジトリを public 化しても、本番アプリのユーザー�
 
 ## 機能要件
 
-- F-01 `apps/web/src/middleware.ts` を新規作成し、Next.js の既定 Edge Runtime で HTTP Basic
-  認証を掛ける（`node:crypto` に依存しない）。
+- F-01 `apps/web/src/proxy.ts`（Next.js 16 の `proxy` 規約。`middleware` 規約は deprecated）を
+  新規作成し、HTTP Basic 認証を掛ける。ランタイムに依存しない Web 標準 API のみで書き、
+  `node:crypto` に依存しない。
 - F-02 `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` の両方が設定されている場合、対象パスへの
   すべてのリクエストで Basic 認証を要求する。
 - F-03 資格情報の検証は定数時間比較で行い、ユーザー名・パスワードの長さの差からも
   情報が漏れないようにする。
-- F-04 保護対象から次を除外する: `_next/static`・`_next/image`・`favicon.ico`・`icons/`・
-  `manifest.webmanifest`・`sw.js`・`workbox-*.js`・`api/cron/*`。
+- F-04 保護対象から次を除外する: `_next/static/`・`favicon.ico`・`icons/`・
+  `manifest.webmanifest`・`sw.js`・`api/cron/*`。`_next/image`・`workbox-*.js` は除外しない
+  （当初案に含まれていたが PR #202 レビューで削除。理由は設計書 D-2）。
 - F-05 認証失敗時は `401` を返し、`WWW-Authenticate: Basic realm="Cookpit", charset="UTF-8"`
   と `Cache-Control: no-store` を付与してブラウザに認証ダイアログを出させる。
 - F-05b fail-closed の `503` にも `Cache-Control: no-store` を付与する。設定不備による 503 が
@@ -62,7 +64,7 @@ GitHub リポジトリを public 化しても、本番アプリのユーザー�
   資格情報比較はタイミング攻撃対策として定数時間比較を用いる（詳細は設計書「セキュリティ」節）。
 - 可用性: 環境変数未設定時、本番では fail-closed（503 でコンテンツを一切出さない）とし、
   「保護漏れで無防備公開」より「一時的にアプリが使えない」を優先する。
-- 性能: 新設する処理は Edge Runtime 上のヘッダ検査のみで、DB・外部 I/O を伴わない。
+- 性能: 新設する処理は Proxy 上のヘッダ検査のみで、DB・外部 I/O を伴わない。
   性能設計の追加観点なし（本タスクの L3 判定理由は「認証・認可の変更」であり、
   `docs/designs/<feature-name>.md` の性能セクションのトリガー条件
   ［外部 I/O 新設／大量データ集計クエリ／明示された性能要件］のいずれにも該当しない）。
@@ -115,13 +117,14 @@ GitHub リポジトリを public 化しても、本番アプリのユーザー�
 ## 制約
 
 - Domain / Application 層への影響は無い。変更は Presentation 層
-  （`apps/web/src/middleware.ts` 新設）と環境変数・ドキュメントのみ。
-- `node:crypto` は Edge Runtime で使えないため使用しない。
+  （`apps/web/src/proxy.ts` 新設）と環境変数・ドキュメント、および `playwright.config.ts` の
+  `httpCredentials` 追加のみ。
+- `node:crypto` はランタイム依存を避けるため使用しない（Web Crypto の `crypto.subtle` を使う）。
 - Vercel Hobby プラン。Deployment Protection は非採用（後述）。
 
 ## 対象範囲
 
-- `apps/web/src/middleware.ts` の新規設計（実装はコード変更禁止のためこのタスクでは行わない）。
+- `apps/web/src/proxy.ts` の新規設計（実装はコード変更禁止のためこのタスクでは行わない）。
 - `apps/web/.env.example` への環境変数追記の設計。
 - `docs/decisions/ADR-0003-no-auth-in-mvp1.md` への追記方針、および新規 ADR-0021 作成方針
   （ADR 本体の作成自体は別工程）。
@@ -157,7 +160,7 @@ GitHub リポジトリを public 化しても、本番アプリのユーザー�
 
 ## 受け入れ条件（Definition of Done に対応）
 
-- AC-01 `apps/web/src/middleware.ts` の設計が F-01〜F-05 を満たす形で
+- AC-01 `apps/web/src/proxy.ts` の設計が F-01〜F-05 を満たす形で
   `docs/designs/public-release-basic-auth.md` に記述されている。
 - AC-02 matcher の除外パス一覧と各除外理由が設計書に明記されている（D-2 のとおり）。
 - AC-03 環境変数未設定時の fail-closed 判定が `NODE_ENV` 基準であり、`VERCEL_ENV` を
