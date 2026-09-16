@@ -2,20 +2,20 @@
 
 ## サマリ
 
-| レイヤー           | 技術                                                 | バージョン目安       |
-| ------------------ | ---------------------------------------------------- | -------------------- |
-| フロントエンド     | Next.js (App Router) + React                         | Next.js 16, React 19 |
-| バックエンド API   | Hono（Next.js 内マウント）                           | Hono 最新            |
-| API 通信（型安全） | Hono RPC + `useApiAction` / React state              | Hono 最新            |
-| ORM                | Drizzle ORM                                          | 最新                 |
-| データベース       | Neon (Serverless PostgreSQL)                         | -                    |
-| 認証               | （MVP1 では未使用、Phase 2 で Better Auth 検討）     | -                    |
-| スタイリング       | Tailwind CSS + shadcn/ui                             | Tailwind v4          |
-| クライアント状態   | React `useState` / `useOptimistic`（Zustand 未使用） | React 19             |
-| バリデーション     | Zod                                                  | 最新                 |
-| PWA                | Serwist                                              | 最新                 |
-| モノレポ           | Turborepo + pnpm workspaces                          | 最新                 |
-| デプロイ           | Vercel + Neon                                        | -                    |
+| レイヤー           | 技術                                                       | バージョン目安       |
+| ------------------ | ---------------------------------------------------------- | -------------------- |
+| フロントエンド     | Next.js (App Router) + React                               | Next.js 16, React 19 |
+| バックエンド API   | Hono（Next.js 内マウント）                                 | Hono 最新            |
+| API 通信（型安全） | Hono RPC + `useApiAction` / React state                    | Hono 最新            |
+| ORM                | Drizzle ORM                                                | 最新                 |
+| データベース       | Neon (Serverless PostgreSQL)                               | -                    |
+| 認証               | Basic 認証（Edge middleware）。Phase 2 で Better Auth 検討 | -                    |
+| スタイリング       | Tailwind CSS + shadcn/ui                                   | Tailwind v4          |
+| クライアント状態   | React `useState` / `useOptimistic`（Zustand 未使用）       | React 19             |
+| バリデーション     | Zod                                                        | 最新                 |
+| PWA                | Serwist                                                    | 最新                 |
+| モノレポ           | Turborepo + pnpm workspaces                                | 最新                 |
+| デプロイ           | Vercel + Neon                                              | -                    |
 
 ## 各技術の選定理由
 
@@ -73,11 +73,14 @@ MVP1 のサーバー状態は次の組み合わせで管理する（TanStack Que
 
 注意点：スケールゼロ状態からのコールドスタートで数秒の遅延が発生することがある。個人利用では実害なし。
 
-### MVP1 では認証なし
+### 認証は Basic 認証（Edge middleware）
 
-Vercel の URL を 2 名で共有して使う運用とする。詳細は [ADR-003](./decisions/ADR-0003-no-auth-in-mvp1.md) を参照。
+当初は認証を置かず、Vercel の URL を 2 名で共有する運用だった（[ADR-003](./decisions/ADR-0003-no-auth-in-mvp1.md)）。
+リポジトリを public にしたことで「URL の推測難度」という前提が成立しなくなったため、
+`apps/web/src/middleware.ts` による Basic 認証へ移行した。詳細は
+[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md) を参照。
 
-Phase 2 以降で Better Auth の導入を検討する。
+個人を識別する認証はまだ必要としないため、Phase 2 以降で Better Auth の導入を引き続き検討する。
 
 ### Tailwind CSS v4 + shadcn/ui
 
