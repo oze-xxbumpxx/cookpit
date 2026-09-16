@@ -1,6 +1,26 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const REALM_HEADER = 'Basic realm="Cookpit", charset="UTF-8"';
+// 本文と Content-Type を必ず付ける。どちらも無い応答をブラウザはレンダリングできず、
+// 不明なファイルとみなしてダウンロードを提案する。401 は実体が無いのでダウンロードも
+// 完了せず、利用者は復帰手段を失う（2026-09-16 に iOS Safari で顕在化）。
+// 認証前に返すため、アプリの情報は一切含めない。
+const HTML_HEADERS = { 'Content-Type': 'text/html; charset=utf-8' } as const;
+
+const UNAUTHORIZED_HTML = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>認証が必要です</title>
+</head><body style="font-family:system-ui,sans-serif;padding:2rem;line-height:1.7">
+<h1 style="font-size:1.25rem">認証が必要です</h1>
+<p>このページを表示するにはユーザー名とパスワードが必要です。</p>
+<p>入力欄が出ない場合は、ページを再読み込みしてください。</p>
+</body></html>`;
+
+const UNAVAILABLE_HTML = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>一時的に利用できません</title>
+</head><body style="font-family:system-ui,sans-serif;padding:2rem;line-height:1.7">
+<h1 style="font-size:1.25rem">一時的に利用できません</h1>
+<p>時間をおいて再度お試しください。</p>
+</body></html>`;
 
 function decodeBasicCredentials(header: string | null): { user: string; password: string } | null {
   if (header === null || !header.startsWith('Basic ')) {
@@ -62,9 +82,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!isConfigured) {
     if (process.env.NODE_ENV === 'production') {
       console.error('BASIC_AUTH_USER/BASIC_AUTH_PASSWORD is not configured');
-      return new NextResponse(null, {
+      return new NextResponse(UNAVAILABLE_HTML, {
         status: 503,
-        headers: { 'Cache-Control': 'no-store' },
+        headers: { ...HTML_HEADERS, 'Cache-Control': 'no-store' },
       });
     }
     return NextResponse.next();
@@ -79,9 +99,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   ]);
 
   if (credentials === null || !(userMatches && passwordMatches)) {
-    return new NextResponse(null, {
+    return new NextResponse(UNAUTHORIZED_HTML, {
       status: 401,
       headers: {
+        ...HTML_HEADERS,
         'WWW-Authenticate': REALM_HEADER,
         'Cache-Control': 'no-store',
       },

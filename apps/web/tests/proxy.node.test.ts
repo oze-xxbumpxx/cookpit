@@ -201,7 +201,7 @@ describe('proxy', () => {
     expect(res.status).toBe(401);
   });
 
-  it('MW-19: 本番相当・環境変数未設定で 503、本文は空', async () => {
+  it('MW-19: 本番相当・環境変数未設定で 503、アプリの内容は返さない', async () => {
     delete process.env.BASIC_AUTH_USER;
     delete process.env.BASIC_AUTH_PASSWORD;
     vi.stubEnv('NODE_ENV', 'production');
@@ -209,7 +209,12 @@ describe('proxy', () => {
     const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
-    expect(await res.text()).toBe('');
+    const body = await res.text();
+    // 本文と Content-Type が無いとブラウザがダウンロード扱いにするため、必ず描画可能にする。
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
+    expect(body.length).toBeGreaterThan(0);
+    // 設定不備の詳細（環境変数名など）を外部へ出さない。
+    expect(body).not.toContain('BASIC_AUTH');
   });
 
   // 要件 E-02 の非対称ケース。MW-19 は両方未設定、MW-13 は両方空文字で、
@@ -231,7 +236,27 @@ describe('proxy', () => {
     const res = await proxy(makeRequest('/'));
 
     expect(res.status).toBe(503);
-    expect(await res.text()).toBe('');
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
+  });
+
+  // 2026-09-16 に iOS Safari で顕在化した不具合の回帰防止。401 に本文と Content-Type が
+  // 無いとブラウザがレンダリングできず「ダウンロードしますか？」となり、実体が無いので
+  // 完了しない。PWA では真っ白になる。
+  it('MW-24【回帰防止】: 401 は描画可能な HTML 本文と Content-Type を持つ', async () => {
+    process.env.BASIC_AUTH_USER = 'configured-user';
+    process.env.BASIC_AUTH_PASSWORD = 'configured-password';
+
+    const res = await proxy(makeRequest('/'));
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
+    const body = await res.text();
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain('<html');
+    // 認証前に返すため、資格情報も環境変数名も含めない。
+    expect(body).not.toContain('configured-user');
+    expect(body).not.toContain('configured-password');
+    expect(body).not.toContain('BASIC_AUTH');
   });
 
   it('MW-19c: 503 応答には Cache-Control: no-store を付ける', async () => {
