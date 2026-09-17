@@ -69,4 +69,7 @@ Phase 2 で認証を導入する場合の手順：
   → 2026-09-16 に実施。ただし契機は Phase 2 移行ではなく**リポジトリの public 化**であり、
   導入したのは Better Auth ではなく Basic 認証（[ADR-0021](./ADR-0021-basic-auth-for-public-repository.md)）。
   Better Auth への移行は引き続き Phase 2 以降の選択肢として残る。
+- **2026-09-17 追記**: Better Auth（email + password + Cookie セッション）を
+  [ADR-0022](./ADR-0022-better-auth-login.md) で導入した。「Better Auth への移行は
+  引き続き Phase 2 以降の選択肢として残る」としていた本項目は解消した。
 - 「最初から認証なし、後から導入」のパターンは業務でも遭遇する状況なので、移行時の経験を業務に還元する

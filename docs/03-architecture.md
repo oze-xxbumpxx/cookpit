@@ -51,7 +51,7 @@ cookpit/
 ├── apps/
 │   └── web/                             # Next.js + Hono 一体（@cookpit/web）
 │       ├── src/
-│       │   ├── proxy.ts                 # Basic 認証（Next.js 16 Proxy。ADR-0021）
+│       │   ├── proxy.ts                 # セッション検証（Next.js 16 Proxy。ADR-0022）
 │       │   ├── app/
 │       │   │   ├── api/[[...route]]/
 │       │   │   │   └── route.ts         # Hono をマウント
@@ -65,6 +65,7 @@ cookpit/
 │       │   │   └── manifest.ts          # PWA マニフェスト
 │       │   ├── server/                  # Hono のサーバー実装
 │       │   │   ├── routes/              # recipes / meal-plans / shopping-lists 等
+│       │   │   ├── auth/                # Better Auth（createAuth/getAuth。ADR-0022）
 │       │   │   ├── repositories.ts      # Repository ファクトリ（DI の入口）
 │       │   │   └── app.ts               # Hono アプリ本体（named export）
 │       │   ├── db/                      # Neon / PGlite 接続
@@ -211,19 +212,21 @@ export function RecipeListClient({ initialRecipes }) {
 
 - **読み取り**は初期表示を Server Component で、その後の操作は Hono RPC に切り替え
 - **書き込み**は基本 Hono RPC（楽観的更新やエラーバナーを効かせやすい）
-- 認証は `src/proxy.ts` の Basic 認証で全経路の手前に掛かる（[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md)）。
+- 認証は `src/proxy.ts` が Better Auth のセッション（`getSession`）検証で全経路の手前に
+  掛かる（[ADR-0022](./decisions/ADR-0022-better-auth-login.md)。Basic 認証
+  （[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md)）を置換）。
   「ログインユーザー」という概念はドメインに持ち込んでいないため（[ADR-0004](./decisions/ADR-0004-no-user-in-domain.md)）、A も B もシンプルなまま
 
 ## パッケージ公開境界（ADR-0010）
 
 消費側は必ずパッケージ名のバレルから import する。
 
-| パッケージ                 | 正規 import                                  | 禁止例                         |
-| -------------------------- | -------------------------------------------- | ------------------------------ |
-| domain                     | `@cookpit/domain`                            | `@cookpit/domain/src/...`      |
-| application                | `@cookpit/application`                       | deep path                      |
-| infrastructure（web から） | `@/server/repositories` と `@/db/*` に閉じる | page からの直接 `new Drizzle*` |
-| api-contract               | `@cookpit/api-contract`                      | deep path                      |
+| パッケージ                 | 正規 import                                                 | 禁止例                         |
+| -------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| domain                     | `@cookpit/domain`                                           | `@cookpit/domain/src/...`      |
+| application                | `@cookpit/application`                                      | deep path                      |
+| infrastructure（web から） | `@/server/repositories`・`@/server/auth`・`@/db/*` に閉じる | page からの直接 `new Drizzle*` |
+| api-contract               | `@cookpit/api-contract`                                     | deep path                      |
 
 `packages/domain` 内部の相互参照は相対パスのまま（バレル自己参照で循環を作らない）。
 
