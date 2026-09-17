@@ -65,10 +65,11 @@ cp apps/web/.env.example apps/web/.env   # DATABASE_URL を設定する
 pnpm dev
 ```
 
-`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` は未設定でも開発時は認証がスキップされるため、
-ローカル開発で設定する必要はありません。設定した場合は `pnpm dev` でも Basic 認証が掛かります
-（Playwright E2E は同じ変数から資格情報を自動で渡します）。本番相当（`NODE_ENV=production`）で
-未設定の場合は fail-closed で 503 を返します。
+`BETTER_AUTH_SECRET` は未設定でも開発時は認証がスキップされるため、ローカル開発で設定する
+必要はありません（生成する場合は `openssl rand -base64 32`）。設定した場合は `pnpm dev` でも
+ログイン画面が挟まります。本番相当（`NODE_ENV=production`）で未設定の場合は fail-closed で
+503 を返します。ログイン E2E（`auth-login.spec.ts`）の実行手順は
+[`apps/web/e2e/README.md`](apps/web/e2e/README.md) を参照してください。
 
 ### 品質ゲート
 
