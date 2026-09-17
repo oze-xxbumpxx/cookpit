@@ -2,6 +2,11 @@ import { getAuth, isAuthConfigured } from '@/server/auth';
 import { headers } from 'next/headers';
 import { MoreMenu } from './_components/more-menu';
 
+// /more/account と同じ規約。secret 未設定のビルド環境（isAuthConfigured() が false）では
+// headers() に到達せず静的化され、実行時のログイン名表示（D-16）が動かなくなるため
+// ビルド環境に依存せず常にリクエスト時評価にする（F-03）。
+export const dynamic = 'force-dynamic';
+
 export default async function MorePage() {
   // dev（BETTER_AUTH_SECRET 未設定。Proxy も認証をスキップする経路）では getAuth() を
   // 呼ばず null 扱いにする。DATABASE_URL 自体が未設定な dev 環境だと getDb() が
