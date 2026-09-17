@@ -79,4 +79,39 @@ describe('ChangePasswordForm', () => {
       screen.queryByText('パスワードを変更しました。他の端末では再ログインが必要です。'),
     ).toBeNull();
   });
+
+  it('新パスワードの文字数ヒントを表示する', () => {
+    render(<ChangePasswordForm />);
+
+    expect(screen.getByText('12 文字以上 128 文字以下で入力してください。')).toBeTruthy();
+  });
+
+  // F-01: status/code で文言を分岐する（docs/reviews/better-auth-login.md EV-06 の実測値）。
+  it.each([
+    [
+      { status: 400, statusText: 'x', code: 'PASSWORD_TOO_SHORT' },
+      'パスワードは 12〜128 文字にしてください。',
+    ],
+    [
+      { status: 400, statusText: 'x', code: 'PASSWORD_TOO_LONG' },
+      'パスワードは 12〜128 文字にしてください。',
+    ],
+    [
+      { status: 429, statusText: 'x' },
+      '試行回数が多すぎます。しばらく待ってから再度お試しください。',
+    ],
+    [
+      { status: 400, statusText: 'x', code: 'INVALID_PASSWORD' },
+      '現在のパスワードが正しくありません。',
+    ],
+  ])('F-01: changePassword のエラー %o → %s', async (error, expected) => {
+    changePassword.mockResolvedValue({ data: null, error });
+    const user = userEvent.setup();
+    render(<ChangePasswordForm />);
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: '変更する' }));
+
+    expect(await screen.findByText(expected)).toBeTruthy();
+  });
 });

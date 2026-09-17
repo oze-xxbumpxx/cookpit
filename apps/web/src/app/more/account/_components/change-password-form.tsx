@@ -8,12 +8,32 @@ import { useId, useState, type FormEvent } from 'react';
 
 const MISMATCH_MESSAGE = '新しいパスワードと確認が一致しません。';
 const CURRENT_PASSWORD_ERROR_MESSAGE = '現在のパスワードが正しくありません。';
+const PASSWORD_LENGTH_ERROR_MESSAGE = 'パスワードは 12〜128 文字にしてください。';
+const RATE_LIMIT_MESSAGE = '試行回数が多すぎます。しばらく待ってから再度お試しください。';
 const SUCCESS_MESSAGE = 'パスワードを変更しました。他の端末では再ログインが必要です。';
+
+/**
+ * Better Auth のエラーを status/code で分岐する（F-01）。実測値
+ * （`docs/reviews/better-auth-login.md` EV-06）: 新パスワード 11 文字 → 400
+ * PASSWORD_TOO_SHORT、129 文字 → 400 PASSWORD_TOO_LONG、現在パスワード誤り →
+ * 400 INVALID_PASSWORD、短時間の連続試行 → 429。code が無い・未知の場合は現在の
+ * パスワード誤りとして扱う（列挙防止のため詳細を出し分けない既定の安全側）。
+ */
+function resolveChangePasswordErrorMessage(error: { status: number; code?: string }): string {
+  if (error.status === 429) {
+    return RATE_LIMIT_MESSAGE;
+  }
+  if (error.code === 'PASSWORD_TOO_SHORT' || error.code === 'PASSWORD_TOO_LONG') {
+    return PASSWORD_LENGTH_ERROR_MESSAGE;
+  }
+  return CURRENT_PASSWORD_ERROR_MESSAGE;
+}
 
 /** パスワード変更フォーム。成功時は他端末を全て失効させる（`revokeOtherSessions: true`）。 */
 export function ChangePasswordForm() {
   const currentId = useId();
   const newId = useId();
+  const newPasswordHintId = useId();
   const confirmId = useId();
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -46,7 +66,7 @@ export function ChangePasswordForm() {
         revokeOtherSessions: true,
       });
       if (result.error !== null) {
-        setErrorMessage(CURRENT_PASSWORD_ERROR_MESSAGE);
+        setErrorMessage(resolveChangePasswordErrorMessage(result.error));
         return;
       }
       setSuccessMessage(SUCCESS_MESSAGE);
@@ -102,10 +122,16 @@ export function ChangePasswordForm() {
           type="password"
           autoComplete="new-password"
           required
+          minLength={12}
+          maxLength={128}
+          aria-describedby={newPasswordHintId}
           value={newPassword}
           onChange={(event) => setNewPassword(event.currentTarget.value)}
           className="h-11 rounded-xl bg-background"
         />
+        <p id={newPasswordHintId} className="text-xs text-muted-foreground">
+          12 文字以上 128 文字以下で入力してください。
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">
