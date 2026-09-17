@@ -34,9 +34,18 @@ const SCRIPT_PATH = join(
   '../scripts/review-readiness.mjs',
 );
 
+// git フック（lefthook の pre-push 等）から実行されると、git が親プロセスへ設定する
+// GIT_DIR / GIT_INDEX_FILE 等がそのまま継承され、一時リポジトリではなく外側のリポジトリに
+// 対して commit してしまう（"nothing to commit" で sandbox 構築が失敗する）。
+// サンドボックス用の git には GIT_* を渡さない。
+const gitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+);
+
 function git(root, args) {
   return execFileSync('git', ['-C', root, ...args], {
     encoding: 'utf8',
+    env: gitEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 }
@@ -124,7 +133,7 @@ function runScript(root, args) {
     const stdout = execFileSync(process.execPath, [SCRIPT_PATH, ...args], {
       cwd: root,
       encoding: 'utf8',
-      env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+      env: { ...gitEnv, CLAUDE_PROJECT_DIR: root },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return { code: 0, stdout, stderr: '' };
