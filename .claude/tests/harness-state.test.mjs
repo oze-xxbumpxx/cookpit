@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   RUN_STATE_FILENAME,
@@ -298,7 +299,9 @@ test('別プロセスからの並行更新で更新が失われない', async ()
   const { state: stateDirPath, root, opts, cleanup } = sandbox();
   try {
     saveRunState(createRunState({ taskId: 'conc-proc' }), opts);
-    const cli = new URL('../scripts/harness-run.mjs', import.meta.url).pathname;
+    // URL#pathname は非 ASCII のパス（日本語ディレクトリ配下の clone など）を percent-encode
+    // したまま返すため spawn がスクリプトを見つけられない。fileURLToPath で実パスへ戻す。
+    const cli = fileURLToPath(new URL('../scripts/harness-run.mjs', import.meta.url));
     const env = { ...process.env, HARNESS_STATE_DIR: stateDirPath, CLAUDE_PROJECT_DIR: root };
     const names = ['lint', 'test', 'build', 'harness'];
     await Promise.all(
