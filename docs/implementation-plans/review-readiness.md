@@ -1,7 +1,7 @@
 # 実装計画: review-readiness
 
 - 前提: `docs/requirements/review-readiness.md` / `docs/designs/review-readiness.md` /
-  `docs/decisions/ADR-0017-review-readiness-as-decision-interface.md`
+  `docs/decisions/ADR-0022-review-readiness-as-decision-interface.md`
 - レベル: L3
 - 実装ルート: Codex 実装 → Claude Code Reviewer 受け入れレビュー
 - 対象外: アプリ本体、DB、API、既存レビュー本文の一括移行、CI blocking 化

@@ -171,5 +171,5 @@
 
 #### ロールバック
 
-ADR-0017 の手順どおり、本 feature の script/test、CI step、Reviewer/Skill 契約、正典追記を同じ
+ADR-0022 の手順どおり、本 feature の script/test、CI step、Reviewer/Skill 契約、正典追記を同じ
 変更単位で revert する。既存 legacy review とアプリデータの migration はない。

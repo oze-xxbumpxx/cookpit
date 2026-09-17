@@ -25,6 +25,8 @@ description: >
   （既存最大 004 の +1。以降は `docs/` 直下と `docs/decisions/` を合わせた最大 +1）。
   `ADR-0001` から始めない — 既存 ADR-001 と番号が衝突する。
 - 既存 4 件は移動しない（移設・置き場所の統一はユーザー判断事項）。
+- **採番前に `docs/decisions/README.md` の「ADR 一覧」で最大番号を確認する**（過去に
+  ADR-0017 を 2 件に重複させ、後から `ADR-0022` へ振り直した。2026-09-17）。
 
 ## テンプレート
 
@@ -55,6 +57,7 @@ description: >
 - Status が設定されている。
 - Alternatives に非採用案と却下理由がある（「検討した」ことを残す）。
 - Migration / Rollback が判断されている（不要なら「対象外」と明記）。
+- `docs/decisions/README.md` の「ADR 一覧」に 1 行追記してある（README からの導線を切らさない）。
 
 ## 良い例（既存 ADR）
 

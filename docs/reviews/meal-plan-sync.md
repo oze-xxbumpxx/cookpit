@@ -186,7 +186,7 @@
 | R-05            | FOLLOW_UP          | low    | resolved      | 減少時も品目側の単位原文を保つ                                                                 |
 | R-06            | PRE_EXISTING       | medium | accepted_risk | ShoppingList / Pantry の部分失敗窓。Unit B                                                     |
 | R-07            | PRE_EXISTING       | low    | open          | amountNote 材料の集計非畳み。今回悪化なし                                                      |
-| R-08            | PRE_EXISTING       | low    | open          | ADR-0017 番号重複。今回の差分外                                                                |
+| R-08            | PRE_EXISTING       | low    | resolved      | ADR-0017 番号重複。2026-09-17 に review-readiness 側を ADR-0022 へ振り直して解消               |
 | SEC-01 / SEC-02 | PRE_EXISTING       | high   | open          | pnpm audit の eslint 配下 DoS。lockfile 未変更                                                 |
 | SEC-03          | HUMAN_DECISION     | low    | open          | no-auth のまま sync が破壊的になった。ADR-0003 の再評価は H-02 の隣接                          |
 | SEC-04          | FOLLOW_UP          | low    | open          | `updateRequiredAmount` は素の Error。現状は UseCase が絞るので到達しない                       |
