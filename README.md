@@ -81,14 +81,17 @@ pnpm build
 
 ## ドキュメント
 
-| 場所                                     | 内容                                                             |
-| ---------------------------------------- | ---------------------------------------------------------------- |
-| [docs/](./docs/)                         | 概要・技術スタック・アーキテクチャ・ドメインモデル・ロードマップ |
-| [docs/decisions/](./docs/decisions/)     | ADR（アーキテクチャ意思決定記録）                                |
-| [docs/designs/](./docs/designs/)         | 機能ごとの設計書                                                 |
-| [docs/claude-code/](./docs/claude-code/) | AI 支援開発のワークフロー・Agent 責務・改善サイクル              |
-| [.claude/](./.claude/)                   | Claude Code の Agent 定義・Skill・Hook・Rule                     |
-| [logs/](./logs/)                         | 日次の作業ログ                                                   |
+設計判断の経緯は ADR に残しています。一覧は
+[docs/decisions/README.md](./docs/decisions/README.md) を参照してください。
+
+| 場所                                          | 内容                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| [docs/](./docs/)                              | 概要・技術スタック・アーキテクチャ・ドメインモデル・ロードマップ |
+| [docs/decisions/](./docs/decisions/README.md) | ADR（アーキテクチャ意思決定記録）の一覧                          |
+| [docs/designs/](./docs/designs/)              | 機能ごとの設計書                                                 |
+| [docs/claude-code/](./docs/claude-code/)      | AI 支援開発のワークフロー・Agent 責務・改善サイクル              |
+| [.claude/](./.claude/)                        | Claude Code の Agent 定義・Skill・Hook・Rule                     |
+| [logs/](./logs/)                              | 日次の作業ログ                                                   |
 
 ## ライセンス
 

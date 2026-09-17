@@ -55,6 +55,7 @@ description: >
 - Status が設定されている。
 - Alternatives に非採用案と却下理由がある（「検討した」ことを残す）。
 - Migration / Rollback が判断されている（不要なら「対象外」と明記）。
+- `docs/decisions/README.md` の「ADR 一覧」に 1 行追記してある（README からの導線を切らさない）。
 
 ## 良い例（既存 ADR）
 
