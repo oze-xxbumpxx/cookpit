@@ -46,7 +46,14 @@ export function createAuth(o: CreateAuthOptions) {
       cookieCache: { enabled: true, maxAge: 60 * 5 },
     },
     rateLimit: { enabled: true, storage: o.rateLimitStorage },
-    advanced: { cookiePrefix: 'cookpit' },
+    advanced: {
+      cookiePrefix: 'cookpit',
+      // Vercel が付与しクライアントからは上書きできないヘッダを優先する（SEC-2）。既定の
+      // x-forwarded-for 単独は多段プロキシ・詐称で複数値になり得、Better Auth は複数値の
+      // ヘッダを一切信頼しないため getIP() が null に落ち、全利用者共有の 1 バケットへ退避する
+      // （総当たり制限の実質無効化、または正規ログインの巻き添え 429 のどちらかを招く）。
+      ipAddress: { ipAddressHeaders: ['x-vercel-forwarded-for', 'x-forwarded-for'] },
+    },
     plugins: [],
   });
 }

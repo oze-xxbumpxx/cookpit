@@ -161,3 +161,57 @@ describe('IT-H: PGlite 実結合（createAuth() を直接構築）', () => {
     ).rejects.toThrow();
   });
 });
+
+// SEC-2: rate_limits.key の IP 解決（`docs/reviews/better-auth-login.security.md` SEC-2）。
+// reviewer が実証した `createAuth(...).handler(new Request(...))` による HTTP 面の直叩きで
+// 検証する（`.api.*` 直接呼び出しは Request オブジェクトを経由しないため getIP() の
+// ヘッダ解決を再現できない）。
+describe('SEC-2: レート制限のキーが x-vercel-forwarded-for で IP 別に分離される', () => {
+  const BASE_URL = 'https://auth-sec2-test.example';
+
+  it('多段 x-forwarded-for があっても x-vercel-forwarded-for を優先し、rate_limits.key が IP 別の行になる', async () => {
+    const pglite = new PGlite();
+    try {
+      await applyMigrations(pglite);
+      const rawDb = drizzle(pglite, { schema: authSchema });
+      const db = rawDb as unknown as DrizzleClient;
+      const auth = createAuth({
+        db,
+        secret: 'sec-2-test-secret-sec-2-test-secret-32',
+        baseURL: BASE_URL,
+        trustedOrigins: [BASE_URL],
+        allowSignUp: false,
+        rateLimitStorage: 'database',
+      });
+
+      const signInRequest = (ip: string): Request =>
+        new Request(`${BASE_URL}/api/auth/sign-in/email`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            origin: BASE_URL,
+            // 多段プロキシ・詐称を模した複数値。Better Auth はこれ単独では信頼しない
+            // （getIPFromHeader は trustedProxies 未設定時、複数値ヘッダを null に落とす）。
+            'x-forwarded-for': `${ip}, 10.0.0.1`,
+            // Vercel が付与しクライアントからは上書きできないヘッダ（想定）。ipAddressHeaders
+            // でこちらを先に見るため、上の多段ヘッダに関わらず ip が解決される（SEC-2 修正）。
+            'x-vercel-forwarded-for': ip,
+          },
+          body: JSON.stringify({ email: 'nobody@example.test', password: 'wrong-password-xxxx' }),
+        });
+
+      await auth.handler(signInRequest('203.0.113.10'));
+      await auth.handler(signInRequest('203.0.113.20'));
+
+      const rows = await rawDb.select().from(authSchema.rateLimits);
+      const keys = rows.map((row) => row.key);
+
+      expect(keys.some((key) => key.startsWith('203.0.113.10|'))).toBe(true);
+      expect(keys.some((key) => key.startsWith('203.0.113.20|'))).toBe(true);
+      // 修正前は複数値ヘッダが信頼されず、両リクエストが同一の共有バケットへ落ちていた。
+      expect(keys.some((key) => key.startsWith('no-trusted-ip'))).toBe(false);
+    } finally {
+      await pglite.close();
+    }
+  });
+});
