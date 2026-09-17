@@ -35,6 +35,11 @@ function isActive(pathname: string, href: string): boolean {
 export function NavBar() {
   const pathname = usePathname();
 
+  // 未ログイン画面にタブを見せない（D-7）。
+  if (pathname === '/login') {
+    return null;
+  }
+
   return (
     <nav aria-label="メインナビゲーション" className="fixed inset-x-0 bottom-0 z-40">
       <div className="mx-auto w-full max-w-md border-t border-border bg-card/95 backdrop-blur">

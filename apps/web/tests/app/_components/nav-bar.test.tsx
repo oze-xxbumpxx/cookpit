@@ -97,4 +97,12 @@ describe('NavBar', () => {
     expect(screen.getByRole('link', { name: '在庫' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: 'その他' }).getAttribute('aria-current')).toBeNull();
   });
+
+  it('CT-25: /login では NavBar が非表示', () => {
+    state.pathname = '/login';
+    const { container } = render(<NavBar />);
+
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
 });
