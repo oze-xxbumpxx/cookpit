@@ -42,16 +42,19 @@ E2E_BASE_URL=http://localhost:3001 pnpm --filter @cookpit/web e2e
 アカウントを発行しておく。
 
 ```bash
+AUTH_USER_PASSWORD="$(openssl rand -base64 24)"
 DATABASE_URL=pglite://.pglite-dev AUTH_USER_EMAIL=e2e@example.test AUTH_USER_NAME=E2E \
-  AUTH_USER_PASSWORD=e2e-test-password-1234 pnpm --filter @cookpit/web auth:create-user
+  AUTH_USER_PASSWORD="$AUTH_USER_PASSWORD" pnpm --filter @cookpit/web auth:create-user
 
-E2E_AUTH_EMAIL=e2e@example.test E2E_AUTH_PASSWORD=e2e-test-password-1234 \
+E2E_AUTH_EMAIL=e2e@example.test E2E_AUTH_PASSWORD="$AUTH_USER_PASSWORD" \
   DATABASE_URL=pglite://.pglite-dev pnpm --filter @cookpit/web e2e
 ```
 
 Preview URL に対して実行する場合は `E2E_BASE_URL` を Preview の URL に、`E2E_AUTH_EMAIL` /
 `E2E_AUTH_PASSWORD` を Preview 上で発行済みのアカウントに合わせる（`BETTER_AUTH_SECRET` が
-Preview に登録されていないとログイン自体が機能しない点に注意）。
+Preview に登録されていないとログイン自体が機能しない点に注意）。Preview / 本番の DB に対して
+E2E 用アカウントを作る場合は、公開リポジトリに実値を残さないよう毎回ランダム生成し、
+検証後に削除する。
 
 ## CI
 
