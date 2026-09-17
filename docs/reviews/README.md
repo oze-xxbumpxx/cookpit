@@ -166,7 +166,7 @@ subject が変わったら packet を再生成する。
 
 「完了」「PR 準備完了」「人間レビュー待ち」と報告する前に `handoff-check` を通す。
 接続先は Orchestrator / close-session / validate-deliverables / definition-of-done。
-CI の review-readiness は当面 warning-only のまま（ADR-0017。strict 化は別タスク）。
+CI の review-readiness は当面 warning-only のまま（ADR-0022。strict 化は別タスク）。
 
 ## 次のプロダクト feature での実戦
 
@@ -184,4 +184,4 @@ structured packet を生成し `handoff-check` を通す。legacy 長文のま�
 
 schema、review tier、digest、移行条件の正典は
 [`review-readiness` 設計](../designs/review-readiness.md) と
-[`ADR-0017`](../decisions/ADR-0017-review-readiness-as-decision-interface.md)。
+[`ADR-0022`](../decisions/ADR-0022-review-readiness-as-decision-interface.md)。

@@ -44,7 +44,7 @@
 
 AI 作業の完了報告と、Gate B での人間のマージ受容を混同しない。マージ可否は人間が packet と
 残余リスクを読んで決める。セッション完了時の hard stop は Orchestrator / close-session /
-validate-deliverables。CI の review-readiness は当面 warning-only（ADR-0017）。
+validate-deliverables。CI の review-readiness は当面 warning-only（ADR-0022）。
 
 ## 共通（全 Level）
 

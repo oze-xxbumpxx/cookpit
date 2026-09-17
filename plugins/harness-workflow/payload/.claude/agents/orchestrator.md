@@ -73,7 +73,7 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
      `node .claude/scripts/review-readiness.mjs handoff-blurb --feature <feature> --base origin/main`
      の出力を使う（正本は常に `docs/reviews/`）。
    - 書き方は `docs/reviews/README.md` の Gate B 規範。CI の review-readiness は当面 warn-only
-     のまま（session hard stop が先。ADR-0017）。
+     のまま（session hard stop が先。ADR-0022）。
 8. 完了条件（development-workflow.md / definition-of-done.md）を確認してユーザーへ報告する。
 
 ## モデル采配（詳細・正典は orchestration-policy.md §モデル割り当て）
