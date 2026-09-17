@@ -17,7 +17,9 @@
     "db:studio": "drizzle-kit studio",
     "dev:pglite": "node scripts/setup-pglite-dev.mjs && DATABASE_URL=pglite://.pglite-dev next dev",
     "db:seed:pglite": "node scripts/setup-pglite-dev.mjs --fresh",
-    "fonts:subset": "node scripts/subset-fonts.mjs"
+    "fonts:subset": "node scripts/subset-fonts.mjs",
+    "auth:create-user": "tsx scripts/auth-create-user.ts",
+    "auth:set-password": "tsx scripts/auth-set-password.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -31,6 +33,7 @@
     "@hono/zod-validator": "^0.9.0",
     "@neondatabase/serverless": "^1.1.0",
     "@serwist/next": "^9.5.12",
+    "better-auth": "^1.7.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
@@ -66,6 +69,7 @@
     "happy-dom": "^20.11.1",
     "subset-font": "^2.5.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

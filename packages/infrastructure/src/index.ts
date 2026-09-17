@@ -12,6 +12,12 @@ export * from './uow/drizzle-unit-of-work';
  */
 export * as schema from './db/schema';
 
+/**
+ * Better Auth（`@better-auth/cli generate`）が生成する認証系テーブル定義の名前空間。
+ * `packages/infrastructure` 自体は `better-auth` パッケージに依存しない（テーブル定義のみ）。
+ */
+export * as authSchema from './db/auth-schema';
+
 export * from './repositories/drizzle-recipe.repository';
 export * from './repositories/drizzle-product.repository';
 export * from './repositories/drizzle-store.repository';

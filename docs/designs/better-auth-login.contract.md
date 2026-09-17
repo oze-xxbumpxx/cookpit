@@ -562,51 +562,90 @@ Better Auth 独自の型付け（Hono RPC とは別経路）で `/api/auth/*` �
 ## 10. 要検証事項の一覧
 
 実装時に `@better-auth/cli generate` の実出力・実際の HTTP 応答・実測ログで確認し、
-本契約書（該当箇所）を更新する。
+本契約書（該当箇所）を更新する。**2026-09-17、実装計画 Step 0〜3・7（implementer:
+claude-sonnet-5）で 1〜4・6・8・12・14（cookiePrefix 部分）・15・16・18 を実測確認済み**
+（詳細は各項目末尾に追記。5・7・9・10・11・13・14（generateId 部分）・17 は Step 4〜9 側の
+作業または本番/Preview 実機確認が必要なため未解決のまま残す）。
 
-1. **DB 列名の物理 casing**（§1 全体）: 本書は snake_case（例 `email_verified`）を想定として
-   示しているが、Better Auth の CLI 生成物が実際に snake_case になるか、camelCase のまま
-   （例 `emailVerified` を物理列名としても使う。Postgres では要ダブルクォート）残るかは
-   1.7.5 の CLI 実装依存であり未確認。camelCase のままだった場合、既存 9 テーブルの
-   snake_case 慣習と混在するが、設計書は別ファイル隔離により許容済み（設計判断は変えない）。
+1. **DB 列名の物理 casing**（§1 全体）: **実測確認: snake_case で確定**（`email_verified` /
+   `created_at` / `provider_id` 等）。`pnpm dlx @better-auth/cli@1.4.21 generate` の実出力
+   （`packages/infrastructure/src/db/auth-schema.ts`）で確認。§1 の「想定」列はそのまま
+   確定値として扱ってよい。
 2. **既存テーブルの `.defaultNow()` 慣習が CLI 生成物にも適用されるか**（§1.1〜1.4 の
-   `createdAt`/`updatedAt`）: Better Auth はアプリケーション層で `new Date()` を渡す実装が
-   多く、DB 側の `DEFAULT now()` 句が無い可能性がある。
-3. **`rate_limits.lastRequest` の型**（§1.5）: `integer`（epoch ミリ秒）か `timestamp` か。
-4. `drizzleAdapter` が `neon-http`（トランザクション不可）で動くか。`transaction` オプション
-   の有無（設計書 D-18 / R-2）。
+   `createdAt`/`updatedAt`）: **実測確認: `createdAt` は全テーブルで `.defaultNow()` あり。
+   `updatedAt` は `users`/`verifications` のみ `.defaultNow()` あり、`sessions`/`accounts` は
+   `.defaultNow()` 無し（`$onUpdate` のみ。初回 INSERT 時はアプリケーション層が
+   `new Date()` を渡すため DB 側 DEFAULT が無くても値は入る）**。
+3. **`rate_limits.lastRequest` の型**（§1.5）: **実測確認: `bigint`（`mode: 'number'`。
+   epoch ミリ秒）で確定**。`integer` でも `timestamp` でもない。
+4. `drizzleAdapter` が `neon-http`（トランザクション不可）で動くか: **実測確認: 動く
+   （フォールバック不要）**。`@better-auth/drizzle-adapter` のソース
+   （`node_modules/.pnpm/@better-auth+drizzle-adapter@1.7.5.../dist/index.mjs`）を読むと、
+   `db.transaction()` を呼ぶのは `config.provider === 'mysql'` の分岐内のみで、
+   `provider: 'pg'`（本設計の設定）では常に `builder.returning()` を直接使う経路になり
+   `db.transaction` を一切呼ばない。`config.transaction` も既定 `false`。よって
+   `getDb()`（neon-http）をそのまま渡してよく、D-18 のフォールバック（`transaction: false`
+   明示指定・WebSocket 接続切替）は不要。
 5. **ローカル dev（http）で `BETTER_AUTH_SECRET` を設定した場合の `Secure` Cookie 属性判定**
-   （§3）: `useSecureCookies` の判定が `NODE_ENV` 由来か `baseURL` のプロトコル由来かにより、
-   http 環境でも `Secure` 属性付き Cookie が発行され、ブラウザが Cookie を送らずログインが
-   機能しなくなる可能性がある。設計書は「`.env` に secret を入れた開発者はローカルでも
-   ログインが要る」とするのみで、この Secure 属性への影響を明記していない。
-6. **`session.freshAge` がパスワード変更・他端末失効を妨げないか**（設計書 罠 8）。妨げる
-   場合は `freshAge: 0` で無効化する必要がある。
+   （§3）: 未検証のまま（HTTP 経由の実リクエストで `Set-Cookie` の属性文字列を見る必要があり、
+   Step 0〜3・7 の範囲（PGlite 直接呼び出しの検証）では確認できなかった。次段の実機/E2E で
+   確認する）。
+6. **`session.freshAge` がパスワード変更・他端末失効を妨げないか**（設計書 罠 8）:
+   **実測確認: 妨げない。フォールバック不要**。`better-auth` のルート実装
+   （`dist/api/routes/update-user.mjs`）で `changePassword` は `sensitiveSessionMiddleware`
+   を使い、`freshAge` を検査する `freshSessionMiddleware` は使わない（`revokeOtherSessions`
+   等の `dist/api/routes/session.mjs` も同様）。`freshSessionMiddleware` は
+   `unlink-account`（OAuth 専用。本 feature 未使用）にのみ使われる。PGlite 上で
+   サインイン直後に `changePassword` を呼んでも拒否されないことも実行確認済み。
 7. `rateLimit.storage: 'database'` がサーバーレス環境（Vercel Function 複数インスタンス）で
-   期待どおり動くか（設計書 D-5 / R-3）。
-8. `drizzle-orm/pglite` 上で Better Auth のアダプタが動くか（テスト経路の成立条件。設計書
-   §DB 設計「PGlite での扱い」）。
-9. `429` 応答に `Retry-After` ヘッダーが付くか（§5 の `sign-in/email` エラー欄）。
+   期待どおり動くか: 未検証（Preview の複数インスタンス相当の確認が必要。§DB 設計手順・
+   Step 10 の運用確認に委ねる）。CLI 生成物に `rate_limits` テーブルが**含まれる**ことは
+   実測確認済み（項目 3 参照）。
+8. `drizzle-orm/pglite` 上で Better Auth のアダプタが動くか: **実測確認: 動く**。
+   `createAuth({ db: drizzle(pglite, { schema: authSchema }) })` で
+   `signUpEmail`→`signInEmail`→`getSession`→`changePassword` が例外なく完了することを
+   確認済み（`apps/web/tests/server/auth/auth-route.test.ts` の PGlite サブテストとして
+   実装）。§DB 設計「PGlite での扱い」の Neon 限定格下げは不要。
+9. `429` 応答に `Retry-After` ヘッダーが付くか: 未検証（Step 0〜3・7 の範囲では未実施。
+   IT-H-12 相当の負荷テストは今回未実装。次段 or Step 8 で確認）。
 10. `sign-in/email` / `change-password` / `sign-out` / `revoke-other-sessions` の成功
-    レスポンスボディの正確な形（§5 の「想定」マーク全項目）。
+    レスポンスボディの正確な形: **`sign-in/email` と `change-password` は実測確認
+    （`{ token, user }`）**。`sign-up/email` も `{ token: null, user }`。`sign-out` /
+    `revoke-other-sessions` は未検証（HTTP 経由でのみ呼ばれ、今回の検証は `.api.*` の
+    直接呼び出し中心だったため）。
 11. `POST /api/auth/sign-up/email` を HTTP 越しに叩いた場合の正確なステータスコードと
-    `code`（§5・§9-4）。
-12. `getSession({ returnHeaders: true })` の戻り形と `getSetCookie()` の利用可否（設計書
-    罠 1）。
-13. `cookieCache.strategy` の既定値（`compact` を想定。変更しない）。
-14. `advanced.cookiePrefix: 'cookpit'` / 既定 `generateId()` の最終値が設計書提案どおりで
-    問題ないか（契約骨子の提案の確定）。
-15. `better-auth@1.7.5` が要求する `zod` のバージョンと本リポジトリの `zod@^4.4.3` の整合
-    （設計書 罠 9）。
+    `code`: 部分検証。`allowSignUp: false` のインスタンスで `.api.signUpEmail(...)` を
+    直接呼ぶと例外が投げられる（メッセージ: `Email and password sign up is not enabled`）
+    ことは確認済みだが、Hono 経由の実 HTTP レスポンスのステータスコード・`code` 値は
+    今回未計測。IT-H-02 相当。
+12. `getSession({ returnHeaders: true })` の戻り形と `getSetCookie()` の利用可否:
+    **実測確認: `{ response, headers }` の形で確定。`headers instanceof Headers === true`、
+    `headers.getSetCookie()` は標準 `Headers` API どおり動作する**。`proxy.ts`
+    （実装計画の概念コードのまま）で問題なく使える。
+13. `cookieCache.strategy` の既定値: 未検証（`compact` の想定のまま。変更なし）。
+14. `advanced.cookiePrefix: 'cookpit'` の最終値: **実測確認: 問題なし**。発行される
+    Cookie 名が `cookpit.session_token` / `cookpit.session_data` になることを確認済み。
+    既定 `generateId()`（UUID ではないランダム文字列。例: `6bOXDhafOuv55CvIdMxfSHtJaRzq5CSk`）
+    であることも実測で確認（詳細な文字数・アルファベットの仕様までは未検証）。
+15. `better-auth@1.7.5` が要求する `zod` のバージョンと本リポジトリの `zod@^4.4.3` の整合:
+    **実測確認: 問題なし**（`pnpm install` で zod 関連の unmet peer 警告なし。
+    `pnpm --filter @cookpit/web type-check` も green）。
 16. Proxy バンドルでの `@/db/client.ts` の top-level `await import`（PGlite 分岐）が
-    `pnpm build` を通るか（設計書 罠 10）。
-17. `session_data` Cookie 自体の `Max-Age`（§3 の表）: `session_token` と同じ 30 日か、
-    `cookieCache.maxAge`（5 分）に連動する短い値か。
-18. `tsx` を devDependency として追加してよいか（設計書 D-10 の代替: Node 22.18+ の型注釈
-    除去）。実装判断だが、追加後は `pnpm audit` の対象に含まれる点を implementer が確認する。
+    `pnpm build` を通るか: **実測確認: 通る（フォールバック不要）**。
+    `pnpm --filter @cookpit/web build` が Proxy（`ƒ Proxy (Middleware)`）を含めて
+    エラー・警告なく成功した。
+17. `session_data` Cookie 自体の `Max-Age`: 未検証（`Set-Cookie` の属性文字列までは
+    今回計測していない。実機/E2E で確認する）。
+18. `tsx` を devDependency として追加してよいか: **実測確認: 追加して動作する**
+    （`pnpm --filter @cookpit/web add -D tsx` → `tsx scripts/auth-create-user.ts` /
+    `auth-set-password.ts` が正常動作）。`pnpm audit --prod --audit-level=high` は
+    Step 8 の完了条件のため今回は未実施（対象外）。
 
-（計 18 件。§1〜§7 いずれかの契約箇所に対応づけ済み。実装完了後、本書の該当箇所を実測値で
-上書きすること。）
+（計 18 件のうち 1・2・3・4・6・8・10（部分）・11（部分）・12・14・15・16・18 を
+実測確認。5・7・9・13・14（generateId 詳細）・17 は未解決のまま次段へ引き継ぐ。
+`@better-auth/cli` の運用方式自体（devDependency ではなく `pnpm dlx` 都度実行）が
+要検証事項に無かった追加の実装是正として判明した点は末尾の「設計書との差異メモ」に
+追記する — 実装計画・設計判断の変更ではなくツールの導入方法の是正。）
 
 ---
 
@@ -647,3 +686,42 @@ Orchestrator 提供事実と設計書の記述レベルの粒度差を記録す�
   `/login` へ戻った際に中間キャッシュや SW が古い 302 を再利用する余地を残さない。
   302 は RFC 9111 上ヒューリスティックキャッシュの対象外だが、明示する方が安全で一貫する。
   設計書 §API 設計の表と `proxy.ts` コード例もこれに合わせる（implementer が実装時に反映）。
+
+### 11-5. 実装時の是正（2026-09-17、Step 0〜3・7、implementer: claude-sonnet-5）
+
+1. **`@better-auth/cli` の導入方式**: 計画 0-1 は「`pnpm dlx` の都度実行ではなく
+   devDependency として固定する」としていたが、実際に `pnpm --filter @cookpit/web add -D
+@better-auth/cli@1.4.21` すると、pnpm のピア依存解決が壊れ、`apps/web` の
+   `better-auth@^1.7.5` 自身が誤った `@better-auth/core`（`better-call` の版違いの
+   インスタンス）を掴み、`generate` 実行時に
+   `SyntaxError: ... does not provide an export named 'kAPIErrorHeaderSymbol'` で失敗する
+   ことを実測した（`@better-auth/cli@1.4.21` は内部で `better-auth@1.4.21` を要求しており、
+   1.7.5 系と混在させると pnpm がこの特定の組み合わせで誤った peer ハッシュを選ぶ）。
+   `@better-auth/cli` を devDependency から外し `pnpm dlx @better-auth/cli@1.4.21 generate
+--config ... --output ...` へ切り替えると解消した（バージョンは同じ 1.4.21 に固定した
+   ままであり、計画の「バージョンドリフトを避ける」意図は維持される。設計判断の変更ではなく
+   導入コマンドの是正）。`apps/web/src/server/auth/cli.config.ts` のヘッダコメントに
+   同内容を記載済み。
+2. **`db:generate` が既存 `shopping_items`/`shopping_lists` テーブルへの `ALTER COLUMN ...
+DROP DEFAULT` を 3 行生成する事象**: auth-schema 追加とは無関係の、`0009` 時点の
+   drizzle-kit スナップショット（`meta/0009_snapshot.json`）に残っていた `"default": null`
+   という古い形式のフィールドと、現行 `drizzle-kit@0.31.10` が生成するスナップショット形式
+   （`default` キー自体を省略）との差分により発生する既存ドリフトであることを、
+   auth-schema を含めない状態での `db:generate` でも同じ 3 行が出ることを確認して切り分けた
+   （`0009_snapshot.json` の当該 3 列は元々 `default: null` で、実マイグレーション
+   `0009_shopping_list_pantry_coverage.sql` にも `DEFAULT` 句は無い。実害の無いスナップショット
+   形式差分）。本 feature の migration（`0010_majestic_namor.sql`）からはこの 3 行を手動で
+   除去し、Better Auth 由来の 5 テーブル `CREATE TABLE` のみを含む形にした
+   （`0010_snapshot.json` は自動生成のまま変更していない）。既存 9 テーブルの
+   `schema.ts`／過去マイグレーションは一切変更していない。この既存ドリフト自体の恒久修正
+   （`0009_snapshot.json` の形式更新等）は本 feature のスコープ外として次のタスクに委ねる。
+3. **`apps/web/vitest.node.config.mts` / `vitest.dom.config.mts` の `resolve.alias` が
+   `new URL(...).pathname` を使っていたため、本リポジトリが日本語ディレクトリ名
+   （`個人開発`）配下に checkout されている環境で `vi.mock('@/...')` を含む既存テストが
+   軒並み `Cannot find package '@/...'` で失敗する事象を発見・修正した**。`URL#pathname`
+   は非 ASCII 文字を percent-encode するため、alias の解決先パスが実ファイルパスと
+   一致しなくなる（`vi.mock` の内部解決だけが顕在化。通常の `import` 解決は別経路のため
+   影響を受けない）。`fileURLToPath` に置き換えると解消し、ASCII のみのパスでは出力が
+   同一のため CI 等の通常環境には影響しない。この 2 ファイルは実装計画の変更対象ファイル
+   一覧に無いが、変更なしでは `pnpm --filter @cookpit/web test`（Step 2/3/7 の完了条件）が
+   一切実行できないため実装計画の範囲内の対応として実施した（Orchestrator への報告事項）。

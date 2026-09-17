@@ -8,7 +8,10 @@ if (existsSync(envLocalPath)) {
 }
 
 export default {
-  schema: '../../packages/infrastructure/src/db/schema.ts',
+  schema: [
+    '../../packages/infrastructure/src/db/schema.ts',
+    '../../packages/infrastructure/src/db/auth-schema.ts',
+  ],
   out: './src/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
