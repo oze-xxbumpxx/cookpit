@@ -6,8 +6,15 @@ import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { authSchema } from '@cookpit/infrastructure';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAuth } from '@/server/auth/create-auth';
+
+// 各テストは `pnpm exec tsx scripts/*.ts` を 1〜3 回起動する。1 回あたり約 2.5 秒
+// （tsx のトランスパイル + better-auth / PGlite の読み込み。CI ではさらに遅い）かかり、
+// 既定の 5,000ms では 2 回以上起動するテストが必ず溢れる。処理自体は完走しているが、
+// タイムアウト後に afterEach の rmSync が走ると PGlite の非同期 FS 操作が ErrnoError(44) の
+// unhandled rejection になる。ファイル単位で上限を引き上げる。
+vi.setConfig({ testTimeout: 30_000 });
 
 /**
  * `apps/web/src/db/migrations/*.sql` を journal 順に PGlite へ適用する。
@@ -133,7 +140,7 @@ describe('IT-S: auth-create-user / auth-set-password（実サブプロセス実�
     });
 
     expect(result.status).toBe(2);
-  }, 15000);
+  });
 
   it('IT-S-06/IT-S-07: パスワード再設定 → 新パスワードで成功・旧パスワード失敗・全セッション失効', async () => {
     const email = 'it-s-06@example.test';
