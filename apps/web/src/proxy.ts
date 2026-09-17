@@ -20,7 +20,7 @@ function buildNextParam(request: NextRequest): string {
 
 /**
  * アプリ全体（cron・`/api/auth/*` を除く）をセッション検証で保護する Proxy（Next.js 16 の
- * `middleware` 規約から改名されたもの。既定ランタイムは Node.js）。ADR-0022。
+ * `middleware` 規約から改名されたもの。既定ランタイムは Node.js）。ADR-0023。
  *
  * `BETTER_AUTH_SECRET` が未設定の場合、`NODE_ENV=production`（Vercel Preview を含む）では
  * fail-closed で 503 を返し、それ以外（開発・テスト）では認証をスキップする。

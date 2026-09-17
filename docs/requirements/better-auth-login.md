@@ -97,7 +97,7 @@
   migration として追加する。既存テーブルは変更しない。
 - F-16 サインイン等の認証エンドポイントにレート制限を掛ける（Better Auth 組み込み）。
 - F-17 `apps/web/.env.example` を更新し、`BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` を追記する。
-  ADR-0021 の Status を `Superseded by ADR-0022` に更新し、`docs/01-overview.md` /
+  ADR-0021 の Status を `Superseded by ADR-0023` に更新し、`docs/01-overview.md` /
   `docs/02-tech-stack.md` / `docs/03-architecture.md` の Basic 認証の記述を更新する。
 
 ## 非機能要件（性能・セキュリティ・可用性など。無ければ「対象外」）
@@ -219,7 +219,7 @@
 - Service Worker: `apps/web/src/app/sw.ts`（キャッシュ条件）。
 - スクリプト: `apps/web/scripts/auth-create-user.ts` / `auth-set-password.ts`、`apps/web/package.json`。
 - 設定: `apps/web/.env.example`、`apps/web/playwright.config.ts`、`apps/web/e2e/README.md`。
-- ドキュメント: ADR-0022 新規、ADR-0021 Status 更新、`docs/01-overview.md` /
+- ドキュメント: ADR-0023 新規、ADR-0021 Status 更新、`docs/01-overview.md` /
   `docs/02-tech-stack.md` / `docs/03-architecture.md` の認証記述。
 
 ## 対象外
@@ -259,7 +259,7 @@
 - AC-05 iOS standalone PWA と Android PWA の両方で、ログイン → 再起動でログイン維持 →
   ログアウト → 通知クリック起動の 4 項目を実機確認している。
 - AC-06 `packages/domain` / `packages/application` に差分が無い。
-- AC-07 ADR-0022 が Accepted になり、ADR-0021 が `Superseded by ADR-0022` に更新されている。
+- AC-07 ADR-0023 が Accepted になり、ADR-0021 が `Superseded by ADR-0023` に更新されている。
 - AC-08 `BASIC_AUTH_*` のコード参照が 0 件になり、`.env.example` から削除されている。
 
 ## 未決事項（誰に何を確認するか）

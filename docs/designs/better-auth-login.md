@@ -4,7 +4,7 @@
 - レベル: L3
 - 作成日: 2026-09-17
 - 関連: `docs/requirements/better-auth-login.md` /
-  `docs/decisions/ADR-0022-better-auth-login.md`（草案）/
+  `docs/decisions/ADR-0023-better-auth-login.md`（草案）/
   `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`（置換対象）/
   `docs/decisions/ADR-0004-no-user-in-domain.md`（維持）/
   `docs/decisions/ADR-0010-package-public-boundary.md` /
@@ -861,7 +861,7 @@ AU-P Proxy / AU-H Hono / AU-UI 画面 / AU-S スクリプト / AU-SW / AU-M 実�
 
 8. **2 名の端末でログイン**（iOS / Android の実機確認項目）。
 9. **後片付け**: Vercel の `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` を Production / Preview
-   から削除。ADR-0022 を Accepted、ADR-0021 を `Superseded by ADR-0022` に更新。
+   から削除。ADR-0023 を Accepted、ADR-0021 を `Superseded by ADR-0023` に更新。
    `docs/01-overview.md` / `02-tech-stack.md` / `03-architecture.md` の Basic 認証の記述を更新。
 
 **共存期間を設けない理由（D-11）**: Basic を外側に残す案は「新コードを Basic の内側で本番
@@ -952,8 +952,8 @@ AU-P Proxy / AU-H Hono / AU-UI 画面 / AU-S スクリプト / AU-SW / AU-M 実�
 実装 PR に含める（D-19）。
 
 - `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`: Status を
-  `Superseded by ADR-0022`（日付）に。本文は残す。
-- `docs/decisions/ADR-0022-better-auth-login.md`: Proposed → Accepted。
+  `Superseded by ADR-0023`（日付）に。本文は残す。
+- `docs/decisions/ADR-0023-better-auth-login.md`: Proposed → Accepted。
 - `docs/01-overview.md`: 「本番デプロイは Basic 認証で保護して」→ Better Auth のログインへ。
 - `docs/02-tech-stack.md`: サマリ表「認証」行と「認証は Basic 認証」節。
 - `docs/03-architecture.md`: ツリーの `proxy.ts` コメント、`server/auth/` の追加、

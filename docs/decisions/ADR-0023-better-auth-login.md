@@ -1,10 +1,10 @@
-# ADR-0022: Basic 認証を Better Auth のログイン画面と Cookie セッション認証へ置き換える
+# ADR-0023: Basic 認証を Better Auth のログイン画面と Cookie セッション認証へ置き換える
 
 - Status: Accepted（2026-09-17 Gate A でユーザー承認。実装 PR のマージで ADR-0021 を Superseded にする）
 - Date: 2026-09-17
 - 関連 feature: better-auth-login
 - 置換対象: [ADR-0021](./ADR-0021-basic-auth-for-public-repository.md)（本 ADR の Accepted 時に
-  `Superseded by ADR-0022` へ更新する）
+  `Superseded by ADR-0023` へ更新する）
 - 維持: [ADR-0004](./ADR-0004-no-user-in-domain.md)（ドメインに User を持ち込まない）
 
 ## Context（背景・なぜ判断が必要か）
@@ -202,7 +202,7 @@ ADR-0021 でも検討した案。設定のみで完結する。
    本番で再確認する）。
 8. 2 名の端末（iOS / Android の standalone PWA）でログインし、再起動でログイン維持を確認。
 9. `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` を Vercel から削除。本 ADR を Accepted に、
-   ADR-0021 を `Superseded by ADR-0022` に更新。`docs/01-overview.md` / `02-tech-stack.md` /
+   ADR-0021 を `Superseded by ADR-0023` に更新。`docs/01-overview.md` / `02-tech-stack.md` /
    `03-architecture.md` の Basic 認証の記述を更新。
 
 ## Rollback（決定を戻す場合の手順）

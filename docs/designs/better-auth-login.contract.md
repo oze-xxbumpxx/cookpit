@@ -157,7 +157,7 @@ Orchestrator が確認した Better Auth 1.7.5 のコアスキーマは `id` / `
   作らない。
 - **`rateLimit.storage: 'database'` の可否自体が要検証**（設計書 D-5 / R-3）。不可なら
   `rate_limits` テーブルは作らず memory ストレージを受容する（この場合、本テーブルは
-  migration から除外する。ADR-0022 の残るリスクに記載済み）。
+  migration から除外する。ADR-0023 の残るリスクに記載済み）。
 
 ### 1.6 `passkeys`（第二段。本契約の対象外）
 

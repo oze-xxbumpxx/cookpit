@@ -3,7 +3,7 @@
 - 前提となる設計書: `docs/designs/better-auth-login.md`（Gate A 承認済み・2026-09-17。D-1〜D-19 確定）
 - 前提となる要件書: `docs/requirements/better-auth-login.md`（F-01〜F-17 / N-01〜N-13 / E-01〜E-12 /
   B-01〜B-09 / AC-01〜AC-08）
-- 関連 ADR: `docs/decisions/ADR-0022-better-auth-login.md`（Accepted） /
+- 関連 ADR: `docs/decisions/ADR-0023-better-auth-login.md`（Accepted） /
   `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`（置換対象）
 - 契約書: `docs/designs/better-auth-login.contract.md` — **本試験計画作成時点で未作成**
   （contract-designer 並列作業中。`Glob` で不存在を確認済み）。本書は設計書「契約骨子」節
@@ -645,7 +645,7 @@ IT-H-10 は本タスク以前から実装済み、IT-H-24（未ログイン sign
 | AC-04 | 本番 black-box 確認（保護対象 302/401、除外パス 200、cron が Bearer 判定）   | §8 BB-01〜BB-13                                                                                                       |
 | AC-05 | iOS/Android 実機で 4 項目（ログイン/再起動維持/ログアウト/通知クリック起動） | §7 MB-01/02/04/05（iOS）、MB-06/07/08/09（Android）                                                                   |
 | AC-06 | `packages/domain`/`packages/application` に差分が無い                        | 回帰試験範囲節（`git diff` によるレビュー確認。自動テスト対象外）                                                     |
-| AC-07 | ADR-0022 が Accepted、ADR-0021 が Superseded に更新                          | 対象外（ドキュメントレビュー事項。ADR-0022 は本書作成時点で既に Accepted と確認済み）                                 |
+| AC-07 | ADR-0023 が Accepted、ADR-0021 が Superseded に更新                          | 対象外（ドキュメントレビュー事項。ADR-0023 は本書作成時点で既に Accepted と確認済み）                                 |
 | AC-08 | `BASIC_AUTH_*` のコード参照が 0 件、`.env.example` から削除                  | 対象外（grep によるレビュー確認。自動テストでは検出できないため実装完了時に確認する）                                 |
 
 ### 15-2. 自動テストの合格基準（2026-09-17 implementer 更新。実態に合わせて記録）

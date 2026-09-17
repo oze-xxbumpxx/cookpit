@@ -9,7 +9,7 @@
 | API 通信（型安全） | Hono RPC + `useApiAction` / React state                                           | Hono 最新            |
 | ORM                | Drizzle ORM                                                                       | 最新                 |
 | データベース       | Neon (Serverless PostgreSQL)                                                      | -                    |
-| 認証               | Better Auth（email + password + Cookie セッション）。ADR-0021（Basic 認証）を置換 | ADR-0022             |
+| 認証               | Better Auth（email + password + Cookie セッション）。ADR-0021（Basic 認証）を置換 | ADR-0023             |
 | スタイリング       | Tailwind CSS + shadcn/ui                                                          | Tailwind v4          |
 | クライアント状態   | React `useState` / `useOptimistic`（Zustand 未使用）                              | React 19             |
 | バリデーション     | Zod                                                                               | 最新                 |
@@ -84,7 +84,7 @@ Superseded）。
 その後、個人を識別するログイン（email + password）と `/more/account` でのパスワード変更・
 他端末セッション失効を導入するため、Better Auth（`apps/web/src/server/auth/`）へ置き換えた。
 Proxy は引き続き全ルートの手前でセッション（`getSession`）を検証する。詳細は
-[ADR-0022](./decisions/ADR-0022-better-auth-login.md) を参照。
+[ADR-0023](./decisions/ADR-0023-better-auth-login.md) を参照。
 
 ### Tailwind CSS v4 + shadcn/ui
 

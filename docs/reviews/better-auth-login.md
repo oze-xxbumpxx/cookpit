@@ -246,7 +246,7 @@ black-box で実測した内容（試験計画の未実装 ID を暫定的に埋
 - 実装済み: UT-P-01/02/04〜10/15〜30（UT-P-03・11〜14 は `config.matcher` の構造テストへ集約する旨をテストファイル冒頭に明記。前例 MW-M02〜M12 と同型で妥当）、UT-SW-01〜04、IT-H-01/01b/02/03/04/10、IT-S-01〜10、CT-01〜14（CT-08〜12 は `it.each`）・16・17(+17b)・18・19・21〜25・27〜29、E2E-03/04。
 - 未実装: IT-H-05/06/07/08/09/11〜20/22/23/24、IT-INF-01、CT-15、CT-20（CT-26 は既存 NV-01〜08 がグリーンのため充足）。→ B-01。
 - CT-15 / CT-20（Server Component）は、本リポジトリに `page.tsx` を直接レンダリングする試験の前例が無く（`apps/web/tests` に `page.test.tsx` は 0 件）、未実装自体は妥当。ただし **試験計画へ「対象外 + 理由」を書く**必要がある（B-01 の (b)）。
-- 受け入れ条件（AC）: AC-01 充足（設計書 D-1〜D-19）/ AC-02 文書上は充足・実装は B-01 の乖離あり / **AC-03 充足**（lint・type-check・test・build を実行）/ AC-04・AC-05 未実施（人間）/ **AC-06 充足**（差分ゼロ）/ **AC-07 充足**（ADR-0022 Accepted・ADR-0021 Superseded）/ AC-08 コードは充足・README に残存（B-02）。
+- 受け入れ条件（AC）: AC-01 充足（設計書 D-1〜D-19）/ AC-02 文書上は充足・実装は B-01 の乖離あり / **AC-03 充足**（lint・type-check・test・build を実行）/ AC-04・AC-05 未実施（人間）/ **AC-06 充足**（差分ゼロ）/ **AC-07 充足**（ADR-0023 Accepted・ADR-0021 Superseded）/ AC-08 コードは充足・README に残存（B-02）。
 
 #### Orchestrator 指定観点への回答
 
@@ -254,7 +254,7 @@ black-box で実測した内容（試験計画の未実装 ID を暫定的に埋
 2. **migration の手動除去**: P-01 のとおり no-op と確定。`0010_snapshot.json` は旧形式のキーを持たないため再発しない。
 3. **vitest alias の `fileURLToPath` 化**: ASCII のみのパスでは `new URL(...).pathname` と出力が同一（`file:///a/b` → `/a/b`）。CI（ASCII パス）への影響なし。`server-only` の alias も同じ理由で是正済み。妥当。
 4. **`/more/account` の `force-dynamic`**: 他の DB 参照ページ 12 件と同じ規約で整合。ただし同じ理由が `/more` にも当てはまる（F-03）。
-5. **`docs/01-overview.md` の「複数ユーザー対応」是正**: 「複数ユーザー対応（ロール・3 人目以降の運用。2 名分のログイン認証自体は ADR-0022 で導入済み）」は要件書「対象外」（ロール・3 人目以降）と一致。事実整合あり。
+5. **`docs/01-overview.md` の「複数ユーザー対応」是正**: 「複数ユーザー対応（ロール・3 人目以降の運用。2 名分のログイン認証自体は ADR-0023 で導入済み）」は要件書「対象外」（ロール・3 人目以降）と一致。事実整合あり。
 6. **Proxy**: 応答表（302 / 401 / 503 と全応答 `no-store`）・`next` 文法・matcher・例外伝播・`Set-Cookie` 転送は契約書 §4 と設計書のコード例に一致（UT-P-01〜30 で網羅）。`getSessionCookie(request, { cookiePrefix: 'cookpit' })` と `advanced.cookiePrefix: 'cookpit'` は一致しており、実測した Cookie 名（`__Secure-cookpit.session_token`）とも整合（罠 2 を回避）。
 7. **クライアント `safeNext`**: `/^\/(?![/\\])/` は契約書 §4.1 の文法と等価で、`//evil` / `/\evil` / `https://` / 空 / 2,000 文字超をすべて `/` に落とす（CT-08〜12 + 長さ分岐）。`window.location.assign` へ渡る値が相対パスに正規化されることを確認した。オープンリダイレクトの反例は見つからなかった（`searchParams` が配列になる `?next=a&next=b` でもカンマ結合により `//` 始まりにはならない）。
 8. **`useApiAction` の 401**: 400 / 404 / 422 / 500 経路は `resolveFailureMessage` のまま（CT-29 で回帰）。`silent: true` でも遷移する（CT-28）。オフラインキューは同フックを経由しないため副作用は無いが、キュー側の 401 の扱いに別の穴がある（F-02）。
@@ -293,7 +293,7 @@ Tailwind の表示崩れ・ハンドラ結線は次のとおり機械的に確�
 #### ドキュメント事実整合
 
 - 更新済みで事実と一致: `docs/01-overview.md` / `02-tech-stack.md` / `03-architecture.md` / `05-roadmap.md` /
-  ADR-0003 追記 / ADR-0021 Status（Superseded）/ ADR-0022（Accepted）/ `apps/web/e2e/README.md` / `.env.example`。
+  ADR-0003 追記 / ADR-0021 Status（Superseded）/ ADR-0023（Accepted）/ `apps/web/e2e/README.md` / `.env.example`。
   実装計画 9-1〜9-9 はすべて実施済み（9-8 / 9-9 は「更新不要」の確認）。
 - 不一致: `README.md:68-71`（B-02）。
 - 契約書 §11-5 の実装時是正 3 件は、いずれも設計判断の変更ではなく記録として妥当。§10 の実測更新も本レビューの実測と矛盾しない。

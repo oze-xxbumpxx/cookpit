@@ -12,7 +12,7 @@
 
 ただし**ソースコードは GitHub で公開する**。「リポジトリを公開すること」と「アプリを
 一般に開放すること」は別であり、本番デプロイは Better Auth（email + password +
-Cookie セッション、[ADR-0022](./decisions/ADR-0022-better-auth-login.md)）で保護して
+Cookie セッション、[ADR-0023](./decisions/ADR-0023-better-auth-login.md)）で保護して
 利用者を 2 名に限定したまま運用する。Basic 認証からの移行の経緯は
 [ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md) を参照。
 
@@ -69,7 +69,7 @@ Cookie セッション、[ADR-0022](./decisions/ADR-0022-better-auth-login.md)�
 ### MVP1 のスコープ外（Phase 2 以降）
 
 - 複数ユーザー対応（ロール・3 人目以降の運用。2 名分のログイン認証自体は
-  [ADR-0022](./decisions/ADR-0022-better-auth-login.md) で導入済み）
+  [ADR-0023](./decisions/ADR-0023-better-auth-login.md) で導入済み）
 - 賞味期限アラート
 - レシピ提案（LLM活用）
 - 履歴・分析ビュー

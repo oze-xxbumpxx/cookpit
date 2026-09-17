@@ -3,7 +3,7 @@
 - 前提となる要件定義書: `docs/requirements/better-auth-login.md`
 - 前提となる設計書: `docs/designs/better-auth-login.md`（ステータス: draft。§未決事項の Gate A
   3 件は 2026-09-17 に確定済み。本計画はこの確定内容と矛盾しない）
-- 関連 ADR: `docs/decisions/ADR-0022-better-auth-login.md`（Status: Accepted）、
+- 関連 ADR: `docs/decisions/ADR-0023-better-auth-login.md`（Status: Accepted）、
   `docs/decisions/ADR-0021-basic-auth-for-public-repository.md`（本 PR で Superseded に更新）
 - 契約: `docs/designs/better-auth-login.contract.md`（contract-designer が並列作成中。
   **本計画作成時点で未作成**。存在しなければ設計書「契約骨子」節を入力にする。契約確定後、
@@ -125,7 +125,7 @@ CLAUDE.md「新規ファイルの作成・既存ファイルの削除は、必�
 | 16  | `apps/web/.env.example`                                       | `BASIC_AUTH_*` 削除、`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL` 追加                                                         |
 | 17  | `apps/web/playwright.config.ts`                               | `httpCredentials` 関連コード削除（F-14）                                                                                 |
 | 18  | `apps/web/e2e/README.md`                                      | ログイン E2E の実行条件を追記                                                                                            |
-| 19  | `docs/decisions/ADR-0021-basic-auth-for-public-repository.md` | Status を `Superseded by ADR-0022` に更新                                                                                |
+| 19  | `docs/decisions/ADR-0021-basic-auth-for-public-repository.md` | Status を `Superseded by ADR-0023` に更新                                                                                |
 | 20  | `docs/decisions/ADR-0003-no-auth-in-mvp1.md`                  | フォローアップ節に「Better Auth 導入完了」の追記                                                                         |
 | 21  | `docs/01-overview.md`                                         | Basic 認証記述を Better Auth に更新                                                                                      |
 | 22  | `docs/02-tech-stack.md`                                       | 認証行・認証節を更新                                                                                                     |
@@ -215,7 +215,7 @@ pnpm --filter @cookpit/web add -D @better-auth/cli@1.4.21
   `rate_limits` 行が増えるかを確認する（本格的な負荷試験は §性能のシナリオ骨子で別途行う）。
 - **NG だった場合の分岐**（設計書 D-5 の許容フォールバック）: `rateLimitStorage: 'memory'` を
   採用する。`rate_limits` テーブルを migration に含めない（CLI 出力にテーブルが無ければ
-  自動的にそうなる）。ADR-0022 の「残るリスク」に記載済みの契機であり、ADR 本文の追加修正は
+  自動的にそうなる）。ADR-0023 の「残るリスク」に記載済みの契機であり、ADR 本文の追加修正は
   不要（既に記載されている想定内の分岐）。ただし本計画の Step 1・Step 2 の完了条件から
   `rate_limits` 関連の記述を外す。
 
@@ -1033,7 +1033,7 @@ pnpm format:check
 1 行目の `- Status: Accepted` を次に変更する:
 
 ```
-- Status: Superseded by [ADR-0022](./ADR-0022-better-auth-login.md)（2026-09-17）
+- Status: Superseded by [ADR-0023](./ADR-0023-better-auth-login.md)（2026-09-17）
 ```
 
 本文（Context/Decision/Alternatives/Consequences/Migration/Rollback）は残す
@@ -1046,7 +1046,7 @@ pnpm format:check
 
 ```
 - **2026-09-17 追記**: Better Auth（email + password + Cookie セッション）を
-  [ADR-0022](./ADR-0022-better-auth-login.md) で導入した。「Better Auth への移行は
+  [ADR-0023](./ADR-0023-better-auth-login.md) で導入した。「Better Auth への移行は
   引き続き Phase 2 以降の選択肢として残る」としていた本項目は解消した。
 ```
 
@@ -1054,7 +1054,7 @@ pnpm format:check
 
 - 14 行目「本番デプロイは Basic 認証で保護して利用者を 2 名に限定した」を
   「本番デプロイは Better Auth（email + password + Cookie セッション、
-  [ADR-0022](./decisions/ADR-0022-better-auth-login.md)）で保護して利用者を 2 名に限定した」
+  [ADR-0023](./decisions/ADR-0023-better-auth-login.md)）で保護して利用者を 2 名に限定した」
   に更新する。
 - 70 行目「認証・複数ユーザー対応」（対象外リストの項目）は、個人を識別する認証を
   導入した現状と矛盾しないか確認する。ロール・複数ユーザー運用は引き続き対象外のため、
@@ -1065,17 +1065,17 @@ pnpm format:check
 ### 9-4. `docs/02-tech-stack.md`
 
 - 12 行目のサマリ表「認証」行を
-  `| 認証 | Better Auth（email + password + Cookie セッション）。ADR-0021（Basic 認証）を置換 | ADR-0022 |`
+  `| 認証 | Better Auth（email + password + Cookie セッション）。ADR-0021（Basic 認証）を置換 | ADR-0023 |`
   相当に更新する。
 - 76-84 行目「認証は Basic 認証（Next.js Proxy）」節の見出し・本文を Better Auth 前提に
-  書き換える。ADR-0021 への参照は「置換された」旨を明記し、ADR-0022 への参照を追加する。
+  書き換える。ADR-0021 への参照は「置換された」旨を明記し、ADR-0023 への参照を追加する。
   84 行目「個人を識別する認証はまだ必要としないため、Phase 2 以降で Better Auth の導入を
   引き続き検討する」は事実と矛盾するため削除・書き換える。
 
 ### 9-5. `docs/03-architecture.md`
 
 - 54 行目 `│   │   ├── proxy.ts                 # Basic 認証（Next.js 16 Proxy。ADR-0021）`
-  を `# セッション検証（Next.js 16 Proxy。ADR-0022）` に更新する。
+  を `# セッション検証（Next.js 16 Proxy。ADR-0023）` に更新する。
 - 66-69 行目付近のツリーに `server/auth/` を追記する（`repositories.ts` と同階層）。
 - 214 行目「認証は `src/proxy.ts` の Basic 認証で全経路の手前に掛かる（ADR-0021）」を
   Better Auth 前提に書き換える。215 行目の「ログインユーザーという概念はドメインに
@@ -1087,7 +1087,7 @@ pnpm format:check
 ### 9-6. `docs/05-roadmap.md`
 
 963 行目・1126 行目の「認証（Better Auth）」対象外記述を、実施済みである旨に更新する
-（例: 「認証導入（Better Auth）— ADR-0022 で導入済み（2026-09-17〜）」）。
+（例: 「認証導入（Better Auth）— ADR-0023 で導入済み（2026-09-17〜）」）。
 設計書には明記が無いが、要求元指示により対象に含める。docs-only の低リスク変更であり
 設計判断を伴わないため、Orchestrator への差し戻しは不要と判断する。
 
@@ -1123,7 +1123,7 @@ pnpm format:check
 ```
 
 - `grep -rn "BASIC_AUTH" apps/web docs` の結果が、ADR-0021 本文（歴史的記録として残す）と
-  ADR-0022 本文（比較のための言及）以外に無いこと（コード・`.env.example`・
+  ADR-0023 本文（比較のための言及）以外に無いこと（コード・`.env.example`・
   `playwright.config.ts` からは 0 件。AC-08）。
 
 ---
@@ -1218,7 +1218,7 @@ green を維持（Step 2 完了条件で確認）。`apps/web/tests/e2e/recipe-c
 | ---- | -------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | R-1  | Proxy バンドル肥大でコールドスタートが延びる                                                       | Step 3 完了条件 / Step 10 手順 8 | §性能の計測手順（curl）を Step 10 の black-box 確認と合わせて実施。悪化が許容できなければ P-c（楽観 + 各経路検証）への切替を Orchestrator に相談 |
 | R-2  | アダプタが neon-http のトランザクション不可で失敗する                                              | Step 0（0-2）                    | フォールバック順（transaction 無効化 → WebSocket 接続切替 → Orchestrator 差し戻し）を明記済み                                                    |
-| R-3  | `rateLimit.storage: 'database'` がサーバーレスで期待どおり動かない                                 | Step 0（0-5）                    | memory へフォールバック。ADR-0022 に既記載のリスクのため ADR 追加修正は不要                                                                      |
+| R-3  | `rateLimit.storage: 'database'` がサーバーレスで期待どおり動かない                                 | Step 0（0-5）                    | memory へフォールバック。ADR-0023 に既記載のリスクのため ADR 追加修正は不要                                                                      |
 | R-4  | 全員が締め出される設定ミス（prefix ずれ・secret 誤登録・`BETTER_AUTH_URL` 誤り）                   | Step 10 手順 3〜6                | Preview で先に検証（手順 5）。`cookiePrefix` は create-auth.ts と proxy.ts で一致確認（Step 3 完了条件）                                         |
 | R-5  | SW がリダイレクト応答を cache する                                                                 | Step 6                           | `cacheWillUpdate`（6-1）+ 実機確認 4（Step 10 の black-box とは別に設計書「実機確認」項目 4）                                                    |
 | R-6  | iOS standalone で Cookie が想定より早く消える                                                      | Step 10 手順 9                   | 実機確認。発生時は設計変更なし（iOS 側挙動の調査）                                                                                               |
@@ -1233,7 +1233,7 @@ green を維持（Step 2 完了条件で確認）。`apps/web/tests/e2e/recipe-c
 - **コードのロールバック**: 本 PR は Basic 認証コードを削除する一括切替のため、
   コードだけを部分的に戻すロールバックは行わない。Vercel の**前デプロイへの即時
   ロールバック**（Step 10 のロールバック手順）が正規の手段。
-- **migration の down は作らない**（設計書 D-11・ADR-0022 Rollback 節の方針どおり）。
+- **migration の down は作らない**（設計書 D-11・ADR-0023 Rollback 節の方針どおり）。
   追加テーブルのみで既存データに影響しないため、Better Auth のテーブルを残したまま
   前デプロイ（Basic 認証）へロールバックしても実害が無い。テーブルを消す必要が生じた
   場合は別途 `DROP TABLE` の migration を新規タスクとして作成する（本 PR では作らない）。
@@ -1266,7 +1266,7 @@ Step 9 に詳細を記載済み。要約:
 - `docs/04-domain-model.md`（Domain/Application 差分ゼロのため**更新不要**。整合確認のみ
   Step 9-8 で実施）
 - `docs/07-dev-rules.md`（該当節無しを確認済み。**更新不要**）
-- ADR-0022 自体（`docs/decisions/ADR-0022-better-auth-login.md`）は既に Status: Accepted
+- ADR-0023 自体（`docs/decisions/ADR-0023-better-auth-login.md`）は既に Status: Accepted
   のため本 PR での追加変更は無し（前提確認・設計書確認済み）。
 
 ## 設計への差し戻し候補
@@ -1289,7 +1289,7 @@ Step 0-3／Step 1-1 に用意済みのため、設計判断の変更を要さな
   すべて green（Step 8）。
 - `packages/domain` / `packages/application` / `packages/api-contract` に差分が無い
   （AC-06）。
-- `grep -rn "BASIC_AUTH" apps/web docs` が ADR-0021/ADR-0022 本文以外で 0 件（AC-08）。
+- `grep -rn "BASIC_AUTH" apps/web docs` が ADR-0021/ADR-0023 本文以外で 0 件（AC-08）。
 - Step 9 のドキュメント更新がすべて反映されている。
 - `node .claude/scripts/review-readiness.mjs handoff-check --feature better-auth-login
 --base <base>` が成功する（`docs/claude-code/definition-of-done.md`「Review readiness

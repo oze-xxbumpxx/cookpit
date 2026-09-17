@@ -51,7 +51,7 @@ cookpit/
 ├── apps/
 │   └── web/                             # Next.js + Hono 一体（@cookpit/web）
 │       ├── src/
-│       │   ├── proxy.ts                 # セッション検証（Next.js 16 Proxy。ADR-0022）
+│       │   ├── proxy.ts                 # セッション検証（Next.js 16 Proxy。ADR-0023）
 │       │   ├── app/
 │       │   │   ├── api/[[...route]]/
 │       │   │   │   └── route.ts         # Hono をマウント
@@ -65,7 +65,7 @@ cookpit/
 │       │   │   └── manifest.ts          # PWA マニフェスト
 │       │   ├── server/                  # Hono のサーバー実装
 │       │   │   ├── routes/              # recipes / meal-plans / shopping-lists 等
-│       │   │   ├── auth/                # Better Auth（createAuth/getAuth。ADR-0022）
+│       │   │   ├── auth/                # Better Auth（createAuth/getAuth。ADR-0023）
 │       │   │   ├── repositories.ts      # Repository ファクトリ（DI の入口）
 │       │   │   └── app.ts               # Hono アプリ本体（named export）
 │       │   ├── db/                      # Neon / PGlite 接続
@@ -213,7 +213,7 @@ export function RecipeListClient({ initialRecipes }) {
 - **読み取り**は初期表示を Server Component で、その後の操作は Hono RPC に切り替え
 - **書き込み**は基本 Hono RPC（楽観的更新やエラーバナーを効かせやすい）
 - 認証は `src/proxy.ts` が Better Auth のセッション（`getSession`）検証で全経路の手前に
-  掛かる（[ADR-0022](./decisions/ADR-0022-better-auth-login.md)。Basic 認証
+  掛かる（[ADR-0023](./decisions/ADR-0023-better-auth-login.md)。Basic 認証
   （[ADR-0021](./decisions/ADR-0021-basic-auth-for-public-repository.md)）を置換）。
   「ログインユーザー」という概念はドメインに持ち込んでいないため（[ADR-0004](./decisions/ADR-0004-no-user-in-domain.md)）、A も B もシンプルなまま
 
