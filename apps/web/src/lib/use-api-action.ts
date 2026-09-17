@@ -54,6 +54,8 @@ interface RunOptionsBase {
   /**
    * true のとき、実行中フラグもエラー文言も更新しない。画面にフィードバックを出さない
    * バックグラウンド再取得（focus 時の同期など）で使う。
+   * **例外**: 401（セッション切れ）を受信した場合はこの抑制の対象外とし、`silent` でも
+   * `/login?next=` へ遷移する（セッション切れはユーザーに見せるべき状態のため。D-8）。
    */
   silent?: boolean;
 }
@@ -138,6 +140,12 @@ export function useApiAction(): ApiAction {
     try {
       const response = await request();
       if (!response.ok) {
+        if (response.status === 401) {
+          // セッション切れは silent でも回復させる。next にはクエリ込みの現在地を渡す。
+          const next = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.assign(`/login?next=${next}`);
+          return;
+        }
         if (!silent) {
           setErrorMessage(resolveFailureMessage(options.failureMessage, response.status));
         }
