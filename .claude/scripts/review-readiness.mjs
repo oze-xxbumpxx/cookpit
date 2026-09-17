@@ -5,6 +5,14 @@
 // docs/reviews を直接変更しない。意味判断は Reviewer、人間の受容はマージ判断が担う。
 
 import { execFileSync } from 'node:child_process';
+
+// git フック（lefthook の pre-push 等）から呼ばれると、git が親プロセスへ設定する
+// GIT_DIR / GIT_INDEX_FILE 等が継承され、引数の root ではなくフック元のリポジトリに対して
+// git が動いてしまう。このスクリプトの git は常に `-C root` の対象だけを見るべきなので
+// GIT_* を落とした環境で実行する。
+const GIT_ENV = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+);
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -345,6 +353,7 @@ function validateGitRef(value, path) {
 function runGit(root, args, { buffer = false } = {}) {
   try {
     return execFileSync('git', ['-C', root, ...args], {
+      env: GIT_ENV,
       encoding: buffer ? null : 'utf8',
       maxBuffer: MAX_BUFFER,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -365,6 +374,7 @@ function defaultBaseRef(root) {
   for (const candidate of ['origin/main', 'main']) {
     try {
       const base = execFileSync('git', ['-C', root, 'merge-base', 'HEAD', candidate], {
+        env: GIT_ENV,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
       }).trim();
