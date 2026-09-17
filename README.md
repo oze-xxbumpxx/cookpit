@@ -8,8 +8,10 @@ Clean Architecture + DDD の実践と両立させて解決する**個人開発�
 ## このリポジトリについて
 
 **ソースコードは公開する前提ですが、アプリ自体は不特定多数へ提供しません。**
-利用者は開発者本人とパートナーの 2 名のみで、本番デプロイは Basic 認証で保護します。
-経緯は [ADR-0021](./docs/decisions/ADR-0021-basic-auth-for-public-repository.md) を参照してください。
+利用者は開発者本人とパートナーの 2 名のみで、本番デプロイはログイン認証（Better Auth の
+email + password + Cookie セッション）で保護し、アカウントは開発者が 2 名分だけ発行します。
+経緯は [ADR-0023](./docs/decisions/ADR-0023-better-auth-login.md)（Basic 認証からの移行）と
+[ADR-0021](./docs/decisions/ADR-0021-basic-auth-for-public-repository.md)（公開時の保護）を参照してください。
 
 公開の目的は、Clean Architecture + DDD のモノレポ構成と、Claude Code を中心とした
 AI 支援開発のワークフロー（`.claude/` と `docs/claude-code/`）を、実例として残すことです。
