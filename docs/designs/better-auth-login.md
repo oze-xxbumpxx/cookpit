@@ -119,27 +119,27 @@ packages/infrastructure/src/db/
 
 ## 設計判断一覧（12 論点との対応）
 
-| D    | 論点             | 決定（推奨）                                                                                                                                                                                                                                |
-| ---- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-1  | 1 層配置         | auth インスタンスは `apps/web/src/server/auth/`（composition root）。Drizzle スキーマは `packages/infrastructure/src/db/auth-schema.ts`。Gate A 質問 1                                                                                      |
-| D-2  | Hono マウント    | Hono に `/auth/*` をマウント（`toNextJsHandler` は不採用）                                                                                                                                                                                  |
-| D-3  | 2 Proxy          | Proxy で `auth.api.getSession` により完全検証。未認証: 画面 302 `/login?next=`、`/api/*` 401 JSON。fail-closed 503。Gate A 質問 2                                                                                                           |
-| D-4  | 7 セッション     | `expiresIn` 30 日 / `updateAge` 1 日 / `cookieCache` 有効・`maxAge` 5 分 / `SameSite=Lax`                                                                                                                                                   |
-| D-5  | 7 総当たり       | Better Auth 組み込み `rateLimit`、`storage: 'database'`（要検証。不可なら memory を受容）。閾値は Better Auth 既定（全体 100 req/60 s、`/sign-in/email` 3 req/10 s）を採用し `customRules` は設定しない（Orchestrator 統合判断 2026-09-17） |
-| D-6  | 9 DB             | 別ファイル `auth-schema.ts`、テーブル名複数形（`usePlural: true`）、CLI 生成 → `drizzle-kit generate` → `migrate`。既存テーブル変更なし                                                                                                     |
-| D-7  | 5 画面           | `/login`（Client フォーム）、`/more` にログアウト、`/more/account` にパスワード変更・他端末失効。NavBar は `/login` で非表示                                                                                                                |
-| D-8  | 5 401 回復       | `useApiAction` が 401 を検知したら `/login?next=<現在>` へフルナビゲーション                                                                                                                                                                |
-| D-9  | 4 SW             | `NetworkFirst` 2 件に `cacheWillUpdate`（`redirected` / 非 200 は cache しない）。`/login` `/api/auth/*` は runtimeCaching 対象外。ログアウトで runtime cache 破棄                                                                          |
-| D-10 | 6 スクリプト     | `tsx` で TS スクリプトを実行。発行は別設定 `createAuth({ allowSignUp: true })` + `auth.api.signUpEmail`。再設定は `auth.$context` の内部アダプタ（フォールバック併記）                                                                      |
-| D-11 | 3 移行           | 一括切替。同一 PR で Basic 認証コード削除。`BASIC_AUTH_*` 環境変数は実機確認完了まで残す（ロールバック用）。Gate A 質問 3                                                                                                                   |
-| D-12 | 8 Preview        | `BETTER_AUTH_URL` は本番のみ明示。Preview は推定に委ね、`trustedOrigins` を `VERCEL_URL` / `VERCEL_BRANCH_URL` から組む。Preview 用の別 secret                                                                                              |
-| D-13 | 11 第二段        | §第二段（パスキー）設計。`passkeys` テーブルの migration は第二段で作る（第一段では作らない）                                                                                                                                               |
-| D-14 | ログ             | 503 のみ `console.error`。資格情報・メールはログしない                                                                                                                                                                                      |
-| D-15 | 12 E2E / CI      | `NODE_ENV!=production` × secret 未設定はスキップ（現行規約を踏襲）。ログイン E2E は資格情報 env があるときだけ実行                                                                                                                          |
-| D-16 | 5 表示名         | Better Auth `users.name` を使う。`/more` と `/more/account` に Server Component で表示                                                                                                                                                      |
-| D-17 | 1 依存の閉じ込め | `packages/domain` / `packages/application` / `api-contract` に差分ゼロ。`packages/infrastructure` は `better-auth` に依存しない                                                                                                             |
-| D-18 | 10 DB 接続       | 認証は `getDb()`（neon-http）上で動かす。アダプタがトランザクションを要求するなら `transaction` 無効化 → 不可なら WebSocket 接続に切替（要検証）                                                                                            |
-| D-19 | ドキュメント     | ADR-0021 Status 更新、01/02/03 の記述更新は実装 PR に含める                                                                                                                                                                                 |
+| D    | 論点             | 決定（推奨）                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1  | 1 層配置         | auth インスタンスは `apps/web/src/server/auth/`（composition root）。Drizzle スキーマは `packages/infrastructure/src/db/auth-schema.ts`。Gate A 質問 1                                                                                                                                                                                                                                                  |
+| D-2  | Hono マウント    | Hono に `/auth/*` をマウント（`toNextJsHandler` は不採用）                                                                                                                                                                                                                                                                                                                                              |
+| D-3  | 2 Proxy          | Proxy で `auth.api.getSession` により完全検証。未認証: 画面 302 `/login?next=`、`/api/*` 401 JSON。fail-closed 503。Gate A 質問 2                                                                                                                                                                                                                                                                       |
+| D-4  | 7 セッション     | `expiresIn` 30 日 / `updateAge` 1 日 / `cookieCache` 有効・`maxAge` 5 分 / `SameSite=Lax`                                                                                                                                                                                                                                                                                                               |
+| D-5  | 7 総当たり       | Better Auth 組み込み `rateLimit`、`storage: 'database'`（要検証。不可なら memory を受容）。閾値は Better Auth 既定（全体 100 req/60 s、`/sign-in/email` 3 req/10 s）を採用し `customRules` は設定しない（Orchestrator 統合判断 2026-09-17）。クライアント IP の解決は `advanced.ipAddress.ipAddressHeaders: ['x-vercel-forwarded-for', 'x-forwarded-for']`（SEC-2。2026-09-17 追記。§セキュリティ参照） |
+| D-6  | 9 DB             | 別ファイル `auth-schema.ts`、テーブル名複数形（`usePlural: true`）、CLI 生成 → `drizzle-kit generate` → `migrate`。既存テーブル変更なし                                                                                                                                                                                                                                                                 |
+| D-7  | 5 画面           | `/login`（Client フォーム）、`/more` にログアウト、`/more/account` にパスワード変更・他端末失効。NavBar は `/login` で非表示                                                                                                                                                                                                                                                                            |
+| D-8  | 5 401 回復       | `useApiAction` が 401 を検知したら `/login?next=<現在>` へフルナビゲーション                                                                                                                                                                                                                                                                                                                            |
+| D-9  | 4 SW             | `NetworkFirst` 2 件に `cacheWillUpdate`（`redirected` / 非 200 は cache しない）。`/login` `/api/auth/*` は runtimeCaching 対象外。ログアウトで runtime cache 破棄                                                                                                                                                                                                                                      |
+| D-10 | 6 スクリプト     | `tsx` で TS スクリプトを実行。発行は別設定 `createAuth({ allowSignUp: true })` + `auth.api.signUpEmail`。再設定は `auth.$context` の内部アダプタ（フォールバック併記）                                                                                                                                                                                                                                  |
+| D-11 | 3 移行           | 一括切替。同一 PR で Basic 認証コード削除。`BASIC_AUTH_*` 環境変数は実機確認完了まで残す（ロールバック用）。Gate A 質問 3                                                                                                                                                                                                                                                                               |
+| D-12 | 8 Preview        | `BETTER_AUTH_URL` は本番のみ明示。Preview は推定に委ね、`trustedOrigins` を `VERCEL_URL` / `VERCEL_BRANCH_URL` から組む。Preview 用の別 secret                                                                                                                                                                                                                                                          |
+| D-13 | 11 第二段        | §第二段（パスキー）設計。`passkeys` テーブルの migration は第二段で作る（第一段では作らない）                                                                                                                                                                                                                                                                                                           |
+| D-14 | ログ             | 503 のみ `console.error`。資格情報・メールはログしない                                                                                                                                                                                                                                                                                                                                                  |
+| D-15 | 12 E2E / CI      | `NODE_ENV!=production` × secret 未設定はスキップ（現行規約を踏襲）。ログイン E2E は資格情報 env があるときだけ実行                                                                                                                                                                                                                                                                                      |
+| D-16 | 5 表示名         | Better Auth `users.name` を使う。`/more` と `/more/account` に Server Component で表示                                                                                                                                                                                                                                                                                                                  |
+| D-17 | 1 依存の閉じ込め | `packages/domain` / `packages/application` / `api-contract` に差分ゼロ。`packages/infrastructure` は `better-auth` に依存しない                                                                                                                                                                                                                                                                         |
+| D-18 | 10 DB 接続       | 認証は `getDb()`（neon-http）上で動かす。アダプタがトランザクションを要求するなら `transaction` 無効化 → 不可なら WebSocket 接続に切替（要検証）                                                                                                                                                                                                                                                        |
+| D-19 | ドキュメント     | ADR-0021 Status 更新、01/02/03 の記述更新は実装 PR に含める                                                                                                                                                                                                                                                                                                                                             |
 
 ## データフロー
 
@@ -376,6 +376,9 @@ export const config = {
   （Client）を置く。既存テスト MM-03「リンクはちょうど 2 件」は 3 件に更新する。
 - `LogoutButton`: `authClient.signOut()` → runtime cache 破棄（DF-5）→ `location.assign('/login')`。
   失敗時は `API_FAILURE_MESSAGE` と同じ扱いでバナー表示。
+- `/more/account` と同じ理由（secret 未設定のビルド環境では `headers()` に到達せず静的化
+  され、実行時のログイン名表示が動かない）で `export const dynamic = 'force-dynamic'` を
+  `/more/page.tsx` にも付与する（F-03。2026-09-17 追記）。
 
 ### `/more/account`（D-7）
 
@@ -394,7 +397,10 @@ export const config = {
 `window.location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search))`
 を呼ぶ。`silent: true` の呼び出し（focus 時同期など）でも遷移する（セッション切れは
 ユーザーに見せるべき状態のため）。テスト `use-api-action.test.tsx` に 401 ケースを追加する。
-`window.location` は happy-dom でスタブする。
+`window.location` は happy-dom でスタブする。この遷移ロジックは `redirectToLogin()` として
+`use-api-action.ts` から export し、オフラインキューの再送（`use-checked-sync-queue.ts` の
+`flush()`）が受け取る 401 でも同じ遷移を行う（F-02。2026-09-17 追記。設計書 D-8 の
+適用範囲。`useApiAction` を経由しない再送経路にも同じ回復手段を揃える）。
 
 ### `authClient`（`apps/web/src/lib/auth-client.ts`）
 
@@ -687,6 +693,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 - **総当たり**: Better Auth 組み込みレート制限。サーバーレスではインメモリがインスタンス
   ごとにリセットされるため `storage: 'database'` を採る（D-5。要検証）。不可なら memory を
   受容し、防御はパスワード長（12 文字以上）と scrypt のコストに依存する旨を ADR に残す。
+  クライアント IP の解決には `advanced.ipAddress.ipAddressHeaders:
+['x-vercel-forwarded-for', 'x-forwarded-for']` を設定する（SEC-2。2026-09-17 追記）。
+  既定の `x-forwarded-for` 単独は多段プロキシ・詐称による複数値を一切信頼せず、
+  レート制限キーが全利用者共有の `no-trusted-ip` バケットへ退避してしまう（総当たり防御の
+  実質無効化、または正規ログインの巻き添え 429）。Vercel が付与しクライアントから上書き
+  できない `x-vercel-forwarded-for` を優先することで IP 別にキーを分離する。
 - **オープンリダイレクト**: `next` は Proxy が生成し、Client は B-02 の形式検査を通したもの
   だけ使う。`//evil` / `/\evil` / 絶対 URL は `/` に落とす。
 - **偽造 Cookie**: 署名検証で弾く（E-08）。Cookie キャッシュも署名付きで、改ざんすれば
@@ -694,7 +706,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 - **列挙**: ログイン失敗はメール / パスワードのどちらが誤りかを区別しない。サインアップは
   閉鎖しているため「登録済みメール」の応答差は生じない。
 - **fail-closed**: secret 未設定 × production → 503。DB 不能 → 500。`VERCEL_ENV` ではなく
-  `NODE_ENV` で判定（ADR-0021 の理由を踏襲。Preview も保護対象）。
+  `NODE_ENV` で判定（ADR-0021 の理由を踏襲。Preview も保護対象）。ただし `/api/auth/*` は
+  Proxy の matcher 除外のためこの 503 の対象外で、secret 未設定 × production では
+  Better Auth 自身が既定 secret を拒否して throw し **500** になる（SEC-5。2026-09-17
+  追記。保護対象は全て 503 になるため実害は無いが、経路によって応答コードが異なる点は
+  契約書 §4 に明記した）。
 - **dev のスキップ経路**: `NODE_ENV!=production` × secret 未設定でのみ有効。`.env` に secret を
   入れた開発者はローカルでもログインが要る（Basic と同じ規約）。
 - **cron**: `/api/cron/*` は Proxy 対象外のまま `CRON_SECRET` Bearer で保護（変更なし）。
