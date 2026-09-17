@@ -12,7 +12,8 @@ import { LoginForm } from '../../../../src/app/login/_components/login-form';
 
 function stubLocation(): { assign: ReturnType<typeof vi.fn> } {
   const assign = vi.fn();
-  vi.stubGlobal('location', { assign });
+  // origin は safeNext の URL 解決（SEC-1 の二重化）に必要。実際の window.location と同じ形。
+  vi.stubGlobal('location', { origin: 'http://localhost:3000', assign });
   return { assign };
 }
 
@@ -147,6 +148,14 @@ describe('LoginForm', () => {
     ['', '/'],
     ['/\\evil', '/'],
     ['/shopping-lists/abc?x=1', '/shopping-lists/abc?x=1'],
+    ['/pantry?x=1', '/pantry?x=1'],
+    // 正規表現だけでは PASS してしまう制御文字（SEC-1）。WHATWG URL パーサは解決前に
+    // TAB/LF/CR を除去するため、"/\t//evil.com" は https://evil.com/ に解決されうる。
+    ['/\t//evil.com', '/'],
+    ['/\n//evil.com', '/'],
+    ['/\r//evil.com', '/'],
+    // 見た目は "//" を含むが percent-encode されているため URL パーサはホストと解釈しない。
+    ['/%2F%2Fevil', '/%2F%2Fevil'],
   ])('CT-08〜12: safeNext(%s) → %s', async (next, expected) => {
     signInEmail.mockResolvedValue({ data: {}, error: null });
     const { assign } = stubLocation();

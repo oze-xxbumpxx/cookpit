@@ -14,16 +14,34 @@ interface Props {
   next: string | null;
 }
 
+// eslint-disable-next-line no-control-regex -- TAB/LF/CR 等の制御文字を意図的に検出する（SEC-1）。
+const CONTROL_CHARS_REGEX = /[\x00-\x1f\x7f]/;
+
 /**
  * `next` クエリ（未信頼入力）の再検証。Proxy 側の `buildNextParam`（生成側）とは別実装
  * （契約書 §4.1）。サーバーが生成した値を信頼して素通しすると、`/login?next=...` を
  * 直接叩かれた場合のオープンリダイレクト防御が働かないため、この再検証を省略してはならない。
+ *
+ * 制御文字（TAB/LF/CR 等）を先に弾くのは、WHATWG URL パーサがこれらを解決前に除去するため
+ * 正規表現の `^\/(?![/\\])` だけでは `"/\t//evil.com"` → `https://evil.com/` の解決を防げない
+ * ため（SEC-1。`docs/reviews/better-auth-login.security.md`）。加えて `new URL()` で実際に
+ * 解決させ origin が自オリジンのままであることを二重に確認する（正規表現の穴に依存しない）。
  */
 function safeNext(value: string | null): string {
-  if (value === null || value.length > NEXT_MAX_LENGTH) {
+  if (value === null || value.length > NEXT_MAX_LENGTH || CONTROL_CHARS_REGEX.test(value)) {
     return '/';
   }
-  return /^\/(?![/\\])/.test(value) ? value : '/';
+  if (!/^\/(?![/\\])/.test(value)) {
+    return '/';
+  }
+  try {
+    const resolved = new URL(value, window.location.origin);
+    return resolved.origin === window.location.origin
+      ? `${resolved.pathname}${resolved.search}`
+      : '/';
+  } catch {
+    return '/';
+  }
 }
 
 /** ログインフォーム（Client Component）。`authClient.signIn.email` を呼ぶ。 */
