@@ -313,14 +313,25 @@ BETTER_AUTH_URL=  # 本番のみ設定: https://cookpit-web.vercel.app（Preview
 `isApiPath(pathname)` は `pathname === '/api' || pathname.startsWith('/api/')` で判定する
 （`/api/` プレフィックスのみで 401/302 を切り替える。`Accept` ヘッダーは見ない）。
 
+**`/api/auth/*` は上表の対象外**（SEC-5。`docs/reviews/better-auth-login.security.md`）:
+matcher（§4.2）が `api/auth/` を除外するため Proxy を経由せず、上表の 503 は及ばない。
+`BETTER_AUTH_SECRET` 未設定 × `NODE_ENV=production` では Better Auth 自身が既定 secret を
+拒否して throw し（`better-auth/dist/context/create-context.mjs`）、Next.js 既定の **500**
+になる（503 ではない）。保護対象（Proxy 配下）はすべて 503 になるため実害は無いが、
+fail-closed の応答コードが経路によって異なる点は契約として明記する。
+
 ### 4.1 `next` パラメータの許可文法（B-02。ABNF 風）
 
 ```
 next-param    = safe-next / "/"
 safe-next     = "/" no-slash-backslash *VCHAR
 no-slash-backslash
-              = %x00-2E / %x30-5B / %x5D-7A / %x7C / %x7E-10FFFF
+              = %x20-2E / %x30-5B / %x5D-7A / %x7C / %x7E / %x80-10FFFF
                 ; "/" (U+002F) と "\" (U+005C) を除く任意の 1 文字
+                ; %x00-1F（TAB/LF/CR 等の C0 制御文字）と %x7F（DEL）は SEC-1 により
+                ; 明示的に除外する（2026-09-17 是正。旧版は %x00-2E を許可しており、
+                ; WHATWG URL パーサが解決前に TAB/LF/CR を除去する挙動と組み合わさって
+                ; オープンリダイレクトを許していた。docs/reviews/better-auth-login.security.md）
                 ; 2 文字目が存在しない場合（値が "/" 単体）も許可
 ```
 
@@ -350,6 +361,9 @@ no-slash-backslash
   | `https://evil.com/`                   | `/` に既定                 | 先頭が `/` でない                  |
   | 2,001 文字の `/aaa...`                | `/` に既定                 | 長さ超過                           |
   | `/pantry?_rsc=abcd`（サーバー生成時） | `/pantry`（`_rsc` 除去後） | B-06                               |
+  | `/<TAB>//evil.com`                    | `/` に既定                 | 2 文字目が制御文字（%x09）。SEC-1  |
+  | `/<LF>//evil.com`                     | `/` に既定                 | 2 文字目が制御文字（%x0A）。SEC-1  |
+  | `/<CR>//evil.com`                     | `/` に既定                 | 2 文字目が制御文字（%x0D）。SEC-1  |
 
 ### 4.2 除外パス（matcher）
 
@@ -394,6 +408,14 @@ Hono マウント: `app.on(['GET', 'POST'], '/auth/*', (c) => getAuth().handler(
   本文は表示しない（設計書 §エラー処理・§セキュリティ「列挙」対策）: 401/403 →
   「メールアドレスまたはパスワードが違います。」、429 →
   「試行回数が多すぎます。しばらく待ってから再度お試しください。」。
+- **レート制限のクライアント IP 解決**（SEC-2。2026-09-17 追記）: `create-auth.ts` の
+  `advanced.ipAddress.ipAddressHeaders` に `['x-vercel-forwarded-for', 'x-forwarded-for']` を
+  設定する。Better Auth の既定 `x-forwarded-for` 単独は複数値ヘッダ（多段プロキシ・詐称）を
+  一切信頼せず `null` に落とし、レート制限キーが全利用者共有の `no-trusted-ip|<path>` へ
+  退避する（総当たり防御の実質無効化、または正規ログインの巻き添え 429）。Vercel が付与し
+  クライアントからは上書きできない `x-vercel-forwarded-for`（単一値）を優先することで、
+  `rate_limits.key` を IP 別に分離する。Preview での実値確認は BB-12/13
+  （`docs/tests/better-auth-login.md` §8）に委ねる。
 
 ---
 
@@ -586,10 +608,12 @@ claude-sonnet-5）で 1〜4・6・8・12・14（cookiePrefix 部分）・15・16
    `db.transaction` を一切呼ばない。`config.transaction` も既定 `false`。よって
    `getDb()`（neon-http）をそのまま渡してよく、D-18 のフォールバック（`transaction: false`
    明示指定・WebSocket 接続切替）は不要。
-5. **ローカル dev（http）で `BETTER_AUTH_SECRET` を設定した場合の `Secure` Cookie 属性判定**
-   （§3）: 未検証のまま（HTTP 経由の実リクエストで `Set-Cookie` の属性文字列を見る必要があり、
-   Step 0〜3・7 の範囲（PGlite 直接呼び出しの検証）では確認できなかった。次段の実機/E2E で
-   確認する）。
+5. **`Secure` Cookie 属性判定**（§3）: **実測確認（2026-09-17。B-01 対応の
+   `IT-H-06` で `createAuth(...).handler(new Request(...))` へ HTTPS baseURL の
+   実リクエストを送り確認）**: `Set-Cookie` は
+   `__Secure-cookpit.session_token=...; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`
+   （契約書 §3 の想定どおり）。**ローカル dev（http）での `Secure` 省略判定は未検証のまま**
+   （PGlite + 疑似 HTTPS リクエストでの確認にとどまる。実 HTTP・実機での確認は残余リスク）。
 6. **`session.freshAge` がパスワード変更・他端末失効を妨げないか**（設計書 罠 8）:
    **実測確認: 妨げない。フォールバック不要**。`better-auth` のルート実装
    （`dist/api/routes/update-user.mjs`）で `changePassword` は `sensitiveSessionMiddleware`
@@ -597,27 +621,34 @@ claude-sonnet-5）で 1〜4・6・8・12・14（cookiePrefix 部分）・15・16
    等の `dist/api/routes/session.mjs` も同様）。`freshSessionMiddleware` は
    `unlink-account`（OAuth 専用。本 feature 未使用）にのみ使われる。PGlite 上で
    サインイン直後に `changePassword` を呼んでも拒否されないことも実行確認済み。
-7. `rateLimit.storage: 'database'` がサーバーレス環境（Vercel Function 複数インスタンス）で
-   期待どおり動くか: 未検証（Preview の複数インスタンス相当の確認が必要。§DB 設計手順・
-   Step 10 の運用確認に委ねる）。CLI 生成物に `rate_limits` テーブルが**含まれる**ことは
-   実測確認済み（項目 3 参照）。
+7. `rateLimit.storage: 'database'` が単一プロセスで期待どおり動くか: **実測確認
+   （2026-09-17。`IT-H-12`）: 動く**。`sign-in/email` を同一キーで 4 回連続呼ぶと 1〜3 回目は
+   `401`、4 回目は `429`（`rate_limits` へ 1 行 upsert）。**サーバーレス環境（Vercel Function
+   複数インスタンス）で期待どおり動くかは未検証のまま**（Preview の複数インスタンス相当の
+   確認が必要。§DB 設計手順・Step 10 の運用確認に委ねる）。CLI 生成物に `rate_limits`
+   テーブルが**含まれる**ことは実測確認済み（項目 3 参照）。
 8. `drizzle-orm/pglite` 上で Better Auth のアダプタが動くか: **実測確認: 動く**。
    `createAuth({ db: drizzle(pglite, { schema: authSchema }) })` で
    `signUpEmail`→`signInEmail`→`getSession`→`changePassword` が例外なく完了することを
    確認済み（`apps/web/tests/server/auth/auth-route.test.ts` の PGlite サブテストとして
    実装）。§DB 設計「PGlite での扱い」の Neon 限定格下げは不要。
-9. `429` 応答に `Retry-After` ヘッダーが付くか: 未検証（Step 0〜3・7 の範囲では未実施。
-   IT-H-12 相当の負荷テストは今回未実装。次段 or Step 8 で確認）。
+9. `429` 応答に `Retry-After` ヘッダーが付くか: **実測確認（2026-09-17。`IT-H-12`）**:
+   標準の `Retry-After` ではなく **`X-Retry-After`**（値は残り秒数。既定ウィンドウ
+   `/sign-in/email` = 10 のため `"10"`）が付く。本文は
+   `{"message":"Too many requests. Please try again later."}`（`code` フィールドは無い。
+   他のエラー応答と形が異なる点に注意）。
 10. `sign-in/email` / `change-password` / `sign-out` / `revoke-other-sessions` の成功
     レスポンスボディの正確な形: **`sign-in/email` と `change-password` は実測確認
-    （`{ token, user }`）**。`sign-up/email` も `{ token: null, user }`。`sign-out` /
-    `revoke-other-sessions` は未検証（HTTP 経由でのみ呼ばれ、今回の検証は `.api.*` の
-    直接呼び出し中心だったため）。
+    （`{ token, user }`）**。`sign-up/email` も `{ token: null, user }`。**`sign-out` /
+    `revoke-other-sessions` も実測確認（2026-09-17。`IT-H-06`/`IT-H-09` で
+    `handler(new Request(...))` を実行）**: `sign-out` は `{"success":true}`、
+    `revoke-other-sessions` は `{"status":true}`。change-password の失敗時は
+    `{"message":"Invalid password","code":"INVALID_PASSWORD"}`（契約書 §5 の想定どおり）。
 11. `POST /api/auth/sign-up/email` を HTTP 越しに叩いた場合の正確なステータスコードと
-    `code`: 部分検証。`allowSignUp: false` のインスタンスで `.api.signUpEmail(...)` を
-    直接呼ぶと例外が投げられる（メッセージ: `Email and password sign up is not enabled`）
-    ことは確認済みだが、Hono 経由の実 HTTP レスポンスのステータスコード・`code` 値は
-    今回未計測。IT-H-02 相当。
+    `code`: **実測確認（reviewer、2026-09-17。`docs/reviews/better-auth-login.md` EV-03）**:
+    `400 {"code":"EMAIL_PASSWORD_SIGN_UP_DISABLED"}`。`allowSignUp: false` のインスタンスで
+    `.api.signUpEmail(...)` を直接呼ぶと例外が投げられる（メッセージ:
+    `Email and password sign up is not enabled`）ことも確認済み（IT-H-02）。
 12. `getSession({ returnHeaders: true })` の戻り形と `getSetCookie()` の利用可否:
     **実測確認: `{ response, headers }` の形で確定。`headers instanceof Headers === true`、
     `headers.getSetCookie()` は標準 `Headers` API どおり動作する**。`proxy.ts`
@@ -634,15 +665,19 @@ claude-sonnet-5）で 1〜4・6・8・12・14（cookiePrefix 部分）・15・16
     `pnpm build` を通るか: **実測確認: 通る（フォールバック不要）**。
     `pnpm --filter @cookpit/web build` が Proxy（`ƒ Proxy (Middleware)`）を含めて
     エラー・警告なく成功した。
-17. `session_data` Cookie 自体の `Max-Age`: 未検証（`Set-Cookie` の属性文字列までは
-    今回計測していない。実機/E2E で確認する）。
+17. `session_data` Cookie 自体の `Max-Age`: **実測確認（2026-09-17。`IT-H-06`）**:
+    `Max-Age=300`（`cookieCache.maxAge` と同値。`session_token` の 30 日ではなく Cookie
+    自体が 5 分で失効する）。属性は `session_token` と同じ `Path=/; HttpOnly; Secure;
+SameSite=Lax`。
 18. `tsx` を devDependency として追加してよいか: **実測確認: 追加して動作する**
     （`pnpm --filter @cookpit/web add -D tsx` → `tsx scripts/auth-create-user.ts` /
     `auth-set-password.ts` が正常動作）。`pnpm audit --prod --audit-level=high` は
     Step 8 の完了条件のため今回は未実施（対象外）。
 
-（計 18 件のうち 1・2・3・4・6・8・10（部分）・11（部分）・12・14・15・16・18 を
-実測確認。5・7・9・13・14（generateId 詳細）・17 は未解決のまま次段へ引き継ぐ。
+（計 18 件のうち 1・2・3・4・5・6・7（サーバーレス複数インスタンス以外）・8・9・10・11・12・
+14・15・16・17・18 を実測確認（2026-09-17、B-01 対応の `IT-H-06/07/08/09/12/13` 追加時に
+5・7・9・10・11・17 を追加で解決）。7 の「Vercel の複数インスタンス + Neon」と 13・14
+（generateId 詳細）は未解決のまま次段へ引き継ぐ。
 `@better-auth/cli` の運用方式自体（devDependency ではなく `pnpm dlx` 都度実行）が
 要検証事項に無かった追加の実装是正として判明した点は末尾の「設計書との差異メモ」に
 追記する — 実装計画・設計判断の変更ではなくツールの導入方法の是正。）
