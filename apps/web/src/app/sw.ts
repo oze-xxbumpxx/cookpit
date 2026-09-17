@@ -1,5 +1,6 @@
 import type { PrecacheEntry, RouteHandler, SerwistGlobalConfig } from 'serwist';
 import { CacheFirst, ExpirationPlugin, NetworkFirst, Serwist, StaleWhileRevalidate } from 'serwist';
+import { cacheWillUpdate } from './_utils/sw-cache-plugins';
 
 // `apps/web/tsconfig.json` の `lib` は `["dom", "dom.iterable", "esnext"]` で `webworker` を
 // 含まない（`dom` と型が衝突するため追加しない）。そのため `PushEvent`/`NotificationEvent`/
@@ -38,21 +39,17 @@ declare global {
 
 const sw = self as unknown as WorkerGlobalScope & typeof globalThis;
 
-// 認証切れ（401）をキャッシュしない。NetworkFirst / StaleWhileRevalidate が 401 を保存すると、
-// 再認証後もキャッシュから 401 が返り続ける。
-const cacheOnlyOk = {
-  cacheWillUpdate: async ({ response }: { response: Response }) =>
-    response.status === 200 ? response : null,
-};
-
 /**
  * 画面遷移で 401 を受けたとき、SW 非経由の `/` へ 302 で逃がす。
  *
  * Service Worker が `respondWith` した 401 に対してブラウザは Basic 認証ダイアログを出さない
- * （Chromium issue 623464）。`proxy.ts` の 401 は本文も Content-Type も持たないため、
- * ブラウザはそれを不明なファイルとみなしダウンロードを提案し、実体が無いので完了しない
- * （2026-09-16 に iOS Safari で顕在化。ADR-0021 の残存リスクが現実化したもの）。
- * SW が横取りしない `/` へ送れば、ブラウザが認証を引き受けられる。
+ * （Chromium issue 623464）。旧 Basic 認証時代の `proxy.ts` の 401 は本文も Content-Type も
+ * 持たず、ブラウザはそれを不明なファイルとみなしダウンロードを提案し、実体が無いので完了
+ * しなかった（2026-09-16 に iOS Safari で顕在化。ADR-0021 の残存リスクが現実化したもの）。
+ * Better Auth 移行後、未認証 navigation は `proxy.ts` が 401 ではなく 302 を返すため
+ * （opaqueredirect として届き、下の `cacheWillUpdate` が cache を防ぐ）この分岐は通常
+ * 到達しないが、想定外に 401 が返った場合の保険として維持する。SW が横取りしない `/` へ
+ * 送れば、ブラウザが認証を引き受けられる。
  *
  * ネットワーク障害（オフライン）では 401 ではなくキャッシュへフォールバックするため、
  * オフライン再訪問（O-01）の挙動は変わらない。
@@ -92,6 +89,8 @@ const serwist = new Serwist({
     },
     // 買い物中に頻繁に更新されるため NetworkFirst。POST（bought/target-store/items 追加）を
     // 誤ってキャッシュ対象にしないよう matcher で GET を明示する（設計書 §PWA設計）。
+    // `cacheWillUpdate` は未認証 navigation の 302（SW には opaqueredirect として届く）を
+    // cache させない防御（D-9・R-5）。
     {
       matcher: ({ url, request }) =>
         request.method === 'GET' && /^\/api\/shopping-lists\/[^/]+$/.test(url.pathname),
@@ -99,18 +98,20 @@ const serwist = new Serwist({
         cacheName: 'shopping-list-detail-cache',
         networkTimeoutSeconds: 3,
         plugins: [
-          cacheOnlyOk,
+          { cacheWillUpdate },
           new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 }),
         ],
       }),
     },
-    // 店舗マスタは更新頻度が低いため StaleWhileRevalidate。
+    // 店舗マスタは更新頻度が低いため StaleWhileRevalidate。他の 2 件と規約を揃え
+    // `cacheWillUpdate` を付ける（設計書のとおり。`/api/stores` は 401 JSON 応答時点で
+    // 既に非 200 のため既定でも cache されないが、明示して規約を統一する）。
     {
       matcher: ({ url, request }) => request.method === 'GET' && url.pathname === '/api/stores',
       handler: new StaleWhileRevalidate({
         cacheName: 'stores-cache',
         plugins: [
-          cacheOnlyOk,
+          { cacheWillUpdate },
           new ExpirationPlugin({ maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 * 7 }),
         ],
       }),
@@ -125,13 +126,16 @@ const serwist = new Serwist({
           cacheName: 'shopping-lists-pages-cache',
           networkTimeoutSeconds: 3,
           plugins: [
-            cacheOnlyOk,
+            { cacheWillUpdate },
             new ExpirationPlugin({ maxEntries: 15, maxAgeSeconds: 60 * 60 * 24 }),
           ],
         }),
       ),
     },
   ],
+  // `/login` と `/api/auth/*` は上記 matcher のいずれにも該当しない（Better Auth の
+  // レスポンスは SW ランタイムキャッシュ対象外のまま）。新たに matcher を追加しない
+  // （設計書「フロントエンド設計 > Service Worker」のとおり）。
 });
 
 serwist.addEventListeners();
