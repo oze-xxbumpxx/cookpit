@@ -7,177 +7,177 @@
 {
   "schemaVersion": 1,
   "feature": "better-auth-login",
-  "status": "ai_blocked",
+  "status": "human_review_requested",
   "reviewTier": "R3",
   "subject": {
     "algorithm": "git-raw-v1",
-    "baseSha": "b2103c91be46536163cbaff14de269c6e0e2cd4d",
-    "digest": "sha256:e931bb10404d94a05c965e8c8c077a776897aa959a1db7711d7f4d1b59d17d44",
+    "baseSha": "45a704c34af757040671fe1c02d9b624600f77bd",
+    "digest": "sha256:3d6d19153b06ec6f0700723664bb5ed9e2af2429fc2bc49fbe347e145badfaea",
     "source": "commit",
-    "entryCount": 58
+    "entryCount": 66
   },
   "aiAssessment": {
-    "blockingOpen": 2,
+    "blockingOpen": 0,
     "highImpactUnverified": 0,
-    "followUpOpen": 3
+    "followUpOpen": 2
   },
   "humanItems": [
     {
       "id": "H-01",
       "kind": "irreversible",
-      "question": "この PR の CI が本番 Neon へ認証テーブル追加のマイグレーションを（マージ前に）適用する順序のまま進めますか？",
-      "recommendation": "accept。追加のみで既存 9 テーブルへの差分が無いことは検証済み（EV-02）。ただし本番データへの不可逆な適用をいつ許すかは運用判断であり、AI が代わりに決められない。",
+      "question": "「先行 PR #207 をマージ → 本 PR を rebase → 本 PR の CI が本番 Neon へ認証テーブルを追加 → マージ」の順序のまま進めますか？",
+      "recommendation": "accept。テーブル追加のみで既存 9 テーブルへの差分が無いことは検証済み（EV-08）。#207 を先に入れないと依存監査が赤のまま残る。本番データへの不可逆な適用とマージ順序は運用判断で、AI が代わりに決められない。",
       "evidenceRefs": [
-        "EV-02"
+        "EV-08"
       ]
     },
     {
       "id": "H-02",
       "kind": "unknown",
-      "question": "iOS / Android のホーム画面 PWA でログイン維持・通知クリック起動が未確認のまま、実機確認を本番デプロイ後に回す進め方でよいですか？",
-      "recommendation": "accept_risk。Cookie 永続と通知起動は OS / ブラウザ実装依存でこの環境では再現できない。実機を持つ本人にしか確認できず、失敗時の影響（毎回ログイン）も利用者本人が判断する。",
+      "question": "Vercel でしか確認できない 2 点（IP ごとの試行制限が効くか、ホーム画面 PWA でログインが維持されるか）を Preview と実機での確認に委ね、コードは今の内容で確定しますか？",
+      "recommendation": "accept_risk。プラットフォームが付けるヘッダと OS の Cookie 永続はこの環境で再現できない。実機と Preview を持つ本人にしか確認できず、外れたときの受容も本人の判断になる。",
       "evidenceRefs": [
-        "EV-05"
+        "EV-07"
       ]
     },
     {
       "id": "H-03",
       "kind": "irreversible",
-      "question": "旧方式の環境変数（BASIC_AUTH_*）の削除を、本番 black-box 確認と 2 名の実機確認が終わった後まで遅らせる順序で実行しますか？",
-      "recommendation": "accept。先に削除すると前デプロイへの巻き戻し先が保護されない時間帯が生まれる。実際に削除する時点の判断と Vercel 操作は人間にしか行えない。",
+      "question": "旧方式の環境変数（BASIC_AUTH_*）の削除を、本番での応答確認と 2 名の実機確認が終わった後まで遅らせる順序で実行しますか？",
+      "recommendation": "accept。先に削除すると前デプロイへ巻き戻したときに保護が無い時間帯が生まれる。削除の実行時点の判断と Vercel 操作は人間にしか行えない。",
       "evidenceRefs": [
         "EV-01"
       ]
     }
   ],
   "residualRisks": [
-    "iOS / Android の standalone PWA でのログイン維持・通知クリック起動は未確認。実機確認（MB-01〜09）で確定させる前提で受容する。",
-    "他端末ログアウト・パスワード変更の失効は、対象端末のキャッシュ Cookie が切れるまで最大 5 分遅れる。DB のセッション行は即時削除されることを確認済みで、設計が明示的に受容した特性として扱う。",
-    "Cookie 属性・オリジン検査・レート制限は PGlite と疑似 HTTPS リクエストでの確認にとどまる。本番 URL での確認（BB-01〜11）は未実施のまま受容する。",
-    "レート制限のデータベース保存は単一プロセスでのみ確認。Vercel の複数インスタンス + Neon での挙動は未確認のまま受容する。",
-    "ログイン・ログアウト・パスワード変更・他端末失効の HTTP 面には自動回帰テストが無く、設定変更による劣化を検知できない。BLOCK-1 の解消までこの状態を受容する。"
+    "プラットフォームが付けるとされる IP ヘッダの実挙動は未検証。付与されない場合、試行回数の制限が全利用者共有の 1 枠へ退避する（総当たり防御の弱化、または正規ログインの巻き添え制限）。Preview での確認項目を追加したうえで受容する。",
+    "他端末ログアウト・パスワード変更の失効は、対象端末のキャッシュ Cookie が切れるまで最大 5 分遅れる。DB のセッション行は即時削除されることを確認済みで、ADR-0023 に記録した既知の特性として受容する。",
+    "iOS / Android のホーム画面 PWA でのログイン維持・通知クリック起動は未確認。実機確認で確定させる前提で受容する。",
+    "保護を Proxy 1 箇所へ集約しているため、除外パスの追加や Proxy 自体の不具合が全画面の保護に直結する。設計上の選択として受容し、除外パスを変える際は境界テストを必ず伴わせる。",
+    "本番 URL での応答確認（未認証の 302 / 401、除外パスの 200、定期実行の Bearer 判定）は未実施。デプロイ後の確認手順に委ねる。"
   ],
   "behaviorChanges": [
     "本番を開くとブラウザ標準のパスワード入力ダイアログではなく、アプリ内のログイン画面が出る。メールアドレスとパスワードでログインすれば、以後 30 日は聞かれない。",
-    "「その他」画面にログアウトと「アカウント」が増え、アカウント画面で表示名・メールの確認、パスワード変更、他の端末からのログアウトができる。",
+    "「その他」画面にログアウトと「アカウント」が増え、アカウント画面で表示名・メールの確認、パスワード変更（12〜128 文字の案内と理由別のエラー表示）、他の端末からのログアウトができる。",
     "ログイン画面では下部のタブが消え、ログイン後は元々開こうとしていた画面へ戻る。",
-    "操作中にログインが切れると、失敗メッセージではなくログイン画面へ移り、ログイン後に元の画面へ戻る。",
+    "操作中やオフライン分の送り直し中にログインが切れると、失敗メッセージではなくログイン画面へ移り、再ログイン後に元の画面と未送信のチェック操作が復帰する。",
     "ログアウトすると、オフライン表示のために端末へ残っていた買い物リストなどの一時データも消える。"
   ],
   "evidence": [
     {
       "id": "EV-01",
-      "claim": "lint / type-check / test がキャッシュ無しで通る（87 ファイル 1,026 テスト）",
+      "claim": "lint / type-check / test（1,046 件）/ format / build がキャッシュ無しで通る",
       "kind": "test",
       "result": "pass",
-      "ref": "TURBO_FORCE=true pnpm test / pnpm lint / pnpm type-check（2026-09-17 実行）"
+      "ref": "TURBO_FORCE=true pnpm test・pnpm lint・pnpm type-check / pnpm format:check / pnpm --filter @cookpit/web build（2026-09-17 再実行）"
     },
     {
       "id": "EV-02",
-      "claim": "新規マイグレーションは認証 5 テーブルの追加のみで、手で除去した 3 行の ALTER は実 DB では無効果（対象 3 列は 0009 で DEFAULT 無しで追加されている）",
-      "kind": "counterfactual",
+      "claim": "前回指摘 B-01 の追加テスト（IT-H-06/07/08/09/12/13/24）が実装され green。残る未実装 ID は試験計画 §14-3 に理由と代替つきで記録された",
+      "kind": "test",
       "result": "pass",
-      "ref": "apps/web/src/db/migrations/0010_majestic_namor.sql / 0009_shopping_list_pantry_coverage.sql / meta の 0009・0010 スナップショット比較"
+      "ref": "apps/web/tests/server/auth/auth-route.test.ts:116-380 / docs/tests/better-auth-login.md §14-3・§15-2"
     },
     {
       "id": "EV-03",
-      "claim": "信頼済みでないオリジンからのログインは 403、HTTP 経由のサインアップは 400 で閉鎖、疎通確認用の応答は 200",
-      "kind": "black_box",
+      "claim": "前回指摘 B-02 が解消し、旧環境変数の記述が README を含めて 0 件になった",
+      "kind": "static",
       "result": "pass",
-      "ref": "PGlite + 実ハンドラへの疑似リクエスト（reviewer の一時スクリプト。オリジン空設定でも同結果）"
+      "ref": "README.md:8-14,65-72 / grep -rn BASIC_AUTH README.md apps/web docs/0[1-7]*.md = 0 件"
     },
     {
       "id": "EV-04",
-      "claim": "レート制限はデータベース保存で機能し、ログイン 4 回目で 429 になる。クライアント IP ヘッダが無い場合は全利用者共有の 1 バケットへ退避する",
-      "kind": "black_box",
+      "claim": "セキュリティ指摘 SEC-1 が解消し、制御文字を含む遷移先と自オリジン以外へ解決される値はすべて / に落ちる",
+      "kind": "counterfactual",
       "result": "pass",
-      "ref": "PGlite + 実ハンドラへの疑似リクエスト。rate_limits の key が no-trusted-ip 付き / IP ヘッダ有りでは IP 別"
+      "ref": "apps/web/src/app/login/_components/login-form.tsx:17-44 / login-form.test.tsx の TAB・LF・CR ケース"
     },
     {
       "id": "EV-05",
-      "claim": "セッション Cookie は HttpOnly / Secure / SameSite=Lax / Path=/ / 30 日、キャッシュ Cookie は 931 バイト、ログアウトで両方が即時失効する",
-      "kind": "black_box",
+      "claim": "前回の改善提案 3 件が反映され動作する（パスワード変更の理由別文言、送り直し 401 でのログイン誘導、/more の実行時レンダリング）",
+      "kind": "test",
       "result": "pass",
-      "ref": "PGlite + 実ハンドラへの疑似リクエスト（Set-Cookie 全文と sessions 行の期限差を実測）"
+      "ref": "change-password-form.test.tsx / use-checked-sync-queue.test.tsx UOQ-15,16 / build のルート一覧が ƒ /more"
     },
     {
       "id": "EV-06",
-      "claim": "パスワード変更は 11 文字 / 129 文字を 400 で拒否し、現在のパスワード誤りも 400。他端末失効は DB のセッション行を即時削除する",
-      "kind": "black_box",
+      "claim": "取り込み時の競合解決が安全側である（キャッシュ判定は取り込み元の条件を厳密に含み、401 時の退避経路も残置されている）",
+      "kind": "static",
       "result": "pass",
-      "ref": "PGlite + 実ハンドラへの疑似リクエスト（PASSWORD_TOO_SHORT / TOO_LONG / INVALID_PASSWORD を確認）"
+      "ref": "apps/web/src/app/sw.ts:42-145（cacheWillUpdate は status 200 かつ非リダイレクトのみ許可）"
     },
     {
       "id": "EV-07",
-      "claim": "試験計画 §15-2 の合格基準に対し、結合試験 18 件・バレル 1 件・画面 2 件が未実装で、乖離の記録も無い",
+      "claim": "認証ライブラリの IP 解決は値が複数あるヘッダを信頼せず null に落とすため、単一値ヘッダを優先する SEC-2 の修正方針は妥当（ただし実環境での付与は未検証）",
       "kind": "static",
       "result": "pass",
-      "ref": "docs/tests/better-auth-login.md §15-2 と apps/web/tests 配下の試験 ID の突合（grep）"
+      "ref": "@better-auth/core dist/utils/ip.mjs:190（forwardedIps.length !== 1 で null）/ auth-route.test.ts の SEC-2 ケース"
     },
     {
       "id": "EV-08",
-      "claim": "本番ビルドが Proxy を含めて成功する。ただし認証設定がビルド時に無い環境では /more が静的生成され、ログイン名の表示経路が実行されない",
-      "kind": "black_box",
+      "claim": "新規マイグレーションは認証 5 テーブルの追加のみで、既存 9 テーブルへの差分が無い",
+      "kind": "counterfactual",
       "result": "pass",
-      "ref": "pnpm --filter @cookpit/web build のルート一覧（○ /more / ƒ /more/account）"
+      "ref": "apps/web/src/db/migrations/0010_majestic_namor.sql / 0009 の SQL とスナップショット比較（前回レビューで確定。差分なし）"
     }
   ],
   "reviewer": {
     "agent": "reviewer",
     "model": "claude-opus-5",
-    "reviewedAt": "2026-09-17T13:05:00Z"
+    "reviewedAt": "2026-09-17T14:40:00Z"
   }
 }
 -->
 ## Review handoff
 
-> **AI review blocked — 人間への引き渡し前です。**
-> open blocker: 2。先に指摘を解消してください。
-> 対象: `sha256:e931bb10404d…` / R3 / 58 changes
+> **人間レビュー待ちです。**
+> Claude の評価です。これは承認ではありません。以下の判断事項・残余リスク・振る舞い差分を確認してください。
+> 対象: `sha256:3d6d19153b06…` / R3 / 66 changes
 
-### 引き渡し前に解消する人間項目（3 件）
+### あなたが判断・確認すること（3 件）
 
-1. **[不可逆] この PR の CI が本番 Neon へ認証テーブル追加のマイグレーションを（マージ前に）適用する順序のまま進めますか？** — 推奨: accept。追加のみで既存 9 テーブルへの差分が無いことは検証済み（EV-02）。ただし本番データへの不可逆な適用をいつ許すかは運用判断であり、AI が代わりに決められない。 / 証拠: EV-02
-2. **[未知] iOS / Android のホーム画面 PWA でログイン維持・通知クリック起動が未確認のまま、実機確認を本番デプロイ後に回す進め方でよいですか？** — 推奨: accept\_risk。Cookie 永続と通知起動は OS / ブラウザ実装依存でこの環境では再現できない。実機を持つ本人にしか確認できず、失敗時の影響（毎回ログイン）も利用者本人が判断する。 / 証拠: EV-05
-3. **[不可逆] 旧方式の環境変数（BASIC\_AUTH\_\*）の削除を、本番 black-box 確認と 2 名の実機確認が終わった後まで遅らせる順序で実行しますか？** — 推奨: accept。先に削除すると前デプロイへの巻き戻し先が保護されない時間帯が生まれる。実際に削除する時点の判断と Vercel 操作は人間にしか行えない。 / 証拠: EV-01
+1. **[不可逆] 「先行 PR \#207 をマージ → 本 PR を rebase → 本 PR の CI が本番 Neon へ認証テーブルを追加 → マージ」の順序のまま進めますか？** — 推奨: accept。テーブル追加のみで既存 9 テーブルへの差分が無いことは検証済み（EV-08）。\#207 を先に入れないと依存監査が赤のまま残る。本番データへの不可逆な適用とマージ順序は運用判断で、AI が代わりに決められない。 / 証拠: EV-08
+2. **[未知] Vercel でしか確認できない 2 点（IP ごとの試行制限が効くか、ホーム画面 PWA でログインが維持されるか）を Preview と実機での確認に委ね、コードは今の内容で確定しますか？** — 推奨: accept\_risk。プラットフォームが付けるヘッダと OS の Cookie 永続はこの環境で再現できない。実機と Preview を持つ本人にしか確認できず、外れたときの受容も本人の判断になる。 / 証拠: EV-07
+3. **[不可逆] 旧方式の環境変数（BASIC\_AUTH\_\*）の削除を、本番での応答確認と 2 名の実機確認が終わった後まで遅らせる順序で実行しますか？** — 推奨: accept。先に削除すると前デプロイへ巻き戻したときに保護が無い時間帯が生まれる。削除の実行時点の判断と Vercel 操作は人間にしか行えない。 / 証拠: EV-01
 
 ### 残余リスク・未確認
 
-- iOS / Android の standalone PWA でのログイン維持・通知クリック起動は未確認。実機確認（MB-01〜09）で確定させる前提で受容する。
-- 他端末ログアウト・パスワード変更の失効は、対象端末のキャッシュ Cookie が切れるまで最大 5 分遅れる。DB のセッション行は即時削除されることを確認済みで、設計が明示的に受容した特性として扱う。
-- Cookie 属性・オリジン検査・レート制限は PGlite と疑似 HTTPS リクエストでの確認にとどまる。本番 URL での確認（BB-01〜11）は未実施のまま受容する。
-- レート制限のデータベース保存は単一プロセスでのみ確認。Vercel の複数インスタンス + Neon での挙動は未確認のまま受容する。
-- ログイン・ログアウト・パスワード変更・他端末失効の HTTP 面には自動回帰テストが無く、設定変更による劣化を検知できない。BLOCK-1 の解消までこの状態を受容する。
+- プラットフォームが付けるとされる IP ヘッダの実挙動は未検証。付与されない場合、試行回数の制限が全利用者共有の 1 枠へ退避する（総当たり防御の弱化、または正規ログインの巻き添え制限）。Preview での確認項目を追加したうえで受容する。
+- 他端末ログアウト・パスワード変更の失効は、対象端末のキャッシュ Cookie が切れるまで最大 5 分遅れる。DB のセッション行は即時削除されることを確認済みで、ADR-0023 に記録した既知の特性として受容する。
+- iOS / Android のホーム画面 PWA でのログイン維持・通知クリック起動は未確認。実機確認で確定させる前提で受容する。
+- 保護を Proxy 1 箇所へ集約しているため、除外パスの追加や Proxy 自体の不具合が全画面の保護に直結する。設計上の選択として受容し、除外パスを変える際は境界テストを必ず伴わせる。
+- 本番 URL での応答確認（未認証の 302 / 401、除外パスの 200、定期実行の Bearer 判定）は未実施。デプロイ後の確認手順に委ねる。
 
 ### 振る舞い差分
 
 - 本番を開くとブラウザ標準のパスワード入力ダイアログではなく、アプリ内のログイン画面が出る。メールアドレスとパスワードでログインすれば、以後 30 日は聞かれない。
-- 「その他」画面にログアウトと「アカウント」が増え、アカウント画面で表示名・メールの確認、パスワード変更、他の端末からのログアウトができる。
+- 「その他」画面にログアウトと「アカウント」が増え、アカウント画面で表示名・メールの確認、パスワード変更（12〜128 文字の案内と理由別のエラー表示）、他の端末からのログアウトができる。
 - ログイン画面では下部のタブが消え、ログイン後は元々開こうとしていた画面へ戻る。
-- 操作中にログインが切れると、失敗メッセージではなくログイン画面へ移り、ログイン後に元の画面へ戻る。
+- 操作中やオフライン分の送り直し中にログインが切れると、失敗メッセージではなくログイン画面へ移り、再ログイン後に元の画面と未送信のチェック操作が復帰する。
 - ログアウトすると、オフライン表示のために端末へ残っていた買い物リストなどの一時データも消える。
 
 ### 証拠
 
 | ID | 主張 | 種別 | 結果 | 参照 |
 | --- | --- | --- | --- | --- |
-| EV-01 | lint / type-check / test がキャッシュ無しで通る（87 ファイル 1,026 テスト） | test | pass | TURBO\_FORCE=true pnpm test / pnpm lint / pnpm type-check（2026-09-17 実行） |
-| EV-02 | 新規マイグレーションは認証 5 テーブルの追加のみで、手で除去した 3 行の ALTER は実 DB では無効果（対象 3 列は 0009 で DEFAULT 無しで追加されている） | counterfactual | pass | apps/web/src/db/migrations/0010\_majestic\_namor.sql / 0009\_shopping\_list\_pantry\_coverage.sql / meta の 0009・0010 スナップショット比較 |
-| EV-03 | 信頼済みでないオリジンからのログインは 403、HTTP 経由のサインアップは 400 で閉鎖、疎通確認用の応答は 200 | black\_box | pass | PGlite + 実ハンドラへの疑似リクエスト（reviewer の一時スクリプト。オリジン空設定でも同結果） |
-| EV-04 | レート制限はデータベース保存で機能し、ログイン 4 回目で 429 になる。クライアント IP ヘッダが無い場合は全利用者共有の 1 バケットへ退避する | black\_box | pass | PGlite + 実ハンドラへの疑似リクエスト。rate\_limits の key が no-trusted-ip 付き / IP ヘッダ有りでは IP 別 |
-| EV-05 | セッション Cookie は HttpOnly / Secure / SameSite=Lax / Path=/ / 30 日、キャッシュ Cookie は 931 バイト、ログアウトで両方が即時失効する | black\_box | pass | PGlite + 実ハンドラへの疑似リクエスト（Set-Cookie 全文と sessions 行の期限差を実測） |
-| EV-06 | パスワード変更は 11 文字 / 129 文字を 400 で拒否し、現在のパスワード誤りも 400。他端末失効は DB のセッション行を即時削除する | black\_box | pass | PGlite + 実ハンドラへの疑似リクエスト（PASSWORD\_TOO\_SHORT / TOO\_LONG / INVALID\_PASSWORD を確認） |
-| EV-07 | 試験計画 §15-2 の合格基準に対し、結合試験 18 件・バレル 1 件・画面 2 件が未実装で、乖離の記録も無い | static | pass | docs/tests/better-auth-login.md §15-2 と apps/web/tests 配下の試験 ID の突合（grep） |
-| EV-08 | 本番ビルドが Proxy を含めて成功する。ただし認証設定がビルド時に無い環境では /more が静的生成され、ログイン名の表示経路が実行されない | black\_box | pass | pnpm --filter @cookpit/web build のルート一覧（○ /more / ƒ /more/account） |
+| EV-01 | lint / type-check / test（1,046 件）/ format / build がキャッシュ無しで通る | test | pass | TURBO\_FORCE=true pnpm test・pnpm lint・pnpm type-check / pnpm format:check / pnpm --filter @cookpit/web build（2026-09-17 再実行） |
+| EV-02 | 前回指摘 B-01 の追加テスト（IT-H-06/07/08/09/12/13/24）が実装され green。残る未実装 ID は試験計画 §14-3 に理由と代替つきで記録された | test | pass | apps/web/tests/server/auth/auth-route.test.ts:116-380 / docs/tests/better-auth-login.md §14-3・§15-2 |
+| EV-03 | 前回指摘 B-02 が解消し、旧環境変数の記述が README を含めて 0 件になった | static | pass | README.md:8-14,65-72 / grep -rn BASIC\_AUTH README.md apps/web docs/0\[1-7\]\*.md = 0 件 |
+| EV-04 | セキュリティ指摘 SEC-1 が解消し、制御文字を含む遷移先と自オリジン以外へ解決される値はすべて / に落ちる | counterfactual | pass | apps/web/src/app/login/\_components/login-form.tsx:17-44 / login-form.test.tsx の TAB・LF・CR ケース |
+| EV-05 | 前回の改善提案 3 件が反映され動作する（パスワード変更の理由別文言、送り直し 401 でのログイン誘導、/more の実行時レンダリング） | test | pass | change-password-form.test.tsx / use-checked-sync-queue.test.tsx UOQ-15,16 / build のルート一覧が ƒ /more |
+| EV-06 | 取り込み時の競合解決が安全側である（キャッシュ判定は取り込み元の条件を厳密に含み、401 時の退避経路も残置されている） | static | pass | apps/web/src/app/sw.ts:42-145（cacheWillUpdate は status 200 かつ非リダイレクトのみ許可） |
+| EV-07 | 認証ライブラリの IP 解決は値が複数あるヘッダを信頼せず null に落とすため、単一値ヘッダを優先する SEC-2 の修正方針は妥当（ただし実環境での付与は未検証） | static | pass | @better-auth/core dist/utils/ip.mjs:190（forwardedIps.length \!== 1 で null）/ auth-route.test.ts の SEC-2 ケース |
+| EV-08 | 新規マイグレーションは認証 5 テーブルの追加のみで、既存 9 テーブルへの差分が無い | counterfactual | pass | apps/web/src/db/migrations/0010\_majestic\_namor.sql / 0009 の SQL とスナップショット比較（前回レビューで確定。差分なし） |
 
 <details>
 <summary>AI assessment</summary>
 
-- blocking open: 2
+- blocking open: 0
 - high-impact unverified: 0
-- follow-up open: 3
+- follow-up open: 2
 - reviewer: reviewer / claude-opus-5
-- reviewed at: 2026-09-17T13:05:00Z
+- reviewed at: 2026-09-17T14:40:00Z
 
 </details>
 
@@ -297,3 +297,74 @@ Tailwind の表示崩れ・ハンドラ結線は次のとおり機械的に確�
   実装計画 9-1〜9-9 はすべて実施済み（9-8 / 9-9 は「更新不要」の確認）。
 - 不一致: `README.md:68-71`（B-02）。
 - 契約書 §11-5 の実装時是正 3 件は、いずれも設計判断の変更ではなく記録として妥当。§10 の実測更新も本レビューの実測と矛盾しない。
+
+### Task 2: closure review（2026-09-17 / reviewer: claude-opus-5）
+
+- 対象: `feat/better-auth-login` の `origin/main..HEAD`（28 コミット・66 エントリ）。base `origin/main` = `45a704c`。
+- subject digest: `sha256:3d6d19153b06ec6f0700723664bb5ed9e2af2429fc2bc49fbe347e145badfaea`（`--source commit`）。
+- state: `human_review_requested`（open BLOCK 0 / high 未検証 0 / FOLLOW_UP open 2）。これは承認ではなく、人間へ判断材料を渡せる状態を指す。
+- 注記: 先行 PR #207 のマージ後に再 rebase すると digest が変わるため、その時点で `subject` の再計算と `render` が必要。
+
+#### 前回指摘の解消確認
+
+| ID   | 処置                                                                                                                                           | reviewer の検証                                                                                                                                                                                                                    | status                 |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| B-01 | (a) `auth-route.test.ts` に IT-H-06/07/08/09/12/13/24 を追加 (b) 試験計画 §14-3 に未実装 ID の理由・代替を記録し §15-2 を実態へ更新（87/102）  | `apps/web/tests/server/auth/auth-route.test.ts:116-380` を読み、Cookie 属性 + `Max-Age=0` 失効 + DB 行削除（IT-H-06）、`session_data` を落として DB 再検証を強制する他端末失効（IT-H-09）、4 回目 429（IT-H-12）を確認。全件 green | resolved               |
+| B-02 | `README.md` の 2 箇所（冒頭「このリポジトリについて」・ローカル起動）を Better Auth 前提へ置換                                                 | `README.md:8-14,65-72` を確認。`grep -rn "BASIC_AUTH" README.md apps/web docs/0[1-7]*.md` = 0 件                                                                                                                                   | resolved               |
+| F-01 | `change-password-form.tsx` に `resolveChangePasswordErrorMessage()`（429 / `PASSWORD_TOO_SHORT`・`TOO_LONG` / 既定）と `minLength`・ヒント追加 | 分岐が前回実測（EV-06: 400 `PASSWORD_TOO_SHORT`/`TOO_LONG`、429）と一致。既定が現行文言のままで列挙防止も維持。テスト追加あり                                                                                                      | resolved               |
+| F-02 | `use-api-action.ts` から `redirectToLogin()` を export し、キューの再送 401 で op を残したまま遷移。UOQ-15/16 追加                             | `use-checked-sync-queue.ts:170-175` を確認。`return` でループを打ち切り `finally` が実行フラグを解除するため再入も安全。404/422/5xx の既存分岐は不変（回帰なし）                                                                   | resolved               |
+| F-03 | `/more/page.tsx` に `force-dynamic`                                                                                                            | 再ビルドのルート一覧が `ƒ /more` / `ƒ /more/account` に変化（前回は `○ /more`）                                                                                                                                                    | resolved               |
+| P-01 | —                                                                                                                                              | 変更なし。0010 の migration は追加のみのまま                                                                                                                                                                                       | resolved（前回どおり） |
+
+#### security 指摘の統合確認（判断は security-reviewer、反映確認のみ実施）
+
+- SEC-1（BLOCK）: `login-form.tsx:17-44` で制御文字（`\x00-\x1f\x7f`）を拒否し、`new URL(value, window.location.origin)` の origin 一致で二重化。`/\t//evil.com` 等 3 ケースをテストに追加し、正常系（`/shopping-lists/abc?x=1`）が維持されることも確認。契約書 §4.1 の ABNF も `%x20-2E` 起点へ是正済み。**resolved**。
+  - 補足: サーバー側 `buildNextParam` は制御文字を明示的に落とさないが、`nextUrl.pathname` は percent-encode 済みの文字列しか返さないため文法違反値を生成できない（穴ではない）。
+- SEC-2（high）: `create-auth.ts:49-56` に `ipAddressHeaders: ['x-vercel-forwarded-for', 'x-forwarded-for']`。ライブラリ実装（`@better-auth/core` `dist/utils/ip.mjs:190`）が「値が複数あるヘッダは信頼せず null」であることを実読で確認したため、単一値ヘッダを優先する方針は妥当。**実環境でのヘッダ付与は未検証**のため残余リスク + Preview 確認項目として扱う。
+- SEC-3 / SEC-4 / SEC-5: ADR-0023 §残るリスクへ 5 分遅延を追記、`apps/web/e2e/README.md` の実値パスワード除去、設計書・契約書へ `/api/auth/*` の 500 追記をそれぞれ確認。**resolved**。
+- SEC-10: 先行 PR #207 に委譲。本 PR 側のコード変更なし。人間項目 H-01（マージ順序）に統合した。
+
+#### 取り込み（rebase）時の競合解決の評価
+
+- `sw.ts`: `cacheWillUpdate`（`status === 200 && !redirected`）は `origin/main` の `cacheOnlyOk`（`status === 200`）を厳密に含むため機能後退なし。`redirectToRootOn401` を残したのも妥当（Better Auth 移行後は未認証 navigation が 302 になるため通常到達しないが、想定外の 401 に対する退避経路として無害）。
+- `proxy.ts`: 本 feature 側の全採用は要件 E-02 / E-04 と契約書 §4 に一致。401 は JSON + `Content-Type` を持つため、`f9b953d`（iOS Safari のダウンロード扱い）の再発条件を満たさない。ただし **503 は本文も `Content-Type` も持たない**ままで、`f9b953d` が 503 にも本文を付けた意図は引き継がれていない（下記 FU-A）。
+
+#### 新規 FOLLOW_UP（今回は止めない）
+
+| ID   | action      | impact | evidence | status | path:line                                               | 根拠・再現                                                                                                                                                                                                                                                                                                                                                                  | 修正案                                                                                                                                                                                                                              |
+| ---- | ----------- | ------ | -------- | ------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FU-A | `FOLLOW_UP` | low    | E1       | open   | `apps/web/src/proxy.ts:34`                              | `origin/main` の `f9b953d`（2026-09-16 の iOS Safari 障害対応）は 401 と **503 の両方**に HTML 本文 + `Content-Type` を付けた。本 PR の 503 は `new NextResponse(null, ...)` で本文・`Content-Type` ともに無く、同障害の「不明なファイル扱い → ダウンロード提案 → 完了しない」条件を 503 側だけ満たしうる。発生は `BETTER_AUTH_SECRET` 未設定 × production の設定不備時のみ | 要件 E-04 / 契約書 §4 / UT-P-09 が「本文なし」を明示しているため、仕様変更として扱う。(a) 503 に最小 HTML（`f9b953d` の `UNAVAILABLE_HTML` 相当）を付け 3 文書と UT-P-09 を更新するか、(b) 本文なしを維持する理由を設計書へ記録する |
+| FU-B | `FOLLOW_UP` | low    | E1       | open   | `apps/web/tests/server/auth/auth-route.test.ts:376-400` | IT-H-13（Origin 検査）は `NODE_ENV=test` で検査がスキップされる制約を回避するため `betterAuth(...)` を**テスト内に再定義**して検証している。ライブラリの挙動は確認できるが、`create-auth.ts` 側の設定（`trustedOrigins` の受け渡し・将来 `disableOriginCheck` を足す等）の後退は検知できない                                                                                | `createAuth()` の戻り値の `options.trustedOrigins` / `advanced` を直接アサートする軽量ケースを 1 本足すか、`create-auth.ts` に `disableOriginCheck: false` を明示して同じ経路をテストから使えるようにする                           |
+
+#### PRE_EXISTING（本 PR の差分外）
+
+- `pnpm test:harness` の `harness-state.test.mjs:301` が日本語パス環境で `URL#pathname` により 1 件失敗する。本 feature の差分外で、先行 PR #207 で修正済みと報告を受けている。今回の受け入れ判定からは分離する。
+
+#### 実行した検証（closure）
+
+| 種別 | 内容                                                                                              | 結果                                                                   |
+| ---- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| gate | `TURBO_FORCE=true pnpm lint` / `pnpm type-check`                                                  | pass                                                                   |
+| gate | `TURBO_FORCE=true pnpm test`                                                                      | 5 パッケージ green（web 87 files / 1,046 tests、合計 2,345 tests）     |
+| gate | `pnpm format:check`                                                                               | pass                                                                   |
+| gate | `pnpm --filter @cookpit/web build`                                                                | pass（`✓ Compiled successfully` / `ƒ /more` / `ƒ Proxy (Middleware)`） |
+| 静的 | ADR 振り直しの整合（`ADR-0022` の残存参照が review-readiness 側のみ、`ADR-0023` が実在）          | pass                                                                   |
+| 静的 | `grep -rn "BASIC_AUTH" README.md apps/web docs/0[1-7]*.md`                                        | 0 件                                                                   |
+| 静的 | `@better-auth/core` の `getIPFromHeader` 実読（複数値ヘッダ → null）                              | SEC-2 の方針が妥当であることを確認                                     |
+| 差分 | `git diff --stat origin/main..HEAD -- packages/domain packages/application packages/api-contract` | 差分ゼロ（AC-06 維持）                                                 |
+
+#### 人間の実機確認へ渡す最小項目（更新版）
+
+前回の 5 項目に security 由来の Preview 確認 1 項目を足した **6 項目**で足りる。固定チェック表（MB 15 + BB 11）の全走査は不要。
+
+| #   | 項目                                                                                                                        | 理由（AI で代替できない点）                                          | 対応 ID              |
+| --- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------- |
+| 1   | iOS ホーム画面 PWA でログイン → 終了 → 再起動でログイン維持                                                                 | Cookie 永続と ITP の扱いが OS 実装依存                               | MB-01 / 02           |
+| 2   | 通知クリックで PWA 起動（セッション有効時・失効時）                                                                         | Web Push + standalone 起動は実機でのみ再現できる                     | MB-05 / 09           |
+| 3   | Android PWA でログイン → 再起動 → ログアウト                                                                                | ブラウザ差分の確認                                                   | MB-06 / 07 / 08      |
+| 4   | Preview で `X-Forwarded-For` を変えた連打が IP ごとに 429 に分かれるか（併せてログインが 403 にならないこと）               | プラットフォームのヘッダ付与と信頼境界は実環境でしか判らない         | SEC-2 / SEC-7 BB     |
+| 5   | 本番 URL への `curl` 6 本（`/`・`/api/pantry`・`/login`・`/manifest.webmanifest`・`/api/cron/expiry-alerts`・`/api/authx`） | 本番の Proxy 実行環境での matcher と応答は実デプロイでのみ確認できる | BB-01/02/03/06/09/11 |
+| 6   | `/shopping-lists/<id>` を開いた状態でセッション失効 → 再ログイン → オフライン再訪問                                         | SW キャッシュと 302 の相互作用は実ブラウザの挙動                     | MB-11                |
+
+Tailwind の表示崩れ・ハンドラ結線は前回同様に機械的確認で確定しており、人間の再走査は求めない
+（新規追加分のヒント文言・`minLength` も RTL テストで結線を確認済み）。
