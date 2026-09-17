@@ -14,7 +14,6 @@ interface Props {
   next: string | null;
 }
 
-// eslint-disable-next-line no-control-regex -- TAB/LF/CR 等の制御文字を意図的に検出する（SEC-1）。
 const CONTROL_CHARS_REGEX = /[\x00-\x1f\x7f]/;
 
 /**
