@@ -11,6 +11,16 @@ export const NETWORK_ERROR_MESSAGE = '通信エラーが発生しました。';
 /** `key` を指定しない操作に割り当てるキー。 */
 const DEFAULT_KEY = 'default';
 
+/**
+ * 401（セッション切れ）を検知したときの回復経路。`next` にはクエリ込みの現在地を渡す。
+ * オフラインキューの再送（`use-checked-sync-queue.ts`）は `useApiAction` を経由しないため、
+ * 同じ遷移ロジックをここから import して再利用する（F-02。設計書 D-8 の適用範囲）。
+ */
+export function redirectToLogin(): void {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.assign(`/login?next=${next}`);
+}
+
 function resolveFailureMessage(
   failureMessage: string | ((status: number) => string) | undefined,
   status: number,
@@ -141,9 +151,8 @@ export function useApiAction(): ApiAction {
       const response = await request();
       if (!response.ok) {
         if (response.status === 401) {
-          // セッション切れは silent でも回復させる。next にはクエリ込みの現在地を渡す。
-          const next = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.assign(`/login?next=${next}`);
+          // セッション切れは silent でも回復させる。
+          redirectToLogin();
           return;
         }
         if (!silent) {
