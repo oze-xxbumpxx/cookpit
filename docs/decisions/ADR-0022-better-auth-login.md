@@ -178,6 +178,12 @@ ADR-0021 でも検討した案。設定のみで完結する。
   ログインフロー自体は CI で走らない（RTL とローカル / Preview の E2E で補う）。
 - パスキー（第二段）は RP ID = オリジンに紐づく。Vercel Preview では本番のパスキーが使えず、
   独自ドメインへ移す場合は全員が登録し直す。
+- **他端末失効・パスワード変更は Proxy 経路では Cookie キャッシュにより最大 5 分反映が
+  遅れる**（`cookieCache.maxAge`。2026-09-17 追記）。`revokeOtherSessions` / パスワード変更で
+  DB の `sessions` 行は即時削除されるが、対象端末が保持する `session_data` Cookie の署名が
+  有効な間（最大 5 分）は Proxy がキャッシュを信頼して通してしまいうる。`/api/auth/*` は
+  DB 権威（`getAuthoritativeSessionFromCtx`）で常に即時反映される。2 名の家庭内利用として
+  受容する（契約書 §3.2 に既知の特性として明記済み）。
 
 ## Migration（移行手順）
 
