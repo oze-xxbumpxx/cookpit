@@ -137,6 +137,10 @@ node プロジェクトは `tests/**/*.node.test.ts` と `tests/server/**/*.test
 > `next` のクライアント側安全化（`safeNext`。`//evil` / `http://` / 空 / `/\evil` / 相対パス
 > 正常の 5 パターン）は `LoginForm` 内のロジックであり `proxy()` からは呼ばれないため、
 > §4-1 の CT-08〜12 で検証する。UT-P-03 の期待結果はこの分離を明記するための注記行。
+> **SEC-1（2026-09-17 追記）**: 正規表現 `^\/(?![/\\])/` だけでは TAB（`\t`）/ LF（`\n`）/
+> CR（`\r`）を 2 文字目に許可してしまい、WHATWG URL パーサがこれらを解決前に除去するため
+> `"/\t//evil.com"` が `https://evil.com/` に解決されうる（`docs/reviews/better-auth-login.security.md`
+> SEC-1）。境界値に TAB/LF/CR（→ `/` に既定）を追加した。CT-08〜12 に反映済み。
 
 ### 2-2. Service Worker `cacheWillUpdate`（純関数）
 
@@ -239,22 +243,27 @@ PGlite への migration 適用は §5「試験データ」のヘルパーを使�
 配置: `apps/web/tests/app/login/_components/login-form.test.tsx`（新規）。`authClient` を
 `vi.mock`、`window.location.assign` を spy（happy-dom でスタブ）。
 
-| #     | 観点                                            | 前提                                                  | 操作                                   | 期待結果                                                                           | 分類      | 対応要件                                       |
-| ----- | ----------------------------------------------- | ----------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------- | --------- | ---------------------------------------------- |
-| CT-01 | 初期表示                                        | `next=/pantry`                                        | `render(<LoginForm next="/pantry" />)` | メール欄・パスワード欄・送信ボタンが表示される                                     | 正常      | F-01                                           |
-| CT-02 | 空欄で送信 → クライアント側チェック             | ─                                                     | 何も入力せず送信                       | `authClient.signIn.email` が呼ばれない（`required` 属性等でブロック）              | 異常/境界 | フロントエンド設計                             |
-| CT-03 | 送信中はボタン無効化                            | `signIn.email` が pending の Promise を返す           | 送信 → pending 中に再クリック          | ボタンが無効化され、`signIn.email` は 1 回しか呼ばれない                           | 正常      | フロントエンド設計                             |
-| CT-04 | 401/403 → 区別しないエラー文言                  | `signIn.email` が `{ error: { status: 401 } }` を返す | 送信                                   | 「メールアドレスまたはパスワードが違います。」を表示                               | 異常      | E-01                                           |
-| CT-05 | 429 → 試行過多文言                              | `signIn.email` が `{ error: { status: 429 } }` を返す | 送信                                   | 「試行回数が多すぎます。しばらく待ってから再度お試しください。」を表示             | 異常      | E-06                                           |
-| CT-06 | 通信例外 → 既存 `NETWORK_ERROR_MESSAGE`         | `signIn.email` が reject                              | 送信                                   | 既存 `NETWORK_ERROR_MESSAGE` と同じ文言を表示                                      | 異常      | エラー処理節                                   |
-| CT-07 | 成功時、`next` が有効な相対パスならその遷移先へ | `signIn.email` が成功、`next="/pantry"`               | 送信                                   | `window.location.assign('/pantry')` が呼ばれる                                     | 正常      | F-01, N-01                                     |
-| CT-08 | `safeNext`: `//evil` → `/`                      | `next="//evil"`                                       | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
-| CT-09 | `safeNext`: `http://evil.example` → `/`         | `next="http://evil.example"`                          | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
-| CT-10 | `safeNext`: 空 → `/`                            | `next=""`                                             | 成功送信                               | `window.location.assign('/')`                                                      | 境界      | B-02                                           |
-| CT-11 | `safeNext`: `/\evil` → `/`                      | `next="/\\evil"`                                      | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
-| CT-12 | `safeNext`: 正常な相対パスはそのまま採用        | `next="/shopping-lists/abc?x=1"`                      | 成功送信                               | `window.location.assign('/shopping-lists/abc?x=1')`                                | 正常/境界 | B-02                                           |
-| CT-13 | `autocomplete` 属性                             | ─                                                     | DOM を検査                             | メール欄 `autoComplete="username"`、パスワード欄 `autoComplete="current-password"` | 正常      | 第二段の伏線（パスキー用 `webauthn` は第二段） |
-| CT-14 | `next` 未指定時は `/` へ遷移                    | `next` を渡さない                                     | 成功送信                               | `window.location.assign('/')`                                                      | 境界      | F-01                                           |
+| #               | 観点                                                      | 前提                                                  | 操作                                   | 期待結果                                                                           | 分類      | 対応要件                                       |
+| --------------- | --------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------- | --------- | ---------------------------------------------- |
+| CT-01           | 初期表示                                                  | `next=/pantry`                                        | `render(<LoginForm next="/pantry" />)` | メール欄・パスワード欄・送信ボタンが表示される                                     | 正常      | F-01                                           |
+| CT-02           | 空欄で送信 → クライアント側チェック                       | ─                                                     | 何も入力せず送信                       | `authClient.signIn.email` が呼ばれない（`required` 属性等でブロック）              | 異常/境界 | フロントエンド設計                             |
+| CT-03           | 送信中はボタン無効化                                      | `signIn.email` が pending の Promise を返す           | 送信 → pending 中に再クリック          | ボタンが無効化され、`signIn.email` は 1 回しか呼ばれない                           | 正常      | フロントエンド設計                             |
+| CT-04           | 401/403 → 区別しないエラー文言                            | `signIn.email` が `{ error: { status: 401 } }` を返す | 送信                                   | 「メールアドレスまたはパスワードが違います。」を表示                               | 異常      | E-01                                           |
+| CT-05           | 429 → 試行過多文言                                        | `signIn.email` が `{ error: { status: 429 } }` を返す | 送信                                   | 「試行回数が多すぎます。しばらく待ってから再度お試しください。」を表示             | 異常      | E-06                                           |
+| CT-06           | 通信例外 → 既存 `NETWORK_ERROR_MESSAGE`                   | `signIn.email` が reject                              | 送信                                   | 既存 `NETWORK_ERROR_MESSAGE` と同じ文言を表示                                      | 異常      | エラー処理節                                   |
+| CT-07           | 成功時、`next` が有効な相対パスならその遷移先へ           | `signIn.email` が成功、`next="/pantry"`               | 送信                                   | `window.location.assign('/pantry')` が呼ばれる                                     | 正常      | F-01, N-01                                     |
+| CT-08           | `safeNext`: `//evil` → `/`                                | `next="//evil"`                                       | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-09           | `safeNext`: `http://evil.example` → `/`                   | `next="http://evil.example"`                          | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-10           | `safeNext`: 空 → `/`                                      | `next=""`                                             | 成功送信                               | `window.location.assign('/')`                                                      | 境界      | B-02                                           |
+| CT-11           | `safeNext`: `/\evil` → `/`                                | `next="/\\evil"`                                      | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-12           | `safeNext`: 正常な相対パスはそのまま採用                  | `next="/shopping-lists/abc?x=1"`                      | 成功送信                               | `window.location.assign('/shopping-lists/abc?x=1')`                                | 正常/境界 | B-02                                           |
+| CT-08b（SEC-1） | `safeNext`: `/<TAB>//evil.com` → `/`                      | `next="/\t//evil.com"`                                | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-08c（SEC-1） | `safeNext`: `/<LF>//evil.com` → `/`                       | `next="/\n//evil.com"`                                | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-08d（SEC-1） | `safeNext`: `/<CR>//evil.com` → `/`                       | `next="/\r//evil.com"`                                | 成功送信                               | `window.location.assign('/')`                                                      | 異常/境界 | E-07, B-02                                     |
+| CT-12b（SEC-1） | `safeNext`: `/pantry?x=1` はそのまま採用                  | `next="/pantry?x=1"`                                  | 成功送信                               | `window.location.assign('/pantry?x=1')`                                            | 正常/境界 | B-02                                           |
+| CT-12c（SEC-1） | `safeNext`: `/%2F%2Fevil`（percent-encode）はそのまま採用 | `next="/%2F%2Fevil"`                                  | 成功送信                               | `window.location.assign('/%2F%2Fevil')`                                            | 正常/境界 | B-02                                           |
+| CT-13           | `autocomplete` 属性                                       | ─                                                     | DOM を検査                             | メール欄 `autoComplete="username"`、パスワード欄 `autoComplete="current-password"` | 正常      | 第二段の伏線（パスキー用 `webauthn` は第二段） |
+| CT-14           | `next` 未指定時は `/` へ遷移                              | `next` を渡さない                                     | 成功送信                               | `window.location.assign('/')`                                                      | 境界      | F-01                                           |
 
 ### 4-2. `/more`（表示名・アカウントリンク・ログアウト）
 
@@ -369,19 +378,21 @@ Web Push・standalone PWA・Cookie 永続がブラウザ/OS の実装依存で�
 設計書「移行とリリース」手順 7 の確認表をそのまま試験項目化。実施は本番デプロイ後、
 `BASIC_AUTH_*` 削除前（設計 D-11 の順序）。
 
-| ID    | パス                                         | 期待                                                                                  | 対応要件              |
-| ----- | -------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------- |
-| BB-01 | `/`（Cookie 無し）                           | `302 Location: /login?next=%2F`                                                       | F-02, N-01, AC-04     |
-| BB-02 | `/api/pantry`（Cookie 無し）                 | `401` JSON、`Cache-Control: no-store`                                                 | E-02, AC-04           |
-| BB-03 | `/login`                                     | `200`                                                                                 | F-01, AC-04           |
-| BB-04 | `/api/auth/ok`                               | `200`                                                                                 | F-03, AC-04           |
-| BB-05 | `/api/auth/sign-up/email`（POST）            | `4xx`（閉鎖）                                                                         | F-04, E-05, AC-04     |
-| BB-06 | `/manifest.webmanifest`                      | `200`                                                                                 | N-06, AC-04           |
-| BB-07 | `/_next/static/...`（実在アセット）          | `200`                                                                                 | N-06, AC-04           |
-| BB-08 | `/_next/image?url=/icons/icon.svg&w=64&q=75` | `302`（除外していないことの確認。ADR-0021 継承）                                      | セキュリティ節, AC-04 |
-| BB-09 | `/api/cron/expiry-alerts`                    | `401`（Proxy ではなく cron 自身の判定。`{ error: 'Unauthorized' }`、`Location` 無し） | N-07, AC-04           |
-| BB-10 | `/api/cron/..%2fpantry`                      | `401` か `404`。`200` ならパス正規化の穴                                              | セキュリティ節, AC-04 |
-| BB-11 | `/api/authx`                                 | `401`（`api/auth/` 前方一致の境界）                                                   | B-07, AC-04           |
+| ID                      | パス                                                                        | 期待                                                                                                                | 対応要件                    |
+| ----------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| BB-01                   | `/`（Cookie 無し）                                                          | `302 Location: /login?next=%2F`                                                                                     | F-02, N-01, AC-04           |
+| BB-02                   | `/api/pantry`（Cookie 無し）                                                | `401` JSON、`Cache-Control: no-store`                                                                               | E-02, AC-04                 |
+| BB-03                   | `/login`                                                                    | `200`                                                                                                               | F-01, AC-04                 |
+| BB-04                   | `/api/auth/ok`                                                              | `200`                                                                                                               | F-03, AC-04                 |
+| BB-05                   | `/api/auth/sign-up/email`（POST）                                           | `4xx`（閉鎖）                                                                                                       | F-04, E-05, AC-04           |
+| BB-06                   | `/manifest.webmanifest`                                                     | `200`                                                                                                               | N-06, AC-04                 |
+| BB-07                   | `/_next/static/...`（実在アセット）                                         | `200`                                                                                                               | N-06, AC-04                 |
+| BB-08                   | `/_next/image?url=/icons/icon.svg&w=64&q=75`                                | `302`（除外していないことの確認。ADR-0021 継承）                                                                    | セキュリティ節, AC-04       |
+| BB-09                   | `/api/cron/expiry-alerts`                                                   | `401`（Proxy ではなく cron 自身の判定。`{ error: 'Unauthorized' }`、`Location` 無し）                               | N-07, AC-04                 |
+| BB-10                   | `/api/cron/..%2fpantry`                                                     | `401` か `404`。`200` ならパス正規化の穴                                                                            | セキュリティ節, AC-04       |
+| BB-11                   | `/api/authx`                                                                | `401`（`api/auth/` 前方一致の境界）                                                                                 | B-07, AC-04                 |
+| BB-12（Preview・SEC-2） | Preview で `X-Forwarded-For` を偽装しつつ誤パスワードで `/login` を連打する | 攻撃者側 IP ごとに個別の 429 になる（`no-trusted-ip` の共有バケットに落ちず、正規ログインが巻き添えにならないこと） | SEC-2, E-06, F-16, AC-04    |
+| BB-13（Preview・SEC-7） | Preview で `trustedOrigins` の実値を確認する                                | Preview からのログインが `403 INVALID_ORIGIN` にならない（`trustedOrigins` が空配列になっていないこと）             | セキュリティ節, N-11, AC-04 |
 
 ---
 
@@ -439,6 +450,13 @@ Web Push・standalone PWA・Cookie 永続がブラウザ/OS の実装依存で�
   無影響。そのまま実行して green を確認する（新規観点の追加は不要）。
 - **`packages/domain` / `packages/application` への差分ゼロ**（AC-06）: 自動テストではなく
   `git diff` によるレビュー確認。CI の既存テストスイートに変化が無いことで間接的に裏付ける。
+- **既知の flaky（PRE_EXISTING。2026-09-17 implementer 追記）**:
+  `tests/app/shopping-lists/_components/shopping-list-client.offline-queue.test.tsx:137` が
+  `pnpm --filter @cookpit/web test` の全体実行時に稀に失敗することがある
+  （security-reviewer の報告 `docs/reviews/better-auth-login.security.md` 補足。
+  `aria-checked` の待ち合わせに見える）。単独実行では 3 回連続で合格し、本 feature は
+  `use-checked-sync-queue.ts` の 401 分岐（F-02）以外このファイルに触れていないため、
+  本 feature 由来ではなく既存の flaky として回帰範囲から除外する。
 
 ---
 
@@ -590,6 +608,29 @@ Web Push・standalone PWA・Cookie 永続がブラウザ/OS の実装依存で�
 > `customRules` は設定しない（設計書 D-5 に追記。契約書 §5 と一致）。IT-H-12 の閾値注入方針は
 > そのままでよい。
 
+### 14-3. 未実装 ID の一覧（reviewer B-01 指摘の追跡。2026-09-17 implementer 追記）
+
+`auth-route.test.ts` へ IT-H-06/07/08/09/12/13 を追加し（B-01 の (a)）、§15-2 の合格基準を
+実態に合わせるため、それでも残る未実装 ID を理由・代替とともに記録する（B-01 の (b)）。
+IT-H-10 は本タスク以前から実装済み、IT-H-24（未ログイン sign-out の冪等性）は IT-H-06 の
+延長で自主的に追加した（試験計画にない観点の自主追加）。
+
+| ID                                                                     | 理由                                                                                                                                                                  | 代替                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| IT-H-05（`get-session` 正常）                                          | 本タスクの指摘範囲（B-01 の追加対象リスト）に含まれない                                                                                                               | IT-H-09 の revoke-other-sessions 検証内で `get-session` が非 null を返すことを間接確認済み。ユーザー情報の中身までの専用アサーションは次タスクで追加する                                                                                   |
+| IT-H-11（同一 email 二重発行拒否）                                     | HTTP 経由のサインアップは IT-H-02 で閉鎖済みで、発行経路はスクリプト限定                                                                                              | IT-S-02（`auth-create-user` の重複 email 失敗）で同じ制約をスクリプト側から確認済み                                                                                                                                                        |
+| IT-H-14〜17（`change-password` 新パスワード長境界 11/12/128/129 文字） | 本タスクの指摘範囲外。境界値ごとに 4 ケース必要で工数が嵩む                                                                                                           | `create-auth.ts` の `minPasswordLength: 12` / `maxPasswordLength: 128` を静的に確認済み。実測は `docs/reviews/better-auth-login.md` EV-06（11/129 文字が 400 で拒否）で部分的に裏付け済み。12/128 文字ちょうどの成功系は次タスクで追加する |
+| IT-H-18（email 形式不正）                                              | Better Auth 組み込みスキーマ依存で本タスクの指摘範囲外                                                                                                                | 次タスクで追加、または BB での手動確認                                                                                                                                                                                                     |
+| IT-H-19（`expiresAt` = `createdAt` + 30 日）                           | DB 行の生成時刻比較用ヘルパーが必要で本タスクの指摘範囲外                                                                                                             | 契約書 §10-19（要検証扱いのまま）                                                                                                                                                                                                          |
+| IT-H-20（`updateAge` 1 日境界での延長）                                | DB の `updatedAt` を意図的に過去日時へ書き換える追加ヘルパーが必要                                                                                                    | 性能節の `curl` 計測（手動）に委ねる（IT-H-21 と同じ扱い）                                                                                                                                                                                 |
+| IT-H-22（`session_data` Cookie が 4KB 未満）                           | Cookie 全体長の計測が必要で本タスクの指摘範囲外                                                                                                                       | `docs/reviews/better-auth-login.md` EV-05（実測 931 バイト）で裏付け済み                                                                                                                                                                   |
+| IT-H-23（sign-in の多重実行が害を及ぼさない）                          | 本タスクの指摘範囲外                                                                                                                                                  | 次タスクで追加                                                                                                                                                                                                                             |
+| IT-INF-01（`authSchema` バレル import）                                | `packages/infrastructure` は本タスクの変更対象外（コード変更なし）                                                                                                    | `pnpm --filter @cookpit/web type-check` が `authSchema` の実 import 解決に依存しており、失敗時はビルドが落ちるため間接的に担保されている                                                                                                   |
+| CT-15（`/more` の表示名表示）                                          | 本リポジトリに Server Component を直接レンダリングする試験の前例が無い（`apps/web/tests` に `page.test.tsx` は 0 件。B-01 (b) で「対象外 + 理由」を書く指摘のとおり） | MB-12（Preview URL でのログイン）で表示名が出ることを手動確認する                                                                                                                                                                          |
+| CT-20（`/more/account` の表示名・メール表示）                          | 同上                                                                                                                                                                  | 同上（MB-12 の確認範囲に含める）                                                                                                                                                                                                           |
+
+§15-2 の合格基準はこれらの未実装 ID を除いた実態に更新した（§15-2 参照）。
+
 ---
 
 ## 15. 完了条件
@@ -601,27 +642,36 @@ Web Push・standalone PWA・Cookie 永続がブラウザ/OS の実装依存で�
 | AC-01 | F-01〜F-17 が設計書に反映され 12 論点に決定が書かれている                    | 対象外（本試験計画の対象外。architecture-designer/reviewer の確認事項。設計書 D-1〜D-19 で充足確認済み）              |
 | AC-02 | N-01〜N-13 / E-01〜E-12 / B-01〜B-09 が試験計画に対応づけられている          | §13「要件観点の照合」で充足（全項目に対応 ID または対象外理由あり）                                                   |
 | AC-03 | lint / type-check / test / build が通り既存 E2E 2 本が CI で通る             | E2E-01, E2E-02 + 全 UT/IT/CT の green。実装後に `pnpm lint`/`pnpm type-check`/`pnpm test`/`pnpm build` を実行して確認 |
-| AC-04 | 本番 black-box 確認（保護対象 302/401、除外パス 200、cron が Bearer 判定）   | §8 BB-01〜BB-11                                                                                                       |
+| AC-04 | 本番 black-box 確認（保護対象 302/401、除外パス 200、cron が Bearer 判定）   | §8 BB-01〜BB-13                                                                                                       |
 | AC-05 | iOS/Android 実機で 4 項目（ログイン/再起動維持/ログアウト/通知クリック起動） | §7 MB-01/02/04/05（iOS）、MB-06/07/08/09（Android）                                                                   |
 | AC-06 | `packages/domain`/`packages/application` に差分が無い                        | 回帰試験範囲節（`git diff` によるレビュー確認。自動テスト対象外）                                                     |
 | AC-07 | ADR-0022 が Accepted、ADR-0021 が Superseded に更新                          | 対象外（ドキュメントレビュー事項。ADR-0022 は本書作成時点で既に Accepted と確認済み）                                 |
 | AC-08 | `BASIC_AUTH_*` のコード参照が 0 件、`.env.example` から削除                  | 対象外（grep によるレビュー確認。自動テストでは検出できないため実装完了時に確認する）                                 |
 
-### 15-2. 自動テストの合格基準
+### 15-2. 自動テストの合格基準（2026-09-17 implementer 更新。実態に合わせて記録）
 
-- UT-P-01〜30 / UT-SW-01〜04（34 件）が実装され全てグリーン。
-- IT-H-01〜24 / IT-S-01〜10 / IT-INF-01（35 件）が実装され全てグリーン。ただし §3-3 の
-  PGlite 格下げが発生した場合は、格下げた項目を明記したうえで手動確認へ振り替える。
-- CT-01〜29（29 件）が実装され全てグリーン。既存 `more-menu.test.tsx` の MM-03 は
-  CT-17 に置き換わっていること。
+§14-3 の未実装 ID を除き、以下が実装され全てグリーンであることを合格基準とする
+（B-01 (b)。PGlite 格下げは発生しなかった — §3-3 の判断基準どおり `createAuth({ db:
+drizzle(pglite) })` での疎通を確認済み。契約書 §10-8）。
+
+- UT-P-01〜30 / UT-SW-01〜04（34 件、全件実装済み）。
+- IT-H-01/02/03/04/06/07/08/09/10/12/13/24（実装済み 12 件。うち 01 は 01b（POST 経路）も
+  併せて回帰確認。IT-H-05/11/14〜20/21/22/23 は §14-3・14-1 のとおり未実装で、理由と代替を
+  記録済み）。
+- IT-S-01〜10（10 件、全件実装済み）。
+- IT-INF-01 は未実装（§14-3）。
+- CT-01〜29 のうち CT-15/CT-20 を除く 27 件が実装済み（§14-3。既存 `more-menu.test.tsx` の
+  MM-03 は CT-17 に置き換わっている）。
 - E2E-01〜04（4 件。E2E-03 は skip が正しい動作）が CI で green。
+- 自動テストの実装済み ID 数（MB/BB を除く自動化対象 102 件中）: 30 + 4 + 12 + 10 + 0 + 27 + 4
+  = **87 件**（UT-P30 + UT-SW4 + IT-H12 + IT-S10 + IT-INF0 + CT27 + E2E4）。
 - `pnpm --filter @cookpit/web lint` / `type-check` / `test` / `build` が通ること。
 - `pnpm --filter @cookpit/web exec playwright test`（ローカルまたは CI）が 2 件以上実行され
   全件成功すること（既存 `assert-e2e-results.mjs` の判定基準を踏襲）。
 
 ### 15-3. 手動確認の記録先
 
-- MB-01〜15（実機・手動確認）と BB-01〜11（本番 black-box）の結果は
+- MB-01〜15（実機・手動確認）と BB-01〜13（本番 black-box。BB-12/13 は Preview 実施）の結果は
   `docs/reviews/better-auth-login.md`（新規作成想定。他タスクの前例に倣い証拠欄を設ける）に
   PASS / BLOCKED(理由) / FAIL で記録する。BLOCKED はコードリーディングでの補完結果と
   完全確認に必要な条件を併記する（`manual-browser-verify` Skill の完了条件のとおり）。
@@ -632,16 +682,16 @@ Web Push・standalone PWA・Cookie 永続がブラウザ/OS の実装依存で�
 
 ## 試験項目サマリ
 
-| 種別                           | 件数                             |
-| ------------------------------ | -------------------------------- |
-| 単体（UT）                     | 34（UT-P 30, UT-SW 4）           |
-| 結合（IT）                     | 35（IT-H 24, IT-S 10, IT-INF 1） |
-| コンポーネント（CT）           | 29                               |
-| E2E                            | 4                                |
-| 実機・手動確認（MB。人間実施） | 15                               |
-| 本番 black-box（BB。人間実施） | 11                               |
-| **合計**                       | **128**                          |
-| うち人間が実施する項目数       | **26**（MB 15 + BB 11）          |
+| 種別                                                          | 件数                             |
+| ------------------------------------------------------------- | -------------------------------- |
+| 単体（UT）                                                    | 34（UT-P 30, UT-SW 4）           |
+| 結合（IT）                                                    | 35（IT-H 24, IT-S 10, IT-INF 1） |
+| コンポーネント（CT）                                          | 29                               |
+| E2E                                                           | 4                                |
+| 実機・手動確認（MB。人間実施）                                | 15                               |
+| 本番 black-box（BB。人間実施。うち BB-12/13 は Preview 実施） | 13                               |
+| **合計**                                                      | **130**                          |
+| うち人間が実施する項目数                                      | **28**（MB 15 + BB 13）          |
 
 セキュリティ観点（SEC-01〜10）は新規カウントに含めない横断参照表のため、上記合計には
 含めていない。
