@@ -7,11 +7,16 @@ import {
   ShoppingList,
   ShoppingListId,
 } from '@cookpit/domain';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DrizzleClient, TxConnection } from '../../src/db/client';
 import { DrizzlePantryRepository } from '../../src/repositories/drizzle-pantry.repository';
 import { DrizzleShoppingListRepository } from '../../src/repositories/drizzle-shopping-list.repository';
 import { createTestDb, DrizzleUnitOfWork } from '../testing/create-test-db';
+
+// createTxClient 節の各テストは本体で createTestDb()（PGlite の起動）を 2 回呼ぶため、
+// 1 テストあたり 6〜8 秒かかる。既定の 5,000ms では CI の負荷が高い回だけ溢れて落ちる
+// （PR #208 の CI で「execute 内で例外が出ても接続を閉じる」が 7,885ms でタイムアウト）。
+vi.setConfig({ testTimeout: 30_000 });
 
 const CREATED_AT = new Date('2026-07-12T03:00:00');
 
