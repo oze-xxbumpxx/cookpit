@@ -201,4 +201,48 @@ describe('useApiAction', () => {
     expect(onSuccessWithoutBody).toHaveBeenCalledTimes(1);
     expect(result.current.errorMessage).toBeNull();
   });
+
+  describe('401 → /login?next= 遷移（D-8）', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function stubLocation(pathname: string, search: string): { assign: ReturnType<typeof vi.fn> } {
+      const assign = vi.fn();
+      vi.stubGlobal('location', { pathname, search, assign });
+      return { assign };
+    }
+
+    it('CT-27: 401 受信で /login?next=<現在地> へ遷移する', async () => {
+      const { assign } = stubLocation('/pantry', '?tab=a');
+      const { result } = renderHook(() => useApiAction());
+
+      await runAction(result, (action) => action.run(() => Promise.resolve(errorResponse(401))));
+
+      expect(assign).toHaveBeenCalledWith(`/login?next=${encodeURIComponent('/pantry?tab=a')}`);
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('CT-28: silent: true でも 401 では遷移する', async () => {
+      const { assign } = stubLocation('/shopping-lists', '');
+      const { result } = renderHook(() => useApiAction());
+
+      await runAction(result, (action) =>
+        action.run(() => Promise.resolve(errorResponse(401)), { silent: true }),
+      );
+
+      expect(assign).toHaveBeenCalledWith(`/login?next=${encodeURIComponent('/shopping-lists')}`);
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('CT-29: 401 以外（500）は遷移せず既存どおり失敗文言を表示する（回帰）', async () => {
+      const { assign } = stubLocation('/pantry', '');
+      const { result } = renderHook(() => useApiAction());
+
+      await runAction(result, (action) => action.run(() => Promise.resolve(errorResponse(500))));
+
+      expect(assign).not.toHaveBeenCalled();
+      expect(result.current.errorMessage).toBe(API_FAILURE_MESSAGE);
+    });
+  });
 });

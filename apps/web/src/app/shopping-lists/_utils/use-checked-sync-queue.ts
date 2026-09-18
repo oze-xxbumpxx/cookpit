@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ShoppingItemDto } from '@cookpit/application';
 import { client } from '@/lib/api-client';
+import { redirectToLogin } from '@/lib/use-api-action';
 import {
   bumpAttempts,
   deleteCheckedOp,
@@ -166,6 +167,12 @@ export function useCheckedSyncQueue({
         // Hono RPC の型は 404/422 を知らないため number へ広げる
         // （shopping-list-client.tsx の handleRemoveItem と同じ理由）。
         const status: number = response.status;
+        if (status === 401) {
+          // セッション切れ（F-02）。op はキューに残したまま再送を止め、ログイン画面へ誘導する
+          // （useApiAction の 401 と同じ遷移。再ログイン後の再送で復帰する）。
+          redirectToLogin();
+          return;
+        }
         if (status === 404) {
           await deleteCheckedOp(op.key).catch(() => {}); // E-02: エラー表示なし
           continue;

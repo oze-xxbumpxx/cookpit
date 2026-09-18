@@ -8,8 +8,10 @@ Clean Architecture + DDD の実践と両立させて解決する**個人開発�
 ## このリポジトリについて
 
 **ソースコードは公開する前提ですが、アプリ自体は不特定多数へ提供しません。**
-利用者は開発者本人とパートナーの 2 名のみで、本番デプロイは Basic 認証で保護します。
-経緯は [ADR-0021](./docs/decisions/ADR-0021-basic-auth-for-public-repository.md) を参照してください。
+利用者は開発者本人とパートナーの 2 名のみで、本番デプロイはログイン認証（Better Auth の
+email + password + Cookie セッション）で保護し、アカウントは開発者が 2 名分だけ発行します。
+経緯は [ADR-0023](./docs/decisions/ADR-0023-better-auth-login.md)（Basic 認証からの移行）と
+[ADR-0021](./docs/decisions/ADR-0021-basic-auth-for-public-repository.md)（公開時の保護）を参照してください。
 
 公開の目的は、Clean Architecture + DDD のモノレポ構成と、Claude Code を中心とした
 AI 支援開発のワークフロー（`.claude/` と `docs/claude-code/`）を、実例として残すことです。
@@ -65,10 +67,11 @@ cp apps/web/.env.example apps/web/.env   # DATABASE_URL を設定する
 pnpm dev
 ```
 
-`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` は未設定でも開発時は認証がスキップされるため、
-ローカル開発で設定する必要はありません。設定した場合は `pnpm dev` でも Basic 認証が掛かります
-（Playwright E2E は同じ変数から資格情報を自動で渡します）。本番相当（`NODE_ENV=production`）で
-未設定の場合は fail-closed で 503 を返します。
+`BETTER_AUTH_SECRET` は未設定でも開発時は認証がスキップされるため、ローカル開発で設定する
+必要はありません（生成する場合は `openssl rand -base64 32`）。設定した場合は `pnpm dev` でも
+ログイン画面が挟まります。本番相当（`NODE_ENV=production`）で未設定の場合は fail-closed で
+503 を返します。ログイン E2E（`auth-login.spec.ts`）の実行手順は
+[`apps/web/e2e/README.md`](apps/web/e2e/README.md) を参照してください。
 
 ### 品質ゲート
 

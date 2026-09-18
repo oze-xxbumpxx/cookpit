@@ -31,5 +31,6 @@
 | [0018](./ADR-0018-meal-plan-sync-delete-and-quantity.md)     | 献立同期で pending 品目の削除追随と数量上書きを行う                                     | 採択                                                                        | 2026-08-13 |
 | [0019](./ADR-0019-db-transaction-uow.md)                     | 書き込み UseCase を DB トランザクション（UoW）で原子的に実行する                        | 採択（接続方式は [0020](./ADR-0020-tx-connection-per-request.md) が上書き） | 2026-08-13 |
 | [0020](./ADR-0020-tx-connection-per-request.md)              | 書き込みトランザクションの WebSocket 接続をリクエストごとに張り捨てる                   | 採択                                                                        | 2026-08-16 |
-| [0021](./ADR-0021-basic-auth-for-public-repository.md)       | リポジトリ公開にあたり本番を Basic 認証で保護する                                       | 採択                                                                        | 2026-09-16 |
+| [0021](./ADR-0021-basic-auth-for-public-repository.md)       | リポジトリ公開にあたり本番を Basic 認証で保護する                                       | 置換済み（[0023](./ADR-0023-better-auth-login.md)）                         | 2026-09-16 |
 | [0022](./ADR-0022-review-readiness-as-decision-interface.md) | レビュー記録を監査ログと意思決定インターフェースの二層にする                            | 採択                                                                        | 2026-08-11 |
+| [0023](./ADR-0023-better-auth-login.md)                      | Basic 認証を Better Auth のログイン画面と Cookie セッション認証へ置き換える             | 採択                                                                        | 2026-09-17 |

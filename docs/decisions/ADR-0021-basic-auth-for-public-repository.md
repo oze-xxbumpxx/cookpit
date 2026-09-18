@@ -1,6 +1,6 @@
 # ADR-0021: リポジトリ公開にあたり本番を Basic 認証で保護する
 
-- Status: Accepted
+- Status: Superseded by [ADR-0023](./ADR-0023-better-auth-login.md)（2026-09-17）
 - Date: 2026-09-16
 - 関連 feature: public-release-basic-auth
 

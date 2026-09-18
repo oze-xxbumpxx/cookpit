@@ -1,5 +1,6 @@
 import { InvalidOperationError, NotFoundError } from '@cookpit/application';
 import { Hono } from 'hono';
+import { getAuth } from './auth';
 import { cronRoute } from './routes/cron';
 import { healthRoute } from './routes/health';
 import { mealPlansRoute } from './routes/meal-plans';
@@ -11,6 +12,10 @@ import { shoppingListsRoute } from './routes/shopping-lists';
 import { storesRoute } from './routes/stores';
 
 export const app = new Hono().basePath('/api');
+
+// `AppType`（RPC クライアント型）へ Better Auth のルート型を混入させないため、
+// `routes` チェーン（`.route()`）には含めず `app.on()` で別マウントする（D-2）。
+app.on(['GET', 'POST'], '/auth/*', (c) => getAuth().handler(c.req.raw));
 
 export const routes = app
   .route('/health', healthRoute)

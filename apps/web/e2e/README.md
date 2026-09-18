@@ -1,10 +1,13 @@
 # E2E スモークテスト（Playwright）
 
-実装本体は `apps/web/tests/e2e/` に置く。現在は、壊れたときの利用者影響が大きい次の 2 本を
+実装本体は `apps/web/tests/e2e/` に置く。現在は、壊れたときの利用者影響が大きい次の 3 本を
 critical-path スモークとして自動化している。
 
 - `recipe-crud.smoke.spec.ts`: レシピの作成 → 詳細 → 編集 → 削除
 - `saturday-flow.spec.ts`: 献立作成 → 買い物リスト → 購入記録 → 在庫化 → 消費
+- `auth-login.spec.ts`: 保護パスへの直接アクセス → `/login` へリダイレクト → ログイン →
+  元のパスへ復帰 → ログアウト → 再度 `/login` へリダイレクト（`E2E_AUTH_EMAIL` /
+  `E2E_AUTH_PASSWORD` が未設定の場合は `test.skip()`。CI は常にこの状態で実行しない）
 
 ビジネスロジックの境界値・異常系は Domain / Application / Hono route / RTL の Vitest が担い、
 Playwright は画面と API、DB をまたぐ主要導線の配線確認に絞る。
@@ -31,6 +34,27 @@ DATABASE_URL=pglite://.pglite-dev pnpm --filter @cookpit/web e2e
 ```bash
 E2E_BASE_URL=http://localhost:3001 pnpm --filter @cookpit/web e2e
 ```
+
+### ログイン E2E（`auth-login.spec.ts`）
+
+`E2E_AUTH_EMAIL` / `E2E_AUTH_PASSWORD` を設定したときだけ実行される（未設定なら
+`test.skip()`）。事前に対象環境（ローカル PGlite / Neon / Preview）へ同じ email + password で
+アカウントを発行しておく。
+
+```bash
+AUTH_USER_PASSWORD="$(openssl rand -base64 24)"
+DATABASE_URL=pglite://.pglite-dev AUTH_USER_EMAIL=e2e@example.test AUTH_USER_NAME=E2E \
+  AUTH_USER_PASSWORD="$AUTH_USER_PASSWORD" pnpm --filter @cookpit/web auth:create-user
+
+E2E_AUTH_EMAIL=e2e@example.test E2E_AUTH_PASSWORD="$AUTH_USER_PASSWORD" \
+  DATABASE_URL=pglite://.pglite-dev pnpm --filter @cookpit/web e2e
+```
+
+Preview URL に対して実行する場合は `E2E_BASE_URL` を Preview の URL に、`E2E_AUTH_EMAIL` /
+`E2E_AUTH_PASSWORD` を Preview 上で発行済みのアカウントに合わせる（`BETTER_AUTH_SECRET` が
+Preview に登録されていないとログイン自体が機能しない点に注意）。Preview / 本番の DB に対して
+E2E 用アカウントを作る場合は、公開リポジトリに実値を残さないよう毎回ランダム生成し、
+検証後に削除する。
 
 ## CI
 

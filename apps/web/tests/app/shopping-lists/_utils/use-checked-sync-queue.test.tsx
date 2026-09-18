@@ -497,6 +497,78 @@ describe('useCheckedSyncQueue', () => {
     expect(result.current.pendingItemIds.has('item-1')).toBe(false);
   });
 
+  // F-02: 再送応答が 401（セッション切れ）のとき、op をキューに残したまま再送を止め
+  // /login?next=<現在地> へ遷移する（useApiAction の 401 と同じ遷移。docs/reviews/better-auth-login.md）。
+  it('UOQ-15: flush が 401 を受けると op をキューに残したまま /login?next= へ遷移する', async () => {
+    postChecked.mockResolvedValue({ ok: false, status: 401 });
+    const assign = vi.fn();
+    vi.stubGlobal('location', { pathname: '/shopping-lists/list-1', search: '', assign });
+    const onQueueError = vi.fn();
+    const { result } = renderHook(() =>
+      useCheckedSyncQueue({
+        items: [ITEM],
+        setItems: vi.fn(),
+        shoppingListId: 'list-1',
+        onQueueError,
+      }),
+    );
+    await act(async () => {
+      await result.current.enqueue({
+        shoppingListId: 'list-1',
+        itemId: 'item-1',
+        checked: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.flush();
+    });
+
+    expect(assign).toHaveBeenCalledWith(
+      `/login?next=${encodeURIComponent('/shopping-lists/list-1')}`,
+    );
+    expect(result.current.pendingItemIds.has('item-1')).toBe(true);
+    expect(onQueueError).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('UOQ-16: flush が 401 を受けると以降のエントリは処理せず打ち切る', async () => {
+    await seedRawOp({
+      key: 'list-1:item-1',
+      shoppingListId: 'list-1',
+      itemId: 'item-1',
+      checked: true,
+      enqueuedAt: Date.now(),
+      attempts: 0,
+    });
+    await seedRawOp({
+      key: 'list-1:item-2',
+      shoppingListId: 'list-1',
+      itemId: 'item-2',
+      checked: true,
+      enqueuedAt: Date.now(),
+      attempts: 0,
+    });
+    postChecked.mockResolvedValue({ ok: false, status: 401 });
+    vi.stubGlobal('location', { pathname: '/shopping-lists/list-1', search: '', assign: vi.fn() });
+    const onQueueError = vi.fn();
+    const { result } = renderHook(() =>
+      useCheckedSyncQueue({
+        items: [ITEM, { ...ITEM, id: 'item-2' }],
+        setItems: vi.fn(),
+        shoppingListId: 'list-1',
+        onQueueError,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.flush();
+    });
+
+    expect(postChecked).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
   it('UOQ-14: flush 中に response.json() が失敗した場合は成功扱いにせずキューに残す', async () => {
     postChecked.mockResolvedValue({
       ok: true,
