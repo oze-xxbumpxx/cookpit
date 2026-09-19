@@ -31,6 +31,8 @@ const eslintConfig = defineConfig([
     'build/**',
     'next-env.d.ts',
     'public/sw.js',
+    // vitest の coverage レポーター（html）が生成する成果物。lint 対象ではない。
+    'coverage/**',
   ]),
 ]);
 
