@@ -4,17 +4,17 @@
 
 ## ドキュメント構成
 
-| ファイル                                           | 内容                                                            |
-| -------------------------------------------------- | --------------------------------------------------------------- |
-| [01-overview.md](./01-overview.md)                 | プロジェクト目的・対象ユーザー・スコープ                        |
-| [02-tech-stack.md](./02-tech-stack.md)             | 技術スタックと選定理由                                          |
-| [03-architecture.md](./03-architecture.md)         | アーキテクチャ・ディレクトリ構成                                |
-| [04-domain-model.md](./04-domain-model.md)         | ドメインモデル設計                                              |
-| [05-roadmap.md](./05-roadmap.md)                   | スプリント計画・ロードマップ                                    |
-| [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                               |
-| [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約）              |
-| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート                         |
-| [decisions/](./decisions/)                         | feature 起点の ADR（ADR-0005〜。001〜004 は本ディレクトリ直下） |
+| ファイル                                           | 内容                                               |
+| -------------------------------------------------- | -------------------------------------------------- |
+| [01-overview.md](./01-overview.md)                 | プロジェクト目的・対象ユーザー・スコープ           |
+| [02-tech-stack.md](./02-tech-stack.md)             | 技術スタックと選定理由                             |
+| [03-architecture.md](./03-architecture.md)         | アーキテクチャ・ディレクトリ構成                   |
+| [04-domain-model.md](./04-domain-model.md)         | ドメインモデル設計                                 |
+| [05-roadmap.md](./05-roadmap.md)                   | スプリント計画・ロードマップ                       |
+| [06-ai-tools.md](./06-ai-tools.md)                 | AI ツール活用方針                                  |
+| [07-dev-rules.md](./07-dev-rules.md)               | 開発ルール（ブランチ戦略・レビュー・コミット規約） |
+| [08-prompt-templates.md](./08-prompt-templates.md) | AI ツールへの定型プロンプトテンプレート            |
+| [decisions/](./decisions/README.md)                | ADR 一覧（ADR-0001〜。全て `decisions/` 配下）     |
 
 ## クイックスタート
 
@@ -28,11 +28,11 @@
 
 ## ADR (Architecture Decision Records)
 
-主要な意思決定の経緯を記録しています（ADR-001〜004 はこのディレクトリ直下、
-ADR-0005 以降の feature 起点の決定は `decisions/` に置く）。「なぜこの選択をしたか」が
+主要な意思決定の経緯を記録しています。ADR は**すべて [`decisions/`](./decisions/) 配下**に
+あり、ステータスと決定日を含む全 ADR の一覧は
+[decisions/README.md](./decisions/README.md) が正典です。「なぜこの選択をしたか」が
 必要になった時に参照してください。
 
-- [ADR-001: Web アプリで実装する](./decisions/ADR-0001-web-not-native.md)
-- [ADR-002: Next.js 内に Hono をマウントする](./decisions/ADR-0002-nextjs-hono-mounted.md)
-- [ADR-003: MVP1 は認証なしで運用する](./decisions/ADR-0003-no-auth-in-mvp1.md)
-- [ADR-004: ドメインから User 集約を外す](./decisions/ADR-0004-no-user-in-domain.md)
+プロジェクト恒久の決定（ADR-0001〜0004）と、feature に伴う決定（ADR-0005 以降）を
+同じディレクトリで連番管理しています。採番規則は
+[`.claude/skills/create-adr/SKILL.md`](../.claude/skills/create-adr/SKILL.md) を参照。

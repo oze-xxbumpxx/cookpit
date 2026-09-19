@@ -1,9 +1,32 @@
 # Cookpit
 
+[![CI](https://github.com/oze-xxbumpxx/cookpit/actions/workflows/ci.yml/badge.svg)](https://github.com/oze-xxbumpxx/cookpit/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-2%2C345%20passed-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-domain%2097%25%20%7C%20application%2099%25-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)
+
 毎週の作り置き運用を支える、献立・買い物・在庫管理の Web アプリ。
 
 紙のレシピブックの限界、複数店舗の価格比較の手間、在庫の見える化という日常の困りごとを、
 Clean Architecture + DDD の実践と両立させて解決する**個人開発プロジェクト**です。
+
+## 画面
+
+土曜日の運用フロー（献立を決める → 買い物リストを作る → 買い物する → 在庫になる）を、
+スマートフォンの 1 画面で完結させることを狙った PWA です。
+
+| レシピ一覧                                            | レシピ詳細（倍量計算）                                      | 価格比較・価格推移                                                   |
+| ----------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![レシピ一覧](docs/assets/screenshots/01-recipes.png) | ![レシピ詳細](docs/assets/screenshots/02-recipe-detail.png) | ![価格比較](docs/assets/screenshots/03-product-price-comparison.png) |
+
+| 献立作成（倍量指定）                                  | 買い物リスト（店舗別・最安店舗バッジ）                        | 在庫                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| ![献立作成](docs/assets/screenshots/04-meal-plan.png) | ![買い物リスト](docs/assets/screenshots/05-shopping-list.png) | ![在庫](docs/assets/screenshots/06-pantry.png) |
+
+> スクリーンショットはシード済みのローカル DB に対して
+> [`apps/web/scripts/capture-screenshots.mjs`](apps/web/scripts/capture-screenshots.mjs)
+> で自動生成しています（手動撮影ではないため、画面変更時に撮り直せます）。
 
 ## このリポジトリについて
 
@@ -52,6 +75,33 @@ packages/
 詳細は [docs/03-architecture.md](./docs/03-architecture.md)、
 ドメインモデルは [docs/04-domain-model.md](./docs/04-domain-model.md) を参照してください。
 
+## はじめて読む方へ（おすすめの入口）
+
+ドキュメントが 400 ファイルを超えているため、短時間で設計の勘所を掴むための入口を示します。
+
+**設計の考え方を知りたい場合**（各 5 分程度）
+
+| ドキュメント                                                               | 読みどころ                                                                 |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [ADR-0002](./docs/decisions/ADR-0002-nextjs-hono-mounted.md)               | Next.js の中に Hono をマウントした理由。API を別プロセスに切り出さない判断 |
+| [ADR-0019](./docs/decisions/ADR-0019-db-transaction-uow.md)                | 集約をまたぐ書き込みを Unit of Work でどう束ねたか                         |
+| [ADR-0006](./docs/decisions/ADR-0006-shopping-list-generate-idempotent.md) | 買い物リスト生成を冪等にするための制約設計                                 |
+
+**コードを読みたい場合**
+
+| ファイル                                                                                                                                               | 読みどころ                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| [`packages/domain/src/shopping-list/shopping-list.ts`](./packages/domain/src/shopping-list/shopping-list.ts)                                           | 本プロジェクトで最も状態遷移が多い集約。不変条件を Entity に閉じ込めている |
+| [`packages/application/src/shopping-list/reopen-shopping-list.use-case.ts`](./packages/application/src/shopping-list/reopen-shopping-list.use-case.ts) | 1 ユースケース = 1 クラス・手動 DI・型付きエラーの実例                     |
+| [`apps/web/src/server/app.ts`](./apps/web/src/server/app.ts)                                                                                           | Application 層のエラー基底 2 種だけで HTTP へ変換する仕組み                |
+
+**AI 支援開発のワークフローに関心がある場合**
+
+[`docs/claude-code/`](./docs/claude-code/) が正典です。Subagent への工程分割、変更レベル
+（L1〜L3）に応じた成果物の出し分け、失敗から改善候補を起票する仕組みを記録しています。
+うまくいった記録だけでなく、**判断を誤った記録も
+[`improvements/`](./docs/claude-code/improvements/) にそのまま残しています**。
+
 ## ローカルでの動かし方
 
 前提: Node.js 20 以上 / pnpm 10 以上。
@@ -78,9 +128,30 @@ pnpm dev
 ```bash
 pnpm lint
 pnpm type-check
-pnpm test          # Vitest
+pnpm test           # Vitest（全 2,345 件）
+pnpm test:coverage  # カバレッジ計測（coverage/ に出力）
 pnpm build
 ```
+
+### テストとカバレッジ
+
+Vitest を全層に導入しています。ビジネスロジックの境界値・異常系は各層の Vitest が担い、
+Playwright は画面・API・DB をまたぐ主要導線の配線確認に絞っています。
+
+| パッケージ                | テスト数 | Statements | Branches |
+| ------------------------- | -------: | ---------: | -------: |
+| `packages/domain`         |      456 |     97.36% |   96.49% |
+| `packages/application`    |      432 |     98.73% |   94.21% |
+| `packages/api-contract`   |      293 |       100% |     100% |
+| `packages/infrastructure` |      118 |     82.91% |   79.79% |
+| `apps/web`                |    1,046 |     85.13% |   78.88% |
+
+`packages/infrastructure` は PGlite による実 DB テスト、`apps/web` は Hono ルートの結合
+テストと React Testing Library によるコンポーネントテストです。
+
+CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）では上記に加えて、
+E2E スモークを**未実行のまま成功扱いにしない**検証（`assert-e2e-results.mjs` が
+「2 件以上実行され全件成功」を確認）と、依存パッケージの脆弱性監査を実行しています。
 
 ## ドキュメント
 
@@ -98,8 +169,10 @@ pnpm build
 
 ## ライセンス
 
-**ライセンスを設定していません。** したがって著作権法上の全権利を留保します。
+**All Rights Reserved（全権利留保）** です。詳細は [LICENSE](./LICENSE) を参照してください。
+
 閲覧と参考にしていただくのは歓迎しますが、複製・改変・再配布・商用利用の許諾はしていません。
+OSS ライセンスを付けていないのは設定漏れではなく、意図的な選択です。
 
 利用をご希望の場合は Issue でご相談ください。
 

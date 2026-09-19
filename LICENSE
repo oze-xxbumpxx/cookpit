@@ -1,0 +1,31 @@
+All Rights Reserved
+
+Copyright (c) 2026 oze-xxbumpxx
+
+本リポジトリのソースコード・ドキュメント・その他一切の成果物の著作権は
+著作者が保有し、著作権法上の全ての権利を留保します。
+
+本リポジトリは、Clean Architecture + DDD のモノレポ構成と AI 支援開発の
+ワークフローを実例として示すために公開しています。閲覧・参照・学習の
+目的でご覧いただくことは歓迎します。
+
+ただし、以下の行為は許諾していません。
+
+- 複製・再配布（リポジトリ全体および一部のファイルを問わない）
+- 改変および改変物の配布
+- 商用利用
+- 本リポジトリのコードを取り込んだ二次的著作物の公開
+
+ライセンスの付与を希望される場合は、GitHub Issue でご相談ください。
+
+---
+
+All rights reserved. The copyright of the source code, documentation, and all
+other materials in this repository is held by the author.
+
+This repository is published as a reference example of a Clean Architecture +
+DDD monorepo and an AI-assisted development workflow. You are welcome to read
+and study it. Copying, redistribution, modification, commercial use, and the
+publication of derivative works are NOT permitted.
+
+To request a license, please open a GitHub Issue.

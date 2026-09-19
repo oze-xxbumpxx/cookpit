@@ -58,3 +58,6 @@ apps/web/.pglite-dev/
 !.obsidian/appearance.json
 !.obsidian/core-plugins.json
 !.obsidian/daily-notes.json
+
+# テストカバレッジ出力（test:coverage が生成）
+coverage/
