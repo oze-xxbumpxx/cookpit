@@ -1,7 +1,7 @@
 # Cookpit
 
 [![CI](https://github.com/oze-xxbumpxx/cookpit/actions/workflows/ci.yml/badge.svg)](https://github.com/oze-xxbumpxx/cookpit/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-2%2C345%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2%2C347%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-domain%2097%25%20%7C%20application%2099%25-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)
@@ -128,7 +128,7 @@ pnpm dev
 ```bash
 pnpm lint
 pnpm type-check
-pnpm test           # Vitest（全 2,345 件）
+pnpm test           # Vitest（全 2,347 件）
 pnpm test:coverage  # カバレッジ計測（coverage/ に出力）
 pnpm build
 ```
@@ -144,7 +144,7 @@ Playwright は画面・API・DB をまたぐ主要導線の配線確認に絞っ
 | `packages/application`    |      432 |     98.73% |   94.21% |
 | `packages/api-contract`   |      293 |       100% |     100% |
 | `packages/infrastructure` |      118 |     82.91% |   79.79% |
-| `apps/web`                |    1,046 |     85.13% |   78.88% |
+| `apps/web`                |    1,048 |     85.13% |   78.82% |
 
 `packages/infrastructure` は PGlite による実 DB テスト、`apps/web` は Hono ルートの結合
 テストと React Testing Library によるコンポーネントテストです。

@@ -80,6 +80,21 @@ describe('formatDate / formatDateTime', () => {
     expect(formatDate('2026-06-01T09:30:00.000Z')).toMatch(/^\d{1,2}\/\d{1,2}$/);
     expect(formatDateTime('2026-06-01T09:30:00.000Z')).toMatch(/^\d{1,2}\/\d{1,2} \d{2}:\d{2}$/);
   });
+
+  // 以下は JST 固定の回帰テスト。形状だけを見る PF-05b は実行時 TZ に関わらず通るため、
+  // サーバ（UTC）とクライアント（JST）で表示がずれるハイドレーション不整合を検知できなかった。
+  // 値を JST で固定することで、`timeZone` 指定が外れたら UTC 実行環境で落ちる。
+  it('PF-05c: 瞬時値は JST で整形される（実行時 TZ に依存しない）', () => {
+    // UTC 09:30 は JST 18:30。TZ 未指定だと UTC 実行環境では '6/1 09:30' になる。
+    expect(formatDateTime('2026-06-01T09:30:00.000Z')).toBe('6/1 18:30');
+    expect(formatDate('2026-06-01T09:30:00.000Z')).toBe('6/1');
+  });
+
+  it('PF-05d: JST で日付が繰り上がる瞬時値でも暦日がずれない', () => {
+    // UTC 6/1 15:30 は JST 6/2 00:30。TZ 未指定だと日付そのものが 1 日ずれる。
+    expect(formatDateTime('2026-06-01T15:30:00.000Z')).toBe('6/2 00:30');
+    expect(formatDate('2026-06-01T15:30:00.000Z')).toBe('6/2');
+  });
 });
 
 describe('formatUnitPrice', () => {
