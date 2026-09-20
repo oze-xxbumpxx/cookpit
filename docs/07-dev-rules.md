@@ -309,3 +309,22 @@ E2E は Playwright で、主要導線を feature 単位で整備する。現在�
   バンドルサイズを前後比較するときは `.next/static/chunks/` のファイルを直接測り、
   `client-reference-manifest` の参照有無で初期ロード対象かを判定する（手順は
   `docs/designs/product-detail-performance.md` §バンドルサイズ削減の検証）。
+- **品質ゲートを並行実行すると偽の FAIL が出る。** `pnpm test` / `pnpm build` /
+  `pnpm test:coverage` を前の実行が終わらないうちに重ねて起動すると、`next build` は
+  `Another next build process is already running.` で落ち、PGlite の infrastructure テストは
+  リソース競合で `Hook timed out in 10000ms` を出す（2026-09-19 に実際に誤診しかけた。
+  直列で回し直したら同じコードで全 PASS）。**ゲートは直列で 1 回だけ回すこと。**
+  失敗したら、コードを疑う前に `ps` で `next-build` / `vitest` / `turbo` の残プロセスが
+  無いかを見る。バックグラウンド実行を使うなら、次を起動する前に完了を待つ。
+- **`next dev` は `apps/web/AGENTS.md` と `apps/web/CLAUDE.md` を毎回生成する**
+  （Next.js 16 の `node_modules/next/dist/server/lib/generate-agent-files.js`）。
+  リポジトリの正典はルート直下の `AGENTS.md` / `CLAUDE.md` であり、生成物は
+  `.gitignore` 済みなのでコミットしない（2026-09-19）。生成自体を止めるなら
+  `next.config.ts` の `agentRules: false`。
+- **`Intl.DateTimeFormat` で瞬時値を整形するときは `timeZone` を必ず指定する。**
+  省略すると実行時 TZ に解決され、サーバ（Vercel は UTC）とブラウザ（JST）で 9 時間ずれ、
+  SSR とハイドレーションが不一致になる（2026-09-19 に `/products` と `/products/[id]` で
+  実際に発生。commit `c1d2d50`）。`TZ` 環境変数での固定は Vercel の予約変数のため使えないので、
+  `Asia/Tokyo` をコード上に明示する（先例: `packages/application/src/pantry/expiry.ts`）。
+  **テストは形状（正規表現）ではなく値で固定すること。** 形状アサーションはどの TZ でも
+  通るため、この種の不整合を検知できない。
