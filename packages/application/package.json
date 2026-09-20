@@ -7,7 +7,8 @@
   "scripts": {
     "type-check": "tsc --project tsconfig.test.json --noEmit",
     "lint": "eslint src tests",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@cookpit/domain": "workspace:*"
@@ -15,6 +16,7 @@
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "@types/node": "^20",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",

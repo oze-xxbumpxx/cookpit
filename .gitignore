@@ -58,3 +58,13 @@ apps/web/.pglite-dev/
 !.obsidian/appearance.json
 !.obsidian/core-plugins.json
 !.obsidian/daily-notes.json
+
+# テストカバレッジ出力（test:coverage が生成）
+coverage/
+
+# Next.js 16 の `next dev` が生成する agent ルール（node_modules/next の
+# generate-agent-files.js が毎回書き戻す）。リポジトリの正典はルートの
+# AGENTS.md / CLAUDE.md なので、生成物は追跡しない。
+# 生成自体を止める場合は next.config の `agentRules: false`。
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

@@ -22,6 +22,18 @@ export function formatYen(amount: number): string {
   return `${amount.toLocaleString('ja-JP')}円`;
 }
 
+/**
+ * 表示の基準タイムゾーン。
+ *
+ * `observedAt` は `toISOString()` の**瞬時値**（UTC）であり、`timeZone` を指定しないと
+ * 実行時 TZ で整形される。サーバ（Vercel は UTC）とブラウザ（JST）で 9 時間ずれるため、
+ * SSR とハイドレーションで文字列が一致せずツリーが再生成される。
+ *
+ * `TZ` 環境変数での固定は使えない（Vercel の予約環境変数。AWS Lambda が定義済み）ため、
+ * 期限判定（`packages/application/src/pantry/expiry.ts`）と同じくコード上に明示する。
+ */
+const DISPLAY_TIME_ZONE = 'Asia/Tokyo';
+
 export function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -29,6 +41,7 @@ export function formatDate(value: string): string {
   }
 
   return new Intl.DateTimeFormat('ja-JP', {
+    timeZone: DISPLAY_TIME_ZONE,
     month: 'numeric',
     day: 'numeric',
   }).format(date);
@@ -41,6 +54,7 @@ export function formatDateTime(value: string): string {
   }
 
   return new Intl.DateTimeFormat('ja-JP', {
+    timeZone: DISPLAY_TIME_ZONE,
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
