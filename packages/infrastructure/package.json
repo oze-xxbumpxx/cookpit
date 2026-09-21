@@ -20,7 +20,7 @@
   "devDependencies": {
     "@cookpit/config": "workspace:*",
     "@electric-sql/pglite": "^0.5.4",
-    "@types/node": "^20",
+    "@types/node": "^26",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.5.12",
     "@vitest/coverage-v8": "^4.1.10",
