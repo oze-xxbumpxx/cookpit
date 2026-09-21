@@ -17,7 +17,7 @@
     "@cookpit/config": "workspace:*",
     "@types/node": "^20",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^9.0.0",
+    "eslint": "^10.10.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"
