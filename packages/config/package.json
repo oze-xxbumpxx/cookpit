@@ -8,7 +8,7 @@
     "./vitest/*": "./vitest/*.cjs"
   },
   "devDependencies": {
-    "typescript-eslint": "^8.65.0",
+    "typescript-eslint": "^8.71.2",
     "vitest": "^4.1.10"
   }
 }
