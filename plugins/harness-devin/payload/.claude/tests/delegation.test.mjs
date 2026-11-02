@@ -577,6 +577,33 @@ test('open-task: 承認済みの計画から区間を取り出し、印つきの
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('open-task: 同じ印のIssueが既にあり記録だけ無いときは、Issueを作らずに記録を作る', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'open-task-'));
+  const mirrorDir = mkdtempSync(join(tmpdir(), 'open-task-mirror-'));
+  const plan = '# 計画\n\n<!-- delegation-task:fix-date -->\n## 目的\n\n日付を直す。\n<!-- /delegation-task -->\n';
+  try {
+    const { body, digest } = extractPlanTask(plan, 'polish:fix-date');
+    const calls = [];
+    const run = (args) => {
+      calls.push(args);
+      if (args[1] === 'list') return JSON.stringify([{ number: 81, body: taskIssueBody('polish:fix-date', digest, body) }]);
+      return assert.fail('Issueを作り直さない');
+    };
+    const git = (args) => (args[0] === 'show' ? plan : '');
+    const options = { planPath: 'docs/implementation-plans/polish.md', taskKey: 'polish:fix-date', title: 'fix(web): 日付', model: 'swe-2-medium' };
+    assert.equal(openTask(options, { dir, mirrorDir, run, git, now: () => '2026-10-25T00:00:00Z' }), 81);
+    assert.equal(readRecord(dir, 81).task_key, 'polish:fix-date');
+    assert.equal(readRecord(mirrorDir, 81).task_key, 'polish:fix-date');
+    // 記録があれば上書きしない
+    assert.equal(openTask(options, { dir, mirrorDir, run, git, now: () => '2026-10-26T00:00:00Z' }), 81);
+    assert.equal(readRecord(dir, 81).delegated_at, '2026-10-25T00:00:00Z');
+    assert.equal(calls.filter((args) => args[1] === 'create').length, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(mirrorDir, { recursive: true, force: true });
+  }
+});
+
 test('open-task: 同じ印の開いたIssueがあれば作らず、本文が違えば止める', () => {
   const digest = 'a'.repeat(64);
   const body = taskIssueBody('polish:fix-date', digest, '## 目的');

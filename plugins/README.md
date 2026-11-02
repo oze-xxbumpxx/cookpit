@@ -16,6 +16,16 @@ Version 0.2.0 of the first three layers brings back the harness grown in Tomotab
 2026-11-02): the single-session loop replaces the orchestrator and its seven subagents. ChatGPT (Codex) entry
 points are not shipped.
 
+### Upgrading from 0.1.0
+
+The installer adds and (with `--force`) replaces files, but never deletes them. After upgrading a project that
+installed 0.1.0, delete the agents that 0.2.0 no longer ships, unless the project changed them on purpose:
+
+- harness-workflow: `.claude/agents/orchestrator.md`, `architecture-designer.md`, `implementation-planner.md`,
+  `implementer.md`, `test-designer.md`, and `.claude/scripts/check-review-coverage.mjs`;
+- harness-improvement: `.claude/agents/reflection-agent.md`, `agent-improvement-manager.md`,
+  `agent-evaluator.md`.
+
 ## Use from another project
 
 Add this repository as a plugin marketplace, install the required layers, and invoke each setup skill from the

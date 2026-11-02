@@ -147,11 +147,17 @@ test('all four layers install in order, link skills for Devin, and pass the harn
       .map((f) => path.join('.claude', 'tests', f));
     const env = { ...process.env, HARNESS_STATE_DIR: path.join(target, '.state') };
     delete env.CLAUDE_PROJECT_DIR;
+    // 外側のnode --testの文脈を引き継ぐと、子は入れ子と見なして試験を飛ばし、成功を返す
+    delete env.NODE_TEST_CONTEXT;
     const run = spawnSync(process.execPath, ['--test', ...tests], {
       cwd: target,
       encoding: 'utf8',
       env,
     });
     assert.equal(run.status, 0, run.stdout.slice(-4000) + run.stderr.slice(-2000));
+    const passed = Number(/^# pass (\d+)$/m.exec(run.stdout)?.[1] ?? 0);
+    const failed = Number(/^# fail (\d+)$/m.exec(run.stdout)?.[1] ?? -1);
+    assert.ok(passed > 0, 'installed harness tests did not run:\n' + run.stdout.slice(-2000));
+    assert.equal(failed, 0);
   });
 });

@@ -12,3 +12,6 @@ Features are developed in one session with the `develop-feature` skill. Only `re
 wide searches run as subagents. `.claude/templates/AGENTS.md` and `CLAUDE.md` are starting points for the target
 project's rule files; copy them to the repository root when the project has none, then fill in the placeholders.
 The payload is project-local after setup, so normal harness paths such as `.claude/scripts/...` continue to work.
+
+Upgrading from 0.1.0: the installer never deletes files. Remove the agents that 0.2.0 no longer ships (listed in
+`plugins/README.md`) by hand.

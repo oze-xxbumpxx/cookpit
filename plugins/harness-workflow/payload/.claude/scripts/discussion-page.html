@@ -288,7 +288,8 @@ button:disabled{opacity:.5;cursor:default}
     card.appendChild(choices);
     card.appendChild(textField(q.id, "other", "その他（選択肢に無い答えを自由に書く。書くと、選んだ記号より優先します）"));
     var reason = textField(q.id, "reason", "推奨と違う案を選んだ理由（任意。記録の「選ばなかった理由」に写します）");
-    reason.id = "reason-" + q.id; reason.hidden = true;
+    // 入力欄が reason-<id> を使うので、囲みには別のidを付ける（同じidだと保存した理由を入力欄に戻せない）
+    reason.id = "reasonbox-" + q.id; reason.hidden = true;
     card.appendChild(reason);
     card.appendChild(textField(q.id, "question", "この問いへの質問（任意）"));
     $("open").appendChild(card);
@@ -336,7 +337,7 @@ button:disabled{opacity:.5;cursor:default}
   }
   function toggleReason(q) {
     var a = answers[q.id];
-    $("reason-" + q.id).hidden = !(a && a.choice && q.recommended && a.choice !== q.recommended);
+    $("reasonbox-" + q.id).hidden = !(a && a.choice && q.recommended && a.choice !== q.recommended);
   }
 
   // ── 問いを足す ──

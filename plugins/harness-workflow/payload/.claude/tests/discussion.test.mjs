@@ -434,3 +434,12 @@ test('D-24 ページの中身: カードに種類・工程・図が入る', () =
   assert.match(html, /"kind":"画面"/);
 });
 
+
+test('D-28 ページ: 理由の囲みは入力欄（reason-<id>）と別のidにする。同じだと保存した理由を入力欄に戻せない', () => {
+  const html = readFileSync(new URL('../scripts/discussion-page.html', import.meta.url), 'utf8');
+  const textareaIds = [...html.matchAll(/el\("textarea", \{ id: key \+ "-" \+ id/g)];
+  assert.equal(textareaIds.length, 1);
+  assert.doesNotMatch(html, /reason\.id = "reason-"/);
+  assert.match(html, /reason\.id = "reasonbox-" \+ q\.id/);
+  assert.match(html, /\$\("reasonbox-" \+ q\.id\)\.hidden/);
+});

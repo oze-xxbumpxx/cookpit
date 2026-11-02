@@ -694,8 +694,14 @@ export function openTask({ planPath, taskKey, title, model, runner = 'local', le
   git(['fetch', '--quiet', 'origin', 'main']);
   const { body, digest } = extractPlanTask(git(['show', `origin/main:${planPath}`]), taskKey);
   const open = JSON.parse(run(['issue', 'list', '--state', 'open', '--limit', '200', '--search', `"delegation-task-key: ${taskKey}" in:body`, '--json', 'number,body']));
+  const record = (issue) => ({ ...newRecord({ issue, title, model, runner, level, delegatedAt: now() }), task_key: taskKey });
   const existing = findTaskIssue(open, taskKey, digest);
-  if (existing !== null) return existing;
+  if (existing !== null) {
+    // Issueを作った直後に止まると記録だけが無い。やり直しで記録を作り、委譲を追えるようにする
+    const recorded = existsSync(recordPath(dir, existing)) || (mirrorDir !== null && existsSync(recordPath(mirrorDir, existing)));
+    if (!recorded) writeRecord(dir, record(existing), { mirrorDir });
+    return existing;
+  }
   const tmp = mkdtempSync(join(tmpdir(), 'delegation-task-'));
   let url;
   try {
@@ -707,7 +713,7 @@ export function openTask({ planPath, taskKey, title, model, runner = 'local', le
   }
   const issue = Number(/\/issues\/(\d+)$/.exec(url)?.[1]);
   if (!Number.isSafeInteger(issue) || issue <= 0) throw new GhError(`作ったIssueの番号を読めません: ${url}`);
-  writeRecord(dir, { ...newRecord({ issue, title, model, runner, level, delegatedAt: now() }), task_key: taskKey }, { mirrorDir });
+  writeRecord(dir, record(issue), { mirrorDir });
   return issue;
 }
 
