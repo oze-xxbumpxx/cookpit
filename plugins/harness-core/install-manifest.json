@@ -1,24 +1,53 @@
 {
   "name": "harness-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": [
+    ".claude/hooks/guard-dangerous.mjs",
+    ".claude/hooks/precompact-context.mjs",
+    ".claude/hooks/record-activity.mjs",
+    ".claude/hooks/session-start-info.sh",
     ".claude/lib/harness-paths.mjs",
     ".claude/lib/harness-state.mjs",
-    ".claude/hooks/guard-dangerous.mjs",
-    ".claude/hooks/session-start-info.sh",
-    ".claude/hooks/record-activity.mjs",
+    ".claude/lib/harness-time.mjs",
+    ".claude/lib/package-manager.mjs",
+    ".claude/rules/coding-standards.md",
+    ".claude/rules/writing-style.md",
     ".claude/scripts/detect-project-commands.sh",
-    ".claude/scripts/run-quality-gates.sh",
-    ".claude/scripts/harness-run.mjs",
     ".claude/scripts/estimate-session-time.mjs",
+    ".claude/scripts/harness-run.mjs",
     ".claude/scripts/migrate-state.mjs",
+    ".claude/scripts/run-quality-gates.sh",
     ".claude/skills/quality-gates/SKILL.md",
     ".claude/skills/write-work-log/SKILL.md",
-    ".claude/rules/coding-standards.md",
     ".claude/templates/claude-md-coding-standards.md",
+    ".claude/tests/estimate-session-time.test.mjs",
     ".claude/tests/guard-dangerous.test.mjs",
     ".claude/tests/harness-paths.test.mjs",
-    ".claude/tests/harness-state.test.mjs"
+    ".claude/tests/harness-state.test.mjs",
+    ".claude/tests/harness-time.test.mjs",
+    ".claude/tests/package-manager.test.mjs",
+    ".claude/tests/precompact-context.test.mjs",
+    ".claude/tests/record-activity.test.mjs",
+    ".claude/tests/run-quality-gates.test.mjs"
+  ],
+  "envDefaults": {
+    "HARNESS_NAMESPACE": "{{repo}}-harness"
+  },
+  "permissionsDeny": [
+    "Read(./.env)",
+    "Read(./.env.local)",
+    "Read(./.env.production)",
+    "Read(./.env.development)",
+    "Read(./**/.env)",
+    "Read(./**/.env.local)",
+    "Edit(./.env)",
+    "Edit(./.env.local)",
+    "Edit(./.env.production)",
+    "Edit(./.env.development)",
+    "Edit(./**/.env)",
+    "Edit(./**/.env.local)",
+    "Read(./**/*.pem)",
+    "Read(./**/id_rsa)"
   ],
   "hooks": {
     "SessionStart": [
@@ -62,6 +91,26 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-activity.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/precompact-context.mjs\""
           }
         ]
       }

@@ -1,6 +1,6 @@
 # harness-improvement
 
-Portable Cookpit development-harness layer (32 project files).
+Portable Cookpit development-harness layer (30 project files).
 
 Install this plugin from the repository marketplace, then invoke `install-harness-improvement` in the target
 project. The installer copies the versioned payload and merges only this layer's Claude Code hooks into

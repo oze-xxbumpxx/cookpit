@@ -1,17 +1,17 @@
 # <IMP-YYYY-NNN>: <タイトル>
 
-> agent-improvement-manager が複数候補を横断分析して起票。重要設定は本適用せず差分を残す。
-> 承認境界は [../../improvement-cycle.md](../../improvement-cycle.md) §承認境界 を参照。
+> メインのセッションが`improve-harness`で複数候補を横断して起票。重要設定は本適用せず差分を残す。
+> 承認境界は[../../improvement-cycle.md](../../improvement-cycle.md) §承認境界 を参照。
 
 - **ステータス**: proposal / evaluated / accepted / rejected
-- **対象 Agent または Skill**: <reflection-agent / Skill: create-design-document / Rule: ... / CLAUDE.md / Hook: ...>
-- **承認区分**: 自動反映可 / manager レビュー後可（非破壊・軽微）/ 人間承認必須
+- **対象AgentまたはSkill**: <Skill: reflect-task / Skill: create-design-document / Rule: ... / CLAUDE.md / Hook: ...>
+- **承認区分**: 自動反映可 / 提案書つき軽微/ 人間承認必須
 - **起票日**: YYYY-MM-DD
 - **元候補**: candidates/<task-id>.md（複数可）
 
 ## 背景
 
-<どの傾向に対する改善か。1 タスクではなく複数タスクで再現したことを示す>
+<どの傾向に対する改善か。1タスクではなく複数タスクで再現したことを示す>
 
 ## 観測事象（根拠）
 
@@ -36,7 +36,7 @@
 ## 反映先一覧（同期文書）
 
 <この変更と同じ内容・関連記述を持つ**すべての文書**を列挙し、適用時に漏れなく同期する。
-「正典 1 + 同期先 N」の形で書く（skills-inventory-audit 事象 2 の再発防止・IMP-2026-018）>
+「正典1 + 同期先N」の形で書く（skills-inventory-audit事象2の再発防止・IMP-2026-018）>
 
 | ファイル | 役割（正典 / 同期） | 反映内容 |
 | -------- | ------------------- | -------- |
@@ -45,22 +45,22 @@
 
 ## リスク
 
-- 副作用: <他 Agent への影響・指示競合・ワークフロー破壊>
+- 副作用: <他Agentへの影響・指示競合・ワークフロー破壊>
 - 指示過多の懸念: <増えた指示が判断遅延・トークン増を招かないか>
 
 ## 評価方法
 
-- 対象 eval ケース: `.claude/evals/cases/<...>.md`
+- 対象evalケース: `.claude/evals/folded-loop-checklist.md`の対象ケース（役の移行は成果物までの比較も含む）
 - 観測軸: 要件理解 / 設計品質 / 実装整合性 / テスト網羅 / レビュー品質 / 不要作業量 / トークン効率
 
 ## 評価結果
 
-<agent-evaluator のレポート evaluations/<IMP-...>.md の要約。before→after の改善・悪化>
+<このセッションがまとめたevaluations/<IMP-...>.mdへの参照。移行前後の改善・悪化、実行済みと未実行、成果物・承認・レビューの証拠>
 
 ## 採用または却下理由
 
-<回帰評価で悪化なし → 採用 / 1 軸でも悪化 → 却下。判断者（manager / 人間）を明記>
+<回帰評価で悪化なし → 採用 / 1軸でも悪化 → 却下。判断者（メインのセッション / ユーザー）を明記>
 
 ## ロールバック方法
 
-<accepted 後に問題が出た場合の戻し方。対象ファイルと戻す差分・コミット>
+<accepted後に問題が出た場合の戻し方。対象ファイルと戻す差分・コミット>

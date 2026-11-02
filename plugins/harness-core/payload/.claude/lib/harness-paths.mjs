@@ -2,16 +2,16 @@
 // ハーネス状態ディレクトリの解決（唯一の正典）。
 //
 // 方針:
-// - 状態（run 状態・ゲート結果・実行ログ）は**リポジトリ配下を唯一の永続先にしない**。
-//   リポジトリ配下（.claude/state/）は .gitignore 対象かつエフェメラル環境で消滅するため、
-//   OS のユーザー状態ディレクトリを既定の永続先とする。
+// - 状態（run状態・ゲート結果・実行ログ）は**リポジトリ配下を唯一の永続先にしない**。
+//   リポジトリ配下（.claude/state/）は .gitignore対象かつエフェメラル環境で消滅するため、
+//   OSのユーザー状態ディレクトリを既定の永続先とする。
 // - 解決順: HARNESS_STATE_DIR → XDG_STATE_HOME/<ns> → ~/.local/state/<ns> → リポジトリ内フォールバック。
-//   <ns> はプロジェクト名に依存しないよう導出する（resolveNamespace 参照）。
+//   <ns> はプロジェクト名に依存しないよう導出する（resolveNamespace参照）。
 // - リポジトリ配下を指す明示指定（HARNESS_STATE_DIR / XDG_STATE_HOME）は**拒否**する。
-//   シンボリックリンクでリポジトリ内へ逆戻りしている場合も拒否する（realpath で検証）。
-// - リポジトリ内フォールバックは `trusted: false` を返し、永続性がないことを呼び出し側へ伝える。
+//   シンボリックリンクでリポジトリ内へ逆戻りしている場合も拒否する（realpathで検証）。
+// - リポジトリ内フォールバックは`trusted: false`を返し、永続性がないことを呼び出し側へ伝える。
 //
-// このモジュールは副作用として stateDir() 呼び出し時のみディレクトリを作成する（mode 0700）。
+// このモジュールは副作用としてstateDir()呼び出し時のみディレクトリを作成する（mode 0700）。
 
 import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -33,7 +33,7 @@ function sanitizeNamespaceSegment(value) {
   return segment === '' ? null : segment;
 }
 
-/** 解決に失敗した（＝安全に決められない）ことを表す。呼び出し側は fail-closed で扱う。 */
+/** 解決に失敗した（＝安全に決められない）ことを表す。呼び出し側はfail-closedで扱う。 */
 export class StateDirError extends Error {
   constructor(message, reason) {
     super(message);
@@ -47,9 +47,9 @@ export function repoRoot(env = process.env) {
 }
 
 /**
- * `.git` を持つ最も近い祖先を返す（見つからなければ start をそのまま返す）。
- * CLAUDE_PROJECT_DIR 未設定で cwd がサブディレクトリのとき、モノレポの
- * workspace 側 package.json を誤って拾わないためにリポジトリ境界で止める。
+ * `.git`を持つ最も近い祖先を返す（見つからなければstartをそのまま返す）。
+ * CLAUDE_PROJECT_DIR未設定でcwdがサブディレクトリのとき、モノレポの
+ * workspace側package.jsonを誤って拾わないためにリポジトリ境界で止める。
  */
 function repoRootFromMarker(start) {
   let current = resolve(start);
@@ -62,11 +62,11 @@ function repoRootFromMarker(start) {
 }
 
 /**
- * OS 状態ディレクトリ配下で使う名前空間を解決する。
- * 解決順: HARNESS_NAMESPACE → package.json の name に `-harness` を付けたもの → DEFAULT_NAMESPACE。
- * **例外を投げない**。名前空間の都合で記録系 Hook を止めないため、読めない場合は既定値へ落とす。
+ * OS状態ディレクトリ配下で使う名前空間を解決する。
+ * 解決順: HARNESS_NAMESPACE → package.jsonのnameに`-harness`を付けたもの → DEFAULT_NAMESPACE。
+ * **例外を投げない**。名前空間の都合で記録系Hookを止めないため、読めない場合は既定値へ落とす。
  *
- * モジュール自身の位置は使わない。Plugin として配布するとモジュールは利用者リポジトリの
+ * モジュール自身の位置は使わない。Pluginとして配布するとモジュールは利用者リポジトリの
  * 外に置かれ、全プロジェクトが同一の名前空間になってしまうため。
  */
 export function resolveNamespace({ env = process.env, root = repoRoot(env) } = {}) {
@@ -77,22 +77,22 @@ export function resolveNamespace({ env = process.env, root = repoRoot(env) } = {
     const pkg = JSON.parse(readFileSync(join(repoRootFromMarker(root), 'package.json'), 'utf8'));
     const derived = sanitizeNamespaceSegment(pkg?.name);
     // サフィックスは現行値との互換（cookpit → cookpit-harness）と、
-    // OS の状態ディレクトリ配下で用途が名前から分かることの両立。
+    // OSの状態ディレクトリ配下で用途が名前から分かることの両立。
     if (derived) return `${derived}-harness`;
   } catch {
-    // package.json が無い・壊れている・name が無い → 既定値
+    // package.jsonが無い・壊れている・nameが無い → 既定値
   }
   return DEFAULT_NAMESPACE;
 }
 
-/** child が parent と同一、またはその配下か。 */
+/** childがparentと同一、またはその配下か。 */
 export function isInside(parent, child) {
   const rel = relative(resolve(parent), resolve(child));
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
 }
 
 // シンボリックリンク経由でリポジトリ内へ戻っていないかを実体パスで確認する。
-// 存在しないパスは realpath できないため、存在する最も近い祖先で判定する。
+// 存在しないパスはrealpathできないため、存在する最も近い祖先で判定する。
 function realpathOfNearestExisting(target) {
   let current = resolve(target);
   for (;;) {
@@ -104,7 +104,7 @@ function realpathOfNearestExisting(target) {
 }
 
 function assertOutsideRepo(candidate, root, source, raw = candidate) {
-  // 相対パスは resolve() で cwd 基準の絶対パスになってしまうため、生の値で判定する
+  // 相対パスはresolve()でcwd基準の絶対パスになってしまうため、生の値で判定する
   if (!isAbsolute(raw)) {
     throw new StateDirError(`${source} は絶対パスで指定してください: ${raw}`, 'not_absolute');
   }
@@ -115,9 +115,9 @@ function assertOutsideRepo(candidate, root, source, raw = candidate) {
     );
   }
   const real = realpathOfNearestExisting(candidate);
-  // root 側は実在するときだけ realpath を取る。存在しない root で祖先まで遡ると、
-  // 同じ祖先を共有する正当な state ディレクトリを誤って「リポジトリ内」と判定し、
-  // コンテナ破棄後の復旧そのものを壊す（2026-07-26 の再監査で実証）。
+  // root側は実在するときだけrealpathを取る。存在しないrootで祖先まで遡ると、
+  // 同じ祖先を共有する正当なstateディレクトリを誤って「リポジトリ内」と判定し、
+  // コンテナ破棄後の復旧そのものを壊す（2026-07-26の再監査で実証）。
   const rootReal = existsSync(root) ? realpathSync(root) : resolve(root);
   if (isInside(rootReal, real)) {
     throw new StateDirError(
@@ -135,7 +135,7 @@ function assertOutsideRepo(candidate, root, source, raw = candidate) {
 export function resolveStateDir({
   env = process.env,
   root = repoRoot(env),
-  // HOME は env から取り、未指定のときだけ OS 既定にフォールバックする
+  // HOMEはenvから取り、未指定のときだけOS既定にフォールバックする
   // （テストと実行時で同じ解決経路を通すため）
   home = env.HOME ?? homedir(),
 } = {}) {
@@ -148,7 +148,7 @@ export function resolveStateDir({
     return { dir: resolve(raw), source: 'HARNESS_STATE_DIR', trusted: true, warnings };
   }
 
-  // HARNESS_STATE_DIR で決まる経路では名前空間を使わないため、ここまで来てから解決する。
+  // HARNESS_STATE_DIRで決まる経路では名前空間を使わないため、ここまで来てから解決する。
   const namespace = resolveNamespace({ env, root });
   // 既定値へ落ちた = プロジェクトを特定できていない。この状態は保存先が本来と変わり、
   // 既存の状態ファイルが参照されなくなる（静かに孤児化する）ため必ず警告する。
@@ -174,14 +174,14 @@ export function resolveStateDir({
 
   if (home && home.trim() !== '' && home !== '/') {
     const candidate = resolve(join(home, '.local/state', namespace));
-    // home がリポジトリ内という異常構成では信頼できない。フォールバックへ落とす。
+    // homeがリポジトリ内という異常構成では信頼できない。フォールバックへ落とす。
     if (!isInside(root, candidate)) {
       return { dir: candidate, source: 'home', trusted: true, warnings };
     }
     warnings.push(`ホームディレクトリがリポジトリ配下です（${home}）。永続領域として使いません`);
   }
 
-  // 最終手段: リポジトリ内。エフェメラル環境では失われるため trusted: false。
+  // 最終手段: リポジトリ内。エフェメラル環境では失われるためtrusted: false。
   warnings.push(
     'ユーザー状態ディレクトリを解決できないため、リポジトリ内 .claude/state/ を使用します。' +
       'この領域は環境破棄で失われます。HARNESS_STATE_DIR を設定してください',
@@ -189,7 +189,7 @@ export function resolveStateDir({
   return { dir: join(root, '.claude/state'), source: 'repo-fallback', trusted: false, warnings };
 }
 
-/** 状態ディレクトリを解決し、必要なら mode 0700 で作成して返す。 */
+/** 状態ディレクトリを解決し、必要ならmode 0700で作成して返す。 */
 export function stateDir(opts = {}) {
   const resolved = resolveStateDir(opts);
   mkdirSync(resolved.dir, { recursive: true, mode: 0o700 });
@@ -203,8 +203,8 @@ export function statePath(name, opts = {}) {
 
 /**
  * 書き込み先のパスを決める。解決に失敗しても例外を投げず旧パスへフォールバックする。
- * 記録系 Hook（活動ログ等）は失敗しても作業を止めてはならないため、この関数を使う。
- * 安全性判断には**使わない**（あちらは fail-closed が要件）。
+ * 記録系Hook（活動ログ等）は失敗しても作業を止めてはならないため、この関数を使う。
+ * 安全性判断には**使わない**（あちらはfail-closedが要件）。
  */
 export function safeStatePath(name, opts = {}) {
   try {
@@ -229,7 +229,7 @@ export function legacyStatePath(name, root = repoRoot()) {
 
 /**
  * 読み取り時の後方互換: 永続領域を優先し、無ければ旧パスを見る。
- * どちらにも無ければ null を返す（存在判定は呼び出し側の責務）。
+ * どちらにも無ければnullを返す（存在判定は呼び出し側の責務）。
  */
 export function resolveReadablePath(name, opts = {}) {
   const root = opts.root || repoRoot(opts.env || process.env);
@@ -245,7 +245,7 @@ export function resolveReadablePath(name, opts = {}) {
   return null;
 }
 
-/** ディレクトリの権限が他ユーザーへ開いていないか（0o077 が立っていないか）。 */
+/** ディレクトリの権限が他ユーザーへ開いていないか（0o077が立っていないか）。 */
 export function hasSafePermissions(dir) {
   try {
     return (statSync(dir).mode & 0o077) === 0;

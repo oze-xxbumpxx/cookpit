@@ -2,17 +2,17 @@
 // Stop Hook — 改善サイクルの未実施チェック（非ブロッキング・警告のみ）
 //
 // 方針（docs/claude-code/improvement-cycle.md）:
-// - 成果物の存在は check-deliverables.mjs が見る。本フックは「改善ループ」固有の観点だけを見る。
-// - `.claude/state/current-feature` が設定された作業単位（= L2/L3 相当）で、複数 Subagent が
-//   動いた（subagent-log にエントリがある）のに reflection-agent の振り返り候補が無い場合に
-//   注意喚起する。L1（feature 未設定）では沈黙し誤検知を出さない。
-// - 強制はしない（常に exit 0）。改善ループの起動判断は Orchestrator / 人間に委ねる。
+// - 成果物の存在はcheck-deliverables.mjsが見る。本フックは「改善ループ」固有の観点だけを見る。
+// - `.claude/state/current-feature`が設定された作業単位（= L2/L3相当）で、複数Subagentが
+//   動いた（subagent-logにエントリがある）のに振り返り候補が無い場合に
+//   注意喚起する。L1（feature未設定）では沈黙し誤検知を出さない。
+// - 強制はしない（常にexit 0）。改善ループを実行するかは、メインのセッションと人間が決める。
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { uncovered as reviewTasksUncovered } from '../scripts/check-review-coverage.mjs';
 import { resolveReadablePath, safeStatePath } from '../lib/harness-paths.mjs';
+import { dayInTz } from '../lib/harness-time.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -20,8 +20,8 @@ const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲し�
 const LOG_STALE_DAYS = 3; // 作業ログがこの日数より古ければ督促（feature 未設定でも出す）
 
 // 同一の警告セットを毎ターン繰り返さないためのデバウンス。
-// 警告セットが変化したか、クールダウンを過ぎたときだけ true（= emit すべき）。
-// state 読み書き失敗時は fail-open（true を返し従来どおり警告する。沈黙して隠さない）。
+// 警告セットが変化したか、クールダウンを過ぎたときだけtrue（= emitすべき）。
+// state読み書き失敗時はfail-open（trueを返し従来どおり警告する。沈黙して隠さない）。
 function shouldEmitNotice(key, feature, warnings) {
   const statePath = safeStatePath('hook-notice-state.json');
   const hash = createHash('sha1').update(feature).digest('hex');
@@ -68,8 +68,8 @@ function subagentLogHasEntries() {
   }
 }
 
-// logs/YYYY-MM-DD.md の最新日付が LOG_STALE_DAYS より古ければ警告文字列を返す。
-// ログが 1 本も無い・読めない場合は沈黙（fail-open で作業を妨げない）。
+// logs/YYYY-MM-DD.mdの最新日付がLOG_STALE_DAYSより古ければ警告文字列を返す。
+// ログが1本も無い・読めない場合は沈黙（fail-openで作業を妨げない）。
 function staleWorkLogWarning() {
   try {
     const files = readdirSync(join(ROOT, 'logs'))
@@ -89,19 +89,17 @@ function staleWorkLogWarning() {
   }
 }
 
-// 今日のログの「所要時間」が未記録なら close-session を促す（R5・2026-07-06）。
-// 発動忘れで「所要時間: 記録なし」が常態化する再発対策（7/5 も再発）。
-// 30 分クールダウン（shouldEmitNotice）で毎ターンのノイズにはしない。常に非ブロッキング。
+// 今日のログの「所要時間」が未記録ならclose-sessionを促す（R5・2026-07-06）。
+// 発動忘れで「所要時間: 記録なし」が常態化する再発対策（7/5も再発）。
+// 30分クールダウン（shouldEmitNotice）で毎ターンのノイズにはしない。常に非ブロッキング。
 //
-// 判定はセクション本文の「完全一致」寄りにする（meal-plan-core 事象1）。
-// 部分一致だと「約 30 分（…先行セッションは記録なし）」のような注記付き記録済み行を
-// 未記録と誤判定するため、trim 後の本文行がプレースホルダのみ／空のときだけ未記録とする。
+// 判定はセクション本文の「完全一致」寄りにする（meal-plan-core事象1）。
+// 部分一致だと「約30分（…先行セッションは記録なし）」のような注記付き記録済み行を
+// 未記録と誤判定するため、trim後の本文行がプレースホルダのみ／空のときだけ未記録とする。
 // 時間表現（数字 + 分/時間/h）があれば記録済みとみなす。
 function timeUnrecordedNudge() {
   try {
-    // COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
-    const tz = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
-    const today = new Date().toLocaleDateString('sv-SE', { timeZone: tz });
+    const today = dayInTz();
     const p = join(ROOT, `logs/${today}.md`);
     if (!existsSync(p)) return null;
     const content = readFileSync(p, 'utf8');
@@ -144,14 +142,14 @@ function main() {
 
   const notices = [];
 
-  // 作業ログの鮮度は feature の有無に関係なく確認する（引き継ぎ切れ対策）
+  // 作業ログの鮮度はfeatureの有無に関係なく確認する（引き継ぎ切れ対策）
   const logWarn = staleWorkLogWarning();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dayInTz();
   if (logWarn && shouldEmitNotice('work-log-staleness:Stop', `log:${today}`, [logWarn])) {
     notices.push(`⚠ ${logWarn}`);
   }
 
-  // close-session の発動忘れナッジ（今日のログの所要時間が未記録のとき・30分毎まで）
+  // close-sessionの発動忘れナッジ（今日のログの所要時間が未記録のとき・30分毎まで）
   const timeNudge = timeUnrecordedNudge();
   if (
     timeNudge &&
@@ -168,21 +166,10 @@ function main() {
 
     if (subagentLogHasEntries() && !existsSync(candidatePath)) {
       warnings.push(
-        `reflection-agent の振り返り候補が未作成: docs/claude-code/improvements/candidates/${feature}.md`,
+        `振り返り候補が未作成（reflect-task スキル）: docs/claude-code/improvements/candidates/${feature}.md`,
       );
     }
-    // Codex ルート feature は Task 単位の網羅を見る（存在だけでは Task 2/3 欠落を見逃す。pantry-core 事象 2）
-    const tasksDir = join(ROOT, `docs/tasks/codex/${feature}`);
-    if (existsSync(tasksDir)) {
-      const uncoveredTasks = reviewTasksUncovered(feature);
-      if (uncoveredTasks.length) {
-        warnings.push(
-          `docs/reviews/${feature}.md に受け入れレビュー記録が無い Codex Task: ` +
-            `${uncoveredTasks.map((n) => `Task ${n}`).join(' / ')}` +
-            `（未着手 Task は無視可。main マージ済みなら記録が完了条件）`,
-        );
-      }
-    } else if (!existsSync(reviewPath)) {
+    if (!existsSync(reviewPath)) {
       warnings.push(
         `reviewer のレビュー記録が見当たりません（L3 など保存対象なら docs/reviews/${feature}.md）`,
       );

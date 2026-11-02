@@ -1,6 +1,6 @@
 # 評価ケース: ドキュメントのみの変更（L0/L1）
 
-> 指示書 §18 の `documentation-only-change`。過剰工程を起動しないことを評価する。
+> 指示書 §18の`documentation-only-change`。過剰工程を起動しないことを評価する。
 
 ## 想定レベル
 
@@ -8,16 +8,16 @@ L0〜L1（ドキュメント修正のみ。プロダクションコードを変�
 
 ## シナリオ
 
-`docs/` や README の記述を修正する（例：`docs/02-tech-stack.md` の説明更新、リンク切れ修正）。
+`docs/`やREADMEの記述を修正する（例：`docs/02-tech-stack.md`の説明更新、リンク切れ修正）。
 コードの振る舞いには一切影響しない。
 
 ## 期待される進め方
 
 - 変更レベルを **L0/L1** と判定。設計書・実装計画・ADR・試験計画を**作らない**。
-- `.claude/state/current-feature` を設定しない（Hook 誤検知防止）。
-- architecture-designer / contract-designer / test-designer などの
-  重い Agent を**起動しない**。
-- 必要なら lint/format（Markdown は prettier 対象）程度の確認。
+- `.claude/state/current-feature`を設定しない（Hook誤検知防止）。
+- architecture-designer / test-designerなどの
+  重いAgentを**起動しない**。
+- 必要ならlint/format（Markdownはprettier対象）程度の確認。
 - 最終報告に変更理由を簡潔に記す。
 
 ## 期待成果物
@@ -27,11 +27,11 @@ L0〜L1（ドキュメント修正のみ。プロダクションコードを変�
 ## 評価で特に見る軸
 
 - **不要な作業量**: 文書修正に設計工程を当てていないか。
-- **Agent 呼び出し効率 / トークン効率**: 重い Agent を呼ばず最小で完了するか。
+- **Agent呼び出し効率 / トークン効率**: 重いAgentを呼ばず最小で完了するか。
 - **不要な質問回数**: 自明な修正で過剰確認していないか。
 
 ## 失敗パターン
 
-- ドキュメント修正に Level 2/3 工程（設計書・計画・複数 Agent）を起動する。
-- `current-feature` を設定して成果物チェック Hook を誤発火させる。
+- ドキュメント修正にLevel 2/3工程（設計書・計画・複数Agent）を起動する。
+- `current-feature`を設定して成果物チェックHookを誤発火させる。
 - スコープ外のドキュメントまで「ついで」修正して差分を膨らませる。

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// 成果物チェック Hook（警告のみ・非ブロッキング）
+// 成果物チェックHook（警告のみ・非ブロッキング）
 //
-// 方針（docs/claude-code/document-policy.md の §feature-name と成果物検証）:
-// - `.claude/state/current-feature` に feature-name が設定されている時だけ働く。
-//   未設定（= Level 1 など）では何も言わない → 誤検知を出さない。
-// - ソースコード変更（packages/*/src, apps/web/src）に対し、L2 ベースラインの成果物
+// 方針（docs/claude-code/document-policy.mdの §feature-nameと成果物検証）:
+// - `.claude/state/current-feature`にfeature-nameが設定されている時だけ働く。
+//   未設定（= Level 1など）では何も言わない → 誤検知を出さない。
+// - ソースコード変更（packages/*/src, apps/web/src）に対し、L2ベースラインの成果物
 //   （designs / implementation-plans / tests）の存在と、設計書の必須セクション非空を確認。
-// - 不足を見つけても処理はブロックしない（exit 0）。additionalContext で警告を返すだけ。
-// - 機械判定できない意味的整合性は validate-deliverables Skill / reviewer に委譲。
+// - 不足を見つけても処理はブロックしない（exit 0）。additionalContextで警告を返すだけ。
+// - 機械判定できない意味的整合性はvalidate-deliverables Skill / reviewerに委譲。
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,8 +19,8 @@ const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const NOTICE_COOLDOWN_MS = 30 * 60 * 1000; // 同一警告セットを再掲しない窓（30分）
 
 // 同一の警告セットを毎ターン繰り返さないためのデバウンス。
-// 警告セットが変化したか、クールダウンを過ぎたときだけ true（= emit すべき）。
-// state 読み書き失敗時は fail-open（true を返し従来どおり警告する。沈黙して隠さない）。
+// 警告セットが変化したか、クールダウンを過ぎたときだけtrue（= emitすべき）。
+// state読み書き失敗時はfail-open（trueを返し従来どおり警告する。沈黙して隠さない）。
 function shouldEmitNotice(key, feature, warnings) {
   const statePath = safeStatePath('hook-notice-state.json');
   const hash = createHash('sha1')

@@ -1,6 +1,6 @@
 {
   "name": "harness-core",
-  "version": "0.1.0",
-  "description": "Portable core layer of the Cookpit development harness.",
+  "version": "0.2.0",
+  "description": "Portable core harness layer: state paths, safety guard, quality gates, writing rules, and work logs.",
   "skills": "./skills/"
 }

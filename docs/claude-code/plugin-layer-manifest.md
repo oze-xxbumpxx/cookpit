@@ -14,8 +14,14 @@
 | `harness-workflow`    | core     | 変更レベル分類と設計 → 実装 → レビューの工程    |
 | `harness-improvement` | workflow | メトリクス・振り返り・改善サイクル・回帰評価    |
 | （cookpit-local）     | —        | Plugin へ同梱しない。スタック固有・実績固有資産 |
+| `harness-devin`       | workflow | Devin への委譲と PR のレビュー（任意。0.1.0〜） |
 
 **下位層は上位層のファイルを参照しない。** これが分割の成立条件（要件 F-2）。
+
+> 2026-11-02: 配布物の 0.2.0 は Tomotabi で育てたハーネスを戻したもので、Cookpit 本体の `.claude/` とは
+> 一致しない（機能の進め方を一つのループにし、orchestrator ほか 8 つの子エージェントを外した）。以下の割り当て表は
+> 0.1.0 時点の記録。配布物の中身の正典は各層の `plugins/<層>/install-manifest.json`。
+> 設計: [harness-from-tomotabi](../designs/harness-from-tomotabi.md)
 
 ## 割り当て（`.claude/` 全 74 ファイル）
 

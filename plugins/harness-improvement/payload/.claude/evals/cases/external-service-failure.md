@@ -1,15 +1,15 @@
 # 評価ケース: 外部サービス障害ハンドリング（L2/L3）
 
-> 指示書 §18 の `external-service-failure`。Cookpit は MVP1 で外部連携が薄いため、
-> 「外部ストレージ/外部 API を呼ぶ処理の障害設計」を題材に、異常系設計の質を評価する。
+> 指示書 §18の`external-service-failure`。CookpitはMVP1で外部連携が薄いため、
+> 「外部ストレージ/外部APIを呼ぶ処理の障害設計」を題材に、異常系設計の質を評価する。
 
 ## 想定レベル
 
-L2〜L3（外部依存・障害設計・冪等性を伴う。本番影響があれば L3）。
+L2〜L3（外部依存・障害設計・冪等性を伴う。本番影響があればL3）。
 
 ## シナリオ
 
-レシピ画像アップロードなどで外部サービス（例: オブジェクトストレージ / 外部 API）を呼ぶ処理に、
+レシピ画像アップロードなどで外部サービス（例: オブジェクトストレージ / 外部API）を呼ぶ処理に、
 障害時の挙動を設計・実装する。タイムアウト・リトライ・部分失敗・冪等性・フォールバックを扱う。
 
 > 外部連携が未導入の場合は、実装ではなく**異常系設計とレビュー観点の質**を採点する
@@ -17,17 +17,17 @@ L2〜L3（外部依存・障害設計・冪等性を伴う。本番影響があ�
 
 ## 期待される進め方
 
-- 依存方向を守る：外部 I/O は **Infrastructure**、Application は interface に依存（Domain は無知）。
+- 依存方向を守る：外部I/Oは **Infrastructure**、Applicationはinterfaceに依存（Domainは無知）。
 - 障害設計：タイムアウト値・リトライ（回数/バックオフ）・冪等性キー・部分失敗時の整合性・
   ユーザーへのエラー表現を設計書と試験計画に明記。
-- reviewer はエラー処理・リトライ嵐・タイムアウト未設定・冪等性欠如・秘密情報の漏えいを指摘。
-- 契約があれば contract-designer がエラー形式・冪等性キーを定義。
+- reviewerはエラー処理・リトライ嵐・タイムアウト未設定・冪等性欠如・秘密情報の漏えいを指摘。
+- 契約があればarchitecture-designerがエラー形式・冪等性キーを設計書に書く。
 
 ## 期待成果物
 
-- `docs/designs/<feature>.md`（Error handling / Transaction / Retry / Idempotency 節）。
+- `docs/designs/<feature>.md`（Error handling / Transaction / Retry / Idempotency節）。
 - `docs/tests/<feature>.md`（異常系・部分失敗・リトライ・タイムアウト・冪等性の観点）。
-- L3 なら requirements / ADR / reviews。
+- L3ならrequirements / ADR / reviews。
 
 ## 評価で特に見る軸
 
@@ -39,5 +39,5 @@ L2〜L3（外部依存・障害設計・冪等性を伴う。本番影響があ�
 ## 失敗パターン
 
 - 正常系だけ設計し、タイムアウト/リトライ/冪等性を欠く。
-- 外部呼び出しを Application/Domain に直書きして依存方向を壊す。
+- 外部呼び出しをApplication/Domainに直書きして依存方向を壊す。
 - リトライ無限ループ・指数バックオフ無しで障害を増幅。

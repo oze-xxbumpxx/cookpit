@@ -1,69 +1,69 @@
 ---
 name: create-test-plan
 description: >
-  機能の試験計画・試験観点を docs/tests/<feature-name>.md に作成する手順とテンプレート。
-  test-designer が使う。正常系・異常系・境界値・整合性・冪等性・障害系・回帰範囲を、
-  対象層と変更レベルに応じて取捨選択して網羅する。
+  機能の試験計画・試験観点をdocs/tests/<feature-name>.mdに作成する手順とテンプレート。
+  設計のあと、このセッションで書く。正常系・異常系・境界値・整合性・冪等性・障害系・回帰範囲を、
+  対象層と変更レベルに応じて取捨選択して網羅する。実装計画と続けて書いてよい。
 ---
 
 # 試験計画作成スキル
 
-`docs/tests/<feature-name>.md` を作成する。入力は `docs/designs/<feature-name>.md`
-（と必要なら requirements メモ）。
+`docs/tests/<feature-name>.md`を作成する。入力は`docs/designs/<feature-name>.md`
+（と必要ならrequirementsメモ）。
 
 ## 手順
 
 1. 設計の振る舞い・境界・エラー条件を洗い出す。
-2. **対象パッケージの実装コードを走査し、全 public メソッド・static ファクトリ・ゲッターを
+2. **対象パッケージの実装コードを走査し、全publicメソッド・staticファクトリ・ゲッターを
    列挙する。** 設計書に記載のないメソッドも含め、各メソッドに最低1つの観点を設ける。
 3. 各観点を「前提・操作・期待結果」の粒度で記述する。
 4. 正常系だけでなく**異常系・境界値・防御性**を必ず含める。
 5. 次の追加観点を「観点の選択基準」に従って**該当する場合のみ**含める（全タスクに強制しない）。
-   - (4) 冪等性: 同一操作の多重実行・重複処理（再送・リトライ）で結果が変わらないか。
-     適用条件: 書き込み系 UseCase / 外部連携 / メッセージ再処理がある場合。
-   - (5) 障害系: 外部依存の失敗・タイムアウト・部分失敗・リトライ/バックオフ・フォールバック。
-     適用条件: Infrastructure 経由の外部 I/O（DB 以外の外部 API/ストレージ）を含む場合。
-   - (6) フロントエンド固有: ローディング状態・エラー表示/エラーバウンダリ・楽観的更新の
-     ロールバック。適用条件: `apps/web` の画面・コンポーネント変更を含む場合。
-   - (7) 防御性: 以下の観点を Entity / Value Object を含む変更で必ず検討する。
-     - **防御的コピー**: ゲッターが配列・Date 等の可変オブジェクトを返す場合、外部からの
-       変更が内部状態に影響しないこと。コンストラクタ / reconstruct の引数も同様。
+   - (4)冪等性: 同一操作の多重実行・重複処理（再送・リトライ）で結果が変わらないか。
+     適用条件: 書き込み系UseCase / 外部連携 / メッセージ再処理がある場合。
+   - (5)障害系: 外部依存の失敗・タイムアウト・部分失敗・リトライ/バックオフ・フォールバック。
+     適用条件: Infrastructure経由の外部I/O（DB以外の外部API/ストレージ）を含む場合。
+   - (6)フロントエンド固有: ローディング状態・エラー表示/エラーバウンダリ・楽観的更新の
+     ロールバック。適用条件: `apps/web`の画面・コンポーネント変更を含む場合。
+   - (7)防御性: 以下の観点をEntity / Value Objectを含む変更で必ず検討する。
+     - **防御的コピー**: ゲッターが配列・Date等の可変オブジェクトを返す場合、外部からの
+       変更が内部状態に影響しないこと。コンストラクタ / reconstructの引数も同様。
      - **不変条件の保持**: 状態変更メソッド実行後もドメインルール（正値制約・排他制約等）
        が満たされていること。
-     - **副作用の検証**: `updatedAt` 等のタイムスタンプが mutation 後に更新されること。
-     - **不正引数の伝搬**: factor / multiplier に 0・負値・NaN を渡した場合に不正な
+     - **副作用の検証**: `updatedAt`等のタイムスタンプがmutation後に更新されること。
+     - **不正引数の伝搬**: factor / multiplierに0・負値・NaNを渡した場合に不正な
        値オブジェクトが生成されないこと。
 6. 回帰試験範囲（既存機能への波及）と試験データを定義する。
-7. **メソッド網羅チェック**: 手順2で列挙した全 public API に試験観点があるか照合する。
+7. **メソッド網羅チェック**: 手順2で列挙した全public APIに試験観点があるか照合する。
    観点がないメソッドがあれば追加する。
-8. **要件書観点の照合**: `docs/requirements/<feature-name>.md` に試験観点（N-xx 等の採番つき
+8. **要件書観点の照合**: `docs/requirements/<feature-name>.md`に試験観点（N-xx等の採番つき
    観点を含む）がある場合、**要件書を正として**全観点が試験計画に反映されているか照合する。
    設計書のテスト方針節が要件書の観点を省略していても、それを黙って踏襲しない。
    意図的に外す観点は「対象外（理由）」を明記する。
-   （出典: cookpit/store-master で設計書 §17-2 が要件書の観点 N-02 を省略 → test-designer と
-   implementer が踏襲 → reviewer の Should-2 指摘で手戻り。
-   `cookpit/store-master` 事象 3 /
+   （出典: cookpit/store-masterで設計書 §17-2が要件書の観点N-02を省略 → test-designerと
+   implementerが踏襲 → reviewerのShould-2指摘で手戻り。
+   `cookpit/store-master`事象3 /
    `cookpit/store-master レビュー` Should-2）
-9. テストランナー（Vitest）は domain / application / infrastructure / apps/web に導入済み
+9. テストランナー（Vitest）はdomain / application / infrastructure / apps/webに導入済み
    （2026-07-01 PR #21・`cookpit/test-infra-expansion 設計書`）。**上記以外のパッケージ
    （例: `packages/api-contract`）に試験観点を書く場合は、対象パッケージに実行環境
-   （`vitest.config.*` や `package.json` の `test` スクリプト）が実在するか先に確認する。
+   （`vitest.config.*`や`package.json`の`test`スクリプト）が実在するか先に確認する。
    無ければ観点は削らず残しつつ「テスト基盤未整備のため本タスクでは未実装（実装計画で対応要否を
-   確認）」と明記し、実装される前提でファイルパスを断定しない**（出典: cookpit/recipe-servings で
-   test-designer が api-contract の Vitest 未整備に気づかず全観点を実装前提で記述し、
-   implementation-planner のスコープ判断と食い違って reviewer 指摘になった —
-   `cookpit/recipe-servings` 事象2）。E2E（Playwright UI）
+   確認）」と明記し、実装される前提でファイルパスを断定しない**（出典: cookpit/recipe-servingsで
+   test-designerがapi-contractのVitest未整備に気づかず全観点を実装前提で記述し、
+   implementation-plannerのスコープ判断と食い違ってreviewer指摘になった —
+   `cookpit/recipe-servings`事象2）。E2E（Playwright UI）
    等の未整備領域に落ちる観点も省略せず設計する（導入時に実装へ落とせる形で残す）。
-10. **新規テストのファイル名は、対象パッケージの vitest `include` と突き合わせる**（projects
-    分割があるパッケージでは必須）。テストは各 workspace の `tests/` に置き、`src/` の構造を
-    ミラーする。apps/web の例:
+10. **新規テストのファイル名は、対象パッケージのvitest `include`と突き合わせる**（projects
+    分割があるパッケージでは必須）。テストは各workspaceの`tests/`に置き、`src/`の構造を
+    ミラーする。apps/webの例:
     `tests/**/*.node.test.ts` / `tests/server/**/*.test.ts`（node）と
     `tests/**/*.dom.test.ts` / `tests/**/*.test.tsx`（dom）。
-    素の `tests/**/*.test.ts`（server 以外）は**どの project にも一致せず silent skip** になる
-    （出典: cookpit/meal-plan-screens 事象 1）。試験計画に書くパスは include に合う名前にする。
-11. **仕様が集合・列挙・デフォルト値を規定する箇所**は、代表値 1〜2 点だけで終わらせない。
-    `toEqual` 等で想定集合の過不足なしを固定するか、境界を跨ぐデータ量で検証する
-    （出典: cookpit/meal-plan-core / cookpit/meal-plan-screens の「弱いアサーション」累計 2。適用は
+    素の`tests/**/*.test.ts`（server以外）は**どのprojectにも一致せずsilent skip** になる
+    （出典: cookpit/meal-plan-screens事象1）。試験計画に書くパスはincludeに合う名前にする。
+11. **仕様が集合・列挙・デフォルト値を規定する箇所**は、代表値1〜2点だけで終わらせない。
+    `toEqual`等で想定集合の過不足なしを固定するか、境界を跨ぐデータ量で検証する
+    （出典: cookpit/meal-plan-core / cookpit/meal-plan-screensの「弱いアサーション」累計2。適用は
     「仕様上意味のある集合」に限定し、全配列の網羅は要求しない）。
 
 ## 観点の選択基準（過剰適用を防ぐ）
@@ -71,14 +71,14 @@ description: >
 追加観点(4)(5)(6)は全タスクに付けない。対象層・変更レベルで取捨選択する。該当しない観点は
 試験計画に「対象外（理由）」と明記して飛ばす。指示は増やすが**適用範囲は絞る**。
 
-| 対象層 / 種別                          | (4) 冪等性 | (5) 障害系            | (6) FE 固有 | (7) 防御性   | 備考                                         |
+| 対象層 / 種別                          | (4)冪等性 | (5)障害系            | (6) FE固有 | (7)防御性   | 備考                                         |
 | -------------------------------------- | ---------- | --------------------- | ----------- | ------------ | -------------------------------------------- |
-| Domain 純粋ロジック（packages/domain） | 任意       | 対象外                | 対象外      | **必須**     | Entity/VO の防御的コピー・不変条件・不正引数 |
-| Application UseCase（書き込み系）      | 必須       | 外部 I/O があれば必須 | 対象外      | 任意         |                                              |
-| Infrastructure（外部 API/ストレージ）  | 必須       | 必須                  | 対象外      | 任意         | external-service-failure 系                  |
-| Presentation（apps/web 画面）          | 任意       | 任意                  | 必須        | 対象外       | frontend-screen-addition 系                  |
+| Domain純粋ロジック                    | 任意       | 対象外                | 対象外      | **必須**     | 不変条件・不正引数（層が分かれている場合） |
+| Application UseCase（書き込み系）      | 必須       | 外部I/Oがあれば必須 | 対象外      | 任意         |                                              |
+| Infrastructure（外部API/ストレージ）  | 必須       | 必須                  | 対象外      | 任意         | 外部障害系                                   |
+| Presentation（画面）                   | 任意       | 任意                  | 必須        | 対象外       | 画面追加系                                   |
 | L1（単一ファイル軽微修正）             | 原則対象外 | 原則対象外            | 原則対象外  | 変更箇所のみ | 直す対象の観点のみ。膨らませない             |
-| L2/L3 リファクタ（振る舞い不変）       | 任意       | 任意                  | 任意        | 任意         | 回帰観点（入出力不変）を最優先               |
+| L2/L3リファクタ（振る舞い不変）       | 任意       | 任意                  | 任意        | 任意         | 回帰観点（入出力不変）を最優先               |
 
 ## テンプレート
 
@@ -134,7 +134,7 @@ description: >
 ## 完了条件
 
 - 正常系・異常系・境界値が各観点表に含まれている。
-- **メソッド網羅チェック表**が埋まっており、全 public メソッドに対応する観点がある。
+- **メソッド網羅チェック表**が埋まっており、全publicメソッドに対応する観点がある。
 - 要件書に試験観点がある場合、全観点が反映されているか「対象外（理由）」つきで
   除外されている（手順8）。
 - 回帰試験範囲が明示されている。
@@ -143,14 +143,14 @@ description: >
   除外されている（網羅不足も過剰適用もない）。
 - 仕様上の集合・列挙・デフォルト値がある場合、過不足なし固定または境界跨ぎ検証の観点がある
   （または「代表値のみで足りる理由」が対象外として書かれている）。
-- 新規テストのファイルパスが対象パッケージの vitest `include` と整合している
-  （projects 分割パッケージでは必須）。
+- 新規テストのファイルパスが対象パッケージのvitest `include`と整合している
+  （projects分割パッケージでは必須）。
 
 ## 良い例（実タスクの成果物）
 
-- `docs/tests/store-master.md` — 公開 API 網羅チェック（§2）を先頭に置き、層別
+- `docs/tests/store-master.md` — 公開API網羅チェック（§2）を先頭に置き、層別
   （Domain / Application / API Contract / Infrastructure / Presentation）に観点を展開。
   完了条件を「必須（リリースブロッカー）/ 推奨 / 将来フェーズ」に分割しており、
   テストランナー未整備の層でも観点を落とさず残せている
-  （出典: reviewer が「試験計画 vs 実装の対応」「Mapper の public API 網羅」を
+  （出典: reviewerが「試験計画vs実装の対応」「Mapperのpublic API網羅」を
   問題なしと確認 — `cookpit/store-master レビュー`）。

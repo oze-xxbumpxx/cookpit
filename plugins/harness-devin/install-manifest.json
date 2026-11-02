@@ -1,0 +1,75 @@
+{
+  "name": "harness-devin",
+  "version": "0.1.0",
+  "files": [
+    ".agents/skills/devin-workflow/SKILL.md",
+    ".claude/config/delegation-review.json",
+    ".claude/hooks/delegation-status.mjs",
+    ".claude/hooks/suggest-pr-watch.mjs",
+    ".claude/scripts/delegation-launch.mjs",
+    ".claude/scripts/delegation-status.mjs",
+    ".claude/scripts/delegation.mjs",
+    ".claude/scripts/devin-stall-watch.mjs",
+    ".claude/scripts/devin-watch.mjs",
+    ".claude/scripts/wait-for-devin-pr.mjs",
+    ".claude/scripts/wait-for-pr-update.mjs",
+    ".claude/scripts/wait-for-pr.mjs",
+    ".claude/skills/review-devin-pr/SKILL.md",
+    ".claude/tests/delegation-launch.test.mjs",
+    ".claude/tests/delegation-status.test.mjs",
+    ".claude/tests/delegation.test.mjs",
+    ".claude/tests/devin-stall-watch.test.mjs",
+    ".claude/tests/devin-watch.test.mjs",
+    ".claude/tests/suggest-pr-watch.test.mjs",
+    ".claude/tests/wait-for-devin-pr.test.mjs",
+    ".claude/tests/wait-for-pr-update.test.mjs",
+    ".claude/tests/wait-for-pr.test.mjs",
+    ".github/ISSUE_TEMPLATE/devin-task.md",
+    "docs/claude-code/improvements/delegations/README.md"
+  ],
+  "links": {
+    ".agents/skills/ask-questions": "../../.claude/skills/ask-questions",
+    ".agents/skills/audit-skills": "../../.claude/skills/audit-skills",
+    ".agents/skills/classify-change": "../../.claude/skills/classify-change",
+    ".agents/skills/close-session": "../../.claude/skills/close-session",
+    ".agents/skills/create-adr": "../../.claude/skills/create-adr",
+    ".agents/skills/create-design-document": "../../.claude/skills/create-design-document",
+    ".agents/skills/create-implementation-plan": "../../.claude/skills/create-implementation-plan",
+    ".agents/skills/create-requirements-document": "../../.claude/skills/create-requirements-document",
+    ".agents/skills/create-test-plan": "../../.claude/skills/create-test-plan",
+    ".agents/skills/develop-feature": "../../.claude/skills/develop-feature",
+    ".agents/skills/implement-change": "../../.claude/skills/implement-change",
+    ".agents/skills/improve-harness": "../../.claude/skills/improve-harness",
+    ".agents/skills/kickoff-session": "../../.claude/skills/kickoff-session",
+    ".agents/skills/quality-gates": "../../.claude/skills/quality-gates",
+    ".agents/skills/record-metrics-and-reflect": "../../.claude/skills/record-metrics-and-reflect",
+    ".agents/skills/reflect-task": "../../.claude/skills/reflect-task",
+    ".agents/skills/sprint-review": "../../.claude/skills/sprint-review",
+    ".agents/skills/validate-deliverables": "../../.claude/skills/validate-deliverables",
+    ".agents/skills/write-work-log": "../../.claude/skills/write-work-log"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegation-status.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggest-pr-watch.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

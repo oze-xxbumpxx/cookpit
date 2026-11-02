@@ -1,4 +1,4 @@
-// review subject の鮮度、state schema、人間向け packet、warning-only CI の回帰試験。
+// review subjectの鮮度、state schema、人間向けpacket、warning-only CIの回帰試験。
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import {
@@ -96,7 +96,7 @@ function baseAssessment(overrides = {}) {
     ],
     reviewer: {
       agent: 'reviewer',
-      model: 'claude-opus-5',
+      model: 'claude-opus-5-5',
       reviewedAt: '2026-08-11T00:00:00Z',
     },
   };

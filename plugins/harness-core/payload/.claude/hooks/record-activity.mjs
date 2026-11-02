@@ -2,14 +2,14 @@
 // SessionStart / UserPromptSubmit / Stop Hook — 活動タイムスタンプの機械的記録（非ブロッキング）
 //
 // 方針:
-// - 「いつ活動があったか」という機械的事実だけを 1 行 1 JSON で追記する。
-//   会話内容・プロンプト本文・秘密情報は一切保存しない（ts / event / session_id のみ）。
-// - 用途: estimate-session-time.mjs が logs/ の「所要時間」欄を自動推定するための入力。
-//   record-subagent.mjs と同じ設計（append-only / 失敗しても常に exit 0）。
-// - 層: harness-core（Plugin 分割時）。依存は harness-paths.mjs のみで、
-//   write-work-log の「所要時間」欄を estimate-session-time.mjs 経由で埋めるための入力。
-// - 記録先: <永続領域>/activity-log.jsonl（harness-paths.mjs が解決。既定は
-//   ~/.local/state/<ns>/ で <ns> はプロジェクト名から導出する（Cookpit では cookpit-harness）。
+// - 「いつ活動があったか」という機械的事実だけを1行1 JSONで追記する。
+//   会話内容・プロンプト本文・秘密情報は一切保存しない（ts / event / session_idのみ）。
+// - 用途: estimate-session-time.mjsがlogs/ の「所要時間」欄を自動推定するための入力。
+//   record-subagent.mjsと同じ設計（append-only / 失敗しても常にexit 0）。
+// - 層: harness-core（Plugin分割時）。依存はharness-paths.mjsのみで、
+//   write-work-logの「所要時間」欄をestimate-session-time.mjs経由で埋めるための入力。
+// - 記録先: <永続領域>/activity-log.jsonl（harness-paths.mjsが解決。既定は
+//   ~/.local/state/<ns>/ で <ns> はプロジェクト名から導出する（例: package.jsonのnameがshopならshop-harness）。
 //   リポジトリ外のためコンテナ回収でも失われない）。
 
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
@@ -40,6 +40,10 @@ function main() {
     event: input.hook_event_name || 'unknown',
     session_id: input.session_id || null,
   };
+  // SessionEndのreason（clear / logout / other等）。会話本文は保存しない。
+  if (typeof input.reason === 'string' && input.reason.trim() !== '') {
+    entry.reason = input.reason.trim();
+  }
 
   try {
     mkdirSync(dirname(LOG), { recursive: true });

@@ -1,4 +1,4 @@
-// run 状態の検証・原子的書き込み・破損検出のテスト。
+// run状態の検証・原子的書き込み・破損検出のテスト。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -7,12 +7,14 @@ import {
   readdirSync,
   readFileSync,
   statSync,
+  utimesSync,
   writeFileSync,
   rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   RUN_STATE_FILENAME,
@@ -264,7 +266,7 @@ test('ロックは排他され、解放後に再取得できる', () => {
   }
 });
 
-// ── 再監査 2026-07-26: 同時更新で更新が失われないこと（R-004 回帰）──
+// ── 再監査2026-07-26: 同時更新で更新が失われないこと（R-004回帰）──
 
 test('並行 updateRunState で更新が失われない', async () => {
   const { opts, state: stateDirPath, cleanup } = sandbox();
@@ -294,11 +296,46 @@ test('並行 updateRunState で更新が失われない', async () => {
   }
 });
 
+test('古いロックの回収が競合しても、別プロセスの更新が失われない', async () => {
+  const { state: stateDirPath, root, opts, cleanup } = sandbox();
+  try {
+    saveRunState(createRunState({ taskId: 'stale-race' }), opts);
+    // 異常終了したプロセスが残した古いロック（mtimeを1分前にする）。
+    const lockPath = join(stateDirPath, `${RUN_STATE_FILENAME}.lock`);
+    writeFileSync(lockPath, '0');
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lockPath, old, old);
+    const cli = fileURLToPath(new URL('../scripts/harness-run.mjs', import.meta.url));
+    const env = { ...process.env, HARNESS_STATE_DIR: stateDirPath, CLAUDE_PROJECT_DIR: root };
+    const names = ['lint', 'test', 'build', 'harness', 'type-check', 'format'];
+    await Promise.all(
+      names.map(
+        (name) =>
+          new Promise((resolve) => {
+            const p = spawn(process.execPath, [cli, 'gate', '--name', name, '--result', 'pass'], {
+              env,
+              stdio: 'ignore',
+            });
+            p.on('exit', resolve);
+          }),
+      ),
+    );
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true);
+    const missing = names.filter((n) => !(n in loaded.state.gateResults));
+    assert.deepEqual(missing, [], `古いロックの回収の競合で失われたゲート: ${missing.join(', ')}`);
+    const leftovers = readdirSync(stateDirPath).filter((f) => f.includes('.lock'));
+    assert.deepEqual(leftovers, [], `ロックの残り: ${leftovers.join(', ')}`);
+  } finally {
+    cleanup();
+  }
+});
+
 test('別プロセスからの並行更新で更新が失われない', async () => {
   const { state: stateDirPath, root, opts, cleanup } = sandbox();
   try {
     saveRunState(createRunState({ taskId: 'conc-proc' }), opts);
-    const cli = new URL('../scripts/harness-run.mjs', import.meta.url).pathname;
+    const cli = fileURLToPath(new URL('../scripts/harness-run.mjs', import.meta.url));
     const env = { ...process.env, HARNESS_STATE_DIR: stateDirPath, CLAUDE_PROJECT_DIR: root };
     const names = ['lint', 'test', 'build', 'harness'];
     await Promise.all(
