@@ -1,0 +1,6 @@
+{
+  "schema_version": 2,
+  "repository": "<owner>/<repo>",
+  "cli_launch_verified": true,
+  "cloud_launch_verified": false
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # タスク品質メトリクスの雛形を生成する（§19）。
-# 値は埋めず unknown/0 のテンプレを作るだけ（推測値を入れない）。秘密情報・会話全文は保存しない。
+# 値は埋めずunknown/0のテンプレを作るだけ（推測値を入れない）。秘密情報・会話全文は保存しない。
 #
 # 使い方:
 #   bash .claude/scripts/record-task-metrics.sh <task-id> <feature-name> <change-level>
@@ -32,7 +32,13 @@ if [ -e "$OUT" ]; then
   exit 0
 fi
 
-DATE="$(date +%F)"
+# 日付はHARNESS_TZ（旧COOKPIT_TZ・既定Asia/Tokyo）。`date +%F`だとUTC環境でずれる。
+DATE="$(
+  node --input-type=module -e '
+import { dayInTz } from "./.claude/lib/harness-time.mjs";
+process.stdout.write(dayInTz());
+' 2>/dev/null || TZ="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}" date +%F
+)"
 TPL="$OUT_DIR/_TEMPLATE.yml"
 if [ -e "$TPL" ]; then
   sed -e "s/^task_id:.*/task_id: ${TASK_ID}/" \
@@ -47,11 +53,11 @@ fi
 
 echo "created: $OUT"
 
-# subagent-log から agents.calls を自動補完（feature が一致する行を数える）
-# AGENT_CALLS は set -u 環境での unbound variable を防ぐため必ず初期化する
-# （2026-07-11 に unbound variable 障害の報告あり・IMP-2026-024 の防御的修正）
+# subagent-logからagents.callsを自動補完（featureが一致する行を数える）
+# AGENT_CALLSはset -u環境でのunbound variableを防ぐため必ず初期化する
+# （2026-07-11にunbound variable障害の報告あり・IMP-2026-024の防御的修正）
 AGENT_CALLS="0"
-# node へは環境変数で渡し、シェル展開を node -e 文字列に埋め込まない（set -u / 特殊文字対策）
+# nodeへは環境変数で渡し、シェル展開をnode -e文字列に埋め込まない（set -u / 特殊文字対策）
 # 保存先は永続領域（リポジトリ外）を優先し、旧 .claude/state/ もフォールバックで見る
 SUBAGENT_LOG="$(node --input-type=module -e '
 import { resolveReadablePath } from "./.claude/lib/harness-paths.mjs";
@@ -88,7 +94,7 @@ fs.writeFileSync(out, t);
   fi
 fi
 
-# docs の有無から process.missing_documents を自動補完
+# docsの有無からprocess.missing_documentsを自動補完
 MISSING=0
 if [ ! -f "$ROOT/docs/designs/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
 if [ ! -f "$ROOT/docs/implementation-plans/${FEATURE}.md" ]; then MISSING=$((MISSING + 1)); fi
@@ -106,7 +112,7 @@ fs.writeFileSync(out, t);
 " && echo "process.missing_documents を自動補完: ${MISSING}"
 fi
 
-# machine セクション（所要時間・トークン・Agent 呼び出し・ゲート実行）を transcript から自動集計
+# machineセクション（所要時間・トークン・Agent呼び出し・ゲート実行）をtranscriptから自動集計
 if node "$ROOT/.claude/scripts/collect-task-metrics.mjs" \
   --feature "$FEATURE" --task-id "$TASK_ID" --write; then
   :
@@ -114,4 +120,4 @@ else
   echo "⚠ collect-task-metrics.mjs の自動集計に失敗（machine セクションはテンプレのまま。手動で再実行可）" >&2
 fi
 
-echo "（意味的な数値 = quality/process は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"
+echo "（意味的な数値 = quality/process は、振り返りを頼まれたセッションか人間が埋める。自動取得できない値は unknown のままにする）"

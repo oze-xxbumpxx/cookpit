@@ -1,0 +1,6 @@
+{
+  "name": "harness-devin",
+  "version": "0.1.0",
+  "description": "Optional Devin delegation layer: Issue hand-off, PR waiting, automated review loop, and delegation records.",
+  "skills": "./skills/"
+}

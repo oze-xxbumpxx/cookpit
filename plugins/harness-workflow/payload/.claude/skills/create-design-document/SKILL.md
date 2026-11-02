@@ -1,32 +1,38 @@
 ---
 name: create-design-document
 description: >
-  機能の技術設計書を docs/designs/<feature-name>.md に作成する手順とテンプレート。
-  architecture-designer が L2/L3 の設計時に使う。対象外項目は削除せず「対象外」と明記する。
+  機能の技術設計書をdocs/designs/<feature-name>.mdに作成する手順とテンプレート。
+  L2/L3の設計をこのセッションで書くときに使う。実装コードは変えない。
+  対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 設計書作成スキル
 
-`docs/designs/<feature-name>.md` を作成する。`<feature-name>` は kebab-case
-（`.claude/state/current-feature` の値と一致させる）。
+`docs/designs/<feature-name>.md`を作成する。`<feature-name>`はkebab-case
+（`.claude/state/current-feature`の値と一致させる）。
 
 ## 手順
 
-1. 入力を確認する：要求メモ（Orchestrator）、`docs/03-architecture.md`、
-   `docs/04-domain-model.md`、関連する既存実装。
-2. 既存の `docs/designs/<feature-name>.md` があれば**更新**する（重複作成しない）。
+1. 入力を確認する：このセッションの依頼、`AGENTS.md`、関連する既存実装。
+   未作成のアーキテクチャ / ドメイン文書は読まない。
+2. 既存の`docs/designs/<feature-name>.md`があれば**更新**する（重複作成しない）。
+   書く前に[ask-questions](../ask-questions/SKILL.md)で「工程: 設計・優先度: 高」の問いを出す。
+   論点の記録（`docs/discussions/<feature-name>.md`）の「後の工程へ」に残った設計の問いも、ここで「回答待ち」にして出し直す。答えが来るまで該当の節を書かない。
 3. 下のテンプレートの**全セクションを残す**。該当しないセクションは削除せず
    「対象外」または「変更なし」と明記する。
-4. 設計判断は「提案」として書き、トレードオフがあれば併記して推奨を 1 つ示す。
-5. アーキテクチャ原則（依存方向・集約境界・create/reconstruct・手動 DI）に反しないか
+4. 設計判断は「提案」として書き、トレードオフがあれば併記して推奨を1つ示す。
+5. アーキテクチャ原則（依存方向・集約境界・create/reconstruct・手動DI）に反しないか
    セルフチェックする。
-6. **外部 API / 外部ストレージへの I/O を含む場合のみ**、`## エラー処理` 節に次の5項目を
-   必ず記載する。該当しない変更（Domain 純粋ロジック・ドキュメントのみ）では省略してよい。
-   - (a) リトライ: 上限回数と指数バックオフの方針（無限リトライ禁止）
-   - (b) タイムアウト: 外部呼び出しのタイムアウト設定値と未設定時の影響
-   - (c) 冪等性: 書き込み・再送操作の重複防止方針（冪等性キー等）
-   - (d) 部分失敗: 多段処理の途中失敗時のデータ整合性保証（補償/ロールバック方針）
-   - (e) フォールバック: 外部依存ダウン時のユーザー向け縮退挙動
+6. 冒頭の「この設計を一言で」には、何を作り、ユーザーにとって何が変わるかを2〜3文で書く。
+   「現状構成」「変更後構成」「データフロー」には、文字の図ではなくmermaidの図を1つ以上入れる（GitHubのPRの画面でも図として読める）。
+7. 決めた結果だけを本文に書き、理由と選ばなかった案は論点の記録に残す。「決めたこと（問いと答え）」の節は論点の記録へのリンクだけにする。
+8. **外部API / 外部ストレージへのI/Oを含む場合のみ**、`## エラー処理`節に次の5項目を
+   必ず記載する。該当しない変更（Domain純粋ロジック・ドキュメントのみ）では省略してよい。
+   - (a)リトライ: 上限回数と指数バックオフの方針（無限リトライ禁止）
+   - (b)タイムアウト: 外部呼び出しのタイムアウト設定値と未設定時の影響
+   - (c)冪等性: 書き込み・再送操作の重複防止方針（冪等性キー等）
+   - (d)部分失敗: 多段処理の途中失敗時のデータ整合性保証（補償/ロールバック方針）
+   - (e)フォールバック: 外部依存ダウン時のユーザー向け縮退挙動
 
 ## テンプレート
 
@@ -35,8 +41,9 @@ description: >
 
 - ステータス: draft | confirmed
 - レベル: L2 | L3
-- 関連: docs/requirements/<feature-name>.md（あれば） / 関連 ADR
+- 関連: docs/requirements/<feature-name>.md（あれば） / 関連 ADR / 論点の記録 docs/discussions/<feature-name>.md
 
+## この設計を一言で
 ## 背景
 ## 目的
 ## 要件
@@ -56,29 +63,43 @@ description: >
 ## テスト方針
 ## 移行とリリース
 ## リスク
-## 未決事項
+## 決めたこと（問いと答え）（docs/discussions/<feature-name>.md へのリンクだけ）
+## 未決事項（論点の記録の「回答待ち」「仮決定」へのリンクと、件数）
 ```
 
 ## 完了条件
 
 - 全セクションが存在し、対象外は明記されている。
 - 「未決事項」にユーザー確認が必要な点が列挙されている。
+- 設計の段階で出した問いが、すべて論点の記録で「決定」になり、「選ばなかった理由」と「反映先」が埋まっている（`discussion.mjs check`が通る）。
+- 「この設計を一言で」があり、構成とデータフローにmermaidの図がある。
+
+## 承認を頼むとき
+
+設計書のPRを出したら、確認のページに設計の説明を載せて承認を頼む。
+
+1. 設計の説明をHTMLの断片でscratchpadに書く。順番は、一言で → 今と変更後の図 → 動きの流れの図 → 画面が変わるならその画面の画像 → 選んだ案と選ばなかった案の表 → 変わらないこと・やらないこと。
+   図はmermaid（`<figure class="fig"><pre class="mermaid">…</pre></figure>`）。既存の画面はアプリのブラウザで撮り、新しい画面は見本の画像かHTMLで描いた見本を使う。
+   見出しには結論を書く（`.claude/rules/writing-style.md`）。
+2. 先に`discussion.mjs stage <feature-name> design approval --doc docs/designs/<feature-name>.md`で「承認待ち」にする（ページは作った時点の進み具合を埋め込むため）。
+3. `node .claude/scripts/discussion.mjs page <feature-name> --out <path> --review <断片>`でページを作り、同じURLへ出し直す（ask-questionsの「ユーザーへの出し方」）。PRの説明の先頭に確認のページのURLを書く。
+4. マージされたら`discussion.mjs stage <feature-name> design done --pr <番号>`。仮決定で異議が無かったものを「決定」に移す。
 - アーキテクチャ原則に反する設計が含まれていない。
 
 ## 良い例（実タスクの成果物）
 
 - **トレードオフ併記 + 推奨（手順4の実例）**: `cookpit/test-infra-expansion 設計書` §4 —
-  テスト DB 戦略を比較表（§4.2）で並べ、推奨 1 案（§4.3 PGlite）を理由つきで提示。
-- **後続 Agent への引き継ぎ**: `cookpit/store-master 設計書` §18「Recipe 先例との構造的差分」
-  §19「契約テスト観点（test-designer への引き継ぎ）」— 既存実装との差分を明示し、
-  試験観点を設計書側から test-designer へ渡している
-  （出典: reviewer が設計との整合性を問題なしと確認 — `cookpit/store-master レビュー`）。
+  テストDB戦略を比較表（§4.2）で並べ、推奨1案（§4.3 PGlite）を理由つきで提示。
+- **試験計画への引き継ぎ**: `cookpit/store-master 設計書` §18「Recipe先例との構造的差分」
+  §19「契約テスト観点（試験計画への引き継ぎ）」— 既存実装との差分を明示し、
+  試験観点を設計書側から`create-test-plan`へ渡している
+  （出典: reviewerが設計との整合性を問題なしと確認 — `cookpit/store-master レビュー`）。
 
 ## 悪い例（実タスクで手戻りになったもの）
 
-- **ライブラリ API を採用バージョンで未確認のまま指定**: `cookpit/test-infra-expansion 設計書`
-  は Vitest の `defineWorkspace` を指定したが、インストールされた Vitest 3.2.6 では非推奨で、
-  実装時に `test.projects` への置き換えが必要になった。設定ファイル・フレームワーク API を
-  設計書に指定するときは、採用バージョンの現行 API か（非推奨でないか）を確認する
-  （出典: `cookpit/test-infra-expansion` 事象 2。
-  ※1 回目の観測のため手順への必須化は保留 — 再発時に昇格検討）。
+- **ライブラリAPIを採用バージョンで未確認のまま指定**: `cookpit/test-infra-expansion 設計書`
+  はVitestの`defineWorkspace`を指定したが、インストールされたVitest 3.2.6では非推奨で、
+  実装時に`test.projects`への置き換えが必要になった。設定ファイル・フレームワークAPIを
+  設計書に指定するときは、採用バージョンの現行APIか（非推奨でないか）を確認する
+  （出典: `cookpit/test-infra-expansion`事象2。
+  ※1回目の観測のため手順への必須化は保留 — 再発時に昇格検討）。

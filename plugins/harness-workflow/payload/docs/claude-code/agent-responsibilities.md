@@ -1,96 +1,46 @@
-# Agent 責務一覧
+# エージェントの分け方
 
-各 Subagent の責務・入出力・ツール権限・禁止事項の早見表。定義の実体は
-`.claude/agents/<name>.md`。詳細な工程手順はそこと各 Skill にある。
+2026-10-25に、連鎖していた専門役をメインのセッションへ畳んだ。根拠はAnthropicの「Building agents: When to fold subagents into your main agent loop」。手順は`develop-feature`スキル。検証の起動条件は[orchestration-policy.md](./orchestration-policy.md)。
 
-## 一覧（11・IMP-2026-031）
+子エージェントは、別の文脈が要るときだけ残す。問題の種類や役割の名前では分けない。
 
-| Agent                     | 役割                                                           | 主な出力                                                | ツール                                          | コード変更 |
-| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------- | ---------- |
-| orchestrator              | 指揮・委譲・統合                                               | 委譲計画・統合報告                                      | Agent, Read, Grep, Glob                         | しない     |
-| architecture-designer     | 技術設計（L3 は requirements + 条件付き性能節）                | `docs/requirements/` + `docs/designs/<feature>.md`      | Read, Grep, Glob, Write                         | しない     |
-| contract-designer         | 契約設計（Zod/Drizzle/Hono RPC/DTO）。必要時のみ               | `docs/designs/<feature>.md` の Contract 節              | Read, Grep, Glob, Write                         | しない     |
-| implementation-planner    | 実装計画                                                       | `docs/implementation-plans/<feature>.md`                | Read, Grep, Glob, Write                         | しない     |
-| implementer               | 実装・単体/E2E・lint/型チェック                                | ソースコード・テスト                                    | Read, Grep, Glob, Edit, Write, Bash             | する       |
-| test-designer             | 試験観点・試験計画                                             | `docs/tests/<feature>.md`                               | Read, Grep, Glob, Write                         | しない     |
-| reviewer                  | 整合性・品質・文書レビュー                                     | 4 軸指摘 + review assessment                            | Read, Grep, Glob, Bash                          | しない     |
-| security-reviewer         | セキュリティ専門レビュー（OWASP・認証/認可・秘密情報・脆弱性） | 4 軸指摘 + 専門 evidence                                | Read, Grep, Glob, Bash                          | しない     |
-| reflection-agent          | 振り返り・改善候補抽出                                         | `docs/claude-code/improvements/candidates/<task-id>.md` | Read, Grep, Glob, Write                         | しない     |
-| agent-evaluator           | 固定評価ケースで回帰評価                                       | `docs/claude-code/improvements/evaluations/`            | Read, Grep, Glob, Write                         | しない     |
-| agent-improvement-manager | 横断分析・改善提案                                             | `docs/claude-code/improvements/proposals/`              | Read, Grep, Glob, Write, Agent(agent-evaluator) | しない     |
+## 残したもの
 
-> ツール権限は最小限に絞る。`Agent` を持つのは **orchestrator** と
-> **agent-improvement-manager**（evaluator のみ）。プロダクションコードを変更するのは
-> **implementer** のみ（E2E テストも同 Agent が条件付きで担当）。
-> 吸収済み（起動しない）: requirements-analyst / performance-designer /
-> e2e-test-implementer / document-reviewer。
-> 改善系の詳細は [improvement-cycle.md](./improvement-cycle.md) を参照。
+| 名前                                         | 役割                                                               | 残した理由                                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| reviewer                                     | 実装のあと、品質・整合性・テスト不足を見る。コードは直さない       | 書いた本人の文脈を持たない検証。指示が「直すな」で、実装と衝突する                                       |
+| security-reviewer                            | 認証、秘密情報、外部入出力、依存の追加などを見る。コードは直さない | 検証を並行し、使い終わった文脈を捨てる。確認項目が品質レビューと衝突し、毎回メインに載せると文脈が増える |
+| 広い探索（Claude Codeでは組み込みのExplore） | 場所と結論だけ返す                                                 | 検索の途中経過はメインに残さなくてよい                                                                   |
 
-## architecture-designer
+定義は`.claude/agents/reviewer.md`と`.claude/agents/security-reviewer.md`。Exploreに定義ファイルは無い。`Agent`ツールを持つプロジェクト内の定義は無い。検証役は互いを起動しない。
 
-- 技術設計、レイヤーと責務、API/DB/フロント/バックエンド設計、データフロー、
-  エラー処理、ログと監視、セキュリティ、性能、後方互換性、テスト方針。
-- **L3**: `docs/requirements/<feature>.md` も作成（Skill `create-requirements-document`）。
-- 外部 I/O・大量データ時は設計書の性能節を厚く書く（旧 performance-designer）。
-- 成果は `docs/designs/<feature>.md` に保存（Skill `create-design-document`）。
-- **実装コードは変更しない。**
-- このプロジェクトの設計判断（アーキテクチャ・ドメインモデル・DB スキーマ）は
-  確定前に Orchestrator 経由でユーザー確認を要する。
+起動方法と機能が無い場合の扱いは[develop-feature](../../.claude/skills/develop-feature/SKILL.md#ツールごとの起動方法)に従う。
 
-## contract-designer
+## スキルに畳んだもの
 
-- 契約（Hono RPC 入出力 / `packages/api-contract` の Zod / Drizzle スキーマ / DTO /
-  将来の外部連携メッセージ）の型・必須/任意・nullability・バージョン・後方互換・エラー形式・
-  冪等性キー・サンプル・契約テスト方針。
-- **契約の新設・変更があるときだけ**起動する（過剰工程の禁止）。
-- 成果は `docs/designs/<feature>.md` の Contract 節（大きければ `-contract.md` に分割）。
-- **実装コードは変更しない**（Zod/Drizzle/Hono の実装は implementer）。
-- 後方互換破壊はユーザー確認なしに確定しない。入出力スキーマは Zod で
-  `packages/api-contract` に定義して共有する（`.claude/rules/presentation-layer.md`）。
+| 以前の子エージェント      | いま読むスキル                                                            | 畳んだ理由                                                                 |
+| ------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| orchestrator              | `develop-feature`、`classify-change`                                      | 振り分け役。計画を書く側と実行する側が分かれると、途中で計画を直せない     |
+| architecture-designer     | `ask-questions`、`create-requirements-document`、`create-design-document` | 設計の結果を、計画と実装がすぐ使う                                         |
+| implementation-planner    | `create-implementation-plan`                                              | 設計の直後に同じ文書を触る                                                 |
+| test-designer             | `create-test-plan`                                                        | 計画と対で、同じ設計を読む                                                 |
+| implementer               | `implement-change`                                                        | 設計の理由を持ったまま実装する。編集ツールはメインのセッションが持っている |
+| reflection-agent          | `reflect-task`                                                            | 同じタスクの記録を読む後処理。改善サイクルは休眠                           |
+| agent-improvement-manager | `improve-harness`                                                         | 休眠の振り分け役。評価役をさらに子に呼んでいた                             |
+| agent-evaluator           | `improve-harness`（一覧は`.claude/evals/folded-loop-checklist.md`）       | 休眠。入れ子の採点ループをやめた                                           |
 
-## implementation-planner
+## フックのままにしたもの
 
-- 設計書を実装可能な単位へ分解、変更対象ファイル特定、ファイルごとの変更内容、
-  実装順序、依存関係、各ステップの完了条件、テスト追加箇所、リスク、ロールバック方法、
-  ドキュメント更新箇所。
-- 成果は `docs/implementation-plans/<feature>.md`（Skill `create-implementation-plan`）。
-- **実装コードは変更しない。**
+文章ではなく、実行時に見る。
 
-## implementer
+| 仕組み                         | 見ていること                                            |
+| ------------------------------ | ------------------------------------------------------- |
+| `guard-dangerous`              | 破壊的なgit操作、本番相当の操作                         |
+| `check-deliverables`           | L2/L3でソースを変えたとき、設計・計画・試験計画があるか |
+| `permissions.deny`（settings） | `.env`や秘密鍵の読み書き                                |
+| `validate-agent-config`        | エージェント定義とスキルのfrontmatter                   |
+| `record-subagent`              | 検証役が動いたことの記録                                |
 
-- 確定済みの `docs/designs/<feature>.md` と `docs/implementation-plans/<feature>.md` を
-  実装前に必ず確認する。
-- 計画に沿って実装し、必要な単体テストを作成、`pnpm lint` / `pnpm type-check` /
-  該当パッケージの `pnpm test`（Vitest・全層導入済み）を実行する。
-- **L3 かつ E2E 基盤整備済み**では結合/E2E テストも実装する（旧 e2e-test-implementer）。
-- 設計から逸脱が必要になったら**独断で変更せず Orchestrator へ差し戻す。**
-- アーキテクチャ原則は `.claude/rules/` を遵守（特に domain 層の制約）。
+## 消したもの
 
-## test-designer
-
-- 単体/結合試験観点、正常系・異常系・境界値・権限・データ整合性・冪等性、
-  回帰試験範囲、試験データ、完了条件。
-- 成果は `docs/tests/<feature>.md`（Skill `create-test-plan`）。
-- **コードは変更しない。**（E2E 実装は implementer）
-
-## reviewer
-
-- 要件充足性、設計との整合性、実装計画との整合性、コード品質、責務分離、
-  エラー処理、セキュリティ（概要）、性能（概要）、テスト不足、ドキュメント更新漏れ。
-- 文書成果物の事実整合・矛盾・参照生存・鮮度（旧 document-reviewer。条件付き）。
-- 原則コードを変更せず、指摘を action / impact / evidence / status の 4 軸で検証する。
-- current packet 用の `review_assessment` JSON を返し、Orchestrator が
-  `docs/reviews/<feature>.md` の監査ログと marker へ統合する。
-- 人間へ渡すのは主観・不可逆・未知の最大 3 件。AI 自身はマージを承認しない。
-- 事実確認は自身の Read/Grep で行う（他 Agent を起動しない）。
-
-## security-reviewer
-
-- 起動条件の正典は [orchestration-policy.md](./orchestration-policy.md) §security-reviewer。
-  L3 は原則必須。L2 はセキュリティ触点があるとき必須、省略条件に該当すれば省略可
-  （Presentation のみ / 契約不変の内部リファクタ / テスト基盤のみ 等）。
-- OWASP Top 10・入力検証（Zod 境界）・認証/認可の漏れ・秘密情報のログ漏洩・
-  `pnpm audit` による依存脆弱性・セキュリティヘッダー（フロント変更時のみ）を確認する。
-- `reviewer` と役割を分担: reviewer は品質/整合性を担当、security-reviewer はセキュリティ深掘り。
-- コードを変更せず、reviewer と同じ 4 軸の指摘と専門 evidence を返す。Reviewer / Orchestrator が
-  重複を除いて assessment へ統合する。
+上の8つの定義ファイル。中身はスキルと、この一覧と、orchestration-policyに移した。古いevalsの`cases/`は配布元向けのまま残し、休眠とする。

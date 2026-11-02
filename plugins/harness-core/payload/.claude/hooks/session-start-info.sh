@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SessionStart Hook — セッション開始時のコンテキスト注入。
-# 1) 実在する品質コマンドの検出結果（detect-project-commands.sh）
-# 2) 最新の作業ログ（CLAUDE.md「前回作業は logs/ の最新ファイル」の情報源を自動提示）
-# 読み取り専用。失敗してもセッションを止めない（常に exit 0）。
+# 1)実在する品質コマンドの検出結果（detect-project-commands.sh）
+# 2)最新の作業ログ（CLAUDE.md「前回作業はlogs/ の最新ファイル」の情報源を自動提示）
+# 読み取り専用。失敗してもセッションを止めない（常にexit 0）。
 set -uo pipefail
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"

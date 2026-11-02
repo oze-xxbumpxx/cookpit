@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # 週次スプリントレビュー用の集計（読み取り専用・何も変更しない）。
-# sprint-review Skill の Step 1 で使う。期間内の logs / メトリクス / roadmap 現在位置 /
-# 改善バックログ / git 履歴を 1 出力に集約し、レビュー文書の材料を出す。
+# sprint-review SkillのStep 1で使う。期間内のlogs / メトリクス / roadmap現在位置 /
+# 改善バックログ / git履歴を1出力に集約し、レビュー文書の材料を出す。
 #
 # 使い方: bash .claude/scripts/sprint-summary.sh [--since YYYY-MM-DD] [--until YYYY-MM-DD]
-#         （既定: 直近 7 日間）
+#         （既定: 直近7日間）
 set -euo pipefail
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$ROOT"
 
-# COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
+# COOKPIT_TZは旧名（後方互換）。新規はHARNESS_TZを使う。
 TZ_NAME="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}"
 UNTIL="$(TZ="$TZ_NAME" date +%F)"
 SINCE="$(TZ="$TZ_NAME" date -d '6 days ago' +%F 2>/dev/null || TZ="$TZ_NAME" date -v-6d +%F)"
@@ -82,7 +82,7 @@ for y in docs/claude-code/improvements/metrics/TASK-*.yml; do
 done
 [ "$METRICS_FOUND" -eq 0 ] && echo "- 期間内のメトリクスなし" && echo
 
-# ── roadmap の現在位置 ──────────────────────────────────────
+# ── roadmapの現在位置 ──────────────────────────────────────
 echo "## roadmap 現在位置（最新ログの Sprint 行 + docs/05-roadmap.md）"
 echo
 LATEST_LOG="$(ls logs/20??-??-??.md 2>/dev/null | sort | tail -1 || true)"
@@ -98,7 +98,7 @@ if [ -n "$SPRINT_NUM" ] && [ -f docs/05-roadmap.md ]; then
 fi
 echo
 
-# ── 改善バックログ（未決定 IMP） ────────────────────────────
+# ── 改善バックログ（未決定IMP） ────────────────────────────
 BACKLOG="docs/claude-code/improvements/improvement-backlog.md"
 echo "## 改善バックログ（accepted/rejected 以外の IMP）"
 echo
@@ -109,7 +109,7 @@ else
 fi
 echo
 
-# ── git 履歴 ────────────────────────────────────────────────
+# ── git履歴 ────────────────────────────────────────────────
 echo "## git 履歴（$SINCE 〜 $UNTIL）"
 echo
 git log --since="$SINCE 00:00" --until="$UNTIL 23:59" --date=short \

@@ -1,39 +1,59 @@
 {
   "name": "harness-workflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": [
-    ".claude/agents/orchestrator.md",
-    ".claude/agents/architecture-designer.md",
-    ".claude/agents/implementation-planner.md",
-    ".claude/agents/implementer.md",
     ".claude/agents/reviewer.md",
-    ".claude/agents/test-designer.md",
     ".claude/agents/security-reviewer.md",
-    ".claude/skills/classify-change/SKILL.md",
-    ".claude/skills/create-requirements-document/SKILL.md",
-    ".claude/skills/create-design-document/SKILL.md",
-    ".claude/skills/create-implementation-plan/SKILL.md",
-    ".claude/skills/create-test-plan/SKILL.md",
-    ".claude/skills/create-adr/SKILL.md",
-    ".claude/skills/validate-deliverables/SKILL.md",
-    ".claude/skills/kickoff-session/SKILL.md",
-    ".claude/skills/close-session/SKILL.md",
-    ".claude/hooks/check-deliverables.mjs",
-    ".claude/hooks/record-subagent.mjs",
-    ".claude/hooks/validate-agent-config.mjs",
-    ".claude/scripts/session-briefing.sh",
-    ".claude/scripts/check-review-coverage.mjs",
-    ".claude/scripts/review-readiness.mjs",
-    ".claude/tests/review-readiness.test.mjs",
     ".claude/evals/cases/documentation-only-change.md",
     ".claude/evals/cases/small-bug-fix.md",
-    "docs/claude-code/document-policy.md",
-    "docs/claude-code/development-workflow.md",
-    "docs/claude-code/definition-of-done.md",
+    ".claude/evals/folded-loop-checklist.md",
+    ".claude/hooks/check-deliverables.mjs",
+    ".claude/hooks/discussion-status.mjs",
+    ".claude/hooks/record-subagent.mjs",
+    ".claude/hooks/validate-agent-config.mjs",
+    ".claude/scripts/discussion-page.html",
+    ".claude/scripts/discussion.mjs",
+    ".claude/scripts/review-readiness.mjs",
+    ".claude/scripts/session-briefing.sh",
+    ".claude/skills/ask-questions/SKILL.md",
+    ".claude/skills/ask-questions/template.md",
+    ".claude/skills/classify-change/SKILL.md",
+    ".claude/skills/close-session/SKILL.md",
+    ".claude/skills/create-adr/SKILL.md",
+    ".claude/skills/create-design-document/SKILL.md",
+    ".claude/skills/create-implementation-plan/SKILL.md",
+    ".claude/skills/create-requirements-document/SKILL.md",
+    ".claude/skills/create-requirements-document/checklist.md",
+    ".claude/skills/create-test-plan/SKILL.md",
+    ".claude/skills/develop-feature/SKILL.md",
+    ".claude/skills/implement-change/SKILL.md",
+    ".claude/skills/kickoff-session/SKILL.md",
+    ".claude/skills/validate-deliverables/SKILL.md",
+    ".claude/templates/AGENTS.md",
+    ".claude/templates/CLAUDE.md",
+    ".claude/tests/discussion.test.mjs",
+    ".claude/tests/record-subagent.test.mjs",
+    ".claude/tests/review-readiness.test.mjs",
+    ".claude/tests/validate-agent-config.test.mjs",
     "docs/claude-code/agent-responsibilities.md",
-    "docs/claude-code/orchestration-policy.md"
+    "docs/claude-code/definition-of-done.md",
+    "docs/claude-code/development-workflow.md",
+    "docs/claude-code/document-policy.md",
+    "docs/claude-code/orchestration-policy.md",
+    "docs/discussions/README.md"
   ],
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/discussion-status.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
@@ -65,6 +85,17 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-deliverables.mjs\""
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "project_settings|skills",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-agent-config.mjs\""
           }
         ]
       }

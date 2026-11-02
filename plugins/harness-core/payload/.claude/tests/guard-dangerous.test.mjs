@@ -1,8 +1,8 @@
 // guard-dangerous.mjs（PreToolUse Hook）の安全境界テスト。
-// 実際にフックをサブプロセスとして起動し、終了コードで allow(0) / deny(2) を検証する。
+// 実際にフックをサブプロセスとして起動し、終了コードでallow(0) / deny(2)を検証する。
 //
-// 保護ファイルの人間承認層は撤去済み（承認境界は PR レビュー）。
-// 本フックは破壊的操作・秘密情報・Hook 回避のみを決定論的に拒否する。
+// 保護ファイルの人間承認層は撤去済み（承認境界はPRレビュー）。
+// 本フックは破壊的操作・秘密情報・Hook回避のみを決定論的に拒否する。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -29,7 +29,7 @@ function sandbox() {
   };
 }
 
-/** フックを起動して終了コードを返す。rawInput を渡すと JSON 化せずそのまま送る。 */
+/** フックを起動して終了コードを返す。rawInputを渡すとJSON化せずそのまま送る。 */
 function runHook(sb, payload, { rawInput = null, env: extraEnv = {} } = {}) {
   const env = {
     ...process.env,
@@ -78,7 +78,7 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
     for (const path of [
       '.claude/hooks/guard-dangerous.mjs',
       '.claude/settings.json',
-      '.claude/agents/implementer.md',
+      '.claude/agents/reviewer.md',
       '.claude/rules/coding-standards.md',
       '.claude/skills/quality-gates/SKILL.md',
       '.claude/lib/harness-state.mjs',
@@ -229,6 +229,99 @@ test('インタープリタでも非保護パスなら妨げない（過剰検�
       ALLOW,
     );
     assert.equal(runHook(sb, bash('node --test .claude/tests/harness-state.test.mjs')).code, ALLOW);
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('作業ツリーを破棄する git 操作を拒否する', () => {
+  const sb = sandbox();
+  try {
+    for (const command of [
+      'git clean -fd',
+      'git clean -df',
+      'git clean -xfd',
+      'git checkout .',
+      'git checkout -- .',
+      'git checkout HEAD -- .',
+      'git restore .',
+      'git restore -- .',
+      'git stash drop',
+      'git stash clear',
+      'git branch -D old-feature',
+      'git push origin --delete old-feature',
+      'git push origin :refs/heads/old-feature',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, DENY, `許可されています: ${command}`);
+    }
+    for (const command of [
+      'git clean -n',
+      'git clean -nd',
+      'git restore src/foo.ts',
+      'git checkout -b feature/x',
+      'git checkout src/foo.ts',
+      'git stash pop',
+      'git branch -d merged-feature',
+      'git push -u origin feature/x',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, ALLOW, `拒否されています: ${command}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('本番を示す語がある DB 破壊操作と AWS 削除を拒否する', () => {
+  const sb = sandbox();
+  try {
+    for (const command of [
+      'npx sequelize-cli db:drop --env production',
+      'sequelize db:drop --env prod',
+      'NODE_ENV=production sequelize db:drop',
+      'prisma migrate reset --force --schema=prisma/schema.production.prisma',
+      'psql -c "DROP DATABASE production"',
+      'dropdb production',
+      'DATABASE_URL=postgres://prod-db.example/app sequelize db:drop',
+      'aws s3 rb s3://my-bucket --force',
+      'aws s3 rm s3://my-bucket/key --recursive',
+      'aws ec2 terminate-instances --instance-ids i-abc',
+      'aws rds delete-db-instance --db-instance-identifier app',
+      'aws cloudformation delete-stack --stack-name app',
+      'AWS_PROFILE=prod aws s3 ls',
+      'aws s3 ls --profile production',
+      'rm -rf ./',
+      'rm -rf ../',
+      'rm -rf /var/log',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, DENY, `許可されています: ${command}`);
+    }
+    for (const command of [
+      'sequelize db:drop',
+      'npx sequelize-cli db:drop',
+      'prisma migrate reset',
+      'psql -c "DROP DATABASE app_dev"',
+      'dropdb sample_dev',
+      'aws s3 ls',
+      'aws sts get-caller-identity',
+      'aws s3api list-objects --delete-markers',
+      'rm -rf node_modules',
+      'rm -rf ./node_modules',
+    ]) {
+      assert.equal(runHook(sb, bash(command)).code, ALLOW, `拒否されています: ${command}`);
+    }
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('secret ディレクトリの設計メモは許可し、秘密ファイルは拒否する', () => {
+  const sb = sandbox();
+  try {
+    assert.equal(runHook(sb, read('docs/secret/notes.md')).code, ALLOW);
+    assert.equal(runHook(sb, bash('cat docs/secret/notes.md')).code, ALLOW);
+    assert.equal(runHook(sb, read('secrets/api.json')).code, DENY);
+    assert.equal(runHook(sb, read('credentials/token')).code, DENY);
+    assert.equal(runHook(sb, bash('cat secrets/api.json')).code, DENY);
   } finally {
     sb.cleanup();
   }

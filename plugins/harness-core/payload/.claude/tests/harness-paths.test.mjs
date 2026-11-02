@@ -188,7 +188,7 @@ test('相対参照を名前空間に持ち込めない', () => {
 test('空・空白・記号のみの HARNESS_NAMESPACE は次の解決元へ落ちる', () => {
   const { root, cleanup } = sandbox();
   try {
-    // sandbox の root には package.json が無いため、既定値まで落ちる。
+    // sandboxのrootにはpackage.jsonが無いため、既定値まで落ちる。
     for (const value of ['', '   ', '///']) {
       assert.equal(resolveNamespace({ env: { HARNESS_NAMESPACE: value }, root }), DEFAULT_NAMESPACE);
     }
@@ -207,22 +207,28 @@ test('package.json が壊れていても例外を投げず既定値へ落ちる'
   }
 });
 
-// 回帰: 導出結果が現行の状態ディレクトリ名と一致すること（一致しないと既存状態が孤児化する）。
-test('このリポジトリでは cookpit-harness を導出する（移行不要の固定）', () => {
-  assert.equal(resolveNamespace({ env: {}, root: REPO_ROOT }), 'cookpit-harness');
+test('Sample の明示名前空間を使う', () => {
+  assert.equal(resolveNamespace({ env: { HARNESS_NAMESPACE: 'sample-harness' }, root: REPO_ROOT }), 'sample-harness');
 });
 
-// モノレポのサブディレクトリから実行しても workspace 側の package.json を拾わないこと。
-// `.git` を持つ祖先まで遡るため、apps/web（@cookpit/web）ではなくルートの name を使う。
 test('サブディレクトリから解決してもリポジトリルートの name を使う', () => {
-  const sub = join(REPO_ROOT, 'apps/web');
-  assert.equal(resolveNamespace({ env: {}, root: sub }), 'cookpit-harness');
+  const { root, cleanup } = sandbox();
+  try {
+    mkdirSync(join(root, '.git'));
+    const sub = join(root, 'apps/web');
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'example-project' }));
+    writeFileSync(join(sub, 'package.json'), JSON.stringify({ name: '@example/web' }));
+    assert.equal(resolveNamespace({ env: {}, root: sub }), 'example-project-harness');
+  } finally {
+    cleanup();
+  }
 });
 
 test('.git を持つ祖先が無ければ既定値へ落ちる', () => {
   const { root, cleanup } = sandbox();
   try {
-    // sandbox は .git も package.json も持たない
+    // sandboxは .gitもpackage.jsonも持たない
     assert.equal(resolveNamespace({ env: {}, root }), DEFAULT_NAMESPACE);
   } finally {
     cleanup();
@@ -264,7 +270,7 @@ test('isInside は同一パスと配下を真、外を偽とする', () => {
   assert.equal(isInside('/a/b', '/a'), false);
 });
 
-// --- 以下は Plugin 切り出し前の土台固め（harness-core として他プロジェクトへ配るため） ---
+// --- 以下はPlugin切り出し前の土台固め（harness-coreとして他プロジェクトへ配るため） ---
 
 test('repoRoot は CLAUDE_PROJECT_DIR を優先し、無ければ cwd を返す', () => {
   assert.equal(repoRoot({ CLAUDE_PROJECT_DIR: '/some/repo' }), '/some/repo');
@@ -277,7 +283,7 @@ test('stateDir は状態ディレクトリを 0700 で作成して返す', () =>
     const dir = stateDir({ env: {}, root, home });
     assert.equal(dir, join(home, '.local/state', resolveNamespace({ env: {}, root })));
     assert.ok(existsSync(dir), '作成されていない');
-    // 他ユーザーへ開いていないこと（0o077 が立っていない）。
+    // 他ユーザーへ開いていないこと（0o077が立っていない）。
     assert.equal(statSync(dir).mode & 0o077, 0);
   } finally {
     cleanup();
@@ -317,11 +323,11 @@ test('safeStatePath は解決できれば永続領域のパスを返す', () => 
   }
 });
 
-// 記録系 Hook は状態ディレクトリを解決できなくても作業を止めてはならない（fail-open）。
+// 記録系Hookは状態ディレクトリを解決できなくても作業を止めてはならない（fail-open）。
 test('safeStatePath は解決に失敗しても例外を投げず旧パスへ落ちる', () => {
   const { root, home, cleanup } = sandbox();
   try {
-    // リポジトリ配下を指す HARNESS_STATE_DIR は resolveStateDir が拒否する（StateDirError）。
+    // リポジトリ配下を指すHARNESS_STATE_DIRはresolveStateDirが拒否する（StateDirError）。
     const env = { HARNESS_STATE_DIR: join(root, '.claude/state') };
     const p = safeStatePath('activity-log.jsonl', { env, root, home });
     assert.equal(p, join(legacyStateDir(root), 'activity-log.jsonl'));
@@ -394,7 +400,7 @@ test('hasSafePermissions は他ユーザーへ開いた権限を偽とする', (
 
     assert.equal(hasSafePermissions(safe), true);
     assert.equal(hasSafePermissions(open), false);
-    // 存在しないパスは判定できないため false（fail-closed）。
+    // 存在しないパスは判定できないためfalse（fail-closed）。
     assert.equal(hasSafePermissions(join(base, 'nonexistent')), false);
   } finally {
     cleanup();

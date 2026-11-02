@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// harness-run.mjs — run 状態（実行単位）の作成・参照・更新 CLI。
+// harness-run.mjs — run状態（実行単位）の作成・参照・更新CLI。
 //
-// run 状態はリポジトリ外の永続領域に保存される（.claude/lib/harness-paths.mjs）。
+// run状態はリポジトリ外の永続領域に保存される（.claude/lib/harness-paths.mjs）。
 // 使い方:
 //   node .claude/scripts/harness-run.mjs start [--task-id <id>] [--force]
 //   node .claude/scripts/harness-run.mjs show
@@ -10,7 +10,7 @@
 //   node .claude/scripts/harness-run.mjs gate --name <gate> --result <pass|fail|skip>
 //   node .claude/scripts/harness-run.mjs where
 //
-// 秘密情報は保存しない。changedFiles / gateResults にパスとゲート名だけを記録する。
+// 秘密情報は保存しない。changedFiles / gateResultsにパスとゲート名だけを記録する。
 
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 import {
@@ -104,7 +104,7 @@ switch (command) {
       fail('--name <gate> --result <pass|fail|skip> を指定してください');
     }
     if (!['pass', 'fail', 'skip'].includes(result)) fail('--result は pass | fail | skip です');
-    // 読み取りから書き込みまでを updateRunState のロック内で行う（lost update 防止）
+    // 読み取りから書き込みまでをupdateRunStateのロック内で行う（lost update防止）
     const next = updateRunState((state) => ({
       gateResults: {
         ...(state?.gateResults ?? {}),

@@ -1,34 +1,35 @@
 {
   "name": "cookpit-harness",
-  "interface": {
-    "displayName": "Cookpit Harness"
+  "owner": {
+    "name": "oze-xxbumpxx"
   },
   "plugins": [
     {
       "name": "harness-core",
       "source": "./plugins/harness-core",
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
+      "description": "Portable core harness layer: state paths, safety guard, quality gates, writing rules, and work logs.",
+      "version": "0.2.0",
       "category": "Developer Tools"
     },
     {
       "name": "harness-workflow",
       "source": "./plugins/harness-workflow",
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
+      "description": "Portable workflow harness layer: change classification, single-session feature loop, questions page, and review agents.",
+      "version": "0.2.0",
       "category": "Developer Tools"
     },
     {
       "name": "harness-improvement",
       "source": "./plugins/harness-improvement",
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
+      "description": "Portable improvement harness layer: reflection, metrics, evaluations, and continuous improvement.",
+      "version": "0.2.0",
+      "category": "Developer Tools"
+    },
+    {
+      "name": "harness-devin",
+      "source": "./plugins/harness-devin",
+      "description": "Optional Devin delegation layer: Issue hand-off, PR waiting, automated review loop, and delegation records.",
+      "version": "0.1.0",
       "category": "Developer Tools"
     }
   ]
